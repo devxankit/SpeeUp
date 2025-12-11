@@ -607,7 +607,7 @@ export default function SellerOrders() {
         <p className="text-xs sm:text-sm text-neutral-600">
           Copyright © 2025. Developed By{' '}
           <Link to="/seller" className="text-blue-600 hover:text-blue-700">
-            Appzeto
+            SpeeUp
           </Link>
         </p>
       </footer>

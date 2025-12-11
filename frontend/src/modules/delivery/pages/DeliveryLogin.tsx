@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import appzetoLogo from '@assets/appzeto1.jpeg';
+import speeUpLogo from '@assets/speeup1.jpeg';
 
 export default function DeliveryLogin() {
   const navigate = useNavigate();
@@ -26,8 +26,8 @@ export default function DeliveryLogin() {
     }
   };
 
-  const handleAppzetoLogin = () => {
-    // Handle Appzeto login logic here
+  const handleSpeeUpLogin = () => {
+    // Handle SpeeUp login logic here
     navigate('/delivery');
   };
 
@@ -50,8 +50,8 @@ export default function DeliveryLogin() {
         <div className="bg-gradient-to-r from-green-600 to-orange-500 px-6 py-8 text-center">
           <div className="mb-4">
             <img
-              src={appzetoLogo}
-              alt="Appzeto"
+              src={speeUpLogo}
+              alt="SpeeUp"
               className="h-16 w-auto mx-auto object-contain"
             />
           </div>
@@ -201,9 +201,9 @@ export default function DeliveryLogin() {
             <div className="flex-1 h-px bg-neutral-200"></div>
           </div>
 
-          {/* Login with Appzeto Button */}
+          {/* Login with SpeeUp Button */}
           <button
-            onClick={handleAppzetoLogin}
+            onClick={handleSpeeUpLogin}
             className="w-full py-2.5 rounded-lg font-semibold text-sm bg-gradient-to-r from-green-600 to-orange-500 text-white hover:from-green-700 hover:to-orange-600 transition-all shadow-md flex items-center justify-center gap-2"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -211,7 +211,7 @@ export default function DeliveryLogin() {
               <circle cx="12" cy="7" r="4"/>
             </svg>
             <span>Login with</span>
-            <span className="font-bold">Appzeto</span>
+            <span className="font-bold">SpeeUp</span>
           </button>
 
           {/* Sign Up Link */}
@@ -228,7 +228,7 @@ export default function DeliveryLogin() {
 
       {/* Footer Text */}
       <p className="mt-6 text-xs text-neutral-500 text-center max-w-md">
-        By continuing, you agree to Appzeto's Terms of Service and Privacy Policy
+        By continuing, you agree to SpeeUp's Terms of Service and Privacy Policy
       </p>
     </div>
   );

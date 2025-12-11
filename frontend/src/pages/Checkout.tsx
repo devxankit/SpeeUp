@@ -368,7 +368,7 @@ export default function Checkout() {
       )}
       {/* Header */}
       <div className="sticky top-0 z-50 bg-white border-b border-neutral-200">
-        <div className="px-4 py-2 flex items-center justify-between">
+        <div className="px-4 md:px-6 lg:px-8 py-2 md:py-3 flex items-center justify-between">
           {/* Back Arrow */}
           <button
             onClick={() => navigate(-1)}
@@ -396,7 +396,7 @@ export default function Checkout() {
       </div>
 
       {/* Ordering for someone else */}
-      <div className="px-4 py-2 bg-neutral-50 border-b border-neutral-200">
+      <div className="px-4 md:px-6 lg:px-8 py-2 md:py-3 bg-neutral-50 border-b border-neutral-200">
         <div className="flex items-center justify-between">
           <span className="text-xs text-neutral-700">Ordering for someone else?</span>
           <button 
@@ -410,7 +410,7 @@ export default function Checkout() {
 
       {/* Saved Address Section */}
       {savedAddress && (
-        <div className="px-4 py-2 border-b border-neutral-200">
+        <div className="px-4 md:px-6 lg:px-8 py-2 md:py-3 border-b border-neutral-200">
           <div className="mb-2">
             <h3 className="text-xs font-semibold text-neutral-900 mb-0.5">Delivery Address</h3>
             <p className="text-[10px] text-neutral-600">Select or edit your saved address</p>
@@ -456,7 +456,7 @@ export default function Checkout() {
       )}
 
       {/* Main Product Card */}
-      <div className="px-4 py-2 bg-white border-b border-neutral-200">
+      <div className="px-4 md:px-6 lg:px-8 py-2 md:py-3 bg-white border-b border-neutral-200">
         <div className="bg-white rounded-lg border border-neutral-200 p-2.5">
           {/* Delivery info */}
           <div className="flex items-center gap-1.5 mb-2">
@@ -538,7 +538,7 @@ export default function Checkout() {
       </div>
 
       {/* You might also like */}
-      <div className="px-4 py-2.5 border-b border-neutral-200">
+      <div className="px-4 md:px-6 lg:px-8 py-2.5 md:py-3 border-b border-neutral-200">
         <h2 className="text-sm font-semibold text-neutral-900 mb-2">You might also like</h2>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-3" style={{ scrollSnapType: 'x mandatory' }}>
           {similarProducts.map((product) => {
@@ -833,7 +833,7 @@ export default function Checkout() {
       )}
 
       {/* Bill details */}
-      <div className="px-4 py-2.5 border-b border-neutral-200">
+      <div className="px-4 md:px-6 lg:px-8 py-2.5 md:py-3 border-b border-neutral-200">
         <h2 className="text-base font-bold text-neutral-900 mb-2.5">Bill details</h2>
         
         <div className="space-y-2">
@@ -1056,7 +1056,7 @@ export default function Checkout() {
         <button className="text-xs text-neutral-700">Cancellation Policy</button>
       </div>
 
-      {/* Made with love by Appzeto - Expanded to fill bottom */}
+      {/* Made with love by SpeeUp - Expanded to fill bottom */}
       <div className="px-4 flex-1 flex items-end pb-4">
         <div className="w-full flex flex-col items-center justify-center py-6">
           <div className="flex items-center gap-1.5 text-neutral-500">
@@ -1069,7 +1069,7 @@ export default function Checkout() {
               ❤️
             </motion.span>
             <span className="text-[10px] font-medium">by</span>
-            <span className="text-[10px] font-semibold text-green-600">Appzeto</span>
+            <span className="text-[10px] font-semibold text-green-600">SpeeUp</span>
           </div>
         </div>
       </div>

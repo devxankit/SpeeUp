@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import appzetoLogo from '@assets/appzeto1.jpeg';
+import speeUpLogo from '@assets/speeup1.jpeg';
 
 interface SellerHeaderProps {
   onMenuClick: () => void;
@@ -87,14 +87,14 @@ export default function SellerHeader({ onMenuClick, isSidebarOpen }: SellerHeade
               </svg>
             )}
           </button>
-          {/* Appzeto Logo */}
+          {/* SpeeUp Logo */}
           <button
             onClick={handleLogoClick}
             className="hover:opacity-80 transition-opacity"
           >
             <img
-              src={appzetoLogo}
-              alt="Appzeto"
+              src={speeUpLogo}
+              alt="SpeeUp"
               className="h-10 sm:h-12 w-auto object-contain cursor-pointer"
               style={{ maxWidth: '200px' }}
             />

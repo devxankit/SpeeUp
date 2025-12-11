@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import appzetoLogo from '@assets/appzeto1.jpeg';
+import speeUpLogo from '@assets/speeup1.jpeg';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -33,8 +33,8 @@ export default function AdminLogin() {
         <div className="bg-gradient-to-r from-teal-600 to-green-600 px-6 py-8 text-center">
           <div className="mb-4">
             <img
-              src={appzetoLogo}
-              alt="Appzeto"
+              src={speeUpLogo}
+              alt="SpeeUp"
               className="h-16 w-auto mx-auto object-contain"
             />
           </div>

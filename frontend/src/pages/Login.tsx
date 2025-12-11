@@ -188,20 +188,20 @@ export default function Login() {
           <div className="flex-1 h-px bg-neutral-200"></div>
         </div>
 
-        {/* Login with Appzeto Button */}
+        {/* Login with SpeeUp Button */}
         <div className="w-full mb-2 px-4 relative z-10" style={{ maxWidth: '100%' }}>
           <button
             onClick={handleZomatoLogin}
             className="w-full py-2 sm:py-2.5 rounded-lg font-semibold text-sm bg-orange-500 text-white hover:bg-orange-600 transition-colors flex items-center justify-center gap-1.5 px-3"
           >
             <span>Login with</span>
-            <span className="font-bold">appzeto</span>
+            <span className="font-bold">SpeeUp</span>
           </button>
         </div>
 
         {/* Privacy Text */}
         <p className="text-[9px] sm:text-[10px] text-neutral-500 text-center max-w-sm leading-tight px-4 relative z-10 pb-1">
-          Access your saved addresses from Appzeto automatically!
+          Access your saved addresses from SpeeUp automatically!
         </p>
       </div>
     </div>

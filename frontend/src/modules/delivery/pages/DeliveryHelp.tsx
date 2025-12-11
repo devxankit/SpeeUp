@@ -30,7 +30,7 @@ export default function DeliveryHelp() {
 
   const contactOptions = [
     { label: 'Call Support', value: '+91-1800-XXX-XXXX', icon: 'phone' },
-    { label: 'Email Support', value: 'support@appzeto.com', icon: 'email' },
+    { label: 'Email Support', value: 'support@speeup.com', icon: 'email' },
     { label: 'Live Chat', value: 'Available 24/7', icon: 'chat' },
   ];
 

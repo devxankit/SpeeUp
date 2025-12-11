@@ -294,17 +294,17 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
     >
       {/* Top section with delivery info and buttons - NOT sticky */}
       <div>
-        <div ref={topSectionRef} className="px-4 pt-2 pb-0">
-          <div className="flex items-start justify-between mb-2">
+        <div ref={topSectionRef} className="px-4 md:px-6 lg:px-8 pt-2 md:pt-3 pb-0">
+          <div className="flex items-start justify-between mb-2 md:mb-2">
           {/* Left: Text content */}
             <div className="flex-1 pr-2">
               {/* Service name - small, dark */}
-              <div className="text-neutral-800 font-medium text-[10px] mb-0 leading-tight">Appzeto Quick Commerce</div>
+              <div className="text-neutral-800 font-medium text-[10px] md:text-xs mb-0 leading-tight">SpeeUp Quick Commerce</div>
               {/* Delivery time - large, bold, dark grey/black */}
-              <div className="text-neutral-900 font-extrabold text-2xl mb-0.5 leading-tight">14 minutes</div>
+              <div className="text-neutral-900 font-extrabold text-2xl md:text-xl mb-0 md:mb-0.5 leading-tight">14 minutes</div>
               {/* Location with dropdown indicator */}
-              <div className="text-neutral-700 text-[10px] flex items-center gap-0.5 leading-tight">
-                <span className="line-clamp-1">Appzeto, Princess Center, New Palasia, Indore, Madhya Pradesh</span>
+              <div className="text-neutral-700 text-[10px] md:text-xs flex items-center gap-0.5 leading-tight">
+                <span className="line-clamp-1">SpeeUp, Princess Center, New Palasia, Indore, Madhya Pradesh</span>
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
                   <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
@@ -313,7 +313,7 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
             {/* Right: Wallet Icon */}
             <div className="flex items-center">
               <button
-                className="w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-sm border"
+                className="w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center transition-colors shadow-sm border"
                 style={{
                   backgroundColor: theme.primary[3] || theme.primary[2],
                   borderColor: theme.primary[2] || theme.primary[1],
@@ -362,21 +362,21 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
           }),
         }}
       >
-        <div className="px-4 pt-2 pb-2">
+        <div className="px-4 md:px-6 lg:px-8 pt-2 md:pt-2 pb-2 md:pb-2">
           {/* Search Bar */}
         <div
           onClick={() => navigate('/search')}
-            className="w-full rounded-xl shadow-lg px-3 py-2 flex items-center gap-2 cursor-pointer hover:shadow-xl transition-all duration-300 mb-2 bg-white"
+            className="w-full md:w-auto md:max-w-xl md:mx-auto rounded-xl shadow-lg px-3 py-2 md:px-3 md:py-1.5 flex items-center gap-2 cursor-pointer hover:shadow-xl transition-all duration-300 mb-2 md:mb-1.5 bg-white"
             style={{
               backgroundColor: scrollProgress > 0.1 ? `rgba(249, 250, 251, ${scrollProgress})` : 'white',
               border: scrollProgress > 0.1 ? `1px solid rgba(229, 231, 235, ${scrollProgress})` : 'none',
             }}
         >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0 md:w-4 md:h-4">
               <circle cx="11" cy="11" r="8" stroke={scrollProgress > 0.5 ? "#9ca3af" : "#6b7280"} strokeWidth="2"/>
               <path d="m21 21-4.35-4.35" stroke={scrollProgress > 0.5 ? "#9ca3af" : "#6b7280"} strokeWidth="2" strokeLinecap="round"/>
             </svg>
-            <div className="flex-1 relative h-4 overflow-hidden">
+            <div className="flex-1 relative h-4 md:h-4 overflow-hidden">
             {searchSuggestions.map((suggestion, index) => {
               const isActive = index === currentSearchIndex;
               const prevIndex = (currentSearchIndex - 1 + searchSuggestions.length) % searchSuggestions.length;
@@ -393,14 +393,14 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
                       : 'translate-y-full opacity-0'
                   }`}
                 >
-                    <span className={`text-xs`} style={{ color: scrollProgress > 0.5 ? '#9ca3af' : '#6b7280' }}>
+                    <span className={`text-xs md:text-xs`} style={{ color: scrollProgress > 0.5 ? '#9ca3af' : '#6b7280' }}>
                       Search &apos;{suggestion}&apos;
                   </span>
                 </div>
               );
             })}
             </div>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0 md:w-4 md:h-4">
               <path d="M12 1C13.1 1 14 1.9 14 3C14 4.1 13.1 5 12 5C10.9 5 10 4.1 10 3C10 1.9 10.9 1 12 1Z" fill={scrollProgress > 0.5 ? "#9ca3af" : "#6b7280"}/>
               <path d="M19 10V17C19 18.1 18.1 19 17 19H7C5.9 19 5 18.1 5 17V10" stroke={scrollProgress > 0.5 ? "#9ca3af" : "#6b7280"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M12 11V17" stroke={scrollProgress > 0.5 ? "#9ca3af" : "#6b7280"} strokeWidth="2" strokeLinecap="round"/>
@@ -411,11 +411,12 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
         </div>
 
         {/* Category Tabs */}
-        <div className="px-4 border-b border-neutral-400/40" style={{ paddingBottom: 0 }}>
+        <div className="border-b border-neutral-400/40 w-full" style={{ paddingBottom: 0 }}>
           <div 
             ref={tabsContainerRef}
-            className="relative flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4 scroll-smooth" 
+            className="relative flex gap-2 md:gap-3 overflow-x-auto scrollbar-hide -mx-4 md:mx-0 px-4 md:px-6 lg:px-8 md:justify-center scroll-smooth" 
             style={{ paddingBottom: '12px' }}
+            data-padding-bottom="md:8px"
           >
             {/* Sliding Indicator */}
             {indicatorStyle.width > 0 && (
@@ -449,20 +450,20 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
                   }
                 }}
                 onClick={() => handleTabClick(tab.id)}
-                className={`flex-shrink-0 flex flex-col items-center min-w-[50px] py-1 relative ${tabColor} z-10`}
+                className={`flex-shrink-0 flex flex-col md:flex-row items-center justify-center min-w-[50px] md:min-w-fit md:px-3 py-1 md:py-1.5 relative ${tabColor} z-10`}
                 style={{
                   transition: 'color 0.3s ease-out',
                 }}
                 type="button"
               >
-                <div className={`mb-0.5 w-5 h-5 flex items-center justify-center ${tabColor}`} style={{
+                <div className={`mb-0.5 md:hidden w-5 h-5 flex items-center justify-center ${tabColor}`} style={{
                   transition: 'color 0.3s ease-out, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   transform: isActive ? 'scale(1.1)' : 'scale(1)',
                 }}>
                   {tab.icon}
                 </div>
                 <span
-                  className={`text-[10px] ${isActive ? 'font-semibold' : 'font-medium'}`}
+                  className={`text-[10px] md:text-xs md:whitespace-nowrap ${isActive ? 'font-semibold' : 'font-medium'}`}
                   style={{
                     transition: 'font-weight 0.3s ease-out',
                   }}

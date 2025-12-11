@@ -105,16 +105,16 @@ export default function Search() {
   }, [searchQuery]);
 
   return (
-    <div className="pb-24 bg-white min-h-screen">
+    <div className="pb-24 md:pb-8 bg-white min-h-screen">
 
       {/* Search Results */}
       {searchQuery.trim() && (
-        <div className="px-4 py-4">
-          <h2 className="text-lg font-semibold text-neutral-900 mb-3">
+        <div className="px-4 md:px-6 lg:px-8 py-4 md:py-6">
+          <h2 className="text-lg md:text-2xl font-semibold text-neutral-900 mb-3 md:mb-6">
             Search Results {searchResults.length > 0 && `(${searchResults.length})`}
           </h2>
           {searchResults.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
               {searchResults.map((product) => (
                 <ProductCard
                   key={product.id}
@@ -127,9 +127,9 @@ export default function Search() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12 text-neutral-500">
-              <p className="text-lg mb-2">No products found</p>
-              <p className="text-sm">Try a different search term</p>
+            <div className="text-center py-12 md:py-16 text-neutral-500">
+              <p className="text-lg md:text-xl mb-2">No products found</p>
+              <p className="text-sm md:text-base">Try a different search term</p>
             </div>
           )}
         </div>
@@ -138,9 +138,9 @@ export default function Search() {
       {/* Trending in your city */}
       {!searchQuery.trim() && (
         <>
-          <div className="px-4 py-4">
-            <h2 className="text-lg font-semibold text-neutral-900 mb-3">Trending in your city</h2>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="px-4 md:px-6 lg:px-8 py-4 md:py-6">
+            <h2 className="text-lg md:text-2xl font-semibold text-neutral-900 mb-3 md:mb-6">Trending in your city</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 md:gap-4">
               {trendingCategories.map((category) => (
                 <div
                   key={category.id}
@@ -176,10 +176,10 @@ export default function Search() {
           </div>
 
           {/* Appliances Section */}
-          <div className="px-4 py-4">
-            <h2 className="text-lg font-semibold text-neutral-900 mb-3">Appliances</h2>
-            <div className="overflow-x-auto scrollbar-hide pb-4">
-              <div className="flex gap-3" style={{ width: 'max-content' }}>
+          <div className="px-4 md:px-6 lg:px-8 py-4 md:py-6">
+            <h2 className="text-lg md:text-2xl font-semibold text-neutral-900 mb-3 md:mb-6">Appliances</h2>
+            <div className="overflow-x-auto scrollbar-hide pb-4 md:pb-6">
+              <div className="flex gap-3 md:gap-4" style={{ width: 'max-content' }}>
                 {appliancesProducts.map((product) => {
                   const discount = product.mrp && product.mrp > product.price
                     ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
@@ -278,11 +278,11 @@ export default function Search() {
           </div>
 
           {/* See all products */}
-          <div className="px-4 py-2">
+          <div className="px-4 md:px-6 lg:px-8 py-2 md:py-4">
             <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2">
-              <div className="flex gap-2">
+              <div className="flex gap-2 md:gap-3">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="w-12 h-12 rounded-full bg-neutral-100 flex-shrink-0 flex items-center justify-center">
+                  <div key={i} className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-neutral-100 flex-shrink-0 flex items-center justify-center">
                     <img
                       src={productImages['amul-butter']}
                       alt=""
@@ -291,14 +291,14 @@ export default function Search() {
                   </div>
                 ))}
               </div>
-              <span className="text-sm text-neutral-700 font-medium whitespace-nowrap">See all products ▸</span>
+              <span className="text-sm md:text-base text-neutral-700 font-medium whitespace-nowrap">See all products ▸</span>
             </div>
           </div>
 
           {/* Cooking ideas */}
-          <div className="px-4 py-4">
-            <h2 className="text-lg font-semibold text-neutral-900 mb-3">Cooking ideas</h2>
-            <div className="grid grid-cols-2 gap-3">
+          <div className="px-4 md:px-6 lg:px-8 py-4 md:py-6">
+            <h2 className="text-lg md:text-2xl font-semibold text-neutral-900 mb-3 md:mb-6">Cooking ideas</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="relative rounded-lg overflow-hidden aspect-[4/3] bg-neutral-100">
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>

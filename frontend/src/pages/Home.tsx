@@ -42,7 +42,7 @@ export default function Home() {
 
 
   return (
-    <div className="pb-4">
+    <div className="pb-4 md:pb-8">
       {/* Hero Header with Gradient and Tabs */}
       <HomeHero activeTab={activeTab} onTabChange={setActiveTab} />
 
@@ -53,16 +53,16 @@ export default function Home() {
       <LowestPricesEver activeTab={activeTab} />
 
       {/* Main content with neutral background */}
-      <div ref={contentRef} className="bg-neutral-50 -mt-2 pt-1 space-y-5">
+      <div ref={contentRef} className="bg-neutral-50 -mt-2 pt-1 space-y-5 md:space-y-8 md:pt-4">
         {/* Filtered Products Section - Show when tab is not "All" */}
         {activeTab !== 'all' && (
-          <div data-products-section className="mt-6 mb-6">
-            <h2 className="text-lg font-semibold text-neutral-900 mb-3 px-4 tracking-tight capitalize">
+          <div data-products-section className="mt-6 mb-6 md:mt-8 md:mb-8">
+            <h2 className="text-lg md:text-2xl font-semibold text-neutral-900 mb-3 md:mb-6 px-4 md:px-6 lg:px-8 tracking-tight capitalize">
               {activeTab === 'grocery' ? 'Grocery Items' : activeTab}
             </h2>
-            <div className="px-4">
+            <div className="px-4 md:px-6 lg:px-8">
               {filteredProducts.length > 0 ? (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4">
                   {filteredProducts.map((product) => (
                     <ProductCard
                       key={product.id}
@@ -75,9 +75,9 @@ export default function Home() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 text-neutral-500">
-                  <p className="text-lg mb-2">No products found</p>
-                  <p className="text-sm">Try selecting a different category</p>
+                <div className="text-center py-12 md:py-16 text-neutral-500">
+                  <p className="text-lg md:text-xl mb-2">No products found</p>
+                  <p className="text-sm md:text-base">Try selecting a different category</p>
                 </div>
               )}
             </div>
@@ -87,7 +87,7 @@ export default function Home() {
         {/* Bestsellers Section - Only show when "All" tab is selected */}
         {activeTab === 'all' && (
           <>
-            <div className="mt-2">
+            <div className="mt-2 md:mt-4">
               <CategoryTileSection title="Bestsellers" tiles={bestsellerTiles} columns={3} showProductCount={true} />
             </div>
             
@@ -107,10 +107,10 @@ export default function Home() {
             <CategoryTileSection title="Household Essentials" tiles={householdEssentialsTiles} columns={4} showProductCount={false} />
 
             {/* Shop by Store Section */}
-            <div className="mb-6 mt-6">
-              <h2 className="text-lg font-semibold text-neutral-900 mb-3 px-4 tracking-tight">Shop by Store</h2>
-              <div className="px-4">
-                <div className="grid grid-cols-4 gap-2">
+            <div className="mb-6 mt-6 md:mb-8 md:mt-8">
+              <h2 className="text-lg md:text-2xl font-semibold text-neutral-900 mb-3 md:mb-6 px-4 md:px-6 lg:px-8 tracking-tight">Shop by Store</h2>
+              <div className="px-4 md:px-6 lg:px-8">
+                <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-4">
                   {shopByStoreTiles.map((tile) => {
                     const hasImages = tile.productImages && tile.productImages.filter(Boolean).length > 0;
                     

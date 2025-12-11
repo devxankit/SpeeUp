@@ -27,13 +27,13 @@ export default function CategoryTileSection({ title, tiles, columns = 2, showPro
     console.log('Clicked tile', tile.id);
   };
 
-  const gridCols = columns === 4 ? 'grid-cols-4' : columns === 3 ? 'grid-cols-3' : 'grid-cols-2';
-  const gapClass = columns === 4 ? 'gap-2' : 'gap-3';
+  const gridCols = columns === 4 ? 'grid-cols-4 md:grid-cols-6 lg:grid-cols-8' : columns === 3 ? 'grid-cols-3 md:grid-cols-4 lg:grid-cols-6' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
+  const gapClass = columns === 4 ? 'gap-2 md:gap-4' : 'gap-3 md:gap-4';
 
   return (
-    <div className="mb-6 mt-0 overflow-visible">
-      <h2 className="text-lg font-semibold text-neutral-900 mb-3 px-4 tracking-tight">{title}</h2>
-      <div className="px-4 overflow-visible">
+    <div className="mb-6 md:mb-8 mt-0 overflow-visible">
+      <h2 className="text-lg md:text-2xl font-semibold text-neutral-900 mb-3 md:mb-6 px-4 md:px-6 lg:px-8 tracking-tight">{title}</h2>
+      <div className="px-4 md:px-6 lg:px-8 overflow-visible">
         <div className={`grid ${gridCols} ${gapClass} overflow-visible`}>
           {tiles.map((tile) => {
             const hasImages = tile.productImages.filter(Boolean).length > 0;

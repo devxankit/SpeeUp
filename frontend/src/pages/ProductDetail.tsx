@@ -24,9 +24,9 @@ export default function ProductDetail() {
 
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white px-4">
+      <div className="min-h-screen flex items-center justify-center bg-white px-4 md:px-6 lg:px-8">
         <div className="text-center">
-          <p className="text-lg font-semibold text-neutral-900 mb-4">Product not found</p>
+          <p className="text-lg md:text-xl font-semibold text-neutral-900 mb-4">Product not found</p>
           <Button onClick={() => navigate(-1)}>
             Go Back
           </Button>
@@ -55,7 +55,7 @@ export default function ProductDetail() {
     <div className="min-h-screen bg-white pb-24">
       {/* Header with back button and action icons */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-transparent">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 md:px-6 lg:px-8 py-3 md:py-4">
           {/* Back button - top left */}
           <button
             onClick={() => navigate(-1)}
@@ -132,7 +132,7 @@ export default function ProductDetail() {
         </div>
 
         {/* Product Details Card - White section */}
-        <div className="bg-white rounded-t-3xl -mt-6 relative z-10 px-4 pt-2.5 pb-2">
+        <div className="bg-white rounded-t-3xl -mt-6 relative z-10 px-4 md:px-6 lg:px-8 pt-2.5 md:pt-4 pb-2 md:pb-4">
           {/* Delivery time */}
           <div className="flex items-center gap-0.5 mb-1">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -143,10 +143,10 @@ export default function ProductDetail() {
           </div>
 
           {/* Product name */}
-          <h2 className="text-sm font-bold text-neutral-900 mb-0 leading-tight">{product.name}</h2>
+          <h2 className="text-sm md:text-xl font-bold text-neutral-900 mb-0 leading-tight">{product.name}</h2>
 
           {/* Quantity */}
-          <p className="text-[10px] text-neutral-600 mb-1">{product.pack}</p>
+          <p className="text-[10px] md:text-sm text-neutral-600 mb-1">{product.pack}</p>
 
             {/* Price section */}
           <div className="flex items-center gap-1.5 mb-1.5">

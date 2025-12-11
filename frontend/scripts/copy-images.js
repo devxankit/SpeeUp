@@ -201,13 +201,13 @@ function copyShopByStoreImages() {
   });
 }
 
-// Copy appzeto logo
-function copyAppzetoLogo() {
-  const appzetoPath = path.join(assetsDir, 'appzeto1.jpeg');
-  if (fs.existsSync(appzetoPath)) {
-    const destPath = path.join(publicAssetsDir, 'appzeto1.jpeg');
-    fs.copyFileSync(appzetoPath, destPath);
-    console.log('Copied appzeto logo: appzeto1.jpeg');
+// Copy speeup logo
+function copySpeeUpLogo() {
+  const speeupPath = path.join(assetsDir, 'speeup1.jpeg');
+  if (fs.existsSync(speeupPath)) {
+    const destPath = path.join(publicAssetsDir, 'speeup1.jpeg');
+    fs.copyFileSync(speeupPath, destPath);
+    console.log('Copied speeup logo: speeup1.jpeg');
   }
 }
 
@@ -218,6 +218,6 @@ copyProductImages();
 copyBannerImage();
 copyShopByStoreImages();
 copyLoginVideo();
-copyAppzetoLogo();
+copySpeeUpLogo();
 console.log('Image copy completed!');
 

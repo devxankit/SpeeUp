@@ -481,11 +481,11 @@ export default function Category() {
 
   if (!category) {
     return (
-      <div className="px-4 py-6">
-        <h1 className="text-2xl font-bold text-neutral-900 mb-4">
+      <div className="px-4 md:px-6 lg:px-8 py-6 md:py-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 mb-4">
           Category not found
         </h1>
-        <p className="text-neutral-600">The category you're looking for doesn't exist.</p>
+        <p className="text-neutral-600 md:text-lg">The category you're looking for doesn't exist.</p>
       </div>
     );
   }
@@ -653,19 +653,19 @@ export default function Category() {
       <div className="flex-1 flex flex-col overflow-hidden bg-white">
         {/* Header */}
         <div className="sticky top-0 z-40 bg-white border-b border-neutral-200 flex-shrink-0">
-          <div className="px-4 py-3">
+          <div className="px-4 md:px-6 lg:px-8 py-3 md:py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => navigate(-1)}
-                  className="w-8 h-8 flex items-center justify-center text-neutral-700 hover:bg-neutral-100 rounded-full transition-colors"
+                  className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center text-neutral-700 hover:bg-neutral-100 rounded-full transition-colors"
                   aria-label="Go back"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
-                <h1 className="text-base font-bold text-neutral-900">{category.name}</h1>
+                <h1 className="text-base md:text-xl font-bold text-neutral-900">{category.name}</h1>
               </div>
               <button
                 className="w-8 h-8 flex items-center justify-center text-neutral-700 hover:bg-neutral-100 rounded-full transition-colors"
@@ -683,8 +683,8 @@ export default function Category() {
         </div>
 
         {/* Filter/Sort Bar - Updated layout */}
-        <div className="px-4 py-1.5 bg-white border-b border-neutral-200 flex-shrink-0">
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide -mx-4 px-4 scroll-smooth">
+        <div className="px-4 md:px-6 lg:px-8 py-1.5 md:py-2 bg-white border-b border-neutral-200 flex-shrink-0">
+          <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto scrollbar-hide -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 scroll-smooth">
             {/* Filters Button */}
             <button 
               onClick={() => setIsFiltersOpen(true)}
@@ -733,8 +733,8 @@ export default function Category() {
         <div className="flex-1 overflow-y-auto scrollbar-hide bg-white">
           {/* Products Grid */}
           {categoryProducts.length > 0 ? (
-            <div className="px-3 py-4">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="px-3 md:px-6 lg:px-8 py-4 md:py-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4">
                 {categoryProducts.map((product) => (
                   <ProductCard
                     key={product.id}
@@ -749,8 +749,8 @@ export default function Category() {
               </div>
             </div>
           ) : (
-            <div className="px-4 py-8 text-center">
-              <p className="text-neutral-500">No products found in this category.</p>
+            <div className="px-4 md:px-6 lg:px-8 py-8 md:py-12 text-center">
+              <p className="text-neutral-500 md:text-lg">No products found in this category.</p>
             </div>
           )}
         </div>

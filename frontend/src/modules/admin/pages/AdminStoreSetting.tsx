@@ -3,7 +3,7 @@ import { useState } from 'react';
 export default function AdminStoreSetting() {
   const [formData, setFormData] = useState({
     // Basic Information
-    title: 'Appzeto - 10 Minute App',
+    title: 'SpeeUp - 10 Minute App',
     email: 'info@apksoftwaresolution.com',
     phone: '8956656429',
     

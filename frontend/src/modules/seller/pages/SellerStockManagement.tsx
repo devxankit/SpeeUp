@@ -16,7 +16,7 @@ const STOCK_ITEMS: StockItem[] = [
     {
         variationId: 3,
         name: 'Maggi 2 - Minute Instant Noodles (Pack of 12)',
-        seller: 'Appzeto store',
+        seller: 'SpeeUp store',
         image: '/assets/product-mtr-poha.jpg',
         variation: '840 g (12 x 70 g)',
         stock: 134,
@@ -26,7 +26,7 @@ const STOCK_ITEMS: StockItem[] = [
     {
         variationId: 14,
         name: 'Sumeru Grated Coconut (Frozen)',
-        seller: 'Appzeto store',
+        seller: 'SpeeUp store',
         image: '/assets/category-fruits-veg.png',
         variation: '200 g',
         stock: 67,
@@ -36,7 +36,7 @@ const STOCK_ITEMS: StockItem[] = [
     {
         variationId: 16,
         name: 'Maggi Masala 2 Minutes Instant Noodles',
-        seller: 'Appzeto store',
+        seller: 'SpeeUp store',
         image: '/assets/product-mtr-poha.jpg',
         variation: '100g',
         stock: 'Unlimited',
@@ -46,7 +46,7 @@ const STOCK_ITEMS: StockItem[] = [
     {
         variationId: 17,
         name: "Abbie's Pure Maple Syrup",
-        seller: 'Appzeto store',
+        seller: 'SpeeUp store',
         image: '/assets/category-sweet-tooth.png',
         variation: '250 ml',
         stock: 47,
@@ -56,7 +56,7 @@ const STOCK_ITEMS: StockItem[] = [
     {
         variationId: 18,
         name: 'Maggi Masala 2 Minutes Instant Noodles',
-        seller: 'Appzeto store',
+        seller: 'SpeeUp store',
         image: '/assets/product-mtr-poha.jpg',
         variation: '200g',
         stock: 47,
@@ -66,7 +66,7 @@ const STOCK_ITEMS: StockItem[] = [
     {
         variationId: 21,
         name: 'Yoga Bar Chocolate Chunk Nut Multigrain Protein Bar (35 g)',
-        seller: 'Appzeto store',
+        seller: 'SpeeUp store',
         image: '/assets/category-snacks.png',
         variation: '35 g',
         stock: 6,

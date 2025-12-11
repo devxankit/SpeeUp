@@ -88,41 +88,44 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const showFooter = !isCheckoutPage && !isProductDetailPage;
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Sticky Header - Show on search page and other non-home pages, excluding account page */}
-      {(showHeader || isSearchPage) && (
-        <header className="sticky top-0 z-50 bg-white shadow-sm">
-          {/* Delivery info line */}
-          <div className="px-4 py-1.5 bg-green-50 text-xs text-green-700 text-center">
-            Delivering in 10–15 mins
-          </div>
-          
-          {/* Location line */}
-          <div className="px-4 py-2 flex items-center justify-between text-sm">
-            <span className="text-neutral-700">Silicon City, Indore</span>
-            <button className="text-blue-600 font-medium">Change</button>
-          </div>
-          
-          {/* Search bar - Hidden on Order Again page */}
-          {showSearchBar && (
-            <div className="px-4 pb-3">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder="Search for products..."
-                  className="w-full px-4 py-2.5 pl-10 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">🔍</span>
+    <div className="flex flex-col min-h-screen w-full">
+      {/* Desktop Container Wrapper */}
+      <div className="md:w-full md:bg-white md:min-h-screen">
+        <div className="md:w-full md:min-h-screen md:flex md:flex-col">
+          {/* Sticky Header - Show on search page and other non-home pages, excluding account page */}
+          {(showHeader || isSearchPage) && (
+            <header className="sticky top-0 z-50 bg-white shadow-sm md:shadow-md">
+              {/* Delivery info line */}
+              <div className="px-4 md:px-6 lg:px-8 py-1.5 bg-green-50 text-xs text-green-700 text-center">
+                Delivering in 10–15 mins
               </div>
-            </div>
+              
+              {/* Location line */}
+              <div className="px-4 md:px-6 lg:px-8 py-2 flex items-center justify-between text-sm">
+                <span className="text-neutral-700">Silicon City, Indore</span>
+                <button className="text-blue-600 font-medium hover:text-blue-700 transition-colors">Change</button>
+              </div>
+              
+              {/* Search bar - Hidden on Order Again page */}
+              {showSearchBar && (
+                <div className="px-4 md:px-6 lg:px-8 pb-3">
+                  <div className="relative max-w-2xl md:mx-auto">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => handleSearchChange(e.target.value)}
+                      placeholder="Search for products..."
+                      className="w-full px-4 py-2.5 pl-10 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent md:text-base md:py-3"
+                    />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">🔍</span>
+                  </div>
+                </div>
+              )}
+            </header>
           )}
-        </header>
-      )}
 
-      {/* Scrollable Main Content */}
-      <main ref={mainRef} className="flex-1 overflow-y-auto scrollbar-hide pb-24">
+          {/* Scrollable Main Content */}
+          <main ref={mainRef} className="flex-1 overflow-y-auto scrollbar-hide pb-24 md:pb-32">
         <AnimatePresence 
           mode="wait" 
           initial={false}
@@ -148,14 +151,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </AnimatePresence>
       </main>
 
-      {/* Floating Cart Pill */}
-      <FloatingCartPill />
+          {/* Floating Cart Pill */}
+          <FloatingCartPill />
 
-      {/* Fixed Bottom Navigation - Hidden on checkout pages */}
-      {showFooter && (
-      <nav 
-        className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200/10 shadow-[0_-2px_4px_rgba(0,0,0,0.05)] z-50"
-      >
+          {/* Fixed Bottom Navigation - Hidden on checkout pages */}
+          {showFooter && (
+          <nav 
+            className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200/10 shadow-[0_-2px_4px_rgba(0,0,0,0.05)] z-50 md:relative md:shadow-none md:border-t md:border-neutral-200"
+          >
         <div className="flex justify-around items-center h-16">
           {/* Home */}
           <motion.div
@@ -396,9 +399,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </span>
             </Link>
           </motion.div>
+          </div>
+          </nav>
+          )}
         </div>
-      </nav>
-      )}
+      </div>
     </div>
   );
 }

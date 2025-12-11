@@ -611,7 +611,7 @@ export default function AdminReceivedOrders() {
       <div className="text-center py-4 text-xs sm:text-sm text-neutral-600">
         Copyright © 2025. Developed By{' '}
         <Link to="/" className="text-blue-600 hover:text-blue-700">
-          Appzeto - 10 Minute App
+          SpeeUp - 10 Minute App
         </Link>
       </div>
     </div>

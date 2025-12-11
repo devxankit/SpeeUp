@@ -6,10 +6,10 @@ export default function Account() {
   const [hideSensitiveItems, setHideSensitiveItems] = useState(false);
 
   return (
-    <div className="pb-24 bg-white min-h-screen">
+    <div className="pb-24 md:pb-8 bg-white min-h-screen">
       {/* Profile Header with Orange Gradient */}
-      <div className="bg-gradient-to-b from-orange-200 via-orange-100 to-white pb-6 pt-12">
-        <div className="px-4">
+      <div className="bg-gradient-to-b from-orange-200 via-orange-100 to-white pb-6 md:pb-8 pt-12 md:pt-16">
+        <div className="px-4 md:px-6 lg:px-8">
           <button
             onClick={() => navigate(-1)}
             className="mb-4 text-neutral-900"
@@ -21,15 +21,15 @@ export default function Account() {
           </button>
           
           {/* Profile Picture */}
-          <div className="flex flex-col items-center mb-4">
-            <div className="w-20 h-20 rounded-full bg-neutral-200 flex items-center justify-center mb-3 border-2 border-white shadow-sm">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-500">
+          <div className="flex flex-col items-center mb-4 md:mb-6">
+            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-neutral-200 flex items-center justify-center mb-3 md:mb-4 border-2 border-white shadow-sm">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-500 md:w-12 md:h-12">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <h1 className="text-xl font-bold text-neutral-900 mb-2">Sumit Jaiswal</h1>
-            <div className="flex flex-col items-center gap-1.5 text-xs text-neutral-600">
+            <h1 className="text-xl md:text-2xl font-bold text-neutral-900 mb-2">Sumit Jaiswal</h1>
+            <div className="flex flex-col items-center gap-1.5 md:gap-2 text-xs md:text-sm text-neutral-600">
               <div className="flex items-center gap-1.5">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -51,8 +51,8 @@ export default function Account() {
       </div>
 
       {/* Quick Action Buttons */}
-      <div className="px-4 -mt-4 mb-4">
-        <div className="grid grid-cols-3 gap-2.5">
+      <div className="px-4 md:px-6 lg:px-8 -mt-4 md:-mt-6 mb-4 md:mb-6">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-2.5 md:gap-4 max-w-4xl md:mx-auto">
           <button
             onClick={() => navigate('/orders')}
             className="bg-white rounded-lg border border-neutral-200 p-3 hover:shadow-md transition-shadow text-center"

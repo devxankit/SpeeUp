@@ -27,7 +27,7 @@ const PRODUCTS: Product[] = [
             {
                 variationId: 16,
                 productName: 'Maggi Masala 2 Minutes Instant Noodles',
-                sellerName: 'Appzeto store',
+                sellerName: 'SpeeUp store',
                 productImage: '/assets/product-mtr-poha.jpg',
                 brandName: 'Amul',
                 category: 'Instant Food',
@@ -40,7 +40,7 @@ const PRODUCTS: Product[] = [
             {
                 variationId: 18,
                 productName: 'Maggi Masala 2 Minutes Instant Noodles',
-                sellerName: 'Appzeto store',
+                sellerName: 'SpeeUp store',
                 productImage: '/assets/product-mtr-poha.jpg',
                 brandName: 'Amul',
                 category: 'Instant Food',
@@ -58,7 +58,7 @@ const PRODUCTS: Product[] = [
             {
                 variationId: 3,
                 productName: 'Maggi 2 - Minute Instant Noodles (Pack of 12)',
-                sellerName: 'Appzeto store',
+                sellerName: 'SpeeUp store',
                 productImage: '/assets/product-mtr-poha.jpg',
                 brandName: 'Amul',
                 category: 'Instant Food',
@@ -75,7 +75,7 @@ const PRODUCTS: Product[] = [
             {
                 variationId: 39,
                 productName: 'Safal Frozen Green Peas',
-                sellerName: 'Appzeto store',
+                sellerName: 'SpeeUp store',
                 productImage: '/assets/category-fruits-veg.png',
                 brandName: '',
                 category: 'Instant Food',
@@ -92,7 +92,7 @@ const PRODUCTS: Product[] = [
             {
                 variationId: 14,
                 productName: 'Sumeru Grated Coconut',
-                sellerName: 'Appzeto store',
+                sellerName: 'SpeeUp store',
                 productImage: '/assets/category-fruits-veg.png',
                 brandName: 'Amul',
                 category: 'Instant Food',

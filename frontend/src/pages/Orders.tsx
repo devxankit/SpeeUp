@@ -32,13 +32,13 @@ export default function Orders() {
 
   if (orders.length === 0) {
     return (
-      <div className="px-4 py-12 text-center">
-        <div className="text-6xl mb-4">📦</div>
-        <h2 className="text-xl font-bold text-neutral-900 mb-2">No orders yet</h2>
-        <p className="text-neutral-600 mb-6">Start shopping to see your orders here!</p>
+      <div className="px-4 md:px-6 lg:px-8 py-12 md:py-16 text-center">
+        <div className="text-6xl md:text-8xl mb-4">📦</div>
+        <h2 className="text-xl md:text-2xl font-bold text-neutral-900 mb-2">No orders yet</h2>
+        <p className="text-neutral-600 mb-6 md:mb-8 md:text-lg">Start shopping to see your orders here!</p>
         <Link
           to="/"
-          className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+          className="inline-block bg-green-600 text-white px-6 md:px-8 py-3 md:py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors md:text-lg"
         >
           Start Shopping
         </Link>
@@ -47,12 +47,12 @@ export default function Orders() {
   }
 
   return (
-    <div className="pb-4">
-      <div className="px-4 py-4 bg-white border-b border-neutral-200 mb-4 sticky top-0 z-10">
-        <h1 className="text-xl font-bold text-neutral-900">My Orders</h1>
+    <div className="pb-4 md:pb-8">
+      <div className="px-4 md:px-6 lg:px-8 py-4 md:py-6 bg-white border-b border-neutral-200 mb-4 md:mb-6 sticky top-0 z-10">
+        <h1 className="text-xl md:text-2xl font-bold text-neutral-900">My Orders</h1>
       </div>
 
-      <div className="px-4 space-y-4">
+      <div className="px-4 md:px-6 lg:px-8 space-y-4 md:space-y-6">
         {orders.map((order) => {
           const shortId = order.id.split('-').slice(-1)[0];
           return (

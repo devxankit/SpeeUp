@@ -87,7 +87,7 @@ export default function ProductCard({
         className="cursor-pointer flex-1 flex flex-col"
       >
         {/* Image area */}
-        <div className={`w-full ${compact ? 'h-32' : categoryStyle ? 'h-28' : 'h-40'} bg-neutral-100 flex items-center justify-center overflow-hidden relative`}>
+        <div className={`w-full ${compact ? 'h-32 md:h-40' : categoryStyle ? 'h-28 md:h-36' : 'h-40 md:h-48'} bg-neutral-100 flex items-center justify-center overflow-hidden relative`}>
           {product.imageUrl ? (
             <img
               ref={imageRef}
@@ -231,14 +231,14 @@ export default function ProductCard({
         )}
 
         {/* Product info */}
-        <div className={`${compact ? 'p-3' : categoryStyle ? 'px-2.5 pt-1.5 pb-2' : 'p-4'} flex-1 flex flex-col`}>
+        <div className={`${compact ? 'p-3 md:p-4' : categoryStyle ? 'px-2.5 md:px-3 pt-1.5 md:pt-2 pb-2 md:pb-3' : 'p-4 md:p-5'} flex-1 flex flex-col`}>
           {/* Pack info - shown after button for categoryStyle */}
           {!showPackBadge && (
-            <p className={`${compact ? 'text-[10px]' : categoryStyle ? 'text-[10px] text-neutral-600 mb-0.5' : 'text-xs'} text-neutral-500 ${categoryStyle ? '' : 'mb-1'}`}>{product.pack}</p>
+            <p className={`${compact ? 'text-[10px] md:text-xs' : categoryStyle ? 'text-[10px] md:text-xs text-neutral-600 mb-0.5' : 'text-xs md:text-sm'} text-neutral-500 ${categoryStyle ? '' : 'mb-1'}`}>{product.pack}</p>
           )}
 
           {/* Product name */}
-          <h3 className={`${compact ? 'text-xs' : categoryStyle ? 'text-xs font-bold' : 'text-sm'} font-semibold text-neutral-900 ${compact ? 'mb-1' : categoryStyle ? 'mb-0.5' : 'mb-2'} line-clamp-2 ${compact ? 'min-h-[2rem]' : categoryStyle ? 'min-h-[2rem]' : 'min-h-[2.5rem]'}`}>
+          <h3 className={`${compact ? 'text-xs md:text-sm' : categoryStyle ? 'text-xs md:text-sm font-bold' : 'text-sm md:text-base'} font-semibold text-neutral-900 ${compact ? 'mb-1' : categoryStyle ? 'mb-0.5' : 'mb-2'} line-clamp-2 ${compact ? 'min-h-[2rem]' : categoryStyle ? 'min-h-[2rem]' : 'min-h-[2.5rem]'}`}>
             {product.name}
           </h3>
 
