@@ -1,0 +1,402 @@
+import { useState } from 'react';
+
+interface FAQ {
+    id: number;
+    question: string;
+    answer: string;
+}
+
+// Mock Data matching the image
+const INITIAL_FAQS: FAQ[] = [
+    {
+        id: 1,
+        question: 'question 1',
+        answer: 'answer 1',
+    },
+    {
+        id: 4,
+        question: 'dgsdz',
+        answer: 'zdgzdqqqqqqqqqqq',
+    },
+];
+
+export default function AdminFAQ() {
+    const [faqQuestion, setFaqQuestion] = useState('');
+    const [faqAnswer, setFaqAnswer] = useState('');
+    const [faqs, setFaqs] = useState<FAQ[]>(INITIAL_FAQS);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [sortColumn, setSortColumn] = useState<string | null>(null);
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [editingFAQ, setEditingFAQ] = useState<FAQ | null>(null);
+
+    const filteredFAQs = faqs.filter(faq =>
+        faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        faq.answer.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const totalPages = Math.ceil(filteredFAQs.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const displayedFAQs = filteredFAQs.slice(startIndex, endIndex);
+
+    const handleSort = (column: string) => {
+        if (sortColumn === column) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortColumn(column);
+            setSortDirection('asc');
+        }
+    };
+
+    const SortIcon = ({ column }: { column: string }) => (
+        <span className="text-neutral-300 text-[10px]">
+            {sortColumn === column ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}
+        </span>
+    );
+
+    const handleAddFAQ = () => {
+        if (!faqQuestion.trim() || !faqAnswer.trim()) {
+            alert('Please fill in all fields');
+            return;
+        }
+
+        if (editingFAQ) {
+            // Update existing FAQ
+            setFaqs(faqs.map(faq =>
+                faq.id === editingFAQ.id
+                    ? { ...faq, question: faqQuestion, answer: faqAnswer }
+                    : faq
+            ));
+            setEditingFAQ(null);
+        } else {
+            // Add new FAQ
+            const newFAQ: FAQ = {
+                id: faqs.length > 0 ? Math.max(...faqs.map(f => f.id)) + 1 : 1,
+                question: faqQuestion,
+                answer: faqAnswer,
+            };
+            setFaqs([...faqs, newFAQ]);
+        }
+
+        // Reset form
+        setFaqQuestion('');
+        setFaqAnswer('');
+    };
+
+    const handleEdit = (faq: FAQ) => {
+        setFaqQuestion(faq.question);
+        setFaqAnswer(faq.answer);
+        setEditingFAQ(faq);
+    };
+
+    const handleDelete = (id: number) => {
+        if (window.confirm('Are you sure you want to delete this FAQ?')) {
+            setFaqs(faqs.filter(faq => faq.id !== id));
+            if (editingFAQ?.id === id) {
+                setEditingFAQ(null);
+                setFaqQuestion('');
+                setFaqAnswer('');
+            }
+        }
+    };
+
+    const handleExport = () => {
+        const headers = ['ID', 'FAQ Question', 'FAQ Answer'];
+        const csvContent = [
+            headers.join(','),
+            ...filteredFAQs.map(faq => [
+                faq.id,
+                `"${faq.question}"`,
+                `"${faq.answer}"`
+            ].join(','))
+        ].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `faqs_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-gray-50">
+            {/* Page Header */}
+            <div className="p-6 pb-0">
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-2xl font-semibold text-neutral-800">FAQ</h1>
+                    <div className="text-sm text-blue-500">
+                        <span className="text-blue-500 hover:underline cursor-pointer">Home</span>{' '}
+                        <span className="text-neutral-400">/</span>{' '}
+                        <span className="text-blue-500 hover:underline cursor-pointer">Dashboard</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Page Content */}
+            <div className="flex-1 px-6 pb-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+                    {/* Left Panel: Add FAQ */}
+                    <div className="bg-white rounded-lg shadow-sm border border-neutral-200 flex flex-col">
+                        <div className="bg-teal-600 text-white px-6 py-4 rounded-t-lg">
+                            <h2 className="text-lg font-semibold">Add FAQ</h2>
+                        </div>
+                        <div className="p-6 flex-1 flex flex-col">
+                            <div className="space-y-4 flex-1">
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-2">
+                                        FAQ Question
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={faqQuestion}
+                                        onChange={(e) => setFaqQuestion(e.target.value)}
+                                        placeholder="Enter FAQ Question"
+                                        className="w-full px-3 py-2 border border-neutral-300 rounded focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-2">
+                                        FAQ Answer
+                                    </label>
+                                    <textarea
+                                        value={faqAnswer}
+                                        onChange={(e) => setFaqAnswer(e.target.value)}
+                                        placeholder="Enter FAQ Answer"
+                                        rows={6}
+                                        className="w-full px-3 py-2 border border-neutral-300 rounded focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none resize-none"
+                                    />
+                                </div>
+                            </div>
+                            <div className="mt-6">
+                                <button
+                                    onClick={handleAddFAQ}
+                                    className="w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded font-medium transition-colors"
+                                >
+                                    {editingFAQ ? 'Update FAQ' : 'Add FAQ'}
+                                </button>
+                                {editingFAQ && (
+                                    <button
+                                        onClick={() => {
+                                            setEditingFAQ(null);
+                                            setFaqQuestion('');
+                                            setFaqAnswer('');
+                                        }}
+                                        className="w-full mt-2 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded font-medium transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Panel: View FAQ */}
+                    <div className="bg-white rounded-lg shadow-sm border border-neutral-200 flex flex-col">
+                        <div className="bg-teal-600 text-white px-6 py-4 rounded-t-lg">
+                            <h2 className="text-lg font-semibold">View FAQ</h2>
+                        </div>
+
+                        {/* Controls */}
+                        <div className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-neutral-100">
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-neutral-600">Show</span>
+                                <select
+                                    value={rowsPerPage}
+                                    onChange={(e) => {
+                                        setRowsPerPage(Number(e.target.value));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="bg-white border border-neutral-300 rounded py-1.5 px-3 text-sm focus:ring-1 focus:ring-teal-500 focus:outline-none cursor-pointer"
+                                >
+                                    <option value={10}>10</option>
+                                    <option value={20}>20</option>
+                                    <option value={50}>50</option>
+                                    <option value={100}>100</option>
+                                </select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleExport}
+                                    className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded text-sm font-medium flex items-center gap-1 transition-colors"
+                                >
+                                    Export
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </button>
+                                <div className="relative">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400 text-xs">Search:</span>
+                                    <input
+                                        type="text"
+                                        className="pl-14 pr-3 py-1.5 bg-neutral-100 border-none rounded text-sm focus:ring-1 focus:ring-teal-500 w-48"
+                                        value={searchTerm}
+                                        onChange={(e) => {
+                                            setSearchTerm(e.target.value);
+                                            setCurrentPage(1);
+                                        }}
+                                        placeholder=""
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Table */}
+                        <div className="overflow-x-auto flex-1">
+                            <table className="w-full text-left border-collapse border border-neutral-200">
+                                <thead>
+                                    <tr className="bg-neutral-50 text-xs font-bold text-neutral-800">
+                                        <th 
+                                            className="p-4 w-16 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('id')}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                ID <SortIcon column="id" />
+                                            </div>
+                                        </th>
+                                        <th 
+                                            className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('question')}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                FAQ Question <SortIcon column="question" />
+                                            </div>
+                                        </th>
+                                        <th 
+                                            className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('answer')}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                FAQ Answer <SortIcon column="answer" />
+                                            </div>
+                                        </th>
+                                        <th className="p-4 border border-neutral-200">
+                                            Action
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {displayedFAQs.map((faq) => (
+                                        <tr key={faq.id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700">
+                                            <td className="p-4 align-middle border border-neutral-200">{faq.id}</td>
+                                            <td className="p-4 align-middle border border-neutral-200">{faq.question}</td>
+                                            <td className="p-4 align-middle border border-neutral-200">{faq.answer}</td>
+                                            <td className="p-4 align-middle border border-neutral-200">
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => handleEdit(faq)}
+                                                        className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+                                                        title="Edit"
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(faq.id)}
+                                                        className="p-1.5 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                                                        title="Delete"
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {displayedFAQs.length === 0 && (
+                                        <tr>
+                                            <td colSpan={4} className="p-8 text-center text-neutral-400 border border-neutral-200">
+                                                No FAQs found.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination Footer */}
+                        <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+                            <div className="text-xs sm:text-sm text-neutral-700">
+                                Showing {startIndex + 1} to {Math.min(endIndex, filteredFAQs.length)} of {filteredFAQs.length} entries
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className={`p-2 border border-teal-600 rounded ${
+                                        currentPage === 1
+                                            ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                            : 'text-teal-600 hover:bg-teal-50'
+                                    }`}
+                                    aria-label="Previous page"
+                                >
+                                    <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path
+                                            d="M15 18L9 12L15 6"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                    </svg>
+                                </button>
+                                <button
+                                    className="px-3 py-1.5 border border-teal-600 bg-teal-600 text-white rounded font-medium text-sm"
+                                >
+                                    {currentPage}
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className={`p-2 border border-teal-600 rounded ${
+                                        currentPage === totalPages
+                                            ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                            : 'text-teal-600 hover:bg-teal-50'
+                                    }`}
+                                    aria-label="Next page"
+                                >
+                                    <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path
+                                            d="M9 18L15 12L9 6"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Footer */}
+            <footer className="text-center py-4 text-sm text-neutral-600 border-t border-neutral-200 bg-white">
+                Copyright © 2025. Developed By{' '}
+                <a href="#" className="text-blue-600 hover:underline">Appzeto - 10 Minute App</a>
+            </footer>
+        </div>
+    );
+}
+
