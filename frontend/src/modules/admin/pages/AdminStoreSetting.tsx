@@ -4,16 +4,16 @@ export default function AdminStoreSetting() {
   const [formData, setFormData] = useState({
     // Basic Information
     title: 'SpeeUp - 10 Minute App',
-    email: 'info@apksoftwaresolution.com',
-    phone: '8956656429',
+    email: 'info@speeup.com',
+    phone: '9999999999',
     
     // Store Location
-    storeAddress: 'Bhandara',
+    storeAddress: '',
     searchLocation: '',
     
     // Coordinates
-    latitude: '21.177658',
-    longitude: '79.6570127',
+    latitude: '',
+    longitude: '',
     
     // Logo Settings
     logoRatio: '1:1 Ratio (Square)',
