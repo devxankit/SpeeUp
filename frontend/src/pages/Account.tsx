@@ -71,7 +71,7 @@ export default function Account() {
               <path d="M21 4H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               <line x1="1" y1="10" x2="23" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
-            <div className="text-[10px] font-semibold text-neutral-900">Blinkit Money</div>
+            <div className="text-[10px] font-semibold text-neutral-900">SpeeUp Money</div>
           </button>
           <button
             className="bg-white rounded-lg border border-neutral-200 p-3 hover:shadow-md transition-shadow text-center"
