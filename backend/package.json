@@ -7,7 +7,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsx test-auth.ts",
+    "test:auth": "tsx test-auth.ts"
   },
   "keywords": [
     "express",
