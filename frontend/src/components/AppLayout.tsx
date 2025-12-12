@@ -92,9 +92,112 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Desktop Container Wrapper */}
       <div className="md:w-full md:bg-white md:min-h-screen">
         <div className="md:w-full md:min-h-screen md:flex md:flex-col">
+          {/* Top Navigation Bar - Desktop Only */}
+          {showFooter && (
+            <nav className="hidden md:flex items-center justify-center gap-8 px-6 lg:px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 border-b border-green-600 shadow-sm">
+              {/* Home */}
+              <Link
+                to="/"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  isActive('/') 
+                    ? 'bg-white text-green-600 shadow-md font-semibold' 
+                    : 'text-white hover:bg-white/20 hover:text-white'
+                }`}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {isActive('/') ? (
+                    <>
+                      <path d="M2 12L12 4L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="currentColor"/>
+                      <rect x="4" y="12" width="16" height="8" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                    </>
+                  ) : (
+                    <>
+                      <path d="M2 12L12 4L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                      <rect x="4" y="12" width="16" height="8" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" fill="none"/>
+                    </>
+                  )}
+                </svg>
+                <span className="font-medium text-sm">Home</span>
+              </Link>
+              
+              {/* Order Again */}
+              <Link
+                to="/order-again"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  isActive('/order-again') 
+                    ? 'bg-white text-green-600 shadow-md font-semibold' 
+                    : 'text-white hover:bg-white/20 hover:text-white'
+                }`}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {isActive('/order-again') ? (
+                    <path d="M5 8V6C5 4.34315 6.34315 3 8 3H16C17.6569 3 19 4.34315 19 6V8H21C21.5523 8 22 8.44772 22 9V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V9C2 8.44772 2.44772 8 3 8H5Z" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                  ) : (
+                    <path d="M5 8V6C5 4.34315 6.34315 3 8 3H16C17.6569 3 19 4.34315 19 6V8H21C21.5523 8 22 8.44772 22 9V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V9C2 8.44772 2.44772 8 3 8H5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" fill="none"/>
+                  )}
+                </svg>
+                <span className="font-medium text-sm">Order Again</span>
+              </Link>
+              
+              {/* Categories */}
+              <Link
+                to="/categories"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  (isActive('/categories') || location.pathname.startsWith('/category/')) 
+                    ? 'bg-white text-green-600 shadow-md font-semibold' 
+                    : 'text-white hover:bg-white/20 hover:text-white'
+                }`}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {(isActive('/categories') || location.pathname.startsWith('/category/')) ? (
+                    <>
+                      <circle cx="7" cy="7" r="2.5" fill="currentColor" stroke="currentColor" strokeWidth="2"/>
+                      <circle cx="17" cy="7" r="2.5" fill="currentColor" stroke="currentColor" strokeWidth="2"/>
+                      <circle cx="7" cy="17" r="2.5" fill="currentColor" stroke="currentColor" strokeWidth="2"/>
+                      <circle cx="17" cy="17" r="2.5" fill="currentColor" stroke="currentColor" strokeWidth="2"/>
+                    </>
+                  ) : (
+                    <>
+                      <circle cx="7" cy="7" r="2.5" stroke="currentColor" strokeWidth="2" fill="none"/>
+                      <circle cx="17" cy="7" r="2.5" stroke="currentColor" strokeWidth="2" fill="none"/>
+                      <circle cx="7" cy="17" r="2.5" stroke="currentColor" strokeWidth="2" fill="none"/>
+                      <circle cx="17" cy="17" r="2.5" stroke="currentColor" strokeWidth="2" fill="none"/>
+                    </>
+                  )}
+                </svg>
+                <span className="font-medium text-sm">Categories</span>
+              </Link>
+              
+              {/* Profile */}
+              <Link
+                to="/account"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  isActive('/account') 
+                    ? 'bg-white text-green-600 shadow-md font-semibold' 
+                    : 'text-white hover:bg-white/20 hover:text-white'
+                }`}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {isActive('/account') ? (
+                    <>
+                      <circle cx="12" cy="8" r="4" fill="currentColor" stroke="currentColor" strokeWidth="2"/>
+                      <path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="currentColor"/>
+                    </>
+                  ) : (
+                    <>
+                      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2" fill="none"/>
+                      <path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/>
+                    </>
+                  )}
+                </svg>
+                <span className="font-medium text-sm">Profile</span>
+              </Link>
+            </nav>
+          )}
+
           {/* Sticky Header - Show on search page and other non-home pages, excluding account page */}
           {(showHeader || isSearchPage) && (
-            <header className="sticky top-0 z-50 bg-white shadow-sm md:shadow-md">
+            <header className="sticky top-0 z-50 bg-white shadow-sm md:shadow-md md:top-[60px]">
               {/* Delivery info line */}
               <div className="px-4 md:px-6 lg:px-8 py-1.5 bg-green-50 text-xs text-green-700 text-center">
                 Delivering in 10–15 mins
@@ -125,7 +228,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           )}
 
           {/* Scrollable Main Content */}
-          <main ref={mainRef} className="flex-1 overflow-y-auto scrollbar-hide pb-24 md:pb-32">
+          <main ref={mainRef} className="flex-1 overflow-y-auto scrollbar-hide pb-24 md:pb-8">
         <AnimatePresence 
           mode="wait" 
           initial={false}
@@ -154,10 +257,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {/* Floating Cart Pill */}
           <FloatingCartPill />
 
-          {/* Fixed Bottom Navigation - Hidden on checkout pages */}
+          {/* Fixed Bottom Navigation - Mobile Only, Hidden on checkout pages */}
           {showFooter && (
           <nav 
-            className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200/10 shadow-[0_-2px_4px_rgba(0,0,0,0.05)] z-50 md:relative md:shadow-none md:border-t md:border-neutral-200"
+            className="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200/10 shadow-[0_-2px_4px_rgba(0,0,0,0.05)] z-50 md:hidden"
           >
         <div className="flex justify-around items-center h-16">
           {/* Home */}
@@ -191,9 +294,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 {isActive('/') ? (
                   <>
                     {/* Roof */}
-                    <path d="M2 12L12 4L22 12" stroke="#1f2937" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="#f97316"/>
+                    <path d="M2 12L12 4L22 12" stroke="#1f2937" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="#22c55e"/>
                     {/* House body */}
-                    <rect x="4" y="12" width="16" height="8" fill="#f97316" stroke="#1f2937" strokeWidth="2" strokeLinejoin="round"/>
+                    <rect x="4" y="12" width="16" height="8" fill="#22c55e" stroke="#1f2937" strokeWidth="2" strokeLinejoin="round"/>
                     {/* Chimney */}
                     <rect x="15" y="5" width="4" height="5" fill="#1f2937" stroke="#1f2937" strokeWidth="2"/>
                     {/* Door */}
@@ -250,7 +353,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 {isActive('/order-again') ? (
                   <>
                     {/* Shopping bag body */}
-                    <path d="M5 8V6C5 4.34315 6.34315 3 8 3H16C17.6569 3 19 4.34315 19 6V8H21C21.5523 8 22 8.44772 22 9V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V9C2 8.44772 2.44772 8 3 8H5Z" fill="#f97316" stroke="#1f2937" strokeWidth="2" strokeLinejoin="round"/>
+                    <path d="M5 8V6C5 4.34315 6.34315 3 8 3H16C17.6569 3 19 4.34315 19 6V8H21C21.5523 8 22 8.44772 22 9V20C22 20.5523 21.5523 21 21 21H3C2.44772 21 2 20.5523 2 20V9C2 8.44772 2.44772 8 3 8H5Z" fill="#22c55e" stroke="#1f2937" strokeWidth="2" strokeLinejoin="round"/>
                     {/* Handles */}
                     <path d="M7 8V6C7 5.44772 7.44772 5 8 5H16C16.5523 5 17 5.44772 17 6V8" stroke="#1f2937" strokeWidth="2" strokeLinecap="round" fill="none"/>
                   </>
@@ -314,8 +417,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   <>
                     {/* Top-left and bottom-right are black when active */}
                     <circle cx="7" cy="7" r="2.5" fill="#1f2937" stroke="#1f2937" strokeWidth="2"/>
-                    <circle cx="17" cy="7" r="2.5" fill="#f97316" stroke="#1f2937" strokeWidth="2"/>
-                    <circle cx="7" cy="17" r="2.5" fill="#f97316" stroke="#1f2937" strokeWidth="2"/>
+                    <circle cx="17" cy="7" r="2.5" fill="#22c55e" stroke="#1f2937" strokeWidth="2"/>
+                    <circle cx="7" cy="17" r="2.5" fill="#22c55e" stroke="#1f2937" strokeWidth="2"/>
                     <circle cx="17" cy="17" r="2.5" fill="#1f2937" stroke="#1f2937" strokeWidth="2"/>
                   </>
                 ) : (
@@ -368,7 +471,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       cx="12" 
                       cy="8" 
                       r="4" 
-                      fill="#f97316" 
+                      fill="#22c55e" 
                       stroke="#1f2937" 
                       strokeWidth="2"
                       animate={{
@@ -382,7 +485,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       }}
                     />
                     {/* Profile body */}
-                    <path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" stroke="#1f2937" strokeWidth="2" strokeLinecap="round" fill="#f97316"/>
+                    <path d="M4 20c0-4 3.5-7 8-7s8 3 8 7" stroke="#1f2937" strokeWidth="2" strokeLinecap="round" fill="#22c55e"/>
                   </>
                 ) : (
                   <>
