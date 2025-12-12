@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import speeUpLogo from '@assets/speeup1.jpeg';
 
 export default function DeliveryLogin() {
   const navigate = useNavigate();
@@ -32,7 +31,7 @@ export default function DeliveryLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-orange-50 flex flex-col items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex flex-col items-center justify-center px-4 py-8">
       {/* Back Button */}
       <button
         onClick={() => navigate(-1)}
@@ -47,10 +46,10 @@ export default function DeliveryLogin() {
       {/* Login Card */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-green-600 to-orange-500 px-6 py-8 text-center">
+        <div className="bg-gradient-to-r from-green-600 to-emerald-500 px-6 py-8 text-center">
           <div className="mb-4">
             <img
-              src={speeUpLogo}
+              src="/assets/speeup2.jpeg"
               alt="SpeeUp"
               className="h-16 w-auto mx-auto object-contain"
             />
@@ -204,7 +203,7 @@ export default function DeliveryLogin() {
           {/* Login with SpeeUp Button */}
           <button
             onClick={handleSpeeUpLogin}
-            className="w-full py-2.5 rounded-lg font-semibold text-sm bg-gradient-to-r from-green-600 to-orange-500 text-white hover:from-green-700 hover:to-orange-600 transition-all shadow-md flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-lg font-semibold text-sm bg-gradient-to-r from-green-600 to-emerald-500 text-white hover:from-green-700 hover:to-emerald-600 transition-all shadow-md flex items-center justify-center gap-2"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>

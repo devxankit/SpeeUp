@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import speeUpLogo from '@assets/speeup1.jpeg';
 
 export default function SellerLogin() {
   const navigate = useNavigate();
@@ -31,6 +30,11 @@ export default function SellerLogin() {
     navigate('/seller');
   };
 
+  const handleAdminLogin = () => {
+    // Navigate to admin login page
+    navigate('/admin/login');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 flex flex-col items-center justify-center px-4 py-8">
       {/* Back Button */}
@@ -47,16 +51,16 @@ export default function SellerLogin() {
       {/* Login Card */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-teal-600 to-green-600 px-6 py-8 text-center">
-          <div className="mb-4">
+        <div className="px-6 py-4 text-center border-b border-green-700" style={{ backgroundColor: 'rgb(21 178 74 / var(--tw-bg-opacity, 1))' }}>
+          <div className="mb-0 -mt-4">
             <img
-              src={speeUpLogo}
+              src="/assets/speeup2.jpeg"
               alt="SpeeUp"
-              className="h-16 w-auto mx-auto object-contain"
+              className="h-44 w-full max-w-xs mx-auto object-fill object-bottom"
             />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Seller Login</h1>
-          <p className="text-teal-100 text-sm">Access your seller dashboard</p>
+          <h1 className="text-2xl font-bold text-white mb-1 -mt-12">Seller Login</h1>
+          <p className="text-green-50 text-sm -mt-2">Access your seller dashboard</p>
         </div>
 
         {/* Login Form */}
@@ -213,6 +217,21 @@ export default function SellerLogin() {
             <span>Login with</span>
             <span className="font-bold">SpeeUp</span>
           </button>
+
+          {/* Admin Panel Login Option */}
+          <div className="pt-2">
+            <button
+              onClick={handleAdminLogin}
+              className="w-full py-2.5 rounded-lg font-semibold text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-all border border-neutral-300 flex items-center justify-center gap-2"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+              </svg>
+              <span>Login to Admin Panel</span>
+            </button>
+          </div>
 
           {/* Sign Up Link */}
           <div className="text-center pt-4 border-t border-neutral-200">
