@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import { OrdersProvider } from './context/OrdersContext';
+import { AuthProvider } from './context/AuthContext';
 import AppLayout from './components/AppLayout';
 import Home from './pages/Home';
 import Search from './pages/Search';
@@ -118,9 +119,10 @@ import AdminManageCustomer from './modules/admin/pages/AdminManageCustomer';
 
 function App() {
   return (
-    <CartProvider>
-      <OrdersProvider>
-        <BrowserRouter>
+    <AuthProvider>
+      <CartProvider>
+        <OrdersProvider>
+          <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/seller/login" element={<SellerLogin />} />
@@ -264,9 +266,10 @@ function App() {
               </AppLayout>
             } />
           </Routes>
-        </BrowserRouter>
-      </OrdersProvider>
-    </CartProvider>
+          </BrowserRouter>
+        </OrdersProvider>
+      </CartProvider>
+    </AuthProvider>
   );
 }
 
