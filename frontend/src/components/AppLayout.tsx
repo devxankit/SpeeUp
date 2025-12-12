@@ -88,10 +88,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const showFooter = !isCheckoutPage && !isProductDetailPage;
 
   return (
-    <div className="flex flex-col min-h-screen w-full">
+    <div className="flex flex-col min-h-screen w-full overflow-x-hidden">
       {/* Desktop Container Wrapper */}
-      <div className="md:w-full md:bg-white md:min-h-screen">
-        <div className="md:w-full md:min-h-screen md:flex md:flex-col">
+      <div className="md:w-full md:bg-white md:min-h-screen overflow-x-hidden">
+        <div className="md:w-full md:min-h-screen md:flex md:flex-col overflow-x-hidden">
           {/* Top Navigation Bar - Desktop Only */}
           {showFooter && (
             <nav className="hidden md:flex items-center justify-center gap-8 px-6 lg:px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 border-b border-green-600 shadow-sm">
@@ -228,7 +228,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       )}
 
       {/* Scrollable Main Content */}
-          <main ref={mainRef} className="flex-1 overflow-y-auto scrollbar-hide pb-24 md:pb-8">
+          <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-hide pb-24 md:pb-8">
         <AnimatePresence 
           mode="wait" 
           initial={false}
@@ -247,7 +247,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
               duration: 0.2,
               ease: "easeInOut"
             }}
-            style={{ width: '100%', minHeight: '100%' }}
+            className="w-full max-w-full"
+            style={{ minHeight: '100%' }}
           >
             {displayChildren}
           </motion.div>
