@@ -1,15 +1,44 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { sendOTP, verifyOTP } from '../../../services/api/auth/deliveryAuthService';
+import OTPInput from '../../../components/OTPInput';
 
 export default function DeliveryLogin() {
   const navigate = useNavigate();
   const [mobileNumber, setMobileNumber] = useState('');
+  const [showOTP, setShowOTP] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleMobileLogin = () => {
-    if (mobileNumber.length === 10) {
-      // Handle delivery login logic here
-      // For now, navigate to delivery dashboard
-      navigate('/delivery');
+  const handleMobileLogin = async () => {
+    if (mobileNumber.length !== 10) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await sendOTP(mobileNumber);
+      setShowOTP(true);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOTPComplete = async (otp: string) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await verifyOTP(mobileNumber, otp);
+      if (response.success) {
+        navigate('/delivery');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,39 +77,86 @@ export default function DeliveryLogin() {
 
         {/* Login Form */}
         <div className="p-6 space-y-4">
-          {/* Mobile Login Form */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Mobile Number
-              </label>
-              <div className="flex items-center bg-white border border-neutral-300 rounded-lg overflow-hidden focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-200 transition-all">
-                <div className="px-3 py-2.5 text-sm font-medium text-neutral-600 border-r border-neutral-300 bg-neutral-50">
-                  +91
+          {!showOTP ? (
+            /* Mobile Login Form */
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Mobile Number
+                </label>
+                <div className="flex items-center bg-white border border-neutral-300 rounded-lg overflow-hidden focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-200 transition-all">
+                  <div className="px-3 py-2.5 text-sm font-medium text-neutral-600 border-r border-neutral-300 bg-neutral-50">
+                    +91
+                  </div>
+                  <input
+                    type="tel"
+                    value={mobileNumber}
+                    onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="Enter mobile number"
+                    className="flex-1 px-3 py-2.5 text-sm placeholder:text-neutral-400 focus:outline-none"
+                    maxLength={10}
+                    disabled={loading}
+                  />
                 </div>
-                <input
-                  type="tel"
-                  value={mobileNumber}
-                  onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  placeholder="Enter mobile number"
-                  className="flex-1 px-3 py-2.5 text-sm placeholder:text-neutral-400 focus:outline-none"
-                  maxLength={10}
-                />
+              </div>
+
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={handleMobileLogin}
+                disabled={mobileNumber.length !== 10 || loading}
+                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
+                  mobileNumber.length === 10 && !loading
+                    ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-md'
+                    : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                }`}
+              >
+                {loading ? 'Sending...' : 'Continue'}
+              </button>
+            </div>
+          ) : (
+            /* OTP Verification Form */
+            <div className="space-y-4">
+              <div className="text-center">
+                <p className="text-sm text-neutral-600 mb-2">
+                  Enter the 6-digit OTP sent to
+                </p>
+                <p className="text-sm font-semibold text-neutral-800">+91 {mobileNumber}</p>
+              </div>
+
+              <OTPInput onComplete={handleOTPComplete} disabled={loading} />
+
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded text-center">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowOTP(false);
+                    setError('');
+                  }}
+                  disabled={loading}
+                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors border border-neutral-300"
+                >
+                  Change Number
+                </button>
+                <button
+                  onClick={handleMobileLogin}
+                  disabled={loading}
+                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-teal-600 text-white hover:bg-teal-700 transition-colors"
+                >
+                  {loading ? 'Verifying...' : 'Resend OTP'}
+                </button>
               </div>
             </div>
-
-            <button
-              onClick={handleMobileLogin}
-              disabled={mobileNumber.length !== 10}
-              className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-                mobileNumber.length === 10
-                  ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-md'
-                  : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
-              }`}
-            >
-              Continue
-            </button>
-          </div>
+          )}
 
           {/* OR Separator */}
           <div className="flex items-center gap-2.5 my-4">
@@ -106,7 +182,10 @@ export default function DeliveryLogin() {
           <div className="text-center pt-4 border-t border-neutral-200">
             <p className="text-sm text-neutral-600">
               Don't have a delivery partner account?{' '}
-              <button className="text-teal-600 hover:text-teal-700 font-semibold">
+              <button
+                onClick={() => navigate('/delivery/signup')}
+                className="text-teal-600 hover:text-teal-700 font-semibold"
+              >
                 Sign Up
               </button>
             </p>

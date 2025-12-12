@@ -202,7 +202,10 @@ export default function SellerLogin() {
           <div className="text-center pt-4 border-t border-neutral-200">
             <p className="text-sm text-neutral-600">
               Don't have a seller account?{' '}
-              <button className="text-teal-600 hover:text-teal-700 font-semibold">
+              <button
+                onClick={() => navigate('/seller/signup')}
+                className="text-teal-600 hover:text-teal-700 font-semibold"
+              >
                 Sign Up
               </button>
             </p>

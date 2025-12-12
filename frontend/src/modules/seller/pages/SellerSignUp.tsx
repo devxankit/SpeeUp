@@ -1,0 +1,502 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { register, sendOTP, verifyOTP } from '../../../services/api/auth/sellerAuthService';
+import OTPInput from '../../../components/OTPInput';
+
+export default function SellerSignUp() {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    sellerName: '',
+    mobile: '',
+    email: '',
+    password: '',
+    storeName: '',
+    category: '',
+    address: '',
+    city: '',
+    serviceableArea: '',
+    panCard: '',
+    taxName: '',
+    taxNumber: '',
+    searchLocation: '',
+    latitude: '',
+    longitude: '',
+    accountName: '',
+    bankName: '',
+    branch: '',
+    accountNumber: '',
+    ifsc: '',
+  });
+  const [showOTP, setShowOTP] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const categories = [
+    'Select Category',
+    'Organic & Premium',
+    'Instant Food',
+    'Masala Oil',
+    'Pet Care',
+    'Sweet Tooth',
+    'Tea Coffee',
+    'Cleaning Essentials',
+    'Personal Care',
+  ];
+
+  const cities = [
+    'Select City',
+    'Mumbai',
+    'Delhi',
+    'Bangalore',
+    'Hyderabad',
+    'Chennai',
+    'Kolkata',
+    'Pune',
+    'Indore',
+  ];
+
+  const serviceableAreas = [
+    'Select Serviceable Area',
+    'Area 1',
+    'Area 2',
+    'Area 3',
+    'Area 4',
+  ];
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    if (name === 'mobile') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value.replace(/\D/g, '').slice(0, 10),
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validate required fields
+    if (!formData.sellerName || !formData.mobile || !formData.email || !formData.password ||
+        !formData.storeName || !formData.category || !formData.address || !formData.city || !formData.serviceableArea) {
+      setError('Please fill all required fields');
+      return;
+    }
+
+    if (formData.mobile.length !== 10) {
+      setError('Please enter a valid 10-digit mobile number');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await register({
+        sellerName: formData.sellerName,
+        mobile: formData.mobile,
+        email: formData.email,
+        password: formData.password,
+        storeName: formData.storeName,
+        category: formData.category,
+        address: formData.address,
+        city: formData.city,
+        serviceableArea: formData.serviceableArea,
+      });
+
+      if (response.success) {
+        // Clear token from registration (we'll get it after OTP verification)
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        // Registration successful, now send OTP for verification
+        try {
+          await sendOTP(formData.mobile);
+          setShowOTP(true);
+        } catch (otpErr: any) {
+          setError(otpErr.response?.data?.message || 'Registration successful but failed to send OTP.');
+        }
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOTPComplete = async (otp: string) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await verifyOTP(formData.mobile, otp);
+      if (response.success) {
+        navigate('/seller');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 flex flex-col items-center justify-center px-4 py-8">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="absolute top-4 left-4 z-10 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-neutral-50 transition-colors"
+        aria-label="Back"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {/* Sign Up Card */}
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+        {/* Header Section */}
+        <div className="px-6 py-4 text-center border-b border-green-700" style={{ backgroundColor: 'rgb(21 178 74 / var(--tw-bg-opacity, 1))' }}>
+          <div className="mb-0 -mt-4">
+            <img
+              src="/assets/speeup2.jpeg"
+              alt="SpeeUp"
+              className="h-44 w-full max-w-xs mx-auto object-fill object-bottom"
+            />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-1 -mt-12">Seller Sign Up</h1>
+          <p className="text-green-50 text-sm -mt-2">Create your seller account</p>
+        </div>
+
+        {/* Sign Up Form */}
+        <div className="p-6 space-y-4 seller-signup-form" style={{ maxHeight: '70vh', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <style>{`
+            .seller-signup-form::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+          {!showOTP ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Required Fields Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-neutral-700 border-b pb-2">Required Information</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Seller Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="sellerName"
+                    value={formData.sellerName}
+                    onChange={handleInputChange}
+                    placeholder="Enter your name"
+                    required
+                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Mobile Number <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center bg-white border border-neutral-300 rounded-lg overflow-hidden focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-200">
+                    <div className="px-3 py-2.5 text-sm font-medium text-neutral-600 border-r border-neutral-300 bg-neutral-50">
+                      +91
+                    </div>
+                    <input
+                      type="tel"
+                      name="mobile"
+                      value={formData.mobile}
+                      onChange={handleInputChange}
+                      placeholder="Enter mobile number"
+                      required
+                      maxLength={10}
+                      className="flex-1 px-3 py-2.5 text-sm placeholder:text-neutral-400 focus:outline-none"
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="Enter email address"
+                    required
+                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="Enter password (min 6 characters)"
+                    required
+                    minLength={6}
+                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Store Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="storeName"
+                    value={formData.storeName}
+                    onChange={handleInputChange}
+                    placeholder="Enter store name"
+                    required
+                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                    disabled={loading}
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat === 'Select Category' ? '' : cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    placeholder="Enter store address"
+                    required
+                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    City <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                    disabled={loading}
+                  >
+                    {cities.map((city) => (
+                      <option key={city} value={city === 'Select City' ? '' : city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Serviceable Area <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="serviceableArea"
+                    value={formData.serviceableArea}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                    disabled={loading}
+                  >
+                    {serviceableAreas.map((area) => (
+                      <option key={area} value={area === 'Select Serviceable Area' ? '' : area}>
+                        {area}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Optional Fields Section */}
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="text-sm font-semibold text-neutral-700 border-b pb-2">Optional Information</h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">PAN Card</label>
+                    <input
+                      type="text"
+                      name="panCard"
+                      value={formData.panCard}
+                      onChange={handleInputChange}
+                      placeholder="PAN Card Number"
+                      className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">Tax Name</label>
+                    <input
+                      type="text"
+                      name="taxName"
+                      value={formData.taxName}
+                      onChange={handleInputChange}
+                      placeholder="Tax Name"
+                      className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">Tax Number</label>
+                    <input
+                      type="text"
+                      name="taxNumber"
+                      value={formData.taxNumber}
+                      onChange={handleInputChange}
+                      placeholder="Tax Number"
+                      className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-2">IFSC Code</label>
+                    <input
+                      type="text"
+                      name="ifsc"
+                      value={formData.ifsc}
+                      onChange={handleInputChange}
+                      placeholder="IFSC Code"
+                      className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded text-center">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
+                  !loading
+                    ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-md'
+                    : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                }`}
+              >
+                {loading ? 'Creating Account...' : 'Sign Up'}
+              </button>
+
+              {/* Login Link */}
+              <div className="text-center pt-2 border-t border-neutral-200">
+                <p className="text-sm text-neutral-600">
+                  Already have a seller account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/seller/login')}
+                    className="text-teal-600 hover:text-teal-700 font-semibold"
+                  >
+                    Login
+                  </button>
+                </p>
+              </div>
+            </form>
+          ) : (
+            /* OTP Verification Form */
+            <div className="space-y-4">
+              <div className="text-center">
+                <p className="text-sm text-neutral-600 mb-2">
+                  Enter the 6-digit OTP sent to
+                </p>
+                <p className="text-sm font-semibold text-neutral-800">+91 {formData.mobile}</p>
+              </div>
+
+              <OTPInput onComplete={handleOTPComplete} disabled={loading} />
+
+              {error && (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded text-center">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowOTP(false);
+                    setError('');
+                  }}
+                  disabled={loading}
+                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors border border-neutral-300"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={async () => {
+                    setLoading(true);
+                    setError('');
+                    try {
+                      await sendOTP(formData.mobile);
+                    } catch (err: any) {
+                      setError(err.response?.data?.message || 'Failed to resend OTP.');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  disabled={loading}
+                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-teal-600 text-white hover:bg-teal-700 transition-colors"
+                >
+                  {loading ? 'Sending...' : 'Resend OTP'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer Text */}
+      <p className="mt-6 text-xs text-neutral-500 text-center max-w-md">
+        By continuing, you agree to SpeeUp's Terms of Service and Privacy Policy
+      </p>
+    </div>
+  );
+}
+

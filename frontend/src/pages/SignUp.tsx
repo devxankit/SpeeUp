@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { sendOTP, verifyOTP } from '../services/api/auth/customerAuthService';
+import { register, sendOTP, verifyOTP } from '../services/api/auth/customerAuthService';
 import OTPInput from '../components/OTPInput';
 
-export default function Login() {
+export default function SignUp() {
   const navigate = useNavigate();
-  const [mobileNumber, setMobileNumber] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    mobile: '',
+    email: '',
+    dateOfBirth: '',
+  });
   const [showOTP, setShowOTP] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -13,17 +18,59 @@ export default function Login() {
   const loginSectionRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  const handleContinue = async () => {
-    if (mobileNumber.length !== 10) return;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    if (name === 'mobile') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value.replace(/\D/g, '').slice(0, 10),
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name || !formData.mobile || !formData.email) {
+      setError('Name, mobile, and email are required');
+      return;
+    }
+
+    if (formData.mobile.length !== 10) {
+      setError('Please enter a valid 10-digit mobile number');
+      return;
+    }
 
     setLoading(true);
     setError('');
 
     try {
-      await sendOTP(mobileNumber);
-      setShowOTP(true);
+      const response = await register({
+        name: formData.name,
+        mobile: formData.mobile,
+        email: formData.email,
+        dateOfBirth: formData.dateOfBirth || undefined,
+      });
+
+      if (response.success) {
+        // Clear token from registration (we'll get it after OTP verification)
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        // Registration successful, now send OTP for verification
+        try {
+          await sendOTP(formData.mobile);
+          setShowOTP(true);
+        } catch (otpErr: any) {
+          setError(otpErr.response?.data?.message || 'Registration successful but failed to send OTP.');
+        }
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -34,7 +81,7 @@ export default function Login() {
     setError('');
 
     try {
-      const response = await verifyOTP(mobileNumber, otp);
+      const response = await verifyOTP(formData.mobile, otp);
       if (response.success) {
         navigate('/');
       }
@@ -45,23 +92,14 @@ export default function Login() {
     }
   };
 
-  const handleZomatoLogin = () => {
-    // Handle Zomato login logic here
-    navigate('/');
-  };
-
   useEffect(() => {
     const updateOverlayPosition = () => {
       if (videoSectionRef.current && loginSectionRef.current && overlayRef.current) {
-        // Use requestAnimationFrame to ensure DOM is fully rendered
         requestAnimationFrame(() => {
           if (videoSectionRef.current && loginSectionRef.current && overlayRef.current) {
             const videoRect = videoSectionRef.current.getBoundingClientRect();
-            
-            // Position the unified overlay at the boundary between sections
-            // Center it on the boundary line (half above, half below)
             const boundaryY = videoRect.bottom;
-            const overlayHeight = 12; // Fixed height for the unified overlay
+            const overlayHeight = 12;
             overlayRef.current.style.top = `${boundaryY - overlayHeight / 2}px`;
             overlayRef.current.style.height = `${overlayHeight}px`;
           }
@@ -69,12 +107,10 @@ export default function Login() {
       }
     };
 
-    // Initial calculation with multiple attempts to ensure accuracy
     const timeoutId1 = setTimeout(updateOverlayPosition, 50);
     const timeoutId2 = setTimeout(updateOverlayPosition, 200);
     const timeoutId3 = setTimeout(updateOverlayPosition, 500);
 
-    // Update on resize with debouncing
     let resizeTimeout: ReturnType<typeof setTimeout>;
     const handleResize = () => {
       clearTimeout(resizeTimeout);
@@ -82,7 +118,6 @@ export default function Login() {
     };
     window.addEventListener('resize', handleResize);
     
-    // Use ResizeObserver for more accurate updates when sections resize
     const resizeObserver = new ResizeObserver(() => {
       updateOverlayPosition();
     });
@@ -94,7 +129,6 @@ export default function Login() {
       resizeObserver.observe(loginSectionRef.current);
     }
 
-    // Also observe scroll events in case layout shifts
     window.addEventListener('scroll', updateOverlayPosition, { passive: true });
 
     return () => {
@@ -157,7 +191,7 @@ export default function Login() {
         />
       </div>
 
-      {/* Unified white overlay to cover black partition - spans both sections */}
+      {/* Unified white overlay */}
       <div 
         ref={overlayRef}
         className="fixed bg-white" 
@@ -171,25 +205,44 @@ export default function Login() {
         }}
       ></div>
 
-      {/* Login Section */}
+      {/* Sign Up Section */}
       <div 
         ref={loginSectionRef}
         className="bg-white flex flex-col items-center flex-shrink-0 relative" 
         style={{ border: 'none', borderTop: 'none', margin: 0, marginTop: '-100px', marginLeft: '-2px', boxShadow: 'none', outline: 'none', backgroundColor: '#ffffff', zIndex: 1, padding: '4px 0px 12px', paddingTop: '6px', width: 'calc(100% + 4px)', boxSizing: 'border-box', position: 'relative' }}
       >
         {!showOTP ? (
-          <>
-            {/* Mobile Number Input */}
-            <div className="w-full mb-1.5 sm:mb-2.5 px-4 relative z-10" style={{ maxWidth: '100%' }}>
-              <div className="flex items-center bg-white border border-neutral-300 rounded-lg overflow-hidden focus-within:border-neutral-400 transition-colors">
+          <form onSubmit={handleSubmit} className="w-full px-4 space-y-2 relative z-10">
+            <h2 className="text-lg font-bold text-neutral-800 mb-3 text-center">Create Account</h2>
+            
+            {/* Name Input */}
+            <div className="mb-2">
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                placeholder="Full Name"
+                required
+                className="w-full px-3 py-2 sm:py-2.5 text-sm border border-neutral-300 rounded-lg placeholder:text-neutral-400 focus:outline-none focus:border-orange-500 bg-white"
+                style={{ color: '#9ca3af', backgroundColor: '#ffffff' }}
+                disabled={loading}
+              />
+            </div>
+
+            {/* Mobile Input */}
+            <div className="mb-2">
+              <div className="flex items-center bg-white border border-neutral-300 rounded-lg overflow-hidden focus-within:border-orange-500 transition-colors">
                 <div className="px-3 py-2 sm:py-2.5 text-sm font-medium text-neutral-400 border-r border-neutral-300 bg-white">
                   +91
                 </div>
                 <input
                   type="tel"
-                  value={mobileNumber}
-                  onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                  placeholder="Enter mobile number"
+                  name="mobile"
+                  value={formData.mobile}
+                  onChange={handleInputChange}
+                  placeholder="Mobile Number"
+                  required
                   className="flex-1 px-3 py-2 sm:py-2.5 text-sm placeholder:text-neutral-400 focus:outline-none bg-white"
                   style={{ color: '#9ca3af', backgroundColor: '#ffffff' }}
                   maxLength={10}
@@ -198,45 +251,68 @@ export default function Login() {
               </div>
             </div>
 
+            {/* Email Input */}
+            <div className="mb-2">
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="Email Address"
+                required
+                className="w-full px-3 py-2 sm:py-2.5 text-sm border border-neutral-300 rounded-lg placeholder:text-neutral-400 focus:outline-none focus:border-orange-500 bg-white"
+                style={{ color: '#9ca3af', backgroundColor: '#ffffff' }}
+                disabled={loading}
+              />
+            </div>
+
+            {/* Date of Birth Input */}
+            <div className="mb-2">
+              <input
+                type="date"
+                name="dateOfBirth"
+                value={formData.dateOfBirth}
+                onChange={handleInputChange}
+                placeholder="Date of Birth (Optional)"
+                className="w-full px-3 py-2 sm:py-2.5 text-sm border border-neutral-300 rounded-lg placeholder:text-neutral-400 focus:outline-none focus:border-orange-500 bg-white"
+                style={{ color: '#9ca3af', backgroundColor: '#ffffff' }}
+                disabled={loading}
+              />
+            </div>
+
             {error && (
-              <div className="w-full mb-1 px-4 relative z-10 text-xs text-red-600 bg-red-50 p-2 rounded">
+              <div className="text-xs text-red-600 bg-red-50 p-2 rounded text-center">
                 {error}
               </div>
             )}
 
-            {/* Continue Button */}
-            <div className="w-full mb-1 px-4 relative z-10" style={{ maxWidth: '100%' }}>
-              <button
-                onClick={handleContinue}
-                disabled={mobileNumber.length !== 10 || loading}
-                className={`w-full py-2 sm:py-2.5 rounded-lg font-semibold text-sm transition-colors border px-3 ${
-                  mobileNumber.length === 10 && !loading
-                    ? 'bg-orange-50 text-orange-600 border-orange-500 hover:bg-orange-100'
-                    : 'bg-neutral-300 text-neutral-500 cursor-not-allowed border-neutral-300'
-                }`}
-              >
-                {loading ? 'Sending...' : 'Continue'}
-              </button>
-            </div>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading || !formData.name || formData.mobile.length !== 10 || !formData.email}
+              className={`w-full py-2 sm:py-2.5 rounded-lg font-semibold text-sm transition-colors border px-3 ${
+                formData.name && formData.mobile.length === 10 && formData.email && !loading
+                  ? 'bg-orange-50 text-orange-600 border-orange-500 hover:bg-orange-100'
+                  : 'bg-neutral-300 text-neutral-500 cursor-not-allowed border-neutral-300'
+              }`}
+            >
+              {loading ? 'Creating Account...' : 'Sign Up'}
+            </button>
 
-            {/* OR Separator */}
-            <div className="flex items-center gap-2.5 w-full mb-1 px-4 relative z-10">
-              <div className="flex-1 h-px bg-neutral-200"></div>
-              <span className="text-xs text-neutral-500">OR</span>
-              <div className="flex-1 h-px bg-neutral-200"></div>
+            {/* Login Link */}
+            <div className="text-center pt-2">
+              <p className="text-xs text-neutral-600">
+                Already have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => navigate('/login')}
+                  className="text-orange-600 hover:text-orange-700 font-semibold"
+                >
+                  Login
+                </button>
+              </p>
             </div>
-
-            {/* Login with SpeeUp Button */}
-            <div className="w-full mb-2 px-4 relative z-10" style={{ maxWidth: '100%' }}>
-              <button
-                onClick={handleZomatoLogin}
-                className="w-full py-2 sm:py-2.5 rounded-lg font-semibold text-sm bg-orange-500 text-white hover:bg-orange-600 transition-colors flex items-center justify-center gap-1.5 px-3"
-              >
-                <span>Login with</span>
-                <span className="font-bold">SpeeUp</span>
-              </button>
-            </div>
-          </>
+          </form>
         ) : (
           <>
             {/* OTP Verification */}
@@ -244,7 +320,7 @@ export default function Login() {
               <p className="text-xs text-neutral-600 mb-2">
                 Enter the 6-digit OTP sent to
               </p>
-              <p className="text-xs font-semibold text-neutral-800">+91 {mobileNumber}</p>
+              <p className="text-xs font-semibold text-neutral-800">+91 {formData.mobile}</p>
             </div>
             <div className="w-full mb-2 px-4 relative z-10 flex justify-center">
               <OTPInput onComplete={handleOTPComplete} disabled={loading} />
@@ -263,10 +339,10 @@ export default function Login() {
                 disabled={loading}
                 className="flex-1 py-2 rounded-lg font-semibold text-xs bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors border border-neutral-300"
               >
-                Change Number
+                Back
               </button>
               <button
-                onClick={handleContinue}
+                onClick={handleSubmit}
                 disabled={loading}
                 className="flex-1 py-2 rounded-lg font-semibold text-xs bg-orange-50 text-orange-600 border border-orange-500 hover:bg-orange-100 transition-colors"
               >
@@ -276,24 +352,9 @@ export default function Login() {
           </>
         )}
 
-        {/* Sign Up Link */}
-        {!showOTP && (
-          <div className="text-center pt-2 px-4 relative z-10">
-            <p className="text-xs text-neutral-600">
-              Don't have an account?{' '}
-              <button
-                onClick={() => navigate('/signup')}
-                className="text-orange-600 hover:text-orange-700 font-semibold"
-              >
-                Sign Up
-              </button>
-            </p>
-          </div>
-        )}
-
         {/* Privacy Text */}
-        <p className="text-[9px] sm:text-[10px] text-neutral-500 text-center max-w-sm leading-tight px-4 relative z-10 pb-1">
-          Access your saved addresses from SpeeUp automatically!
+        <p className="text-[9px] sm:text-[10px] text-neutral-500 text-center max-w-sm leading-tight px-4 relative z-10 pb-1 mt-2">
+          By signing up, you agree to SpeeUp's Terms of Service and Privacy Policy
         </p>
       </div>
     </div>

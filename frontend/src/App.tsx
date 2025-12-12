@@ -24,6 +24,7 @@ import FashionStore from './pages/FashionStore';
 import ToyStore from './pages/ToyStore';
 import HobbyStore from './pages/HobbyStore';
 import Login from './pages/Login';
+import SignUp from './pages/SignUp';
 import DeliveryLayout from './modules/delivery/components/DeliveryLayout';
 import DeliveryDashboard from './modules/delivery/pages/DeliveryDashboard';
 import DeliveryOrders from './modules/delivery/pages/DeliveryOrders';
@@ -58,6 +59,8 @@ import SellerSalesReport from './modules/seller/pages/SellerSalesReport';
 import SellerPosReport from './modules/seller/pages/SellerPosReport';
 import SellerReturnRequest from './modules/seller/pages/SellerReturnRequest';
 import SellerLogin from './modules/seller/pages/SellerLogin';
+import SellerSignUp from './modules/seller/pages/SellerSignUp';
+import DeliverySignUp from './modules/delivery/pages/DeliverySignUp';
 import AdminLayout from './modules/admin/components/AdminLayout';
 import AdminDashboard from './modules/admin/pages/AdminDashboard';
 import AdminLogin from './modules/admin/pages/AdminLogin';
@@ -125,8 +128,11 @@ function App() {
           <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
             <Route path="/seller/login" element={<SellerLogin />} />
+            <Route path="/seller/signup" element={<SellerSignUp />} />
             <Route path="/delivery/login" element={<DeliveryLogin />} />
+            <Route path="/delivery/signup" element={<DeliverySignUp />} />
             <Route path="/admin/login" element={<AdminLogin />} />
             {/* Delivery App Routes */}
             <Route path="/delivery/*" element={

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, TokenPayload } from '../services/jwtService';
-import { UserType } from '../models/Otp';
+
+export type AuthUserType = 'Admin' | 'Seller' | 'Customer' | 'Delivery';
 
 // Extend Express Request to include user info
 declare global {
@@ -77,7 +78,7 @@ export const authorize = (...roles: string[]) => {
 /**
  * Require specific user type(s)
  */
-export const requireUserType = (...userTypes: UserType[]) => {
+export const requireUserType = (...userTypes: AuthUserType[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({

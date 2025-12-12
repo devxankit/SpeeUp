@@ -2,6 +2,7 @@ import { Router } from 'express';
 import adminAuthRoutes from './auth/adminAuthRoutes';
 import sellerAuthRoutes from './auth/sellerAuthRoutes';
 import customerAuthRoutes from './auth/customerAuthRoutes';
+import deliveryAuthRoutes from './auth/deliveryAuthRoutes';
 
 const router = Router();
 
@@ -18,6 +19,7 @@ router.get('/health', (_req, res) => {
 router.use('/auth/admin', adminAuthRoutes);
 router.use('/auth/seller', sellerAuthRoutes);
 router.use('/auth/customer', customerAuthRoutes);
+router.use('/auth/delivery', deliveryAuthRoutes);
 
 // Add more routes here
 // router.use('/users', userRoutes);
