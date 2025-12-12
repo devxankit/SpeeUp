@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { register, sendOTP, verifyOTP } from '../../../services/api/auth/sellerAuthService';
 import OTPInput from '../../../components/OTPInput';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function SellerSignUp() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     sellerName: '',
     mobile: '',
@@ -134,8 +136,19 @@ export default function SellerSignUp() {
 
     try {
       const response = await verifyOTP(formData.mobile, otp);
-      if (response.success) {
-        navigate('/seller');
+      if (response.success && response.data) {
+        // Update auth context with seller data
+        login(response.data.token, {
+          id: response.data.user.id,
+          name: response.data.user.sellerName,
+          email: response.data.user.email,
+          phone: response.data.user.mobile,
+          userType: 'Seller',
+          storeName: response.data.user.storeName,
+          status: response.data.user.status,
+        });
+        // Navigate to seller dashboard
+        navigate('/seller', { replace: true });
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid OTP. Please try again.');

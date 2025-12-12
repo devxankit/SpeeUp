@@ -32,10 +32,17 @@ api.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid - clear token and redirect to login
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userData');
-      window.location.href = '/login';
+      // Check if this is an authentication endpoint (OTP verification, etc.)
+      // Don't redirect for auth endpoints - let the component handle the error
+      const isAuthEndpoint = error.config?.url?.includes('/auth/');
+      
+      if (!isAuthEndpoint) {
+        // Token expired or invalid - clear token and redirect to login
+        // Only redirect for non-auth endpoints (protected routes)
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

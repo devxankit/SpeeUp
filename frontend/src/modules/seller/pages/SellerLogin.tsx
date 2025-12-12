@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendOTP, verifyOTP } from '../../../services/api/auth/sellerAuthService';
 import OTPInput from '../../../components/OTPInput';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function SellerLogin() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [mobileNumber, setMobileNumber] = useState('');
   const [showOTP, setShowOTP] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -17,9 +19,17 @@ export default function SellerLogin() {
     setError('');
 
     try {
-      await sendOTP(mobileNumber);
-      setShowOTP(true);
+      const response = await sendOTP(mobileNumber);
+      if (response.success) {
+        // Only show OTP screen on success
+        setShowOTP(true);
+        setError(''); // Clear any previous errors
+      } else {
+        // If not successful, show error and stay on page
+        setError(response.message || 'Failed to send OTP. Please try again.');
+      }
     } catch (err: any) {
+      // On error, show error message and stay on the same page
       setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
     } finally {
       setLoading(false);
@@ -32,12 +42,27 @@ export default function SellerLogin() {
 
     try {
       const response = await verifyOTP(mobileNumber, otp);
-      if (response.success) {
-        navigate('/seller');
+      if (response.success && response.data) {
+        // Update auth context with seller data
+        login(response.data.token, {
+          id: response.data.user.id,
+          name: response.data.user.sellerName,
+          email: response.data.user.email,
+          phone: response.data.user.mobile,
+          userType: 'Seller',
+          storeName: response.data.user.storeName,
+          status: response.data.user.status,
+        });
+        // Navigate to seller dashboard only on success
+        navigate('/seller', { replace: true });
+      } else {
+        // If response is not successful, show error and stay on page
+        setError(response.message || 'Login failed. Please try again.');
+        setLoading(false);
       }
     } catch (err: any) {
+      // On error, show error message and stay on the same page
       setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
@@ -153,11 +178,29 @@ export default function SellerLogin() {
                   Change Number
                 </button>
                 <button
-                  onClick={handleMobileLogin}
+                  onClick={async () => {
+                    setLoading(true);
+                    setError('');
+                    try {
+                      const response = await sendOTP(mobileNumber);
+                      if (response.success) {
+                        // OTP resent successfully, clear any previous errors
+                        setError('');
+                      } else {
+                        // Show error but stay on page
+                        setError(response.message || 'Failed to resend OTP. Please try again.');
+                      }
+                    } catch (err: any) {
+                      // Show error but stay on page
+                      setError(err.response?.data?.message || 'Failed to resend OTP. Please try again.');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
                   disabled={loading}
                   className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-teal-600 text-white hover:bg-teal-700 transition-colors"
                 >
-                  {loading ? 'Verifying...' : 'Resend OTP'}
+                  {loading ? 'Sending...' : 'Resend OTP'}
                 </button>
               </div>
             </div>
