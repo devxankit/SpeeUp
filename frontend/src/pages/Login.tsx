@@ -1,18 +1,47 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { sendOTP, verifyOTP } from '../services/api/auth/customerAuthService';
+import OTPInput from '../components/OTPInput';
 
 export default function Login() {
   const navigate = useNavigate();
   const [mobileNumber, setMobileNumber] = useState('');
+  const [showOTP, setShowOTP] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const loginSectionRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  const handleContinue = () => {
-    // Handle login logic here
-    if (mobileNumber.length === 10) {
-      // Navigate to home or verify OTP
-      navigate('/');
+  const handleContinue = async () => {
+    if (mobileNumber.length !== 10) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await sendOTP(mobileNumber);
+      setShowOTP(true);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOTPComplete = async (otp: string) => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await verifyOTP(mobileNumber, otp);
+      if (response.success) {
+        navigate('/');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -148,56 +177,104 @@ export default function Login() {
         className="bg-white flex flex-col items-center flex-shrink-0 relative" 
         style={{ border: 'none', borderTop: 'none', margin: 0, marginTop: '-100px', marginLeft: '-2px', boxShadow: 'none', outline: 'none', backgroundColor: '#ffffff', zIndex: 1, padding: '4px 0px 12px', paddingTop: '6px', width: 'calc(100% + 4px)', boxSizing: 'border-box', position: 'relative' }}
       >
-        {/* Mobile Number Input */}
-        <div className="w-full mb-1.5 sm:mb-2.5 px-4 relative z-10" style={{ maxWidth: '100%' }}>
-          <div className="flex items-center bg-white border border-neutral-300 rounded-lg overflow-hidden focus-within:border-neutral-400 transition-colors">
-            <div className="px-3 py-2 sm:py-2.5 text-sm font-medium text-neutral-400 border-r border-neutral-300 bg-white">
-              +91
+        {!showOTP ? (
+          <>
+            {/* Mobile Number Input */}
+            <div className="w-full mb-1.5 sm:mb-2.5 px-4 relative z-10" style={{ maxWidth: '100%' }}>
+              <div className="flex items-center bg-white border border-neutral-300 rounded-lg overflow-hidden focus-within:border-neutral-400 transition-colors">
+                <div className="px-3 py-2 sm:py-2.5 text-sm font-medium text-neutral-400 border-r border-neutral-300 bg-white">
+                  +91
+                </div>
+                <input
+                  type="tel"
+                  value={mobileNumber}
+                  onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="Enter mobile number"
+                  className="flex-1 px-3 py-2 sm:py-2.5 text-sm placeholder:text-neutral-400 focus:outline-none bg-white"
+                  style={{ color: '#9ca3af', backgroundColor: '#ffffff' }}
+                  maxLength={10}
+                  disabled={loading}
+                />
+              </div>
             </div>
-            <input
-              type="tel"
-              value={mobileNumber}
-              onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-              placeholder="Enter mobile number"
-              className="flex-1 px-3 py-2 sm:py-2.5 text-sm placeholder:text-neutral-400 focus:outline-none bg-white"
-              style={{ color: '#9ca3af', backgroundColor: '#ffffff' }}
-              maxLength={10}
-            />
-          </div>
-        </div>
 
-        {/* Continue Button */}
-        <div className="w-full mb-1 px-4 relative z-10" style={{ maxWidth: '100%' }}>
-          <button
-            onClick={handleContinue}
-            disabled={mobileNumber.length !== 10}
-            className={`w-full py-2 sm:py-2.5 rounded-lg font-semibold text-sm transition-colors border px-3 ${
-              mobileNumber.length === 10
-                ? 'bg-orange-50 text-orange-600 border-orange-500 hover:bg-orange-100'
-                : 'bg-neutral-300 text-neutral-500 cursor-not-allowed border-neutral-300'
-            }`}
-          >
-            Continue
-          </button>
-        </div>
+            {error && (
+              <div className="w-full mb-1 px-4 relative z-10 text-xs text-red-600 bg-red-50 p-2 rounded">
+                {error}
+              </div>
+            )}
 
-        {/* OR Separator */}
-        <div className="flex items-center gap-2.5 w-full mb-1 px-4 relative z-10">
-          <div className="flex-1 h-px bg-neutral-200"></div>
-          <span className="text-xs text-neutral-500">OR</span>
-          <div className="flex-1 h-px bg-neutral-200"></div>
-        </div>
+            {/* Continue Button */}
+            <div className="w-full mb-1 px-4 relative z-10" style={{ maxWidth: '100%' }}>
+              <button
+                onClick={handleContinue}
+                disabled={mobileNumber.length !== 10 || loading}
+                className={`w-full py-2 sm:py-2.5 rounded-lg font-semibold text-sm transition-colors border px-3 ${
+                  mobileNumber.length === 10 && !loading
+                    ? 'bg-orange-50 text-orange-600 border-orange-500 hover:bg-orange-100'
+                    : 'bg-neutral-300 text-neutral-500 cursor-not-allowed border-neutral-300'
+                }`}
+              >
+                {loading ? 'Sending...' : 'Continue'}
+              </button>
+            </div>
 
-        {/* Login with SpeeUp Button */}
-        <div className="w-full mb-2 px-4 relative z-10" style={{ maxWidth: '100%' }}>
-          <button
-            onClick={handleZomatoLogin}
-            className="w-full py-2 sm:py-2.5 rounded-lg font-semibold text-sm bg-orange-500 text-white hover:bg-orange-600 transition-colors flex items-center justify-center gap-1.5 px-3"
-          >
-            <span>Login with</span>
-            <span className="font-bold">SpeeUp</span>
-          </button>
-        </div>
+            {/* OR Separator */}
+            <div className="flex items-center gap-2.5 w-full mb-1 px-4 relative z-10">
+              <div className="flex-1 h-px bg-neutral-200"></div>
+              <span className="text-xs text-neutral-500">OR</span>
+              <div className="flex-1 h-px bg-neutral-200"></div>
+            </div>
+
+            {/* Login with SpeeUp Button */}
+            <div className="w-full mb-2 px-4 relative z-10" style={{ maxWidth: '100%' }}>
+              <button
+                onClick={handleZomatoLogin}
+                className="w-full py-2 sm:py-2.5 rounded-lg font-semibold text-sm bg-orange-500 text-white hover:bg-orange-600 transition-colors flex items-center justify-center gap-1.5 px-3"
+              >
+                <span>Login with</span>
+                <span className="font-bold">SpeeUp</span>
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* OTP Verification */}
+            <div className="w-full mb-2 px-4 relative z-10 text-center">
+              <p className="text-xs text-neutral-600 mb-2">
+                Enter the 6-digit OTP sent to
+              </p>
+              <p className="text-xs font-semibold text-neutral-800">+91 {mobileNumber}</p>
+            </div>
+            <div className="w-full mb-2 px-4 relative z-10 flex justify-center">
+              <OTPInput onComplete={handleOTPComplete} disabled={loading} />
+            </div>
+            {error && (
+              <div className="w-full mb-1 px-4 relative z-10 text-xs text-red-600 bg-red-50 p-2 rounded text-center">
+                {error}
+              </div>
+            )}
+            <div className="w-full mb-1 px-4 relative z-10 flex gap-2">
+              <button
+                onClick={() => {
+                  setShowOTP(false);
+                  setError('');
+                }}
+                disabled={loading}
+                className="flex-1 py-2 rounded-lg font-semibold text-xs bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors border border-neutral-300"
+              >
+                Change Number
+              </button>
+              <button
+                onClick={handleContinue}
+                disabled={loading}
+                className="flex-1 py-2 rounded-lg font-semibold text-xs bg-orange-50 text-orange-600 border border-orange-500 hover:bg-orange-100 transition-colors"
+              >
+                {loading ? 'Verifying...' : 'Resend OTP'}
+              </button>
+            </div>
+          </>
+        )}
 
         {/* Privacy Text */}
         <p className="text-[9px] sm:text-[10px] text-neutral-500 text-center max-w-sm leading-tight px-4 relative z-10 pb-1">

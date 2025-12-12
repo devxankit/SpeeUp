@@ -1,4 +1,7 @@
 // Export all models from here
-// Example: export { default as User } from './User';
+export { default as Admin } from './Admin';
+export { default as Seller } from './Seller';
+export { default as Customer } from './Customer';
+export { default as Otp } from './Otp';
 
 

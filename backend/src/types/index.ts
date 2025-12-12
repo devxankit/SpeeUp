@@ -13,4 +13,15 @@ export interface PaginationParams {
   sort?: string;
 }
 
+// Model Types
+export type AdminRole = 'Super Admin' | 'Admin';
+
+export type SellerStatus = 'Approved' | 'Pending' | 'Rejected';
+
+export type CustomerStatus = 'Active' | 'Inactive';
+
+// Re-export model interfaces
+export type { IAdmin } from '../models/Admin';
+export type { ISeller } from '../models/Seller';
+export type { ICustomer } from '../models/Customer';
 
