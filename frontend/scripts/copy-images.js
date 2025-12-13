@@ -6,13 +6,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const assetsDir = path.join(rootDir, 'assets');
-const publicDir = path.join(rootDir, 'public');
-const publicAssetsDir = path.join(publicDir, 'assets');
+// Copy to dist/assets for production builds (Vite will use these)
+const publicAssetsDir = path.join(rootDir, 'dist', 'assets');
 
-// Create public/assets directories
-if (!fs.existsSync(publicDir)) {
-  fs.mkdirSync(publicDir, { recursive: true });
-}
+// Create target assets directory
 if (!fs.existsSync(publicAssetsDir)) {
   fs.mkdirSync(publicAssetsDir, { recursive: true });
 }
