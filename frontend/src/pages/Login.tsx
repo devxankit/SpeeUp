@@ -14,6 +14,7 @@ export default function Login() {
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const loginSectionRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleContinue = async () => {
     if (mobileNumber.length !== 10) return;
@@ -140,6 +141,7 @@ export default function Login() {
         style={{ minHeight: 0, border: 'none', borderBottom: 'none', padding: 0, margin: 0, marginLeft: '2px', backgroundColor: '#ffffff', zIndex: 0, width: 'calc(100% - 2px)', boxSizing: 'border-box', position: 'relative' }}
       >
         <video
+          ref={videoRef}
           src="/assets/login/loginvideo.mp4?v=2"
           autoPlay
           loop
@@ -147,6 +149,11 @@ export default function Login() {
           playsInline
           className="w-full h-full object-cover"
           key="login-video-v2"
+          onLoadedMetadata={() => {
+            if (videoRef.current) {
+              videoRef.current.playbackRate = 1.5;
+            }
+          }}
           style={{ 
             display: 'block', 
             width: '100%', 

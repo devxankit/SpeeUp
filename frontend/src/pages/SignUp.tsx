@@ -19,6 +19,7 @@ export default function SignUp() {
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const loginSectionRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -171,6 +172,7 @@ export default function SignUp() {
         style={{ minHeight: 0, border: 'none', borderBottom: 'none', padding: 0, margin: 0, marginLeft: '2px', backgroundColor: '#ffffff', zIndex: 0, width: 'calc(100% - 2px)', boxSizing: 'border-box', position: 'relative' }}
       >
         <video
+          ref={videoRef}
           src="/assets/login/loginvideo.mp4?v=2"
           autoPlay
           loop
@@ -178,6 +180,11 @@ export default function SignUp() {
           playsInline
           className="w-full h-full object-cover"
           key="login-video-v2"
+          onLoadedMetadata={() => {
+            if (videoRef.current) {
+              videoRef.current.playbackRate = 1.5;
+            }
+          }}
           style={{ 
             display: 'block', 
             width: '100%', 
