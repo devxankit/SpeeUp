@@ -105,6 +105,7 @@ import AdminTimeSlot from './modules/admin/pages/AdminTimeSlot';
 import AdminUsers from './modules/admin/pages/AdminUsers';
 import AdminFAQ from './modules/admin/pages/AdminFAQ';
 import AdminHomeSection from './modules/admin/pages/AdminHomeSection';
+import AdminShopByStore from './modules/admin/pages/AdminShopByStore';
 import AdminAllOrders from './modules/admin/pages/AdminAllOrders';
 import AdminPendingOrders from './modules/admin/pages/AdminPendingOrders';
 import AdminReceivedOrders from './modules/admin/pages/AdminReceivedOrders';
@@ -232,6 +233,7 @@ function App() {
                   <Route path="users" element={<AdminUsers />} />
                   <Route path="faq" element={<AdminFAQ />} />
                   <Route path="home-section" element={<AdminHomeSection />} />
+                  <Route path="shop-by-store" element={<AdminShopByStore />} />
                   <Route path="orders/all" element={<AdminAllOrders />} />
                   <Route path="orders/pending" element={<AdminPendingOrders />} />
                   <Route path="orders/received" element={<AdminReceivedOrders />} />

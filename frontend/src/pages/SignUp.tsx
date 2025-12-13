@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { register, sendOTP, verifyOTP } from '../services/api/auth/customerAuthService';
+import { useAuth } from '../context/AuthContext';
 import OTPInput from '../components/OTPInput';
 
 export default function SignUp() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     mobile: '',
@@ -58,9 +60,6 @@ export default function SignUp() {
       });
 
       if (response.success) {
-        // Clear token from registration (we'll get it after OTP verification)
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
         // Registration successful, now send OTP for verification
         try {
           await sendOTP(formData.mobile);
@@ -82,7 +81,17 @@ export default function SignUp() {
 
     try {
       const response = await verifyOTP(formData.mobile, otp);
-      if (response.success) {
+      if (response.success && response.data) {
+        // Update auth context with user data
+        login(response.data.token, {
+          id: response.data.user.id,
+          name: response.data.user.name,
+          phone: response.data.user.phone,
+          email: response.data.user.email,
+          walletAmount: response.data.user.walletAmount,
+          refCode: response.data.user.refCode,
+          status: response.data.user.status,
+        });
         navigate('/');
       }
     } catch (err: any) {
@@ -162,12 +171,13 @@ export default function SignUp() {
         style={{ minHeight: 0, border: 'none', borderBottom: 'none', padding: 0, margin: 0, marginLeft: '2px', backgroundColor: '#ffffff', zIndex: 0, width: 'calc(100% - 2px)', boxSizing: 'border-box', position: 'relative' }}
       >
         <video
-          src="/assets/login/loginvideo.mp4"
+          src="/assets/login/loginvideo.mp4?v=2"
           autoPlay
           loop
           muted
           playsInline
           className="w-full h-full object-cover"
+          key="login-video-v2"
           style={{ 
             display: 'block', 
             width: '100%', 

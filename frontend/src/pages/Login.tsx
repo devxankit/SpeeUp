@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendOTP, verifyOTP } from '../services/api/auth/customerAuthService';
+import { useAuth } from '../context/AuthContext';
 import OTPInput from '../components/OTPInput';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [mobileNumber, setMobileNumber] = useState('');
   const [showOTP, setShowOTP] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -35,7 +37,17 @@ export default function Login() {
 
     try {
       const response = await verifyOTP(mobileNumber, otp);
-      if (response.success) {
+      if (response.success && response.data) {
+        // Update auth context with user data
+        login(response.data.token, {
+          id: response.data.user.id,
+          name: response.data.user.name,
+          phone: response.data.user.phone,
+          email: response.data.user.email,
+          walletAmount: response.data.user.walletAmount,
+          refCode: response.data.user.refCode,
+          status: response.data.user.status,
+        });
         navigate('/');
       }
     } catch (err: any) {
@@ -128,12 +140,13 @@ export default function Login() {
         style={{ minHeight: 0, border: 'none', borderBottom: 'none', padding: 0, margin: 0, marginLeft: '2px', backgroundColor: '#ffffff', zIndex: 0, width: 'calc(100% - 2px)', boxSizing: 'border-box', position: 'relative' }}
       >
         <video
-          src="/assets/login/loginvideo.mp4"
+          src="/assets/login/loginvideo.mp4?v=2"
           autoPlay
           loop
           muted
           playsInline
           className="w-full h-full object-cover"
+          key="login-video-v2"
           style={{ 
             display: 'block', 
             width: '100%', 

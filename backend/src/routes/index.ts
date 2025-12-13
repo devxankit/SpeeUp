@@ -3,6 +3,7 @@ import adminAuthRoutes from './auth/adminAuthRoutes';
 import sellerAuthRoutes from './auth/sellerAuthRoutes';
 import customerAuthRoutes from './auth/customerAuthRoutes';
 import deliveryAuthRoutes from './auth/deliveryAuthRoutes';
+import customerRoutes from './customerRoutes';
 
 const router = Router();
 
@@ -20,6 +21,9 @@ router.use('/auth/admin', adminAuthRoutes);
 router.use('/auth/seller', sellerAuthRoutes);
 router.use('/auth/customer', customerAuthRoutes);
 router.use('/auth/delivery', deliveryAuthRoutes);
+
+// Customer routes (protected)
+router.use('/customer', customerRoutes);
 
 // Add more routes here
 // router.use('/users', userRoutes);
