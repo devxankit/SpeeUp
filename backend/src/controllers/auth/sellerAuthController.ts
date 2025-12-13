@@ -26,8 +26,8 @@ export const sendOTP = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  // Send OTP
-  const result = await sendOTPService(mobile, 'Seller');
+  // Send OTP - for login, always use default OTP
+  const result = await sendOTPService(mobile, 'Seller', true);
 
   return res.status(200).json({
     success: true,

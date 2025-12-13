@@ -5,8 +5,15 @@ const DEFAULT_OTP = process.env.DEFAULT_OTP || '123456';
 
 /**
  * Generate a random 6-digit OTP
+ * @param isLogin - If true, always returns default OTP for login flows
  */
-export function generateOTP(): string {
+export function generateOTP(isLogin: boolean = false): string {
+  // For login flows, always use default OTP
+  if (isLogin) {
+    return DEFAULT_OTP;
+  }
+  
+  // For signup flows, use default OTP in development, random in production
   if (process.env.NODE_ENV === 'development') {
     return DEFAULT_OTP;
   }
@@ -15,15 +22,16 @@ export function generateOTP(): string {
 
 /**
  * Send OTP to mobile number
- * In development, uses default OTP. In production, integrates with SMSIndiaHub
+ * For login flows (Customer, Seller, Delivery), always uses default OTP
+ * In production, integrates with SMSIndiaHub for signup flows
  */
-export async function sendOTP(mobile: string, userType: UserType): Promise<{ success: boolean; message: string }> {
+export async function sendOTP(mobile: string, userType: UserType, isLogin: boolean = false): Promise<{ success: boolean; message: string }> {
   try {
     // Delete any existing OTPs for this mobile and userType
     await Otp.deleteMany({ mobile, userType });
 
-    // Generate OTP
-    const otp = generateOTP();
+    // Generate OTP - for login flows, always use default OTP
+    const otp = generateOTP(isLogin);
 
     // Calculate expiry time (5 minutes from now)
     const expiresAt = new Date();
@@ -45,6 +53,14 @@ export async function sendOTP(mobile: string, userType: UserType): Promise<{ suc
       // if (!smsResult.success) {
       //   throw new Error('Failed to send OTP via SMS');
       // }
+    }
+
+    // For login flows, always show the default OTP in the message
+    if (isLogin) {
+      return {
+        success: true,
+        message: `OTP sent (Login OTP: ${otp})`,
+      };
     }
 
     return {
