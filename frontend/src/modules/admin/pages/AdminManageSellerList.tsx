@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getAllSellers, updateSellerStatus, deleteSeller, Seller as SellerType } from '../../../services/api/sellerService';
 
 interface Seller {
-    id: number;
+    _id: string;
+    id?: number; // For backward compatibility with existing code
     name: string;
+    sellerName: string;
     storeName: string;
     phone: string;
+    mobile: string;
     email: string;
-    logo: string;
+    logo?: string;
     balance: number;
     commission: number;
     categories: string[];
@@ -35,13 +39,66 @@ interface Seller {
     viewCustomerDetails?: boolean;
 }
 
-// Mock data matching the image
-const SELLERS: Seller[] = [
+// Helper function to convert backend seller to frontend format
+const mapSellerToFrontend = (seller: SellerType): Seller => {
+    return {
+        _id: seller._id,
+        id: parseInt(seller._id.slice(-6), 16) || 0, // Generate a numeric ID from MongoDB _id
+        name: seller.sellerName,
+        sellerName: seller.sellerName,
+        storeName: seller.storeName,
+        phone: seller.mobile,
+        mobile: seller.mobile,
+        email: seller.email,
+        logo: seller.logo || '/api/placeholder/40/40',
+        balance: seller.balance || 0,
+        commission: seller.commission || 0,
+        categories: seller.categories || [],
+        status: seller.status,
+        needApproval: seller.status === 'Pending',
+        category: seller.category,
+        address: seller.address,
+        city: seller.city,
+        serviceableArea: seller.serviceableArea,
+        panCard: seller.panCard,
+        taxName: seller.taxName,
+        taxNumber: seller.taxNumber,
+        searchLocation: seller.searchLocation,
+        latitude: seller.latitude,
+        longitude: seller.longitude,
+        accountName: seller.accountName,
+        bankName: seller.bankName,
+        branch: seller.branch,
+        accountNumber: seller.accountNumber,
+        ifsc: seller.ifsc,
+        profile: seller.profile,
+        idProof: seller.idProof,
+        addressProof: seller.addressProof,
+        requireProductApproval: seller.requireProductApproval,
+        viewCustomerDetails: seller.viewCustomerDetails,
+    };
+};
+
+// Stable fallback logo to avoid endless reload loops when logo is missing
+const FALLBACK_LOGO =
+    'data:image/svg+xml;utf8,' +
+    encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <rect width="40" height="40" rx="8" fill="#E5F3F2"/>
+            <path d="M20 19c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5Zm0 2.5c-3.333 0-10 1.667-10 5v1.5c0 .552.448 1 1 1h18c.552 0 1-.448 1-1V26.5c0-3.333-6.667-5-10-5Z" fill="#0F766E"/>
+        </svg>`
+    );
+
+// Mock data - kept as fallback
+const MOCK_SELLERS: Seller[] = [
     {
+        _id: 'mock1',
         id: 1,
         name: 'Chirag Seller',
+        sellerName: 'Chirag Seller',
         storeName: 'Chirag store',
         phone: '9766846429',
+        mobile: '9766846429',
         email: 'info@chirag.com',
         logo: '/api/placeholder/40/40',
         balance: 1.70,
@@ -65,10 +122,13 @@ const SELLERS: Seller[] = [
         viewCustomerDetails: false,
     },
     {
+        _id: 'mock2',
         id: 2,
         name: 'Vaishnavi Seller',
+        sellerName: 'Vaishnavi Seller',
         storeName: 'Vaishnavi Store',
         phone: '9766846428',
+        mobile: '9766846428',
         email: 'info@vaishnavi.com',
         logo: '/api/placeholder/40/40',
         balance: 7929.75,
@@ -92,10 +152,13 @@ const SELLERS: Seller[] = [
         viewCustomerDetails: true,
     },
     {
+        _id: 'mock3',
         id: 3,
         name: 'Pratik Seller',
+        sellerName: 'Pratik Seller',
         storeName: 'Pratik Store',
         phone: '9766846427',
+        mobile: '9766846427',
         email: 'info@pratik.com',
         logo: '/api/placeholder/40/40',
         balance: 8379.00,
@@ -119,10 +182,13 @@ const SELLERS: Seller[] = [
         viewCustomerDetails: false,
     },
     {
+        _id: 'mock4',
         id: 4,
         name: 'New Seller',
+        sellerName: 'New Seller',
         storeName: 'New Store',
         phone: '9766846426',
+        mobile: '9766846426',
         email: 'info@newseller.com',
         logo: '/api/placeholder/40/40',
         balance: 0.00,
@@ -148,6 +214,9 @@ const SELLERS: Seller[] = [
 ];
 
 export default function AdminManageSellerList() {
+    const [sellers, setSellers] = useState<Seller[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState('');
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
@@ -157,6 +226,37 @@ export default function AdminManageSellerList() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    // Fetch sellers from backend
+    useEffect(() => {
+        const fetchSellers = async () => {
+            try {
+                setLoading(true);
+                setError('');
+                const response = await getAllSellers();
+                if (response.success && response.data) {
+                    const mappedSellers = response.data.map(mapSellerToFrontend);
+                    setSellers(mappedSellers);
+                } else {
+                    setError('Failed to fetch sellers');
+                }
+            } catch (err: any) {
+                console.error('Error fetching sellers:', err);
+                // Show a clear message when the admin is not authenticated/authorized
+                if (err?.response?.status === 401 || err?.response?.status === 403) {
+                    setError('Please login as admin to view sellers.');
+                } else {
+                    setError(err.response?.data?.message || 'Failed to fetch sellers. Please try again.');
+                }
+                // Fallback to mock data on error
+                setSellers(MOCK_SELLERS);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSellers();
+    }, []);
 
     const handleSort = (column: string) => {
         if (sortColumn === column) {
@@ -174,11 +274,12 @@ export default function AdminManageSellerList() {
     );
 
     // Filter sellers
-    let filteredSellers = SELLERS.filter(seller =>
+    let filteredSellers = sellers.filter(seller =>
         seller.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         seller.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         seller.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        seller.phone.includes(searchTerm)
+        seller.phone.includes(searchTerm) ||
+        seller.mobile.includes(searchTerm)
     );
 
     // Sort sellers
@@ -189,8 +290,8 @@ export default function AdminManageSellerList() {
 
             switch (sortColumn) {
                 case 'id':
-                    aValue = a.id;
-                    bValue = b.id;
+                    aValue = a._id;
+                    bValue = b._id;
                     break;
                 case 'name':
                     aValue = a.name;
@@ -252,35 +353,66 @@ export default function AdminManageSellerList() {
         document.body.removeChild(link);
     };
 
-    const handleEdit = (id: number) => {
-        const seller = SELLERS.find(s => s.id === id);
+    const handleEdit = (id: number | string) => {
+        const sellerId = typeof id === 'number' ? sellers.find(s => s.id === id)?._id : id;
+        const seller = sellers.find(s => s._id === sellerId);
         if (seller) {
             setEditingSeller(seller);
             setIsEditModalOpen(true);
         }
     };
 
-    const handleApprove = (id: number) => {
-        const seller = SELLERS.find(s => s.id === id);
-        if (seller) {
-            seller.status = 'Approved';
-            seller.needApproval = false;
-            // In real app, this would be an API call
-            alert(`Seller ${seller.name} has been approved.`);
-            setIsEditModalOpen(false);
-            setEditingSeller(null);
+    const handleApprove = async (id: number | string) => {
+        const sellerId = typeof id === 'number' ? sellers.find(s => s.id === id)?._id : id;
+        if (!sellerId) return;
+
+        try {
+            const response = await updateSellerStatus(sellerId, 'Approved');
+            if (response.success) {
+                // Update local state
+                setSellers(prevSellers =>
+                    prevSellers.map(seller =>
+                        seller._id === sellerId
+                            ? { ...seller, status: 'Approved', needApproval: false }
+                            : seller
+                    )
+                );
+                alert(`Seller has been approved.`);
+                setIsEditModalOpen(false);
+                setEditingSeller(null);
+            } else {
+                alert('Failed to approve seller. Please try again.');
+            }
+        } catch (err: any) {
+            console.error('Error approving seller:', err);
+            alert(err.response?.data?.message || 'Failed to approve seller. Please try again.');
         }
     };
 
-    const handleReject = (id: number) => {
-        const seller = SELLERS.find(s => s.id === id);
-        if (seller) {
-            seller.status = 'Rejected';
-            seller.needApproval = false;
-            // In real app, this would be an API call
-            alert(`Seller ${seller.name} has been rejected.`);
-            setIsEditModalOpen(false);
-            setEditingSeller(null);
+    const handleReject = async (id: number | string) => {
+        const sellerId = typeof id === 'number' ? sellers.find(s => s.id === id)?._id : id;
+        if (!sellerId) return;
+
+        try {
+            const response = await updateSellerStatus(sellerId, 'Rejected');
+            if (response.success) {
+                // Update local state
+                setSellers(prevSellers =>
+                    prevSellers.map(seller =>
+                        seller._id === sellerId
+                            ? { ...seller, status: 'Rejected', needApproval: false }
+                            : seller
+                    )
+                );
+                alert(`Seller has been rejected.`);
+                setIsEditModalOpen(false);
+                setEditingSeller(null);
+            } else {
+                alert('Failed to reject seller. Please try again.');
+            }
+        } catch (err: any) {
+            console.error('Error rejecting seller:', err);
+            alert(err.response?.data?.message || 'Failed to reject seller. Please try again.');
         }
     };
 
@@ -289,10 +421,24 @@ export default function AdminManageSellerList() {
         setEditingSeller(null);
     };
 
-    const handleDelete = (id: number) => {
+    const handleDelete = async (id: number | string) => {
+        const sellerId = typeof id === 'number' ? sellers.find(s => s.id === id)?._id : id;
+        if (!sellerId) return;
+
         if (window.confirm('Are you sure you want to delete this seller?')) {
-            console.log('Delete seller:', id);
-            alert(`Delete seller ${id}`);
+            try {
+                const response = await deleteSeller(sellerId);
+                if (response.success) {
+                    // Remove from local state
+                    setSellers(prevSellers => prevSellers.filter(seller => seller._id !== sellerId));
+                    alert('Seller deleted successfully.');
+                } else {
+                    alert('Failed to delete seller. Please try again.');
+                }
+            } catch (err: any) {
+                console.error('Error deleting seller:', err);
+                alert(err.response?.data?.message || 'Failed to delete seller. Please try again.');
+            }
         }
     };
 
@@ -316,6 +462,20 @@ export default function AdminManageSellerList() {
                     <div className="bg-teal-600 text-white px-6 py-4 rounded-t-lg">
                         <h2 className="text-lg font-semibold">View Seller List</h2>
                     </div>
+
+                    {/* Error Message */}
+                    {error && (
+                        <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+                            <p className="text-sm">{error}</p>
+                        </div>
+                    )}
+
+                    {/* Loading State */}
+                    {loading && (
+                        <div className="p-8 text-center">
+                            <p className="text-neutral-600">Loading sellers...</p>
+                        </div>
+                    )}
 
                     {/* Controls */}
                     <div className="p-4 border-b border-neutral-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -362,6 +522,7 @@ export default function AdminManageSellerList() {
                     </div>
 
                     {/* Table */}
+                    {!loading && (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -433,8 +594,8 @@ export default function AdminManageSellerList() {
                             </thead>
                             <tbody>
                                 {displayedSellers.map((seller) => (
-                                    <tr key={seller.id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200">
-                                        <td className="p-4 align-middle">{seller.id}</td>
+                                    <tr key={seller._id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200">
+                                        <td className="p-4 align-middle">{seller.id || seller._id.slice(-6)}</td>
                                         <td className="p-4 align-middle">{seller.name}</td>
                                         <td className="p-4 align-middle">{seller.storeName}</td>
                                         <td className="p-4 align-middle">
@@ -445,9 +606,16 @@ export default function AdminManageSellerList() {
                                         </td>
                                         <td className="p-4 align-middle">
                                             <img 
-                                                src={seller.logo} 
+                                                src={(seller.logo && seller.logo.trim() !== '') ? seller.logo : FALLBACK_LOGO} 
                                                 alt={seller.storeName}
                                                 className="w-10 h-10 object-cover rounded"
+                                                loading="lazy"
+                                                onError={(e) => {
+                                                    const img = e.currentTarget;
+                                                    if (img.dataset.fallbackApplied === 'true') return;
+                                                    img.dataset.fallbackApplied = 'true';
+                                                    img.src = FALLBACK_LOGO;
+                                                }}
                                             />
                                         </td>
                                         <td className="p-4 align-middle">{seller.balance.toFixed(2)}</td>
@@ -487,7 +655,7 @@ export default function AdminManageSellerList() {
                                         <td className="p-4 align-middle">
                                             <div className="flex items-center gap-2">
                                                 <button
-                                                    onClick={() => handleEdit(seller.id)}
+                                                    onClick={() => handleEdit(seller._id)}
                                                     className="p-1.5 text-teal-600 hover:bg-teal-50 rounded transition-colors"
                                                     title="Edit"
                                                 >
@@ -497,7 +665,7 @@ export default function AdminManageSellerList() {
                                                     </svg>
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(seller.id)}
+                                                    onClick={() => handleDelete(seller._id)}
                                                     className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
                                                     title="Delete"
                                                 >
@@ -520,8 +688,10 @@ export default function AdminManageSellerList() {
                             </tbody>
                         </table>
                     </div>
+                    )}
 
                     {/* Pagination Footer */}
+                    {!loading && (
                     <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
                         <div className="text-xs sm:text-sm text-neutral-700">
                             Showing {startIndex + 1} to {Math.min(endIndex, filteredSellers.length)} of {filteredSellers.length} entries
@@ -586,6 +756,7 @@ export default function AdminManageSellerList() {
                             </button>
                         </div>
                     </div>
+                    )}
                 </div>
             </div>
 
@@ -698,10 +869,10 @@ export default function AdminManageSellerList() {
                                             Status: {editingSeller.status}
                                         </span>
                                     </div>
-                                    {editingSeller.status === 'Pending' && (
+                                        {editingSeller.status === 'Pending' && (
                                         <div className="flex gap-2">
                                             <button
-                                                onClick={() => handleApprove(editingSeller.id)}
+                                                onClick={() => handleApprove(editingSeller._id)}
                                                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors flex items-center gap-2"
                                             >
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -710,7 +881,7 @@ export default function AdminManageSellerList() {
                                                 Approve
                                             </button>
                                             <button
-                                                onClick={() => handleReject(editingSeller.id)}
+                                                onClick={() => handleReject(editingSeller._id)}
                                                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium transition-colors flex items-center gap-2"
                                             >
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
