@@ -907,7 +907,12 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 py-4 overflow-y-auto">
+      <nav className="flex-1 py-4 overflow-y-auto admin-sidebar-nav" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <style>{`
+          .admin-sidebar-nav::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
         {filteredSections.map((section, sectionIndex) => (
           <div key={sectionIndex} className="mb-6">
             <h3 className="px-4 mb-2 text-xs font-bold text-teal-200 uppercase tracking-wider">

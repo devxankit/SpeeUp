@@ -12,6 +12,27 @@ interface Seller {
     categories: string[];
     status: 'Approved' | 'Pending' | 'Rejected';
     needApproval: boolean;
+    // Additional fields from signup
+    category?: string;
+    address?: string;
+    city?: string;
+    serviceableArea?: string;
+    panCard?: string;
+    taxName?: string;
+    taxNumber?: string;
+    searchLocation?: string;
+    latitude?: string;
+    longitude?: string;
+    accountName?: string;
+    bankName?: string;
+    branch?: string;
+    accountNumber?: string;
+    ifsc?: string;
+    profile?: string;
+    idProof?: string;
+    addressProof?: string;
+    requireProductApproval?: boolean;
+    viewCustomerDetails?: boolean;
 }
 
 // Mock data matching the image
@@ -28,6 +49,20 @@ const SELLERS: Seller[] = [
         categories: ['Organic & Premium', 'Instant Food', 'Pet Care', 'Sweet Tooth', 'Tea Coffee', 'Cleaning Essentials', 'Pharma And Wellness'],
         status: 'Approved',
         needApproval: false,
+        category: 'Organic & Premium',
+        address: '123 Main Street, Sector 5',
+        city: 'Mumbai',
+        serviceableArea: 'Area 1',
+        panCard: 'ABCDE1234F',
+        taxName: 'GST',
+        taxNumber: '27ABCDE1234F1Z5',
+        accountName: 'Chirag Seller',
+        bankName: 'State Bank of India',
+        branch: 'Mumbai Branch',
+        accountNumber: '1234567890',
+        ifsc: 'SBIN0001234',
+        requireProductApproval: false,
+        viewCustomerDetails: false,
     },
     {
         id: 2,
@@ -41,6 +76,20 @@ const SELLERS: Seller[] = [
         categories: ['Pet Care', 'Sweet Tooth', 'Personal Care', 'Paan Corner', 'Home Office'],
         status: 'Approved',
         needApproval: false,
+        category: 'Pet Care',
+        address: '456 Park Avenue, Sector 10',
+        city: 'Delhi',
+        serviceableArea: 'Area 2',
+        panCard: 'FGHIJ5678K',
+        taxName: 'GST',
+        taxNumber: '07FGHIJ5678K2Z6',
+        accountName: 'Vaishnavi Seller',
+        bankName: 'HDFC Bank',
+        branch: 'Delhi Branch',
+        accountNumber: '9876543210',
+        ifsc: 'HDFC0005678',
+        requireProductApproval: true,
+        viewCustomerDetails: true,
     },
     {
         id: 3,
@@ -52,8 +101,49 @@ const SELLERS: Seller[] = [
         balance: 8379.00,
         commission: 5.00,
         categories: ['Pet Care', 'Sweet Tooth', 'Tea Coffee'],
-        status: 'Approved',
-        needApproval: false,
+        status: 'Pending',
+        needApproval: true,
+        category: 'Tea Coffee',
+        address: '789 Market Road, Sector 15',
+        city: 'Bangalore',
+        serviceableArea: 'Area 3',
+        panCard: 'LMNOP9012Q',
+        taxName: 'GST',
+        taxNumber: '29LMNOP9012Q3Z7',
+        accountName: 'Pratik Seller',
+        bankName: 'ICICI Bank',
+        branch: 'Bangalore Branch',
+        accountNumber: '5555555555',
+        ifsc: 'ICIC0009012',
+        requireProductApproval: false,
+        viewCustomerDetails: false,
+    },
+    {
+        id: 4,
+        name: 'New Seller',
+        storeName: 'New Store',
+        phone: '9766846426',
+        email: 'info@newseller.com',
+        logo: '/api/placeholder/40/40',
+        balance: 0.00,
+        commission: 0.00,
+        categories: ['Cleaning Essentials'],
+        status: 'Pending',
+        needApproval: true,
+        category: 'Cleaning Essentials',
+        address: '321 New Street, Sector 20',
+        city: 'Pune',
+        serviceableArea: 'Area 4',
+        panCard: 'QRSTU3456V',
+        taxName: 'GST',
+        taxNumber: '27QRSTU3456V4Z8',
+        accountName: 'New Seller',
+        bankName: 'Axis Bank',
+        branch: 'Pune Branch',
+        accountNumber: '1111111111',
+        ifsc: 'UTIB0003456',
+        requireProductApproval: false,
+        viewCustomerDetails: false,
     },
 ];
 
@@ -63,6 +153,10 @@ export default function AdminManageSellerList() {
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const handleSort = (column: string) => {
         if (sortColumn === column) {
@@ -159,9 +253,40 @@ export default function AdminManageSellerList() {
     };
 
     const handleEdit = (id: number) => {
-        console.log('Edit seller:', id);
-        // Navigate to edit page or open edit modal
-        alert(`Edit seller ${id}`);
+        const seller = SELLERS.find(s => s.id === id);
+        if (seller) {
+            setEditingSeller(seller);
+            setIsEditModalOpen(true);
+        }
+    };
+
+    const handleApprove = (id: number) => {
+        const seller = SELLERS.find(s => s.id === id);
+        if (seller) {
+            seller.status = 'Approved';
+            seller.needApproval = false;
+            // In real app, this would be an API call
+            alert(`Seller ${seller.name} has been approved.`);
+            setIsEditModalOpen(false);
+            setEditingSeller(null);
+        }
+    };
+
+    const handleReject = (id: number) => {
+        const seller = SELLERS.find(s => s.id === id);
+        if (seller) {
+            seller.status = 'Rejected';
+            seller.needApproval = false;
+            // In real app, this would be an API call
+            alert(`Seller ${seller.name} has been rejected.`);
+            setIsEditModalOpen(false);
+            setEditingSeller(null);
+        }
+    };
+
+    const handleCloseEditModal = () => {
+        setIsEditModalOpen(false);
+        setEditingSeller(null);
     };
 
     const handleDelete = (id: number) => {
@@ -169,6 +294,16 @@ export default function AdminManageSellerList() {
             console.log('Delete seller:', id);
             alert(`Delete seller ${id}`);
         }
+    };
+
+    const handleViewCategories = (seller: Seller) => {
+        setSelectedSeller(seller);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedSeller(null);
     };
 
     return (
@@ -318,30 +453,16 @@ export default function AdminManageSellerList() {
                                         <td className="p-4 align-middle">{seller.balance.toFixed(2)}</td>
                                         <td className="p-4 align-middle">{seller.commission.toFixed(2)}%</td>
                                         <td className="p-4 align-middle">
-                                            <div className="flex flex-wrap gap-1 max-w-xs">
-                                                {seller.categories.map((category, index) => (
-                                                    <span 
-                                                        key={index}
-                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800"
-                                                    >
-                                                        {category}
-                                                        <svg 
-                                                            width="12" 
-                                                            height="12" 
-                                                            viewBox="0 0 24 24" 
-                                                            fill="none" 
-                                                            stroke="currentColor" 
-                                                            strokeWidth="2" 
-                                                            strokeLinecap="round" 
-                                                            strokeLinejoin="round"
-                                                            className="cursor-pointer hover:text-teal-600"
-                                                        >
-                                                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                                                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                                                        </svg>
-                                                    </span>
-                                                ))}
-                                            </div>
+                                            <button
+                                                onClick={() => handleViewCategories(seller)}
+                                                className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1"
+                                            >
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                    <circle cx="12" cy="12" r="3"></circle>
+                                                </svg>
+                                                View ({seller.categories.length})
+                                            </button>
                                         </td>
                                         <td className="p-4 align-middle">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -473,6 +594,327 @@ export default function AdminManageSellerList() {
                 Copyright © 2025. Developed By{' '}
                 <a href="#" className="text-blue-600 hover:underline">SpeeUp - 10 Minute App</a>
             </footer>
+
+            {/* Categories Modal */}
+            {isModalOpen && selectedSeller && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={handleCloseModal}>
+                    <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        {/* Modal Header */}
+                        <div className="bg-teal-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold">Categories</h3>
+                                <p className="text-sm text-teal-100 mt-1">{selectedSeller.storeName} - {selectedSeller.name}</p>
+                            </div>
+                            <button
+                                onClick={handleCloseModal}
+                                className="text-white hover:text-teal-200 transition-colors p-1"
+                                aria-label="Close modal"
+                            >
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 overflow-y-auto flex-1">
+                            {selectedSeller.categories.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {selectedSeller.categories.map((category, index) => (
+                                        <div
+                                            key={index}
+                                            className="flex items-center gap-2 px-4 py-3 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors"
+                                        >
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-teal-600 flex-shrink-0">
+                                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                            </svg>
+                                            <span className="text-sm font-medium text-teal-900">{category}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 text-neutral-400">
+                                    <p>No categories assigned to this seller.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="px-6 py-4 border-t border-neutral-200 flex justify-end">
+                            <button
+                                onClick={handleCloseModal}
+                                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded text-sm font-medium transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Seller Modal */}
+            {isEditModalOpen && editingSeller && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={handleCloseEditModal}>
+                    <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        {/* Modal Header */}
+                        <div className="bg-teal-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold">Edit Seller - {editingSeller.name}</h3>
+                                <p className="text-sm text-teal-100 mt-1">View and manage seller details</p>
+                            </div>
+                            <button
+                                onClick={handleCloseEditModal}
+                                className="text-white hover:text-teal-200 transition-colors p-1"
+                                aria-label="Close modal"
+                            >
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 overflow-y-auto flex-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            <style>{`
+                                .edit-seller-modal::-webkit-scrollbar {
+                                    display: none;
+                                }
+                            `}</style>
+                            
+                            <div className="space-y-6">
+                                {/* Status Badge */}
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                                            editingSeller.status === 'Approved' 
+                                                ? 'bg-green-100 text-green-800' 
+                                                : editingSeller.status === 'Pending'
+                                                ? 'bg-yellow-100 text-yellow-800'
+                                                : 'bg-red-100 text-red-800'
+                                        }`}>
+                                            Status: {editingSeller.status}
+                                        </span>
+                                    </div>
+                                    {editingSeller.status === 'Pending' && (
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleApprove(editingSeller.id)}
+                                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors flex items-center gap-2"
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                                </svg>
+                                                Approve
+                                            </button>
+                                            <button
+                                                onClick={() => handleReject(editingSeller.id)}
+                                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium transition-colors flex items-center gap-2"
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                                </svg>
+                                                Reject
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Basic Information */}
+                                <div className="bg-neutral-50 rounded-lg p-4">
+                                    <h4 className="text-sm font-semibold text-neutral-700 mb-3">Basic Information</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Seller Name</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.name}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Store Name</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.storeName}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Email</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.email}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Phone</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.phone}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Category</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.category || 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Commission</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.commission.toFixed(2)}%</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Address Information */}
+                                <div className="bg-neutral-50 rounded-lg p-4">
+                                    <h4 className="text-sm font-semibold text-neutral-700 mb-3">Address Information</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="md:col-span-2">
+                                            <label className="text-xs text-neutral-500">Address</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.address || 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">City</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.city || 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Serviceable Area</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.serviceableArea || 'N/A'}</p>
+                                        </div>
+                                        {editingSeller.searchLocation && (
+                                            <div className="md:col-span-2">
+                                                <label className="text-xs text-neutral-500">Location</label>
+                                                <p className="text-sm font-medium text-neutral-900">{editingSeller.searchLocation}</p>
+                                            </div>
+                                        )}
+                                        {(editingSeller.latitude || editingSeller.longitude) && (
+                                            <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Latitude</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.latitude || 'N/A'}</p>
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Longitude</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.longitude || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Tax Information */}
+                                {(editingSeller.panCard || editingSeller.taxName || editingSeller.taxNumber) && (
+                                    <div className="bg-neutral-50 rounded-lg p-4">
+                                        <h4 className="text-sm font-semibold text-neutral-700 mb-3">Tax Information</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {editingSeller.panCard && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">PAN Card</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.panCard}</p>
+                                                </div>
+                                            )}
+                                            {editingSeller.taxName && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Tax Name</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.taxName}</p>
+                                                </div>
+                                            )}
+                                            {editingSeller.taxNumber && (
+                                                <div className="md:col-span-2">
+                                                    <label className="text-xs text-neutral-500">Tax Number</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.taxNumber}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Bank Information */}
+                                {(editingSeller.accountName || editingSeller.bankName || editingSeller.accountNumber) && (
+                                    <div className="bg-neutral-50 rounded-lg p-4">
+                                        <h4 className="text-sm font-semibold text-neutral-700 mb-3">Bank Information</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {editingSeller.accountName && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Account Name</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.accountName}</p>
+                                                </div>
+                                            )}
+                                            {editingSeller.bankName && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Bank Name</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.bankName}</p>
+                                                </div>
+                                            )}
+                                            {editingSeller.branch && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Branch</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.branch}</p>
+                                                </div>
+                                            )}
+                                            {editingSeller.accountNumber && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Account Number</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.accountNumber}</p>
+                                                </div>
+                                            )}
+                                            {editingSeller.ifsc && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">IFSC Code</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.ifsc}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Settings */}
+                                <div className="bg-neutral-50 rounded-lg p-4">
+                                    <h4 className="text-sm font-semibold text-neutral-700 mb-3">Settings</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Require Product Approval</label>
+                                            <p className="text-sm font-medium text-neutral-900">
+                                                {editingSeller.requireProductApproval ? 'Yes' : 'No'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">View Customer Details</label>
+                                            <p className="text-sm font-medium text-neutral-900">
+                                                {editingSeller.viewCustomerDetails ? 'Yes' : 'No'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Balance</label>
+                                            <p className="text-sm font-medium text-neutral-900">₹{editingSeller.balance.toFixed(2)}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Categories Count</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.categories.length} categories</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Categories */}
+                                {editingSeller.categories.length > 0 && (
+                                    <div className="bg-neutral-50 rounded-lg p-4">
+                                        <h4 className="text-sm font-semibold text-neutral-700 mb-3">Categories</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {editingSeller.categories.map((category, index) => (
+                                                <span
+                                                    key={index}
+                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800"
+                                                >
+                                                    {category}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="px-6 py-4 border-t border-neutral-200 flex justify-end gap-2">
+                            <button
+                                onClick={handleCloseEditModal}
+                                className="px-4 py-2 bg-neutral-200 hover:bg-neutral-300 text-neutral-700 rounded text-sm font-medium transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
