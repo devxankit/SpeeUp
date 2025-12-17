@@ -665,6 +665,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Custom hook - Fast Refresh warning is acceptable here as hooks are meant to be exported with providers
+// eslint-disable-next-line react-refresh/only-export-components
 export function useLocation() {
   const context = useContext(LocationContext);
   if (context === undefined) {
