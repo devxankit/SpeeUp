@@ -23,8 +23,16 @@ interface LocationContextType {
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
 
+// Geocoding result interface
+interface GeocodeResult {
+  formatted_address: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+}
+
 // Cache for geocoding results to avoid redundant API calls
-const geocodeCache = new Map<string, { data: any; timestamp: number }>();
+const geocodeCache = new Map<string, { data: GeocodeResult; timestamp: number }>();
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 // Generate cache key from coordinates
@@ -36,19 +44,30 @@ const getCacheKey = (lat: number, lng: number, precision: number = 4): string =>
 const cleanAddress = (address: string): string => {
   if (!address) return address;
   
-  // Remove Plus Codes (pattern: 2-4 letters/numbers + + + 2-4 letters/numbers, e.g., RW8H+646, 8QXX+XX)
-  let cleaned = address
-    // Remove Plus Codes at start: "RW8H+646, Street Name" -> "Street Name"
-    .replace(/^[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}[,\s]+/i, '')
-    // Remove Plus Codes in middle: "Street, RW8H+646, City" -> "Street, City"
-    .replace(/[,\s]+[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}[,\s]+/gi, ', ')
-    // Remove Plus Codes at end: "Street Name, RW8H+646" -> "Street Name"
-    .replace(/[,\s]+[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}$/i, '')
-    // Remove standalone Plus Codes with spaces around them
+  // Remove Plus Codes more comprehensively:
+  // 1. Match Plus Code at start (with optional trailing delimiters)
+  // 2. Match Plus Code at end (with optional leading delimiters)
+  // 3. Match Plus Code in middle (with surrounding delimiters)
+  // 4. Match standalone Plus Code (with optional surrounding spaces)
+  
+  const cleaned = address
+    // Remove Plus Code at start (with or without trailing delimiters)
+    .replace(/^[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}([,\s]+)?/i, '')
+    // Remove Plus Code at end (with or without leading delimiters)
+    .replace(/([,\s]+)?[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}$/i, '')
+    // Remove Plus Code in middle (with surrounding delimiters - most common case)
+    .replace(/([,\s]+)[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}([,\s]+)/gi, (_match, before, after) => {
+      // Preserve one delimiter (prefer comma if available)
+      return before.includes(',') || after.includes(',') ? ', ' : ' ';
+    })
+    // Remove standalone Plus Code with spaces (fallback for any remaining)
     .replace(/\s+[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}\s+/gi, ' ')
+    // Remove any remaining Plus Codes that might be attached to words (no spaces)
+    .replace(/\b[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}\b/gi, '')
     // Clean up multiple commas/spaces
-    .replace(/,\s*,/g, ',')
-    .replace(/\s+/g, ' ')
+    .replace(/,\s*,+/g, ',')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[,\s]+|[,\s]+$/g, '') // Remove leading/trailing commas and spaces
     .trim();
   
   return cleaned;
@@ -116,9 +135,10 @@ export function LocationProvider({ children }: { children: ReactNode }) {
               return;
             }
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           // 404 is OK - user hasn't set location yet
-          if (err.response?.status !== 404) {
+          const error = err as { response?: { status?: number } };
+          if (error.response?.status !== 404) {
             console.error('Failed to load location from backend:', err);
           }
         }
@@ -156,9 +176,10 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             }
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Silently fail - localStorage location is already set
-        if (err.response?.status !== 404) {
+        const error = err as { response?: { status?: number } };
+        if (error.response?.status !== 404) {
           console.error('Background location sync failed:', err);
         }
       }
@@ -267,7 +288,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
               isRequestingRef.current = false;
               resolve();
-            } catch (geocodeError: any) {
+            } catch (geocodeError: unknown) {
               // Geocoding failed but we have coordinates - still success
               console.warn('Geocoding failed, using coordinates:', geocodeError);
               const fallbackLocation: Location = {
@@ -286,9 +307,10 @@ export function LocationProvider({ children }: { children: ReactNode }) {
               isRequestingRef.current = false;
               resolve(); // Still resolve - we have coordinates
             }
-          } catch (error: any) {
+          } catch (error: unknown) {
             if (!abortControllerRef.current?.signal.aborted) {
-              setLocationError(error.message || 'Failed to get location address');
+              const errorMessage = error instanceof Error ? error.message : 'Failed to get location address';
+              setLocationError(errorMessage);
             }
             setIsLocationLoading(false);
             isRequestingRef.current = false;
@@ -325,22 +347,18 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
   // Helper function to save location to backend (non-blocking)
   const saveLocationToBackend = async (locationData: Location): Promise<void> => {
-    try {
-      await api.post('/customer/location', {
-        latitude: locationData.latitude,
-        longitude: locationData.longitude,
-        address: locationData.address,
-        city: locationData.city,
-        state: locationData.state,
-        pincode: locationData.pincode,
-      });
-    } catch (err) {
-      throw err; // Re-throw for caller to handle
-    }
+    await api.post('/customer/location', {
+      latitude: locationData.latitude,
+      longitude: locationData.longitude,
+      address: locationData.address,
+      city: locationData.city,
+      state: locationData.state,
+      pincode: locationData.pincode,
+    });
   };
 
   // Reverse geocode coordinates to address - OPTIMIZED with caching and retry logic
-  const reverseGeocode = async (lat: number, lng: number, signal?: AbortSignal): Promise<any> => {
+  const reverseGeocode = async (lat: number, lng: number, signal?: AbortSignal): Promise<GeocodeResult> => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
       return { formatted_address: `${lat}, ${lng}` };
@@ -404,16 +422,16 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         let pincode = '';
 
         // Improved address component parsing
-        addressComponents.forEach((component: any) => {
+        addressComponents.forEach((component: { types?: string[]; long_name?: string }) => {
           const types = component.types || [];
           if (!city && (types.includes('locality') || types.includes('administrative_area_level_2') || types.includes('sublocality'))) {
-            city = component.long_name;
+            city = component.long_name || '';
           }
           if (!state && types.includes('administrative_area_level_1')) {
-            state = component.long_name;
+            state = component.long_name || '';
           }
           if (!pincode && types.includes('postal_code')) {
-            pincode = component.long_name;
+            pincode = component.long_name || '';
           }
         });
 
@@ -443,12 +461,13 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         }
 
         return geocodeResult;
-      } catch (error: any) {
-        lastError = error;
+      } catch (error: unknown) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        lastError = err;
         
         // Don't retry on abort
-        if (signal?.aborted || error.name === 'AbortError') {
-          throw error;
+        if (signal?.aborted || err.name === 'AbortError') {
+          throw err;
         }
 
         // Don't retry on last attempt
