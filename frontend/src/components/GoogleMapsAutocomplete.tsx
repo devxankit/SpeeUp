@@ -16,6 +16,28 @@ declare global {
   }
 }
 
+// Clean address by removing Plus Codes and unwanted identifiers
+const cleanAddress = (address: string): string => {
+  if (!address) return address;
+  
+  // Remove Plus Codes (pattern: 2-4 letters/numbers + + + 2-4 letters/numbers, e.g., RW8H+646, 8QXX+XX)
+  let cleaned = address
+    // Remove Plus Codes at start: "RW8H+646, Street Name" -> "Street Name"
+    .replace(/^[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}[,\s]+/i, '')
+    // Remove Plus Codes in middle: "Street, RW8H+646, City" -> "Street, City"
+    .replace(/[,\s]+[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}[,\s]+/gi, ', ')
+    // Remove Plus Codes at end: "Street Name, RW8H+646" -> "Street Name"
+    .replace(/[,\s]+[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}$/i, '')
+    // Remove standalone Plus Codes with spaces around them
+    .replace(/\s+[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}\s+/gi, ' ')
+    // Clean up multiple commas/spaces
+    .replace(/,\s*,/g, ',')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  return cleaned;
+};
+
 export default function GoogleMapsAutocomplete({
   value,
   onChange,
@@ -102,7 +124,9 @@ export default function GoogleMapsAutocomplete({
 
         const lat = place.geometry.location.lat();
         const lng = place.geometry.location.lng();
-        const address = place.formatted_address || place.name || value;
+        const rawAddress = place.formatted_address || place.name || value;
+        // Clean address to remove Plus Codes
+        const address = cleanAddress(rawAddress);
         const placeName = place.name || address;
 
         onChange(address, lat, lng, placeName);
@@ -145,3 +169,4 @@ export default function GoogleMapsAutocomplete({
     </div>
   );
 }
+

@@ -308,3 +308,4 @@ For issues or questions:
 2. Verify API key configuration
 3. Check network requests in DevTools
 4. Review backend logs for API errors
+

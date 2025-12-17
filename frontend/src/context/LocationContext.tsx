@@ -32,6 +32,28 @@ const getCacheKey = (lat: number, lng: number, precision: number = 4): string =>
   return `${lat.toFixed(precision)},${lng.toFixed(precision)}`;
 };
 
+// Clean address by removing Plus Codes and unwanted identifiers
+const cleanAddress = (address: string): string => {
+  if (!address) return address;
+  
+  // Remove Plus Codes (pattern: 2-4 letters/numbers + + + 2-4 letters/numbers, e.g., RW8H+646, 8QXX+XX)
+  let cleaned = address
+    // Remove Plus Codes at start: "RW8H+646, Street Name" -> "Street Name"
+    .replace(/^[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}[,\s]+/i, '')
+    // Remove Plus Codes in middle: "Street, RW8H+646, City" -> "Street, City"
+    .replace(/[,\s]+[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}[,\s]+/gi, ', ')
+    // Remove Plus Codes at end: "Street Name, RW8H+646" -> "Street Name"
+    .replace(/[,\s]+[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}$/i, '')
+    // Remove standalone Plus Codes with spaces around them
+    .replace(/\s+[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}\s+/gi, ' ')
+    // Clean up multiple commas/spaces
+    .replace(/,\s*,/g, ',')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  return cleaned;
+};
+
 export function LocationProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, user } = useAuth();
   const [location, setLocation] = useState<Location | null>(null);
@@ -220,10 +242,13 @@ export function LocationProvider({ children }: { children: ReactNode }) {
                 return;
               }
 
+              // Address is already cleaned from reverseGeocode function
+              const cleanedAddress = address.formatted_address || `${latitude}, ${longitude}`;
+
               const newLocation: Location = {
                 latitude,
                 longitude,
-                address: address.formatted_address || `${latitude}, ${longitude}`,
+                address: cleanedAddress,
                 city: address.city,
                 state: address.state,
                 pincode: address.pincode,
@@ -392,8 +417,12 @@ export function LocationProvider({ children }: { children: ReactNode }) {
           }
         });
 
+        // Clean the formatted address to remove Plus Codes
+        const rawAddress = result.formatted_address || `${lat}, ${lng}`;
+        const cleanedAddress = cleanAddress(rawAddress);
+
         const geocodeResult = {
-          formatted_address: result.formatted_address || `${lat}, ${lng}`,
+          formatted_address: cleanedAddress,
           city,
           state,
           pincode,
@@ -519,3 +548,4 @@ export function useLocation() {
   }
   return context;
 }
+
