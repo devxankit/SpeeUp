@@ -1,7 +1,7 @@
 import Otp, { UserType } from '../models/Otp';
 
 const OTP_EXPIRY_MINUTES = parseInt(process.env.OTP_EXPIRES_IN?.replace('m', '') || '5', 10);
-const DEFAULT_OTP = process.env.DEFAULT_OTP || '123456';
+const DEFAULT_OTP = process.env.DEFAULT_OTP || '999999';
 
 /**
  * Generate a random 6-digit OTP

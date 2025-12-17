@@ -14,6 +14,7 @@ export default function SellerSignUp() {
     password: '',
     storeName: '',
     category: '',
+    categories: [] as string[],
     address: '',
     city: '',
     serviceableArea: '',
@@ -34,7 +35,6 @@ export default function SellerSignUp() {
   const [error, setError] = useState('');
 
   const categories = [
-    'Select Category',
     'Organic & Premium',
     'Instant Food',
     'Masala Oil',
@@ -80,13 +80,27 @@ export default function SellerSignUp() {
     }
   };
 
+  const toggleCategory = (cat: string) => {
+    setFormData(prev => {
+      const exists = prev.categories.includes(cat);
+      const nextCategories = exists
+        ? prev.categories.filter(c => c !== cat)
+        : [...prev.categories, cat];
+      return {
+        ...prev,
+        categories: nextCategories,
+        category: nextCategories[0] || '',
+      };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate required fields
     if (!formData.sellerName || !formData.mobile || !formData.email || !formData.password ||
-        !formData.storeName || !formData.category || !formData.address || !formData.city || !formData.serviceableArea) {
-      setError('Please fill all required fields');
+        !formData.storeName || formData.categories.length === 0 || !formData.address || !formData.city || !formData.serviceableArea) {
+      setError('Please fill all required fields (select at least one category)');
       return;
     }
 
@@ -105,7 +119,8 @@ export default function SellerSignUp() {
         email: formData.email,
         password: formData.password,
         storeName: formData.storeName,
-        category: formData.category,
+        category: formData.categories[0], // primary
+        categories: formData.categories,
         address: formData.address,
         city: formData.city,
         serviceableArea: formData.serviceableArea,
@@ -287,22 +302,28 @@ export default function SellerSignUp() {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    Category <span className="text-red-500">*</span>
+                    Categories <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    name="category"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-                    disabled={loading}
-                  >
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat === 'Select Category' ? '' : cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    {categories.map((cat) => {
+                      const checked = formData.categories.includes(cat);
+                      return (
+                        <label key={cat} className="flex items-center gap-2 text-sm text-neutral-700">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleCategory(cat)}
+                            disabled={loading}
+                            className="h-4 w-4 text-teal-600 border-neutral-300 rounded focus:ring-teal-500"
+                          />
+                          <span>{cat}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {formData.categories.length === 0 && (
+                    <p className="text-xs text-red-600 mt-1">Select at least one category</p>
+                  )}
                 </div>
 
                 <div>

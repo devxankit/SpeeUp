@@ -1,26 +1,104 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getAllSellers, updateSellerStatus, deleteSeller, Seller as SellerType } from '../../../services/api/sellerService';
 
 interface Seller {
-    id: number;
+    _id: string;
+    id?: number; // For backward compatibility with existing code
     name: string;
+    sellerName: string;
     storeName: string;
     phone: string;
+    mobile: string;
     email: string;
-    logo: string;
+    logo?: string;
     balance: number;
     commission: number;
     categories: string[];
     status: 'Approved' | 'Pending' | 'Rejected';
     needApproval: boolean;
+    // Additional fields from signup
+    category?: string;
+    address?: string;
+    city?: string;
+    serviceableArea?: string;
+    panCard?: string;
+    taxName?: string;
+    taxNumber?: string;
+    searchLocation?: string;
+    latitude?: string;
+    longitude?: string;
+    accountName?: string;
+    bankName?: string;
+    branch?: string;
+    accountNumber?: string;
+    ifsc?: string;
+    profile?: string;
+    idProof?: string;
+    addressProof?: string;
+    requireProductApproval?: boolean;
+    viewCustomerDetails?: boolean;
 }
 
-// Mock data matching the image
-const SELLERS: Seller[] = [
+// Helper function to convert backend seller to frontend format
+const mapSellerToFrontend = (seller: SellerType): Seller => {
+    return {
+        _id: seller._id,
+        id: parseInt(seller._id.slice(-6), 16) || 0, // Generate a numeric ID from MongoDB _id
+        name: seller.sellerName,
+        sellerName: seller.sellerName,
+        storeName: seller.storeName,
+        phone: seller.mobile,
+        mobile: seller.mobile,
+        email: seller.email,
+        logo: seller.logo || '/api/placeholder/40/40',
+        balance: seller.balance || 0,
+        commission: seller.commission || 0,
+        categories: seller.categories || [],
+        status: seller.status,
+        needApproval: seller.status === 'Pending',
+        category: seller.category,
+        address: seller.address,
+        city: seller.city,
+        serviceableArea: seller.serviceableArea,
+        panCard: seller.panCard,
+        taxName: seller.taxName,
+        taxNumber: seller.taxNumber,
+        searchLocation: seller.searchLocation,
+        latitude: seller.latitude,
+        longitude: seller.longitude,
+        accountName: seller.accountName,
+        bankName: seller.bankName,
+        branch: seller.branch,
+        accountNumber: seller.accountNumber,
+        ifsc: seller.ifsc,
+        profile: seller.profile,
+        idProof: seller.idProof,
+        addressProof: seller.addressProof,
+        requireProductApproval: seller.requireProductApproval,
+        viewCustomerDetails: seller.viewCustomerDetails,
+    };
+};
+
+// Stable fallback logo to avoid endless reload loops when logo is missing
+const FALLBACK_LOGO =
+    'data:image/svg+xml;utf8,' +
+    encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <rect width="40" height="40" rx="8" fill="#E5F3F2"/>
+            <path d="M20 19c2.761 0 5-2.239 5-5s-2.239-5-5-5-5 2.239-5 5 2.239 5 5 5Zm0 2.5c-3.333 0-10 1.667-10 5v1.5c0 .552.448 1 1 1h18c.552 0 1-.448 1-1V26.5c0-3.333-6.667-5-10-5Z" fill="#0F766E"/>
+        </svg>`
+    );
+
+// Mock data - kept as fallback
+const MOCK_SELLERS: Seller[] = [
     {
+        _id: 'mock1',
         id: 1,
         name: 'Chirag Seller',
+        sellerName: 'Chirag Seller',
         storeName: 'Chirag store',
         phone: '9766846429',
+        mobile: '9766846429',
         email: 'info@chirag.com',
         logo: '/api/placeholder/40/40',
         balance: 1.70,
@@ -28,12 +106,29 @@ const SELLERS: Seller[] = [
         categories: ['Organic & Premium', 'Instant Food', 'Pet Care', 'Sweet Tooth', 'Tea Coffee', 'Cleaning Essentials', 'Pharma And Wellness'],
         status: 'Approved',
         needApproval: false,
+        category: 'Organic & Premium',
+        address: '123 Main Street, Sector 5',
+        city: 'Mumbai',
+        serviceableArea: 'Area 1',
+        panCard: 'ABCDE1234F',
+        taxName: 'GST',
+        taxNumber: '27ABCDE1234F1Z5',
+        accountName: 'Chirag Seller',
+        bankName: 'State Bank of India',
+        branch: 'Mumbai Branch',
+        accountNumber: '1234567890',
+        ifsc: 'SBIN0001234',
+        requireProductApproval: false,
+        viewCustomerDetails: false,
     },
     {
+        _id: 'mock2',
         id: 2,
         name: 'Vaishnavi Seller',
+        sellerName: 'Vaishnavi Seller',
         storeName: 'Vaishnavi Store',
         phone: '9766846428',
+        mobile: '9766846428',
         email: 'info@vaishnavi.com',
         logo: '/api/placeholder/40/40',
         balance: 7929.75,
@@ -41,28 +136,127 @@ const SELLERS: Seller[] = [
         categories: ['Pet Care', 'Sweet Tooth', 'Personal Care', 'Paan Corner', 'Home Office'],
         status: 'Approved',
         needApproval: false,
+        category: 'Pet Care',
+        address: '456 Park Avenue, Sector 10',
+        city: 'Delhi',
+        serviceableArea: 'Area 2',
+        panCard: 'FGHIJ5678K',
+        taxName: 'GST',
+        taxNumber: '07FGHIJ5678K2Z6',
+        accountName: 'Vaishnavi Seller',
+        bankName: 'HDFC Bank',
+        branch: 'Delhi Branch',
+        accountNumber: '9876543210',
+        ifsc: 'HDFC0005678',
+        requireProductApproval: true,
+        viewCustomerDetails: true,
     },
     {
+        _id: 'mock3',
         id: 3,
         name: 'Pratik Seller',
+        sellerName: 'Pratik Seller',
         storeName: 'Pratik Store',
         phone: '9766846427',
+        mobile: '9766846427',
         email: 'info@pratik.com',
         logo: '/api/placeholder/40/40',
         balance: 8379.00,
         commission: 5.00,
         categories: ['Pet Care', 'Sweet Tooth', 'Tea Coffee'],
-        status: 'Approved',
-        needApproval: false,
+        status: 'Pending',
+        needApproval: true,
+        category: 'Tea Coffee',
+        address: '789 Market Road, Sector 15',
+        city: 'Bangalore',
+        serviceableArea: 'Area 3',
+        panCard: 'LMNOP9012Q',
+        taxName: 'GST',
+        taxNumber: '29LMNOP9012Q3Z7',
+        accountName: 'Pratik Seller',
+        bankName: 'ICICI Bank',
+        branch: 'Bangalore Branch',
+        accountNumber: '5555555555',
+        ifsc: 'ICIC0009012',
+        requireProductApproval: false,
+        viewCustomerDetails: false,
+    },
+    {
+        _id: 'mock4',
+        id: 4,
+        name: 'New Seller',
+        sellerName: 'New Seller',
+        storeName: 'New Store',
+        phone: '9766846426',
+        mobile: '9766846426',
+        email: 'info@newseller.com',
+        logo: '/api/placeholder/40/40',
+        balance: 0.00,
+        commission: 0.00,
+        categories: ['Cleaning Essentials'],
+        status: 'Pending',
+        needApproval: true,
+        category: 'Cleaning Essentials',
+        address: '321 New Street, Sector 20',
+        city: 'Pune',
+        serviceableArea: 'Area 4',
+        panCard: 'QRSTU3456V',
+        taxName: 'GST',
+        taxNumber: '27QRSTU3456V4Z8',
+        accountName: 'New Seller',
+        bankName: 'Axis Bank',
+        branch: 'Pune Branch',
+        accountNumber: '1111111111',
+        ifsc: 'UTIB0003456',
+        requireProductApproval: false,
+        viewCustomerDetails: false,
     },
 ];
 
 export default function AdminManageSellerList() {
+    const [sellers, setSellers] = useState<Seller[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState('');
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [selectedSeller, setSelectedSeller] = useState<Seller | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    // Fetch sellers from backend
+    useEffect(() => {
+        const fetchSellers = async () => {
+            try {
+                setLoading(true);
+                setError('');
+                const response = await getAllSellers();
+                if (response.success && response.data) {
+                    const mappedSellers = response.data.map(mapSellerToFrontend);
+                    setSellers(mappedSellers);
+                } else {
+                    setError('Failed to fetch sellers');
+                }
+            } catch (err: any) {
+                console.error('Error fetching sellers:', err);
+                // Show a clear message when the admin is not authenticated/authorized
+                if (err?.response?.status === 401 || err?.response?.status === 403) {
+                    setError('Please login as admin to view sellers.');
+                } else {
+                    setError(err.response?.data?.message || 'Failed to fetch sellers. Please try again.');
+                }
+                // Fallback to mock data on error
+                setSellers(MOCK_SELLERS);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSellers();
+    }, []);
 
     const handleSort = (column: string) => {
         if (sortColumn === column) {
@@ -80,11 +274,12 @@ export default function AdminManageSellerList() {
     );
 
     // Filter sellers
-    let filteredSellers = SELLERS.filter(seller =>
+    let filteredSellers = sellers.filter(seller =>
         seller.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         seller.storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         seller.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        seller.phone.includes(searchTerm)
+        seller.phone.includes(searchTerm) ||
+        seller.mobile.includes(searchTerm)
     );
 
     // Sort sellers
@@ -95,8 +290,8 @@ export default function AdminManageSellerList() {
 
             switch (sortColumn) {
                 case 'id':
-                    aValue = a.id;
-                    bValue = b.id;
+                    aValue = a._id;
+                    bValue = b._id;
                     break;
                 case 'name':
                     aValue = a.name;
@@ -158,17 +353,103 @@ export default function AdminManageSellerList() {
         document.body.removeChild(link);
     };
 
-    const handleEdit = (id: number) => {
-        console.log('Edit seller:', id);
-        // Navigate to edit page or open edit modal
-        alert(`Edit seller ${id}`);
+    const handleEdit = (id: number | string) => {
+        const sellerId = typeof id === 'number' ? sellers.find(s => s.id === id)?._id : id;
+        const seller = sellers.find(s => s._id === sellerId);
+        if (seller) {
+            setEditingSeller(seller);
+            setIsEditModalOpen(true);
+        }
     };
 
-    const handleDelete = (id: number) => {
-        if (window.confirm('Are you sure you want to delete this seller?')) {
-            console.log('Delete seller:', id);
-            alert(`Delete seller ${id}`);
+    const handleApprove = async (id: number | string) => {
+        const sellerId = typeof id === 'number' ? sellers.find(s => s.id === id)?._id : id;
+        if (!sellerId) return;
+
+        try {
+            const response = await updateSellerStatus(sellerId, 'Approved');
+            if (response.success) {
+                // Update local state
+                setSellers(prevSellers =>
+                    prevSellers.map(seller =>
+                        seller._id === sellerId
+                            ? { ...seller, status: 'Approved', needApproval: false }
+                            : seller
+                    )
+                );
+                alert(`Seller has been approved.`);
+                setIsEditModalOpen(false);
+                setEditingSeller(null);
+            } else {
+                alert('Failed to approve seller. Please try again.');
+            }
+        } catch (err: any) {
+            console.error('Error approving seller:', err);
+            alert(err.response?.data?.message || 'Failed to approve seller. Please try again.');
         }
+    };
+
+    const handleReject = async (id: number | string) => {
+        const sellerId = typeof id === 'number' ? sellers.find(s => s.id === id)?._id : id;
+        if (!sellerId) return;
+
+        try {
+            const response = await updateSellerStatus(sellerId, 'Rejected');
+            if (response.success) {
+                // Update local state
+                setSellers(prevSellers =>
+                    prevSellers.map(seller =>
+                        seller._id === sellerId
+                            ? { ...seller, status: 'Rejected', needApproval: false }
+                            : seller
+                    )
+                );
+                alert(`Seller has been rejected.`);
+                setIsEditModalOpen(false);
+                setEditingSeller(null);
+            } else {
+                alert('Failed to reject seller. Please try again.');
+            }
+        } catch (err: any) {
+            console.error('Error rejecting seller:', err);
+            alert(err.response?.data?.message || 'Failed to reject seller. Please try again.');
+        }
+    };
+
+    const handleCloseEditModal = () => {
+        setIsEditModalOpen(false);
+        setEditingSeller(null);
+    };
+
+    const handleDelete = async (id: number | string) => {
+        const sellerId = typeof id === 'number' ? sellers.find(s => s.id === id)?._id : id;
+        if (!sellerId) return;
+
+        if (window.confirm('Are you sure you want to delete this seller?')) {
+            try {
+                const response = await deleteSeller(sellerId);
+                if (response.success) {
+                    // Remove from local state
+                    setSellers(prevSellers => prevSellers.filter(seller => seller._id !== sellerId));
+                    alert('Seller deleted successfully.');
+                } else {
+                    alert('Failed to delete seller. Please try again.');
+                }
+            } catch (err: any) {
+                console.error('Error deleting seller:', err);
+                alert(err.response?.data?.message || 'Failed to delete seller. Please try again.');
+            }
+        }
+    };
+
+    const handleViewCategories = (seller: Seller) => {
+        setSelectedSeller(seller);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedSeller(null);
     };
 
     return (
@@ -181,6 +462,20 @@ export default function AdminManageSellerList() {
                     <div className="bg-teal-600 text-white px-6 py-4 rounded-t-lg">
                         <h2 className="text-lg font-semibold">View Seller List</h2>
                     </div>
+
+                    {/* Error Message */}
+                    {error && (
+                        <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+                            <p className="text-sm">{error}</p>
+                        </div>
+                    )}
+
+                    {/* Loading State */}
+                    {loading && (
+                        <div className="p-8 text-center">
+                            <p className="text-neutral-600">Loading sellers...</p>
+                        </div>
+                    )}
 
                     {/* Controls */}
                     <div className="p-4 border-b border-neutral-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -227,6 +522,7 @@ export default function AdminManageSellerList() {
                     </div>
 
                     {/* Table */}
+                    {!loading && (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
@@ -298,8 +594,8 @@ export default function AdminManageSellerList() {
                             </thead>
                             <tbody>
                                 {displayedSellers.map((seller) => (
-                                    <tr key={seller.id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200">
-                                        <td className="p-4 align-middle">{seller.id}</td>
+                                    <tr key={seller._id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200">
+                                        <td className="p-4 align-middle">{seller.id || seller._id.slice(-6)}</td>
                                         <td className="p-4 align-middle">{seller.name}</td>
                                         <td className="p-4 align-middle">{seller.storeName}</td>
                                         <td className="p-4 align-middle">
@@ -310,38 +606,31 @@ export default function AdminManageSellerList() {
                                         </td>
                                         <td className="p-4 align-middle">
                                             <img 
-                                                src={seller.logo} 
+                                                src={(seller.logo && seller.logo.trim() !== '') ? seller.logo : FALLBACK_LOGO} 
                                                 alt={seller.storeName}
                                                 className="w-10 h-10 object-cover rounded"
+                                                loading="lazy"
+                                                onError={(e) => {
+                                                    const img = e.currentTarget;
+                                                    if (img.dataset.fallbackApplied === 'true') return;
+                                                    img.dataset.fallbackApplied = 'true';
+                                                    img.src = FALLBACK_LOGO;
+                                                }}
                                             />
                                         </td>
                                         <td className="p-4 align-middle">{seller.balance.toFixed(2)}</td>
                                         <td className="p-4 align-middle">{seller.commission.toFixed(2)}%</td>
                                         <td className="p-4 align-middle">
-                                            <div className="flex flex-wrap gap-1 max-w-xs">
-                                                {seller.categories.map((category, index) => (
-                                                    <span 
-                                                        key={index}
-                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800"
-                                                    >
-                                                        {category}
-                                                        <svg 
-                                                            width="12" 
-                                                            height="12" 
-                                                            viewBox="0 0 24 24" 
-                                                            fill="none" 
-                                                            stroke="currentColor" 
-                                                            strokeWidth="2" 
-                                                            strokeLinecap="round" 
-                                                            strokeLinejoin="round"
-                                                            className="cursor-pointer hover:text-teal-600"
-                                                        >
-                                                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                                                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                                                        </svg>
-                                                    </span>
-                                                ))}
-                                            </div>
+                                            <button
+                                                onClick={() => handleViewCategories(seller)}
+                                                className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1"
+                                            >
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                    <circle cx="12" cy="12" r="3"></circle>
+                                                </svg>
+                                                View ({seller.categories.length})
+                                            </button>
                                         </td>
                                         <td className="p-4 align-middle">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -366,7 +655,7 @@ export default function AdminManageSellerList() {
                                         <td className="p-4 align-middle">
                                             <div className="flex items-center gap-2">
                                                 <button
-                                                    onClick={() => handleEdit(seller.id)}
+                                                    onClick={() => handleEdit(seller._id)}
                                                     className="p-1.5 text-teal-600 hover:bg-teal-50 rounded transition-colors"
                                                     title="Edit"
                                                 >
@@ -376,7 +665,7 @@ export default function AdminManageSellerList() {
                                                     </svg>
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(seller.id)}
+                                                    onClick={() => handleDelete(seller._id)}
                                                     className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
                                                     title="Delete"
                                                 >
@@ -399,8 +688,10 @@ export default function AdminManageSellerList() {
                             </tbody>
                         </table>
                     </div>
+                    )}
 
                     {/* Pagination Footer */}
+                    {!loading && (
                     <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
                         <div className="text-xs sm:text-sm text-neutral-700">
                             Showing {startIndex + 1} to {Math.min(endIndex, filteredSellers.length)} of {filteredSellers.length} entries
@@ -465,6 +756,7 @@ export default function AdminManageSellerList() {
                             </button>
                         </div>
                     </div>
+                    )}
                 </div>
             </div>
 
@@ -473,6 +765,327 @@ export default function AdminManageSellerList() {
                 Copyright © 2025. Developed By{' '}
                 <a href="#" className="text-blue-600 hover:underline">SpeeUp - 10 Minute App</a>
             </footer>
+
+            {/* Categories Modal */}
+            {isModalOpen && selectedSeller && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={handleCloseModal}>
+                    <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        {/* Modal Header */}
+                        <div className="bg-teal-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold">Categories</h3>
+                                <p className="text-sm text-teal-100 mt-1">{selectedSeller.storeName} - {selectedSeller.name}</p>
+                            </div>
+                            <button
+                                onClick={handleCloseModal}
+                                className="text-white hover:text-teal-200 transition-colors p-1"
+                                aria-label="Close modal"
+                            >
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 overflow-y-auto flex-1">
+                            {selectedSeller.categories.length > 0 ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {selectedSeller.categories.map((category, index) => (
+                                        <div
+                                            key={index}
+                                            className="flex items-center gap-2 px-4 py-3 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors"
+                                        >
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-teal-600 flex-shrink-0">
+                                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                            </svg>
+                                            <span className="text-sm font-medium text-teal-900">{category}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 text-neutral-400">
+                                    <p>No categories assigned to this seller.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="px-6 py-4 border-t border-neutral-200 flex justify-end">
+                            <button
+                                onClick={handleCloseModal}
+                                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded text-sm font-medium transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Seller Modal */}
+            {isEditModalOpen && editingSeller && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={handleCloseEditModal}>
+                    <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        {/* Modal Header */}
+                        <div className="bg-teal-600 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold">Edit Seller - {editingSeller.name}</h3>
+                                <p className="text-sm text-teal-100 mt-1">View and manage seller details</p>
+                            </div>
+                            <button
+                                onClick={handleCloseEditModal}
+                                className="text-white hover:text-teal-200 transition-colors p-1"
+                                aria-label="Close modal"
+                            >
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 overflow-y-auto flex-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            <style>{`
+                                .edit-seller-modal::-webkit-scrollbar {
+                                    display: none;
+                                }
+                            `}</style>
+                            
+                            <div className="space-y-6">
+                                {/* Status Badge */}
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                                            editingSeller.status === 'Approved' 
+                                                ? 'bg-green-100 text-green-800' 
+                                                : editingSeller.status === 'Pending'
+                                                ? 'bg-yellow-100 text-yellow-800'
+                                                : 'bg-red-100 text-red-800'
+                                        }`}>
+                                            Status: {editingSeller.status}
+                                        </span>
+                                    </div>
+                                        {editingSeller.status === 'Pending' && (
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleApprove(editingSeller._id)}
+                                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors flex items-center gap-2"
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                                </svg>
+                                                Approve
+                                            </button>
+                                            <button
+                                                onClick={() => handleReject(editingSeller._id)}
+                                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-medium transition-colors flex items-center gap-2"
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                                </svg>
+                                                Reject
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Basic Information */}
+                                <div className="bg-neutral-50 rounded-lg p-4">
+                                    <h4 className="text-sm font-semibold text-neutral-700 mb-3">Basic Information</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Seller Name</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.name}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Store Name</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.storeName}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Email</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.email}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Phone</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.phone}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Category</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.category || 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Commission</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.commission.toFixed(2)}%</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Address Information */}
+                                <div className="bg-neutral-50 rounded-lg p-4">
+                                    <h4 className="text-sm font-semibold text-neutral-700 mb-3">Address Information</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="md:col-span-2">
+                                            <label className="text-xs text-neutral-500">Address</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.address || 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">City</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.city || 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Serviceable Area</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.serviceableArea || 'N/A'}</p>
+                                        </div>
+                                        {editingSeller.searchLocation && (
+                                            <div className="md:col-span-2">
+                                                <label className="text-xs text-neutral-500">Location</label>
+                                                <p className="text-sm font-medium text-neutral-900">{editingSeller.searchLocation}</p>
+                                            </div>
+                                        )}
+                                        {(editingSeller.latitude || editingSeller.longitude) && (
+                                            <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Latitude</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.latitude || 'N/A'}</p>
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Longitude</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.longitude || 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Tax Information */}
+                                {(editingSeller.panCard || editingSeller.taxName || editingSeller.taxNumber) && (
+                                    <div className="bg-neutral-50 rounded-lg p-4">
+                                        <h4 className="text-sm font-semibold text-neutral-700 mb-3">Tax Information</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {editingSeller.panCard && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">PAN Card</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.panCard}</p>
+                                                </div>
+                                            )}
+                                            {editingSeller.taxName && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Tax Name</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.taxName}</p>
+                                                </div>
+                                            )}
+                                            {editingSeller.taxNumber && (
+                                                <div className="md:col-span-2">
+                                                    <label className="text-xs text-neutral-500">Tax Number</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.taxNumber}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Bank Information */}
+                                {(editingSeller.accountName || editingSeller.bankName || editingSeller.accountNumber) && (
+                                    <div className="bg-neutral-50 rounded-lg p-4">
+                                        <h4 className="text-sm font-semibold text-neutral-700 mb-3">Bank Information</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {editingSeller.accountName && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Account Name</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.accountName}</p>
+                                                </div>
+                                            )}
+                                            {editingSeller.bankName && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Bank Name</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.bankName}</p>
+                                                </div>
+                                            )}
+                                            {editingSeller.branch && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Branch</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.branch}</p>
+                                                </div>
+                                            )}
+                                            {editingSeller.accountNumber && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">Account Number</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.accountNumber}</p>
+                                                </div>
+                                            )}
+                                            {editingSeller.ifsc && (
+                                                <div>
+                                                    <label className="text-xs text-neutral-500">IFSC Code</label>
+                                                    <p className="text-sm font-medium text-neutral-900">{editingSeller.ifsc}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Settings */}
+                                <div className="bg-neutral-50 rounded-lg p-4">
+                                    <h4 className="text-sm font-semibold text-neutral-700 mb-3">Settings</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Require Product Approval</label>
+                                            <p className="text-sm font-medium text-neutral-900">
+                                                {editingSeller.requireProductApproval ? 'Yes' : 'No'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">View Customer Details</label>
+                                            <p className="text-sm font-medium text-neutral-900">
+                                                {editingSeller.viewCustomerDetails ? 'Yes' : 'No'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Balance</label>
+                                            <p className="text-sm font-medium text-neutral-900">₹{editingSeller.balance.toFixed(2)}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-neutral-500">Categories Count</label>
+                                            <p className="text-sm font-medium text-neutral-900">{editingSeller.categories.length} categories</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Categories */}
+                                {editingSeller.categories.length > 0 && (
+                                    <div className="bg-neutral-50 rounded-lg p-4">
+                                        <h4 className="text-sm font-semibold text-neutral-700 mb-3">Categories</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {editingSeller.categories.map((category, index) => (
+                                                <span
+                                                    key={index}
+                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800"
+                                                >
+                                                    {category}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="px-6 py-4 border-t border-neutral-200 flex justify-end gap-2">
+                            <button
+                                onClick={handleCloseEditModal}
+                                className="px-4 py-2 bg-neutral-200 hover:bg-neutral-300 text-neutral-700 rounded text-sm font-medium transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

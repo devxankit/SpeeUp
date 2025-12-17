@@ -28,7 +28,8 @@ export interface RegisterData {
   email: string;
   password: string;
   storeName: string;
-  category: string;
+  category?: string; // primary category (optional if categories array provided)
+  categories: string[]; // multiple categories
   address: string;
   city: string;
   serviceableArea: string;
@@ -46,6 +47,7 @@ export interface RegisterResponse {
       email: string;
       storeName: string;
       status: string;
+      categories?: string[];
     };
   };
 }

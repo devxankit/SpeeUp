@@ -1,10 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+<<<<<<< HEAD:frontend/src/modules/user/Login.tsx
 import { sendOTP, verifyOTP } from '../../services/api/auth/customerAuthService';
 import OTPInput from '../../components/OTPInput';
+=======
+import { sendOTP, verifyOTP } from '../services/api/auth/customerAuthService';
+import { useAuth } from '../context/AuthContext';
+import OTPInput from '../components/OTPInput';
+>>>>>>> f00164bdf4b21e6ebc5c73e451ec8696cb91a5a3:frontend/src/pages/Login.tsx
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [mobileNumber, setMobileNumber] = useState('');
   const [showOTP, setShowOTP] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -12,6 +19,7 @@ export default function Login() {
   const videoSectionRef = useRef<HTMLDivElement>(null);
   const loginSectionRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleContinue = async () => {
     if (mobileNumber.length !== 10) return;
@@ -35,7 +43,17 @@ export default function Login() {
 
     try {
       const response = await verifyOTP(mobileNumber, otp);
-      if (response.success) {
+      if (response.success && response.data) {
+        // Update auth context with user data
+        login(response.data.token, {
+          id: response.data.user.id,
+          name: response.data.user.name,
+          phone: response.data.user.phone,
+          email: response.data.user.email,
+          walletAmount: response.data.user.walletAmount,
+          refCode: response.data.user.refCode,
+          status: response.data.user.status,
+        });
         navigate('/');
       }
     } catch (err: any) {
@@ -128,12 +146,14 @@ export default function Login() {
         style={{ minHeight: 0, border: 'none', borderBottom: 'none', padding: 0, margin: 0, marginLeft: '2px', backgroundColor: '#ffffff', zIndex: 0, width: 'calc(100% - 2px)', boxSizing: 'border-box', position: 'relative' }}
       >
         <video
-          src="/assets/login/loginvideo.mp4"
+          ref={videoRef}
+          src="/assets/login/loginvideo.mp4?v=2"
           autoPlay
           loop
           muted
           playsInline
           className="w-full h-full object-cover"
+<<<<<<< HEAD:frontend/src/modules/user/Login.tsx
           style={{
             display: 'block',
             width: '100%',
@@ -142,6 +162,22 @@ export default function Login() {
             padding: 0,
             border: 'none',
             outline: 'none',
+=======
+          key="login-video-v2"
+          onLoadedMetadata={() => {
+            if (videoRef.current) {
+              videoRef.current.playbackRate = 1.5;
+            }
+          }}
+          style={{ 
+            display: 'block', 
+            width: '100%', 
+            height: '100%', 
+            margin: 0, 
+            padding: 0, 
+            border: 'none', 
+            outline: 'none', 
+>>>>>>> f00164bdf4b21e6ebc5c73e451ec8696cb91a5a3:frontend/src/pages/Login.tsx
             boxShadow: 'none',
             verticalAlign: 'top',
             objectFit: 'cover',
