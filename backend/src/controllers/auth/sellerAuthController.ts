@@ -111,7 +111,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   } = req.body;
 
   // Validation
-  if (!sellerName || !mobile || !email || !password || !storeName || !category || !address || !city || !serviceableArea) {
+  if (!sellerName || !mobile || !email || !password || !storeName || !category || !address || !city) {
     return res.status(400).json({
       success: false,
       message: 'All required fields must be provided',
@@ -147,7 +147,10 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     category,
     address,
     city,
-    serviceableArea,
+    ...(serviceableArea && { serviceableArea }),
+    searchLocation: req.body.searchLocation,
+    latitude: req.body.latitude,
+    longitude: req.body.longitude,
     status: 'Pending',
     requireProductApproval: false,
     viewCustomerDetails: false,

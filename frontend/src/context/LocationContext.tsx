@@ -1,0 +1,519 @@
+import { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
+import { useAuth } from './AuthContext';
+import api from '../services/api/config';
+
+interface Location {
+  latitude: number;
+  longitude: number;
+  address: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+}
+
+interface LocationContextType {
+  location: Location | null;
+  isLocationEnabled: boolean;
+  isLocationLoading: boolean;
+  locationError: string | null;
+  requestLocation: () => Promise<void>;
+  updateLocation: (location: Location) => Promise<void>;
+  clearLocation: () => void;
+}
+
+const LocationContext = createContext<LocationContextType | undefined>(undefined);
+
+// Cache for geocoding results to avoid redundant API calls
+const geocodeCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+// Generate cache key from coordinates
+const getCacheKey = (lat: number, lng: number, precision: number = 4): string => {
+  return `${lat.toFixed(precision)},${lng.toFixed(precision)}`;
+};
+
+export function LocationProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated, user } = useAuth();
+  const [location, setLocation] = useState<Location | null>(null);
+  const [isLocationEnabled, setIsLocationEnabled] = useState(false);
+  const [isLocationLoading, setIsLocationLoading] = useState(true);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  
+  // Refs for request cancellation and preventing race conditions
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isRequestingRef = useRef(false);
+
+  // Load saved location - OPTIMIZED: localStorage first (instant), then backend in parallel
+  useEffect(() => {
+    const loadSavedLocation = async () => {
+      setIsLocationLoading(true);
+      
+      // STEP 1: Load from localStorage FIRST (instant, no network delay)
+      const saved = localStorage.getItem('userLocation');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.latitude && parsed.longitude) {
+            // Immediately set location from localStorage for instant display
+            setLocation(parsed);
+            setIsLocationEnabled(true);
+            setIsLocationLoading(false); // Set loading false early for instant UI
+            
+            // Continue to check backend in background (non-blocking)
+            if (isAuthenticated && user) {
+              checkBackendLocation(parsed);
+            }
+            return; // Exit early, location already loaded
+          } else {
+            localStorage.removeItem('userLocation');
+          }
+        } catch (e) {
+          localStorage.removeItem('userLocation');
+        }
+      }
+
+      // STEP 2: If no localStorage, check backend (only if authenticated)
+      if (isAuthenticated && user) {
+        try {
+          const response = await api.get('/customer/location');
+          if (response.data.success && response.data.data) {
+            const backendLocation = response.data.data;
+            if (backendLocation.latitude && backendLocation.longitude) {
+              const locationData: Location = {
+                latitude: backendLocation.latitude,
+                longitude: backendLocation.longitude,
+                address: backendLocation.address || '',
+                city: backendLocation.city,
+                state: backendLocation.state,
+                pincode: backendLocation.pincode,
+              };
+              setLocation(locationData);
+              setIsLocationEnabled(true);
+              localStorage.setItem('userLocation', JSON.stringify(locationData));
+              setIsLocationLoading(false);
+              return;
+            }
+          }
+        } catch (err: any) {
+          // 404 is OK - user hasn't set location yet
+          if (err.response?.status !== 404) {
+            console.error('Failed to load location from backend:', err);
+          }
+        }
+      }
+
+      // STEP 3: No location found anywhere
+      setLocation(null);
+      setIsLocationEnabled(false);
+      setIsLocationLoading(false);
+    };
+
+    // Helper function to check backend location (non-blocking)
+    const checkBackendLocation = async (localStorageLocation: Location) => {
+      try {
+        const response = await api.get('/customer/location');
+        if (response.data.success && response.data.data) {
+          const backendLocation = response.data.data;
+          if (backendLocation.latitude && backendLocation.longitude) {
+            // Only update if backend location is different (more recent)
+            const latDiff = Math.abs(backendLocation.latitude - localStorageLocation.latitude);
+            const lngDiff = Math.abs(backendLocation.longitude - localStorageLocation.longitude);
+            
+            // Update if coordinates differ significantly (> 0.001 degrees ≈ 100m)
+            if (latDiff > 0.001 || lngDiff > 0.001) {
+              const locationData: Location = {
+                latitude: backendLocation.latitude,
+                longitude: backendLocation.longitude,
+                address: backendLocation.address || localStorageLocation.address,
+                city: backendLocation.city || localStorageLocation.city,
+                state: backendLocation.state || localStorageLocation.state,
+                pincode: backendLocation.pincode || localStorageLocation.pincode,
+              };
+              setLocation(locationData);
+              localStorage.setItem('userLocation', JSON.stringify(locationData));
+            }
+          }
+        }
+      } catch (err: any) {
+        // Silently fail - localStorage location is already set
+        if (err.response?.status !== 404) {
+          console.error('Background location sync failed:', err);
+        }
+      }
+    };
+
+    loadSavedLocation();
+  }, [isAuthenticated, user]);
+
+  // Request user's current location - OPTIMIZED for speed and accuracy
+  const requestLocation = useCallback(async (): Promise<void> => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser');
+      setIsLocationLoading(false);
+      return;
+    }
+
+    // Prevent concurrent requests
+    if (isRequestingRef.current) {
+      return;
+    }
+
+    // Cancel any previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    isRequestingRef.current = true;
+    setIsLocationLoading(true);
+    setLocationError(null);
+    abortControllerRef.current = new AbortController();
+
+    return new Promise((resolve, reject) => {
+      // Optimized geolocation options for faster and more accurate results
+      const geoOptions = {
+        enableHighAccuracy: true, // Use GPS if available for better accuracy
+        timeout: 8000, // Reduced timeout for faster failure (was 10000)
+        maximumAge: 60000, // Accept cached position up to 1 minute old (faster response)
+      };
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          // Check if request was cancelled
+          if (abortControllerRef.current?.signal.aborted) {
+            isRequestingRef.current = false;
+            return;
+          }
+
+          try {
+            const { latitude, longitude, accuracy } = position.coords;
+
+            // Validate coordinates
+            if (!latitude || !longitude || isNaN(latitude) || isNaN(longitude)) {
+              throw new Error('Invalid coordinates received');
+            }
+
+            // Check accuracy (warn if accuracy is poor but don't fail)
+            if (accuracy > 1000) {
+              console.warn(`Location accuracy is ${accuracy}m - may not be precise`);
+            }
+
+            // Set coordinates immediately for instant UI update
+            const tempLocation: Location = {
+              latitude,
+              longitude,
+              address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, // Temporary
+              city: undefined,
+              state: undefined,
+              pincode: undefined,
+            };
+            setLocation(tempLocation);
+            setIsLocationEnabled(true);
+            setIsLocationLoading(false); // Set loading false early
+
+            // Reverse geocode in background (non-blocking)
+            try {
+              const address = await reverseGeocode(latitude, longitude, abortControllerRef.current.signal);
+              
+              // Check if request was cancelled during geocoding
+              if (abortControllerRef.current?.signal.aborted) {
+                isRequestingRef.current = false;
+                return;
+              }
+
+              const newLocation: Location = {
+                latitude,
+                longitude,
+                address: address.formatted_address || `${latitude}, ${longitude}`,
+                city: address.city,
+                state: address.state,
+                pincode: address.pincode,
+              };
+
+              setLocation(newLocation);
+              localStorage.setItem('userLocation', JSON.stringify(newLocation));
+
+              // Save to backend in background (non-blocking, don't wait)
+              if (isAuthenticated && user) {
+                saveLocationToBackend(newLocation).catch(err => {
+                  console.error('Background location save failed:', err);
+                  // Don't fail the request - location is already saved locally
+                });
+              }
+
+              isRequestingRef.current = false;
+              resolve();
+            } catch (geocodeError: any) {
+              // Geocoding failed but we have coordinates - still success
+              console.warn('Geocoding failed, using coordinates:', geocodeError);
+              const fallbackLocation: Location = {
+                latitude,
+                longitude,
+                address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+              };
+              setLocation(fallbackLocation);
+              localStorage.setItem('userLocation', JSON.stringify(fallbackLocation));
+              
+              // Try to save to backend anyway
+              if (isAuthenticated && user) {
+                saveLocationToBackend(fallbackLocation).catch(() => {});
+              }
+
+              isRequestingRef.current = false;
+              resolve(); // Still resolve - we have coordinates
+            }
+          } catch (error: any) {
+            if (!abortControllerRef.current?.signal.aborted) {
+              setLocationError(error.message || 'Failed to get location address');
+            }
+            setIsLocationLoading(false);
+            isRequestingRef.current = false;
+            reject(error);
+          }
+        },
+        (error) => {
+          if (abortControllerRef.current?.signal.aborted) {
+            isRequestingRef.current = false;
+            return;
+          }
+
+          let errorMessage = 'Failed to get your location';
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Location permission denied. Please enable location access.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Location information unavailable.';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Location request timed out. Please try again.';
+              break;
+          }
+          setLocationError(errorMessage);
+          setIsLocationLoading(false);
+          isRequestingRef.current = false;
+          reject(new Error(errorMessage));
+        },
+        geoOptions
+      );
+    });
+  }, [isAuthenticated, user]);
+
+  // Helper function to save location to backend (non-blocking)
+  const saveLocationToBackend = async (locationData: Location): Promise<void> => {
+    try {
+      await api.post('/customer/location', {
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+        address: locationData.address,
+        city: locationData.city,
+        state: locationData.state,
+        pincode: locationData.pincode,
+      });
+    } catch (err) {
+      throw err; // Re-throw for caller to handle
+    }
+  };
+
+  // Reverse geocode coordinates to address - OPTIMIZED with caching and retry logic
+  const reverseGeocode = async (lat: number, lng: number, signal?: AbortSignal): Promise<any> => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      return { formatted_address: `${lat}, ${lng}` };
+    }
+
+    // Check cache first (fast path)
+    const cacheKey = getCacheKey(lat, lng);
+    const cached = geocodeCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.data;
+    }
+
+    // Retry logic for robustness
+    const maxRetries = 2;
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      // Check if request was cancelled
+      if (signal?.aborted) {
+        throw new Error('Request cancelled');
+      }
+
+      try {
+        // Add timeout to fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&result_type=street_address|route|locality|administrative_area_level_1|postal_code`,
+          {
+            signal: signal || controller.signal,
+          }
+        );
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Handle API errors
+        if (data.status === 'ZERO_RESULTS') {
+          return { formatted_address: `${lat}, ${lng}` };
+        }
+
+        if (data.status !== 'OK') {
+          throw new Error(`Geocoding API error: ${data.status}`);
+        }
+
+        if (data.results.length === 0) {
+          return { formatted_address: `${lat}, ${lng}` };
+        }
+
+        const result = data.results[0];
+        const addressComponents = result.address_components || [];
+
+        let city = '';
+        let state = '';
+        let pincode = '';
+
+        // Improved address component parsing
+        addressComponents.forEach((component: any) => {
+          const types = component.types || [];
+          if (!city && (types.includes('locality') || types.includes('administrative_area_level_2') || types.includes('sublocality'))) {
+            city = component.long_name;
+          }
+          if (!state && types.includes('administrative_area_level_1')) {
+            state = component.long_name;
+          }
+          if (!pincode && types.includes('postal_code')) {
+            pincode = component.long_name;
+          }
+        });
+
+        const geocodeResult = {
+          formatted_address: result.formatted_address || `${lat}, ${lng}`,
+          city,
+          state,
+          pincode,
+        };
+
+        // Cache the result
+        geocodeCache.set(cacheKey, {
+          data: geocodeResult,
+          timestamp: Date.now(),
+        });
+
+        // Limit cache size (keep last 100 entries)
+        if (geocodeCache.size > 100) {
+          const firstKey = geocodeCache.keys().next().value;
+          geocodeCache.delete(firstKey);
+        }
+
+        return geocodeResult;
+      } catch (error: any) {
+        lastError = error;
+        
+        // Don't retry on abort
+        if (signal?.aborted || error.name === 'AbortError') {
+          throw error;
+        }
+
+        // Don't retry on last attempt
+        if (attempt < maxRetries) {
+          // Exponential backoff: wait 200ms, 400ms
+          await new Promise(resolve => setTimeout(resolve, 200 * (attempt + 1)));
+          continue;
+        }
+      }
+    }
+
+    // All retries failed
+    console.error('Reverse geocoding failed after retries:', lastError);
+    return { formatted_address: `${lat}, ${lng}` };
+  };
+
+  // Update location manually - OPTIMIZED for instant UI update
+  const updateLocation = useCallback(async (newLocation: Location): Promise<void> => {
+    // Validate location data
+    if (!newLocation.latitude || !newLocation.longitude || 
+        isNaN(newLocation.latitude) || isNaN(newLocation.longitude)) {
+      throw new Error('Invalid location coordinates');
+    }
+
+    // Update UI immediately (instant feedback)
+    setLocation(newLocation);
+    setIsLocationEnabled(true);
+    localStorage.setItem('userLocation', JSON.stringify(newLocation));
+
+    // Cache geocoding result if we have full address
+    if (newLocation.address && newLocation.latitude && newLocation.longitude) {
+      const cacheKey = getCacheKey(newLocation.latitude, newLocation.longitude);
+      geocodeCache.set(cacheKey, {
+        data: {
+          formatted_address: newLocation.address,
+          city: newLocation.city,
+          state: newLocation.state,
+          pincode: newLocation.pincode,
+        },
+        timestamp: Date.now(),
+      });
+    }
+
+    // Save to backend in background (non-blocking)
+    if (isAuthenticated && user) {
+      saveLocationToBackend(newLocation).catch(err => {
+        console.error('Failed to save location to backend:', err);
+        // Don't fail - location is already saved locally
+      });
+    }
+  }, [isAuthenticated, user]);
+
+  // Clear location
+  const clearLocation = useCallback(() => {
+    // Cancel any ongoing requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    isRequestingRef.current = false;
+    
+    setLocation(null);
+    setIsLocationEnabled(false);
+    localStorage.removeItem('userLocation');
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Cancel any pending requests on unmount
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  return (
+    <LocationContext.Provider
+      value={{
+        location,
+        isLocationEnabled,
+        isLocationLoading,
+        locationError,
+        requestLocation,
+        updateLocation,
+        clearLocation,
+      }}
+    >
+      {children}
+    </LocationContext.Provider>
+  );
+}
+
+export function useLocation() {
+  const context = useContext(LocationContext);
+  if (context === undefined) {
+    throw new Error('useLocation must be used within a LocationProvider');
+  }
+  return context;
+}

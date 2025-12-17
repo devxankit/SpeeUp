@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef, useState, useEffect, useMemo } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getTheme } from '../../../utils/themes';
+import { useLocation } from '../../../context/LocationContext';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -110,6 +111,7 @@ const tabs: Tab[] = [
 
 export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroProps) {
   const navigate = useNavigate();
+  const { location: userLocation } = useLocation();
   const heroRef = useRef<HTMLDivElement>(null);
   const topSectionRef = useRef<HTMLDivElement>(null);
   const stickyRef = useRef<HTMLDivElement>(null);
@@ -119,6 +121,24 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
   const [, setIsSticky] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+
+  // Format location display text
+  const locationDisplayText = useMemo(() => {
+    if (userLocation?.address) {
+      // Use the full address if available
+      return userLocation.address;
+    }
+    // Fallback to city, state format if available
+    if (userLocation?.city && userLocation?.state) {
+      return `${userLocation.city}, ${userLocation.state}`;
+    }
+    // Fallback to city only
+    if (userLocation?.city) {
+      return userLocation.city;
+    }
+    // Default fallback
+    return 'SpeeUp, Princess Center, New Palasia, Indore, Madhya Pradesh';
+  }, [userLocation]);
 
   // Search suggestions based on active tab
   const searchSuggestions = useMemo(() => {
@@ -304,7 +324,7 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
               <div className="text-neutral-900 font-extrabold text-2xl md:text-xl mb-0 md:mb-0.5 leading-tight">14 minutes</div>
               {/* Location with dropdown indicator */}
               <div className="text-neutral-700 text-[10px] md:text-xs flex items-center gap-0.5 leading-tight">
-                <span className="line-clamp-1">SpeeUp, Princess Center, New Palasia, Indore, Madhya Pradesh</span>
+                <span className="line-clamp-1" title={locationDisplayText}>{locationDisplayText}</span>
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
                   <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>

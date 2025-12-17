@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { register, sendOTP, verifyOTP } from '../../../services/api/auth/sellerAuthService';
 import OTPInput from '../../../components/OTPInput';
+import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import { useAuth } from '../../../context/AuthContext';
 
 export default function SellerSignUp() {
@@ -17,7 +18,6 @@ export default function SellerSignUp() {
     categories: [] as string[],
     address: '',
     city: '',
-    serviceableArea: '',
     panCard: '',
     taxName: '',
     taxNumber: '',
@@ -57,13 +57,6 @@ export default function SellerSignUp() {
     'Indore',
   ];
 
-  const serviceableAreas = [
-    'Select Serviceable Area',
-    'Area 1',
-    'Area 2',
-    'Area 3',
-    'Area 4',
-  ];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -113,6 +106,12 @@ export default function SellerSignUp() {
     setError('');
 
     try {
+      // Validate location is selected
+      if (!formData.searchLocation || !formData.latitude || !formData.longitude) {
+        setError('Please select your store location using the location search');
+        return;
+      }
+
       const response = await register({
         sellerName: formData.sellerName,
         mobile: formData.mobile,
@@ -121,9 +120,11 @@ export default function SellerSignUp() {
         storeName: formData.storeName,
         category: formData.categories[0], // primary
         categories: formData.categories,
-        address: formData.address,
+        address: formData.address || formData.searchLocation,
         city: formData.city,
-        serviceableArea: formData.serviceableArea,
+        searchLocation: formData.searchLocation,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
       });
 
       if (response.success) {
@@ -328,24 +329,54 @@ export default function SellerSignUp() {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    Address <span className="text-red-500">*</span>
+                    Store Location <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    placeholder="Enter store address"
-                    required
-                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                  <GoogleMapsAutocomplete
+                    value={formData.searchLocation}
+                    onChange={(address, lat, lng, placeName) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        searchLocation: address,
+                        latitude: lat.toString(),
+                        longitude: lng.toString(),
+                        address: address,
+                        // Extract city from address if possible
+                        city: placeName || address.split(',')[0] || '',
+                      }));
+                    }}
+                    placeholder="Search and select your store location..."
                     disabled={loading}
+                    required
                   />
+                  {formData.latitude && formData.longitude && (
+                    <p className="mt-1 text-xs text-neutral-500">
+                      Location: {formData.latitude}, {formData.longitude}
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
                     City <span className="text-red-500">*</span>
                   </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    placeholder="Enter city"
+                    required
+                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Hidden fields for coordinates */}
+                <input type="hidden" name="latitude" value={formData.latitude} />
+                <input type="hidden" name="longitude" value={formData.longitude} />
+
+                {/* Legacy city select - keeping for backward compatibility but hidden */}
+                <div className="hidden">
                   <select
                     name="city"
                     value={formData.city}
@@ -362,25 +393,6 @@ export default function SellerSignUp() {
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    Serviceable Area <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    name="serviceableArea"
-                    value={formData.serviceableArea}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-                    disabled={loading}
-                  >
-                    {serviceableAreas.map((area) => (
-                      <option key={area} value={area === 'Select Serviceable Area' ? '' : area}>
-                        {area}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
               {/* Optional Fields Section */}

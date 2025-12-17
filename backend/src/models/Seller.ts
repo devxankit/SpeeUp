@@ -18,7 +18,7 @@ export interface ISeller extends Document {
 
   // Store Location Info
   city: string;
-  serviceableArea: string;
+  serviceableArea?: string;
   searchLocation?: string;
   latitude?: string;
   longitude?: string;
@@ -128,7 +128,6 @@ const SellerSchema = new Schema<ISeller>(
     },
     serviceableArea: {
       type: String,
-      required: [true, 'Serviceable area is required'],
       trim: true,
     },
     searchLocation: {

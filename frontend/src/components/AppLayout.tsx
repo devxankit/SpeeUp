@@ -2,6 +2,9 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import FloatingCartPill from './FloatingCartPill';
+import { useLocation as useLocationContext } from '../context/LocationContext';
+import { useAuth } from '../context/AuthContext';
+import LocationPermissionRequest from './LocationPermissionRequest';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -15,8 +18,34 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [categoriesRotation, setCategoriesRotation] = useState(0);
   const [prevCategoriesActive, setPrevCategoriesActive] = useState(false);
+  const { isLocationEnabled, isLocationLoading, location: userLocation, updateLocation } = useLocationContext();
+  const { isAuthenticated } = useAuth();
+  const [showLocationRequest, setShowLocationRequest] = useState(false);
+  const [showLocationChangeModal, setShowLocationChangeModal] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
+
+  // Check if location is required for current route
+  const requiresLocation = () => {
+    const publicRoutes = ['/login', '/signup', '/seller/login', '/seller/signup', '/delivery/login', '/delivery/signup', '/admin/login'];
+    // Don't require location on login/signup pages
+    if (publicRoutes.includes(location.pathname)) {
+      return false;
+    }
+    // Require location for ALL routes (not just authenticated users)
+    // This ensures location is mandatory for everyone visiting the platform
+    return true;
+  };
+
+  // Show location request if needed - check on every route change
+  useEffect(() => {
+    // Wait for location loading to complete, then check if location is required and not enabled
+    if (!isLocationLoading && requiresLocation() && !isLocationEnabled) {
+      setShowLocationRequest(true);
+    } else if (isLocationEnabled) {
+      setShowLocationRequest(false);
+    }
+  }, [isLocationLoading, isLocationEnabled, location.pathname]);
 
   // Update search query when URL params change
   useEffect(() => {
@@ -191,8 +220,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
               {/* Location line */}
               <div className="px-4 md:px-6 lg:px-8 py-2 flex items-center justify-between text-sm">
-                <span className="text-neutral-700">Silicon City, Indore</span>
-                <button className="text-blue-600 font-medium hover:text-blue-700 transition-colors">Change</button>
+                <span className="text-neutral-700 line-clamp-1" title={userLocation?.address || 'Location not set'}>
+                  {userLocation?.address 
+                    ? userLocation.address.length > 50 
+                      ? `${userLocation.address.substring(0, 50)}...` 
+                      : userLocation.address
+                    : userLocation?.city && userLocation?.state
+                    ? `${userLocation.city}, ${userLocation.state}`
+                    : userLocation?.city || 'Location not set'}
+                </span>
+                <button 
+                  onClick={() => setShowLocationChangeModal(true)}
+                  className="text-blue-600 font-medium hover:text-blue-700 transition-colors flex-shrink-0 ml-2"
+                >
+                  Change
+                </button>
               </div>
 
               {/* Search bar - Hidden on Order Again page */}
@@ -241,6 +283,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
           {/* Floating Cart Pill */}
           <FloatingCartPill />
+
+          {/* Location Permission Request Modal - Mandatory for all users */}
+          {showLocationRequest && (
+            <LocationPermissionRequest
+              onLocationGranted={() => setShowLocationRequest(false)}
+              skipable={false}
+              title="Location Access Required"
+              description="We need your location to show you products available near you and enable delivery services. Location access is required to continue."
+            />
+          )}
+
+          {/* Location Change Modal */}
+          {showLocationChangeModal && (
+            <LocationPermissionRequest
+              onLocationGranted={() => setShowLocationChangeModal(false)}
+              skipable={true}
+              title="Change Location"
+              description="Update your location to see products available near you."
+            />
+          )}
 
           {/* Fixed Bottom Navigation - Mobile Only, Hidden on checkout pages */}
           {showFooter && (

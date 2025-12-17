@@ -32,7 +32,10 @@ export interface RegisterData {
   categories: string[]; // multiple categories
   address: string;
   city: string;
-  serviceableArea: string;
+  serviceableArea?: string;
+  searchLocation?: string;
+  latitude?: string;
+  longitude?: string;
 }
 
 export interface RegisterResponse {
