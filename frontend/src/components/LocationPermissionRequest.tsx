@@ -35,7 +35,7 @@ export default function LocationPermissionRequest({
     }
   };
 
-  const handleManualLocationSelect = (address: string, lat: number, lng: number, placeName: string) => {
+  const handleManualLocationSelect = (address: string, lat: number, lng: number, _placeName: string) => {
     setManualAddress(address);
     setManualLat(lat);
     setManualLng(lng);

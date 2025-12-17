@@ -212,7 +212,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
             // Reverse geocode in background (non-blocking)
             try {
-              const address = await reverseGeocode(latitude, longitude, abortControllerRef.current.signal);
+              const address = await reverseGeocode(latitude, longitude, abortControllerRef.current?.signal);
               
               // Check if request was cancelled during geocoding
               if (abortControllerRef.current?.signal.aborted) {
@@ -408,7 +408,9 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         // Limit cache size (keep last 100 entries)
         if (geocodeCache.size > 100) {
           const firstKey = geocodeCache.keys().next().value;
-          geocodeCache.delete(firstKey);
+          if (firstKey) {
+            geocodeCache.delete(firstKey);
+          }
         }
 
         return geocodeResult;

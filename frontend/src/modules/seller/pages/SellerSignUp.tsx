@@ -92,7 +92,7 @@ export default function SellerSignUp() {
 
     // Validate required fields
     if (!formData.sellerName || !formData.mobile || !formData.email || !formData.password ||
-        !formData.storeName || formData.categories.length === 0 || !formData.address || !formData.city || !formData.serviceableArea) {
+        !formData.storeName || formData.categories.length === 0 || !formData.address || !formData.city) {
       setError('Please fill all required fields (select at least one category)');
       return;
     }
