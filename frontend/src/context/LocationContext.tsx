@@ -16,9 +16,11 @@ interface LocationContextType {
   isLocationEnabled: boolean;
   isLocationLoading: boolean;
   locationError: string | null;
+  permissionStatus: 'prompt' | 'granted' | 'denied' | 'unsupported';
   requestLocation: () => Promise<void>;
   updateLocation: (location: Location) => Promise<void>;
   clearLocation: () => void;
+  checkPermissionStatus: () => Promise<void>;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
@@ -79,10 +81,12 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const [isLocationLoading, setIsLocationLoading] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied' | 'unsupported'>('prompt');
   
   // Refs for request cancellation and preventing race conditions
   const abortControllerRef = useRef<AbortController | null>(null);
   const isRequestingRef = useRef(false);
+  const requestLocationRef = useRef<(() => Promise<void>) | null>(null);
 
   // Load saved location - OPTIMIZED: localStorage first (instant), then backend in parallel
   useEffect(() => {
@@ -326,10 +330,11 @@ export function LocationProvider({ children }: { children: ReactNode }) {
           let errorMessage = 'Failed to get your location';
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              errorMessage = 'Location permission denied. Please enable location access.';
+              setPermissionStatus('denied');
+              errorMessage = 'Location permission denied. Please enable location access in your device settings.';
               break;
             case error.POSITION_UNAVAILABLE:
-              errorMessage = 'Location information unavailable.';
+              errorMessage = 'Location information unavailable. Please check your GPS settings.';
               break;
             case error.TIMEOUT:
               errorMessage = 'Location request timed out. Please try again.';
@@ -344,6 +349,48 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       );
     });
   }, [isAuthenticated, user]);
+
+  // Store requestLocation in ref for use in checkPermissionStatus
+  useEffect(() => {
+    requestLocationRef.current = requestLocation;
+  }, [requestLocation]);
+
+  // Check permission status
+  const checkPermissionStatus = useCallback(async () => {
+    if (!navigator.geolocation) {
+      setPermissionStatus('unsupported');
+      return;
+    }
+
+    if (navigator.permissions) {
+      try {
+        const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+        setPermissionStatus(permissionStatus.state);
+        
+        // Listen for permission changes (when user returns from settings)
+        permissionStatus.onchange = () => {
+          setPermissionStatus(permissionStatus.state);
+          // If permission is now granted, try to get location
+          if (permissionStatus.state === 'granted' && !isLocationEnabled && requestLocationRef.current) {
+            requestLocationRef.current().catch(() => {
+              // Error handled by requestLocation
+            });
+          }
+        };
+      } catch (error) {
+        // Permission API not supported, fallback to checking via geolocation
+        setPermissionStatus('prompt');
+      }
+    } else {
+      // Fallback for browsers without Permissions API
+      setPermissionStatus('prompt');
+    }
+  }, [isLocationEnabled]);
+
+  // Check permission status on mount
+  useEffect(() => {
+    checkPermissionStatus();
+  }, [checkPermissionStatus]);
 
   // Helper function to save location to backend (non-blocking)
   const saveLocationToBackend = async (locationData: Location): Promise<void> => {
@@ -550,9 +597,11 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         isLocationEnabled,
         isLocationLoading,
         locationError,
+        permissionStatus,
         requestLocation,
         updateLocation,
         clearLocation,
+        checkPermissionStatus,
       }}
     >
       {children}
