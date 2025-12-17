@@ -192,8 +192,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     loadSavedLocation();
   }, [isAuthenticated, user]);
 
-  // Request user's current location - OPTIMIZED for speed and accuracy
-  const requestLocation = useCallback(async (): Promise<void> => {
+  // Request user's current location - OPTIMIZED with retry logic and fallback strategies
+  const requestLocation = useCallback(async (retryCount = 0): Promise<void> => {
     if (!navigator.geolocation) {
       setLocationError('Geolocation is not supported by your browser');
       setIsLocationLoading(false);
@@ -201,26 +201,35 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     }
 
     // Prevent concurrent requests
-    if (isRequestingRef.current) {
+    if (isRequestingRef.current && retryCount === 0) {
       return;
     }
 
-    // Cancel any previous request
-    if (abortControllerRef.current) {
+    // Cancel any previous request only on first attempt
+    if (retryCount === 0 && abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
-    isRequestingRef.current = true;
-    setIsLocationLoading(true);
-    setLocationError(null);
-    abortControllerRef.current = new AbortController();
+    // Create new abort controller for this attempt
+    if (retryCount === 0) {
+      abortControllerRef.current = new AbortController();
+      isRequestingRef.current = true;
+      setIsLocationLoading(true);
+      setLocationError(null);
+    } else {
+      // Update error message for retry
+      setLocationError(`Getting your location... (Attempt ${retryCount + 1}/3)`);
+    }
 
     return new Promise((resolve, reject) => {
-      // Optimized geolocation options for faster and more accurate results
+      // Strategy: Try high accuracy first, then fallback to lower accuracy
+      const useHighAccuracy = retryCount < 2; // First 2 attempts use high accuracy
+      const timeoutDuration = useHighAccuracy ? 20000 : 30000; // 20s for high accuracy, 30s for low accuracy
+      
       const geoOptions = {
-        enableHighAccuracy: true, // Use GPS if available for better accuracy
-        timeout: 8000, // Reduced timeout for faster failure (was 10000)
-        maximumAge: 60000, // Accept cached position up to 1 minute old (faster response)
+        enableHighAccuracy: useHighAccuracy,
+        timeout: timeoutDuration,
+        maximumAge: retryCount === 0 ? 60000 : 0, // Use cache on first attempt, force fresh on retries
       };
 
       navigator.geolocation.getCurrentPosition(
@@ -256,6 +265,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             setLocation(tempLocation);
             setIsLocationEnabled(true);
             setIsLocationLoading(false); // Set loading false early
+            setLocationError(null); // Clear any retry messages
 
             // Reverse geocode in background (non-blocking)
             try {
@@ -328,18 +338,64 @@ export function LocationProvider({ children }: { children: ReactNode }) {
           }
 
           let errorMessage = 'Failed to get your location';
+          let shouldRetry = false;
+          
           switch (error.code) {
             case error.PERMISSION_DENIED:
               setPermissionStatus('denied');
               errorMessage = 'Location permission denied. Please enable location access in your device settings.';
               break;
             case error.POSITION_UNAVAILABLE:
-              errorMessage = 'Location information unavailable. Please check your GPS settings.';
+              // Retry if GPS is unavailable (might be temporary)
+              if (retryCount < 2) {
+                shouldRetry = true;
+                errorMessage = `GPS signal unavailable. Retrying... (${retryCount + 1}/3)`;
+              } else {
+                errorMessage = 'Location information unavailable. Please check your GPS settings and ensure you are outdoors or near a window.';
+              }
               break;
             case error.TIMEOUT:
-              errorMessage = 'Location request timed out. Please try again.';
+              // Always retry timeout errors
+              if (retryCount < 2) {
+                shouldRetry = true;
+                errorMessage = `Location request taking longer than expected. Retrying with ${retryCount === 1 ? 'lower accuracy' : 'extended timeout'}... (${retryCount + 1}/3)`;
+              } else {
+                // On final attempt, try to use cached location if available
+                const cachedLocation = localStorage.getItem('userLocation');
+                if (cachedLocation) {
+                  try {
+                    const parsed = JSON.parse(cachedLocation);
+                    if (parsed.latitude && parsed.longitude) {
+                      console.warn('Using cached location due to timeout');
+                      setLocation(parsed);
+                      setIsLocationEnabled(true);
+                      setIsLocationLoading(false);
+                      setLocationError('Using previously saved location (GPS timeout)');
+                      isRequestingRef.current = false;
+                      resolve();
+                      return;
+                    }
+                  } catch (e) {
+                    // Ignore cache parse errors
+                  }
+                }
+                errorMessage = 'Location request timed out. Please ensure GPS is enabled and you have a clear view of the sky, or try again.';
+              }
               break;
           }
+
+          if (shouldRetry) {
+            // Wait before retrying (exponential backoff)
+            const delay = Math.min(1000 * (retryCount + 1), 3000); // 1s, 2s, max 3s
+            setTimeout(() => {
+              // Retry with updated count
+              requestLocation(retryCount + 1)
+                .then(() => resolve())
+                .catch((retryError) => reject(retryError));
+            }, delay);
+            return; // Exit early, retry will handle resolve/reject
+          }
+
           setLocationError(errorMessage);
           setIsLocationLoading(false);
           isRequestingRef.current = false;
