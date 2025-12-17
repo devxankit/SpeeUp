@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { register, sendOTP, verifyOTP } from '../services/api/auth/customerAuthService';
-import OTPInput from '../components/OTPInput';
+import { register, sendOTP, verifyOTP } from '../../services/api/auth/customerAuthService';
+import OTPInput from '../../components/OTPInput';
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -35,7 +35,7 @@ export default function SignUp() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.mobile || !formData.email) {
       setError('Name, mobile, and email are required');
       return;
@@ -117,11 +117,11 @@ export default function SignUp() {
       resizeTimeout = setTimeout(updateOverlayPosition, 100);
     };
     window.addEventListener('resize', handleResize);
-    
+
     const resizeObserver = new ResizeObserver(() => {
       updateOverlayPosition();
     });
-    
+
     if (videoSectionRef.current) {
       resizeObserver.observe(videoSectionRef.current);
     }
@@ -151,14 +151,14 @@ export default function SignUp() {
         aria-label="Back"
       >
         <svg width="18" height="18" className="sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
       {/* Video Section */}
-      <div 
+      <div
         ref={videoSectionRef}
-        className="overflow-hidden relative flex-1" 
+        className="overflow-hidden relative flex-1"
         style={{ minHeight: 0, border: 'none', borderBottom: 'none', padding: 0, margin: 0, marginLeft: '2px', backgroundColor: '#ffffff', zIndex: 0, width: 'calc(100% - 2px)', boxSizing: 'border-box', position: 'relative' }}
       >
         <video
@@ -168,14 +168,14 @@ export default function SignUp() {
           muted
           playsInline
           className="w-full h-full object-cover"
-          style={{ 
-            display: 'block', 
-            width: '100%', 
-            height: '100%', 
-            margin: 0, 
-            padding: 0, 
-            border: 'none', 
-            outline: 'none', 
+          style={{
+            display: 'block',
+            width: '100%',
+            height: '100%',
+            margin: 0,
+            padding: 0,
+            border: 'none',
+            outline: 'none',
             boxShadow: 'none',
             verticalAlign: 'top',
             objectFit: 'cover',
@@ -192,10 +192,10 @@ export default function SignUp() {
       </div>
 
       {/* Unified white overlay */}
-      <div 
+      <div
         ref={overlayRef}
-        className="fixed bg-white" 
-        style={{ 
+        className="fixed bg-white"
+        style={{
           height: '12px',
           zIndex: 10,
           left: '0px',
@@ -206,15 +206,15 @@ export default function SignUp() {
       ></div>
 
       {/* Sign Up Section */}
-      <div 
+      <div
         ref={loginSectionRef}
-        className="bg-white flex flex-col items-center flex-shrink-0 relative" 
+        className="bg-white flex flex-col items-center flex-shrink-0 relative"
         style={{ border: 'none', borderTop: 'none', margin: 0, marginTop: '-100px', marginLeft: '-2px', boxShadow: 'none', outline: 'none', backgroundColor: '#ffffff', zIndex: 1, padding: '4px 0px 12px', paddingTop: '6px', width: 'calc(100% + 4px)', boxSizing: 'border-box', position: 'relative' }}
       >
         {!showOTP ? (
           <form onSubmit={handleSubmit} className="w-full px-4 space-y-2 relative z-10">
             <h2 className="text-lg font-bold text-neutral-800 mb-3 text-center">Create Account</h2>
-            
+
             {/* Name Input */}
             <div className="mb-2">
               <input
@@ -290,11 +290,10 @@ export default function SignUp() {
             <button
               type="submit"
               disabled={loading || !formData.name || formData.mobile.length !== 10 || !formData.email}
-              className={`w-full py-2 sm:py-2.5 rounded-lg font-semibold text-sm transition-colors border px-3 ${
-                formData.name && formData.mobile.length === 10 && formData.email && !loading
+              className={`w-full py-2 sm:py-2.5 rounded-lg font-semibold text-sm transition-colors border px-3 ${formData.name && formData.mobile.length === 10 && formData.email && !loading
                   ? 'bg-orange-50 text-orange-600 border-orange-500 hover:bg-orange-100'
                   : 'bg-neutral-300 text-neutral-500 cursor-not-allowed border-neutral-300'
-              }`}
+                }`}
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
             </button>

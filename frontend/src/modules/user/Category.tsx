@@ -1,8 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useMemo } from 'react';
-import { categories } from '../data/categories';
-import { products } from '../data/products';
-import ProductCard from '../components/ProductCard';
+import { categories } from '../../data/categories';
+import { products } from '../../data/products';
+import ProductCard from './components/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Subcategories for each category
@@ -416,24 +416,24 @@ export default function Category() {
     return productsList.filter((product) => {
       const nameLower = product.name.toLowerCase();
       const tagsLower = (product.tags || []).map(tag => tag.toLowerCase());
-      
+
       // Check if product matches current subcategory
       const matchesCurrent = keywords.some(keyword => {
         const keywordLower = keyword.toLowerCase().trim();
-        
+
         // For multi-word keywords, match the entire phrase
         if (keywordLower.includes(' ')) {
           return nameLower.includes(keywordLower) || tagsLower.some(tag => tag.includes(keywordLower));
         }
-        
+
         // For single-word keywords, check if it appears as a whole word
         const nameWords = nameLower.split(/\s+/);
         const tagWords = tagsLower.flatMap(tag => tag.split(/\s+/));
-        
+
         const exactMatch = nameWords.includes(keywordLower) || tagWords.includes(keywordLower);
         const wordBoundaryPattern = new RegExp(`(^|\\s)${keywordLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`, 'i');
         const boundaryMatch = wordBoundaryPattern.test(nameLower) || tagsLower.some(tag => wordBoundaryPattern.test(tag));
-        
+
         return exactMatch || boundaryMatch;
       });
 
@@ -442,33 +442,33 @@ export default function Category() {
       // Check if product matches a higher priority subcategory - if so, exclude from current
       for (const otherSubcatId of allSubcategories) {
         if (otherSubcatId === subcategoryId) continue;
-        
+
         const otherPriority = subcategoryPriority[mainCategoryId]?.[otherSubcatId] || 0;
         if (otherPriority <= currentPriority) continue; // Skip lower or equal priority
-        
+
         const otherKeywords = categoryKeywords[mainCategoryId]?.[otherSubcatId] || [];
         const matchesOther = otherKeywords.some(keyword => {
           const keywordLower = keyword.toLowerCase().trim();
-          
+
           if (keywordLower.includes(' ')) {
             return nameLower.includes(keywordLower) || tagsLower.some(tag => tag.includes(keywordLower));
           }
-          
+
           const nameWords = nameLower.split(/\s+/);
           const tagWords = tagsLower.flatMap(tag => tag.split(/\s+/));
           const exactMatch = nameWords.includes(keywordLower) || tagWords.includes(keywordLower);
           const wordBoundaryPattern = new RegExp(`(^|\\s)${keywordLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`, 'i');
           const boundaryMatch = wordBoundaryPattern.test(nameLower) || tagsLower.some(tag => wordBoundaryPattern.test(tag));
-          
+
           return exactMatch || boundaryMatch;
         });
-        
+
         // If product matches a higher priority subcategory, exclude from current
         if (matchesOther) {
           return false;
         }
       }
-      
+
       return true;
     });
   };
@@ -496,13 +496,13 @@ export default function Category() {
   const getFilterOptions = () => {
     const categoryProducts = products.filter((p) => p.categoryId === id);
     const filterMap = new Map<string, number>();
-    
+
     categoryProducts.forEach((product) => {
       // Extract main ingredient/type from product name
       const name = product.name.toLowerCase();
       // Remove common prefixes like "fresh", "organic", etc.
       const cleanName = name.replace(/^(fresh|organic|premium|best|new)\s+/i, '').trim();
-      
+
       const commonTypes = [
         { keywords: ['tomato', 'tomatoes'], display: 'Tomato' },
         { keywords: ['potato', 'potatoes'], display: 'Potato' },
@@ -530,7 +530,7 @@ export default function Category() {
         { keywords: ['orange', 'oranges'], display: 'Orange' },
         { keywords: ['mango', 'mangoes'], display: 'Mango' },
       ];
-      
+
       for (const type of commonTypes) {
         if (type.keywords.some(keyword => cleanName.includes(keyword))) {
           filterMap.set(type.display, (filterMap.get(type.display) || 0) + 1);
@@ -538,7 +538,7 @@ export default function Category() {
         }
       }
     });
-    
+
     return Array.from(filterMap.entries())
       .map(([name, count]) => ({ name, count, icon: getIconForFilter(name) }))
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -609,9 +609,9 @@ export default function Category() {
                   setSelectedSubcategory(subcat.id);
                 }}
                 className="w-full flex flex-col items-center justify-center py-2 relative hover:bg-neutral-50 transition-colors cursor-pointer"
-                style={{ 
-                  minHeight: '70px', 
-                  paddingLeft: '4px', 
+                style={{
+                  minHeight: '70px',
+                  paddingLeft: '4px',
                   paddingRight: '4px',
                   pointerEvents: 'auto',
                   zIndex: 10
@@ -686,7 +686,7 @@ export default function Category() {
         <div className="px-4 md:px-6 lg:px-8 py-1.5 md:py-2 bg-white border-b border-neutral-200 flex-shrink-0">
           <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto scrollbar-hide -mx-4 md:-mx-6 lg:-mx-8 px-4 md:px-6 lg:px-8 scroll-smooth">
             {/* Filters Button */}
-            <button 
+            <button
               onClick={() => setIsFiltersOpen(true)}
               className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors flex-shrink-0 whitespace-nowrap"
             >
@@ -698,7 +698,7 @@ export default function Category() {
               <span>Filters</span>
               <span className="text-neutral-500 text-[10px] ml-0.5">▾</span>
             </button>
-            
+
             {/* Sort Button */}
             <button className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 rounded-md hover:bg-neutral-50 transition-colors flex-shrink-0 whitespace-nowrap">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
@@ -715,11 +715,10 @@ export default function Category() {
                 <button
                   key={subcat.id}
                   onClick={() => setSelectedSubcategory(subcat.id)}
-                  className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors flex-shrink-0 whitespace-nowrap ${
-                    isSelected
-                      ? 'bg-white border border-neutral-300 text-neutral-900'
-                      : 'bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-50'
-                  }`}
+                  className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors flex-shrink-0 whitespace-nowrap ${isSelected
+                    ? 'bg-white border border-neutral-300 text-neutral-900'
+                    : 'bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-50'
+                    }`}
                 >
                   <span className="text-sm flex-shrink-0">{subcat.icon}</span>
                   <span>{subcat.name}</span>
@@ -823,21 +822,19 @@ export default function Category() {
                   <div className="w-24 border-r border-neutral-200 flex-shrink-0 bg-neutral-50">
                     <button
                       onClick={() => setSelectedFilterCategory('Type')}
-                      className={`w-full px-3 py-3 text-left text-sm font-medium transition-colors ${
-                        selectedFilterCategory === 'Type'
-                          ? 'bg-green-50 text-green-700'
-                          : 'text-neutral-600 hover:bg-neutral-100'
-                      }`}
+                      className={`w-full px-3 py-3 text-left text-sm font-medium transition-colors ${selectedFilterCategory === 'Type'
+                        ? 'bg-green-50 text-green-700'
+                        : 'text-neutral-600 hover:bg-neutral-100'
+                        }`}
                     >
                       Type
                     </button>
                     <button
                       onClick={() => setSelectedFilterCategory('Properties')}
-                      className={`w-full px-3 py-3 text-left text-sm font-medium transition-colors ${
-                        selectedFilterCategory === 'Properties'
-                          ? 'bg-green-50 text-green-700'
-                          : 'text-neutral-600 hover:bg-neutral-100'
-                      }`}
+                      className={`w-full px-3 py-3 text-left text-sm font-medium transition-colors ${selectedFilterCategory === 'Properties'
+                        ? 'bg-green-50 text-green-700'
+                        : 'text-neutral-600 hover:bg-neutral-100'
+                        }`}
                     >
                       Properties
                     </button>
@@ -897,11 +894,10 @@ export default function Category() {
                   </button>
                   <button
                     onClick={handleApplyFilters}
-                    className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${
-                      selectedFilters.length > 0
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
-                    }`}
+                    className={`flex-1 px-4 py-2.5 rounded-lg font-medium text-sm transition-colors ${selectedFilters.length > 0
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                      }`}
                     disabled={selectedFilters.length === 0}
                   >
                     Apply

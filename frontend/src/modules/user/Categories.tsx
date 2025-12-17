@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import { categories } from '../data/categories';
-import { getProductsByCategory, householdEssentialsTiles, shopByStoreTiles } from '../data/homeTiles';
-import { productImages } from '../utils/imagePaths';
+import { categories } from '../../data/categories';
+import { getProductsByCategory, householdEssentialsTiles, shopByStoreTiles } from '../../data/homeTiles';
+import { productImages } from '../../utils/imagePaths';
 
 // Organize categories into sections
 const categorySections = [
@@ -84,7 +84,7 @@ export default function Categories() {
                 {section.categories.map((category) => {
                   const categoryData = categories.find((c) => c.id === category.categoryId);
                   const productImages = category.productImages || (category.categoryId ? getProductsByCategory(category.categoryId, 1) : []);
-                  
+
                   return (
                     <div key={category.id} className="flex flex-col">
                       <Link
@@ -115,7 +115,7 @@ export default function Categories() {
                           )}
                         </div>
                       </Link>
-                      
+
                       {/* Category name - outside the card */}
                       <div className="mt-1.5 text-center">
                         <span className="text-[11px] font-semibold text-neutral-900 line-clamp-2 leading-tight">

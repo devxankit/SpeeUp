@@ -1,4 +1,4 @@
-import { Product } from '../types/domain';
+import { Product } from '../../../types/domain';
 import { useNavigate } from 'react-router-dom';
 
 interface SimilarProductsProps {

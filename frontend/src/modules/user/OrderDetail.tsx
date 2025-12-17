@@ -1,9 +1,9 @@
 import { useParams, Link, useSearchParams } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import Button from "../components/ui/button"
-import { useOrders } from "../context/OrdersContext"
-import { OrderStatus } from "../types/order"
+import Button from "../../components/ui/button"
+import { useOrders } from "../../context/OrdersContext"
+import { OrderStatus } from "../../types/order"
 
 // Icon Components
 const ArrowLeftIcon = ({ className }: { className?: string }) => (
@@ -100,7 +100,7 @@ const CircleSlashIcon = ({ className }: { className?: string }) => (
 const DeliveryPartnerMarker = ({ isVisible }: { isVisible: boolean }) => {
   const [deliveryPos, setDeliveryPos] = useState({ left: 330, top: 190 });
   const [storePos, setStorePos] = useState({ left: 60, top: 70 });
-  
+
   useEffect(() => {
     if (isVisible) {
       // Calculate delivery location position
@@ -136,11 +136,11 @@ const DeliveryPartnerMarker = ({ isVisible }: { isVisible: boolean }) => {
     <motion.div
       className="absolute z-10"
       initial={{ x: storePos.left, y: storePos.top }}
-      animate={{ 
+      animate={{
         x: [
-          storePos.left, 
-          storePos.left + (deliveryPos.left - storePos.left) * 0.3, 
-          storePos.left + (deliveryPos.left - storePos.left) * 0.7, 
+          storePos.left,
+          storePos.left + (deliveryPos.left - storePos.left) * 0.3,
+          storePos.left + (deliveryPos.left - storePos.left) * 0.7,
           deliveryPos.left,
           deliveryPos.left,
           storePos.left + (deliveryPos.left - storePos.left) * 0.7,
@@ -148,9 +148,9 @@ const DeliveryPartnerMarker = ({ isVisible }: { isVisible: boolean }) => {
           storePos.left
         ],
         y: [
-          storePos.top, 
-          storePos.top + (deliveryPos.top - storePos.top) * 0.3, 
-          storePos.top + (deliveryPos.top - storePos.top) * 0.7, 
+          storePos.top,
+          storePos.top + (deliveryPos.top - storePos.top) * 0.3,
+          storePos.top + (deliveryPos.top - storePos.top) * 0.7,
           deliveryPos.top,
           deliveryPos.top,
           storePos.top + (deliveryPos.top - storePos.top) * 0.7,
@@ -158,7 +158,7 @@ const DeliveryPartnerMarker = ({ isVisible }: { isVisible: boolean }) => {
           storePos.top
         ]
       }}
-      transition={{ 
+      transition={{
         duration: 16, // Total duration for round trip
         repeat: Infinity,
         ease: "linear",
@@ -209,7 +209,7 @@ const AnimatedCheckmark = ({ delay = 0 }) => (
 
 // Map placeholder component with animated route
 const DeliveryMap = ({ isVisible }: { isVisible: boolean }) => (
-  <motion.div 
+  <motion.div
     data-map-container
     className="relative h-64 bg-gradient-to-b from-gray-100 to-gray-200 overflow-hidden"
     initial={{ opacity: 0 }}
@@ -224,16 +224,16 @@ const DeliveryMap = ({ isVisible }: { isVisible: boolean }) => (
       `,
       backgroundSize: '40px 40px'
     }} />
-    
+
     {/* Roads */}
     <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 256">
       {/* Main roads */}
       <path d="M0 128 L400 128" stroke="#e5e7eb" strokeWidth="12" fill="none" />
       <path d="M200 0 L200 256" stroke="#e5e7eb" strokeWidth="8" fill="none" />
       <path d="M0 64 L400 200" stroke="#e5e7eb" strokeWidth="6" fill="none" />
-      
+
       {/* Animated delivery route */}
-      <motion.path 
+      <motion.path
         d="M60 70 Q 120 90, 160 120 T 280 160 T 340 200"
         stroke="#166534"
         strokeWidth="3"
@@ -245,7 +245,7 @@ const DeliveryMap = ({ isVisible }: { isVisible: boolean }) => (
       />
     </svg>
     {/* Store marker */}
-    <motion.div 
+    <motion.div
       data-store-marker
       className="absolute flex items-center justify-center"
       style={{ left: '50px', top: '50px' }}
@@ -258,7 +258,7 @@ const DeliveryMap = ({ isVisible }: { isVisible: boolean }) => (
       </div>
     </motion.div>
     {/* Delivery location marker */}
-    <motion.div 
+    <motion.div
       data-delivery-marker
       className="absolute flex flex-col items-center"
       style={{ right: '50px', bottom: '40px' }}
@@ -275,7 +275,7 @@ const DeliveryMap = ({ isVisible }: { isVisible: boolean }) => (
       <DeliveryPartnerMarker isVisible={isVisible} />
     )}
     {/* Expand button */}
-    <motion.button 
+    <motion.button
       className="absolute top-3 right-3 w-8 h-8 bg-white rounded-lg shadow flex items-center justify-center"
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.95 }}
@@ -288,7 +288,7 @@ const DeliveryMap = ({ isVisible }: { isVisible: boolean }) => (
       </svg>
     </motion.button>
     {/* Current location button */}
-    <motion.button 
+    <motion.button
       className="absolute bottom-3 right-3 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center"
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.95 }}
@@ -308,26 +308,26 @@ const DeliveryMap = ({ isVisible }: { isVisible: boolean }) => (
 const PromoCarousel = () => {
   const [currentSlide, setCurrentSlide] = useState(0)
   const promos = [
-    { 
-      bank: "HDFC BANK", 
+    {
+      bank: "HDFC BANK",
       offer: "10% cashback on all orders",
       subtext: "Extraordinary Rewards | Zero Joining Fee | T&C apply",
       color: "from-blue-50 to-indigo-50"
     },
-    { 
-      bank: "ICICI BANK", 
+    {
+      bank: "ICICI BANK",
       offer: "15% instant discount",
       subtext: "Valid on orders above ₹299 | Use code ICICI15",
       color: "from-orange-50 to-red-50"
     },
-    { 
-      bank: "SBI CARD", 
+    {
+      bank: "SBI CARD",
       offer: "Flat ₹75 off",
       subtext: "On all orders | No minimum order value",
       color: "from-purple-50 to-pink-50"
     },
-    { 
-      bank: "AXIS BANK", 
+    {
+      bank: "AXIS BANK",
       offer: "20% cashback up to ₹100",
       subtext: "Valid on first order | T&C apply",
       color: "from-teal-50 to-cyan-50"
@@ -342,7 +342,7 @@ const PromoCarousel = () => {
   }, [])
 
   return (
-    <motion.div 
+    <motion.div
       className="bg-white rounded-xl p-4 shadow-sm"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -376,16 +376,15 @@ const PromoCarousel = () => {
           </motion.div>
         </AnimatePresence>
       </div>
-      
+
       {/* Dots indicator */}
       <div className="flex justify-center gap-2 mt-3">
         {promos.map((_, index) => (
           <button
             key={index}
             onClick={() => setCurrentSlide(index)}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              index === currentSlide ? 'bg-green-600 w-4' : 'bg-gray-300'
-            }`}
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentSlide ? 'bg-green-600 w-4' : 'bg-gray-300'
+              }`}
           />
         ))}
       </div>
@@ -400,7 +399,7 @@ const TipSection = () => {
   const tips = [20, 30, 50]
 
   return (
-    <motion.div 
+    <motion.div
       className="bg-white rounded-xl p-4 shadow-sm"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -417,11 +416,10 @@ const TipSection = () => {
               setSelectedTip(tip)
               setCustomTip('')
             }}
-            className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
-              selectedTip === tip 
-                ? 'border-green-600 bg-green-50 text-green-700' 
+            className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${selectedTip === tip
+                ? 'border-green-600 bg-green-50 text-green-700'
                 : 'border-gray-200 text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
             whileTap={{ scale: 0.95 }}
           >
             ₹{tip}
@@ -431,17 +429,16 @@ const TipSection = () => {
           onClick={() => {
             setSelectedTip('other')
           }}
-          className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
-            selectedTip === 'other' 
-              ? 'border-green-600 bg-green-50 text-green-700' 
+          className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${selectedTip === 'other'
+              ? 'border-green-600 bg-green-50 text-green-700'
               : 'border-gray-200 text-gray-700 hover:border-gray-300'
-          }`}
+            }`}
           whileTap={{ scale: 0.95 }}
         >
           Other
         </motion.button>
       </div>
-      
+
       <AnimatePresence>
         {selectedTip === 'other' && (
           <motion.div
@@ -465,19 +462,19 @@ const TipSection = () => {
 }
 
 // Section item component
-const SectionItem = ({ 
-  icon: Icon, 
-  title, 
-  subtitle, 
-  onClick, 
-  showArrow = true, 
-  rightContent 
-}: { 
-  icon: any; 
-  title: string; 
-  subtitle?: string; 
-  onClick?: () => void; 
-  showArrow?: boolean; 
+const SectionItem = ({
+  icon: Icon,
+  title,
+  subtitle,
+  onClick,
+  showArrow = true,
+  rightContent
+}: {
+  icon: any;
+  title: string;
+  subtitle?: string;
+  onClick?: () => void;
+  showArrow?: boolean;
   rightContent?: React.ReactNode;
 }) => (
   <motion.button
@@ -502,7 +499,7 @@ export default function OrderDetail() {
   const confirmed = searchParams.get("confirmed") === "true"
   const { getOrderById } = useOrders()
   const order = id ? getOrderById(id) : undefined
-  
+
   const [showConfirmation, setShowConfirmation] = useState(confirmed)
   const [orderStatus, setOrderStatus] = useState<OrderStatus>(order?.status || 'Placed')
   const [estimatedTime, setEstimatedTime] = useState(29)
@@ -548,7 +545,7 @@ export default function OrderDetail() {
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold mb-4">Order Not Found</h1>
           <Link to="/orders">
             <Button>Back to Orders</Button>
-        </Link>
+          </Link>
         </div>
       </div>
     )
@@ -628,7 +625,7 @@ export default function OrderDetail() {
       </AnimatePresence>
 
       {/* Green Header */}
-      <motion.div 
+      <motion.div
         className={`${currentStatus.color} text-white sticky top-0 z-40`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -636,7 +633,7 @@ export default function OrderDetail() {
         {/* Navigation bar */}
         <div className="flex items-center justify-between px-4 py-3">
           <Link to="/orders">
-            <motion.button 
+            <motion.button
               className="w-10 h-10 flex items-center justify-center"
               whileTap={{ scale: 0.9 }}
             >
@@ -644,7 +641,7 @@ export default function OrderDetail() {
             </motion.button>
           </Link>
           <h2 className="font-semibold text-lg">SpeeUp</h2>
-          <motion.button 
+          <motion.button
             className="w-10 h-10 flex items-center justify-center"
             whileTap={{ scale: 0.9 }}
           >
@@ -654,7 +651,7 @@ export default function OrderDetail() {
 
         {/* Status section */}
         <div className="px-4 pb-4 text-center">
-          <motion.h1 
+          <motion.h1
             className="text-2xl font-bold mb-3"
             key={currentStatus.title}
             initial={{ opacity: 0, y: -10 }}
@@ -662,9 +659,9 @@ export default function OrderDetail() {
           >
             {currentStatus.title}
           </motion.h1>
-          
+
           {/* Status pill */}
-          <motion.div 
+          <motion.div
             className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -677,7 +674,7 @@ export default function OrderDetail() {
                 <span className="text-sm text-green-200">On time</span>
               </>
             )}
-            <motion.button 
+            <motion.button
               onClick={handleRefresh}
               className="ml-1"
               animate={{ rotate: isRefreshing ? 360 : 0 }}
@@ -695,7 +692,7 @@ export default function OrderDetail() {
       {/* Scrollable Content */}
       <div className="px-4 py-4 space-y-4 pb-24">
         {/* Payment Pending */}
-        <motion.div 
+        <motion.div
           className="bg-white rounded-xl p-4 shadow-sm"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -713,14 +710,14 @@ export default function OrderDetail() {
             <Button className="bg-gray-900 hover:bg-gray-800 text-white rounded-full px-6">
               Pay now <ChevronRightIcon className="w-4 h-4 ml-1" />
             </Button>
-                  </div>
+          </div>
         </motion.div>
 
         {/* Promo Carousel */}
         <PromoCarousel />
 
         {/* Delivery Partner Assignment */}
-        <motion.div 
+        <motion.div
           className="bg-white rounded-xl p-4 shadow-sm"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -729,7 +726,7 @@ export default function OrderDetail() {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
               <span className="text-2xl">👨‍🍳</span>
-                    </div>
+            </div>
             <p className="font-semibold text-gray-900">Assigning delivery partner shortly</p>
           </div>
         </motion.div>
@@ -765,13 +762,13 @@ export default function OrderDetail() {
         </motion.div>
 
         {/* Contact & Address Section */}
-        <motion.div 
+        <motion.div
           className="bg-white rounded-xl shadow-sm overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.7 }}
         >
-          <SectionItem 
+          <SectionItem
             icon={PhoneIcon}
             title={`${order.address?.name || 'Customer'}, ${order.address?.phone || '9XXXXXXXX'}`}
             subtitle="Delivery partner may call this number"
@@ -779,18 +776,18 @@ export default function OrderDetail() {
               <span className="text-green-600 font-medium text-sm">Edit</span>
             }
           />
-          <SectionItem 
+          <SectionItem
             icon={HomeIcon}
             title="Delivery at Home"
-            subtitle={order.address ? 
-              `${order.address.street}, ${order.address.city}` : 
+            subtitle={order.address ?
+              `${order.address.street}, ${order.address.city}` :
               'Add delivery address'
             }
             rightContent={
               <span className="text-green-600 font-medium text-sm">Edit</span>
             }
           />
-          <SectionItem 
+          <SectionItem
             icon={MessageSquareIcon}
             title="Add delivery instructions"
             subtitle=""
@@ -798,7 +795,7 @@ export default function OrderDetail() {
         </motion.div>
 
         {/* Store Section */}
-        <motion.div 
+        <motion.div
           className="bg-white rounded-xl shadow-sm overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -812,13 +809,13 @@ export default function OrderDetail() {
               <p className="font-semibold text-gray-900">SpeeUp Store</p>
               <p className="text-sm text-gray-500">{order.address?.city || 'Local Area'}</p>
             </div>
-            <motion.button 
+            <motion.button
               className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center"
               whileTap={{ scale: 0.9 }}
             >
               <PhoneIcon className="w-5 h-5 text-green-700" />
             </motion.button>
-      </div>
+          </div>
 
           {/* Order Items */}
           <div className="p-4 border-b border-dashed border-gray-200">
@@ -838,10 +835,10 @@ export default function OrderDetail() {
                 </div>
               </div>
               <ChevronRightIcon className="w-5 h-5 text-gray-400" />
-        </div>
-      </div>
+            </div>
+          </div>
 
-          <SectionItem 
+          <SectionItem
             icon={ChefHatIcon}
             title="Add special requests"
             subtitle=""
@@ -849,7 +846,7 @@ export default function OrderDetail() {
         </motion.div>
 
         {/* Help Section */}
-        <motion.div 
+        <motion.div
           className="bg-white rounded-xl shadow-sm overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -865,7 +862,7 @@ export default function OrderDetail() {
             </div>
             <ChevronRightIcon className="w-5 h-5 text-gray-400" />
           </div>
-          <SectionItem 
+          <SectionItem
             icon={CircleSlashIcon}
             title="Cancel order"
             subtitle=""
@@ -873,7 +870,7 @@ export default function OrderDetail() {
         </motion.div>
 
         {/* Quick Actions */}
-        <motion.div 
+        <motion.div
           className="flex gap-3"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

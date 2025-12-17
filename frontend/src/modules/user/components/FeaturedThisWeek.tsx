@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { products } from '../data/products';
-import { productImages } from '../utils/imagePaths';
+import { products } from '../../../data/products';
+import { productImages } from '../../../utils/imagePaths';
 
 interface FeaturedCard {
   id: string;
@@ -46,16 +46,16 @@ const featuredCards: FeaturedCard[] = [
 // Get newly launched products (fruits) - use actual product data or fallback
 const getNewlyLaunchedProducts = () => {
   const fruitKeywords = ['papaya', 'apple', 'banana', 'mango', 'orange', 'guava'];
-  
+
   // Get products from database
   const fruitProducts = products
-    .filter((p) => 
-      p.categoryId === 'fruits-veg' && 
+    .filter((p) =>
+      p.categoryId === 'fruits-veg' &&
       fruitKeywords.some(keyword => p.name.toLowerCase().includes(keyword)) &&
       p.imageUrl // Only include products with images
     )
     .slice(0, 6);
-  
+
   // List of distinct product images to use (ensuring variety)
   const availableImages = [
     productImages['amul-butter'],
@@ -69,7 +69,7 @@ const getNewlyLaunchedProducts = () => {
     productImages['aashirvaad-atta'],
     productImages['fortune-atta'],
   ];
-  
+
   // Create products with distinct images
   const fruitList = [
     { name: 'Papaya', emoji: '🥭' },
@@ -79,7 +79,7 @@ const getNewlyLaunchedProducts = () => {
     { name: 'Orange', emoji: '🍊' },
     { name: 'Guava', emoji: '🍈' },
   ];
-  
+
   // Merge real products with placeholders, ensuring each has a distinct image
   const allProducts = fruitList.map((fruit, idx) => {
     const realProduct = fruitProducts[idx];
@@ -94,7 +94,7 @@ const getNewlyLaunchedProducts = () => {
       emoji: fruit.emoji,
     };
   });
-  
+
   return allProducts.slice(0, 6);
 };
 
@@ -153,11 +153,10 @@ export default function FeaturedThisWeek() {
                 {newlyLaunchedProducts.map((product, idx) => (
                   <div
                     key={`${product.id || idx}-${product.imageUrl || product.name}`}
-                    className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ${
-                      idx === currentProductIndex 
-                        ? 'opacity-100 animate-slide-left' 
+                    className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ${idx === currentProductIndex
+                        ? 'opacity-100 animate-slide-left'
                         : 'opacity-0 pointer-events-none'
-                    }`}
+                      }`}
                   >
                     {product.imageUrl ? (
                       <img
@@ -210,9 +209,9 @@ export default function FeaturedThisWeek() {
               {/* Price Drop Content with 3D effect */}
               <div className="flex items-center justify-center h-full px-2 relative z-10">
                 <div className="text-center">
-                  <div 
-                    className="text-yellow-400 text-3xl font-black mb-0.5 transform group-hover:scale-105 transition-transform" 
-                    style={{ 
+                  <div
+                    className="text-yellow-400 text-3xl font-black mb-0.5 transform group-hover:scale-105 transition-transform"
+                    style={{
                       textShadow: '2px 2px 0px #1e3a8a, 3px 3px 6px rgba(0,0,0,0.3), 0 0 12px rgba(250, 204, 21, 0.6)',
                       letterSpacing: '2px',
                       filter: 'drop-shadow(0 0 6px rgba(250, 204, 21, 0.8))'
@@ -220,9 +219,9 @@ export default function FeaturedThisWeek() {
                   >
                     PRICE
                   </div>
-                  <div 
-                    className="text-red-400 text-3xl font-black transform group-hover:scale-105 transition-transform" 
-                    style={{ 
+                  <div
+                    className="text-red-400 text-3xl font-black transform group-hover:scale-105 transition-transform"
+                    style={{
                       textShadow: '2px 2px 0px #1e3a8a, 3px 3px 6px rgba(0,0,0,0.3), 0 0 12px rgba(239, 68, 68, 0.6)',
                       letterSpacing: '2px',
                       filter: 'drop-shadow(0 0 6px rgba(239, 68, 68, 0.8))'

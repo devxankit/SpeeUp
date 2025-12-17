@@ -1,13 +1,13 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useCart } from '../context/CartContext';
-import { useOrders } from '../context/OrdersContext';
-import { products } from '../data/products';
-import { OrderAddress, Order } from '../types/order';
-import Toast from '../components/Toast';
-import PartyPopper from '../components/PartyPopper';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '../components/ui/sheet';
+import { useCart } from '../../context/CartContext';
+import { useOrders } from '../../context/OrdersContext';
+import { products } from '../../data/products';
+import { OrderAddress, Order } from '../../types/order';
+import Toast from '../../components/Toast';
+import PartyPopper from './components/PartyPopper';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '../../components/ui/sheet';
 
 const STORAGE_KEY = 'saved_address';
 
@@ -54,12 +54,12 @@ const AVAILABLE_COUPONS: Coupon[] = [
 const getSimilarProducts = (currentProductId: string) => {
   const currentProduct = products.find(p => p.id === currentProductId);
   if (!currentProduct) return products.slice(0, 6);
-  
+
   return products
-    .filter(p => 
-      p.id !== currentProductId && 
-      (p.categoryId === currentProduct.categoryId || 
-       p.tags?.some(tag => currentProduct.tags?.includes(tag)))
+    .filter(p =>
+      p.id !== currentProductId &&
+      (p.categoryId === currentProduct.categoryId ||
+        p.tags?.some(tag => currentProduct.tags?.includes(tag)))
     )
     .slice(0, 6);
 };
@@ -82,14 +82,14 @@ export default function Checkout() {
   const [snapshotCartItems, setSnapshotCartItems] = useState(cart.items);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
-  
+
   // Update snapshot when cart has items (so we have content to show during exit)
   useEffect(() => {
     if (cart.items.length > 0) {
       setSnapshotCartItems([...cart.items]); // Create a copy
     }
   }, [cart.items]);
-  
+
   // Redirect to homepage if cart is empty with smooth animation
   useEffect(() => {
     if (cart.items.length === 0 && !showToast && !isExiting && !showOrderSuccess) {
@@ -147,24 +147,24 @@ export default function Checkout() {
 
   // Calculate totals for billing section
   const itemsTotal = displayItems.reduce((sum, item) => {
-    const itemPrice = item.product.mrp && item.product.mrp > item.product.price 
-      ? item.product.mrp 
+    const itemPrice = item.product.mrp && item.product.mrp > item.product.price
+      ? item.product.mrp
       : item.product.price;
     return sum + (itemPrice * item.quantity);
   }, 0);
-  
+
   const discountedTotal = displayCart.total;
   const savedAmount = itemsTotal - discountedTotal;
   const handlingCharge = 2;
   const deliveryCharge = displayCart.total >= 199 ? 0 : 40;
   const amountNeededForFreeDelivery = Math.max(0, 199 - displayCart.total);
-  
+
   // Calculate coupon discount
   let couponDiscount = 0;
   if (selectedCoupon) {
     const subtotalBeforeCoupon = discountedTotal + handlingCharge + deliveryCharge;
     const meetsMinOrder = !selectedCoupon.minOrderValue || subtotalBeforeCoupon >= selectedCoupon.minOrderValue;
-    
+
     if (meetsMinOrder) {
       if (selectedCoupon.type === 'percentage') {
         couponDiscount = Math.round((subtotalBeforeCoupon * selectedCoupon.discount) / 100);
@@ -173,7 +173,7 @@ export default function Checkout() {
       }
     }
   }
-  
+
   const grandTotal = discountedTotal + handlingCharge + deliveryCharge + (tipAmount || 0) + (showDonationInput ? donationAmount : 0) - couponDiscount;
 
   const handleApplyCoupon = (coupon: Coupon) => {
@@ -216,10 +216,10 @@ export default function Checkout() {
 
     addOrder(order);
     setPlacedOrderId(orderId);
-    
+
     // Clear cart immediately
     clearCart();
-    
+
     // Show order success celebration animation
     setShowOrderSuccess(true);
   };
@@ -235,7 +235,7 @@ export default function Checkout() {
   return (
     <motion.div
       initial={{ opacity: 1, y: 0 }}
-      animate={{ 
+      animate={{
         opacity: isExiting ? 0 : 1,
         y: isExiting ? -20 : 0
       }}
@@ -250,16 +250,16 @@ export default function Checkout() {
         onClose={() => setShowToast(false)}
         duration={3000}
       />
-      
+
       {/* Party Popper Animation */}
-      <PartyPopper 
-        show={showPartyPopper} 
-        onComplete={() => setShowPartyPopper(false)} 
+      <PartyPopper
+        show={showPartyPopper}
+        onComplete={() => setShowPartyPopper(false)}
       />
 
       {/* Order Success Celebration Page */}
       {showOrderSuccess && (
-        <div 
+        <div
           className="fixed inset-0 z-[70] bg-white flex flex-col items-center justify-center h-screen w-screen overflow-hidden"
           style={{ animation: 'fadeIn 0.3s ease-out' }}
         >
@@ -284,25 +284,25 @@ export default function Checkout() {
           {/* Success Content */}
           <div className="relative z-10 flex flex-col items-center px-6">
             {/* Success Tick Circle */}
-            <div 
+            <div
               className="relative mb-8"
               style={{ animation: 'scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both' }}
             >
               {/* Outer ring animation */}
-              <div 
+              <div
                 className="absolute inset-0 w-32 h-32 rounded-full border-4 border-green-500"
-                style={{ 
+                style={{
                   animation: 'ringPulse 1.5s ease-out infinite',
                   opacity: 0.3
                 }}
               />
               {/* Main circle */}
               <div className="w-32 h-32 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-2xl">
-                <svg 
+                <svg
                   className="w-16 h-16 text-white"
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -327,14 +327,14 @@ export default function Checkout() {
             </div>
 
             {/* Location Info */}
-            <div 
+            <div
               className="text-center"
               style={{ animation: 'slideUp 0.5s ease-out 0.6s both' }}
             >
               <div className="flex items-center justify-center gap-2 mb-2">
                 <div className="w-5 h-5 text-red-500">
                   <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
                   </svg>
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900">
@@ -347,7 +347,7 @@ export default function Checkout() {
             </div>
 
             {/* Order Placed Message */}
-            <div 
+            <div
               className="mt-12 text-center"
               style={{ animation: 'slideUp 0.5s ease-out 0.8s both' }}
             >
@@ -389,7 +389,7 @@ export default function Checkout() {
             aria-label="Share"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+              <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
             </svg>
           </button>
         </div>
@@ -399,7 +399,7 @@ export default function Checkout() {
       <div className="px-4 md:px-6 lg:px-8 py-2 md:py-3 bg-neutral-50 border-b border-neutral-200">
         <div className="flex items-center justify-between">
           <span className="text-xs text-neutral-700">Ordering for someone else?</span>
-          <button 
+          <button
             onClick={() => navigate('/checkout/address')}
             className="text-xs text-green-600 font-medium hover:text-green-700 transition-colors"
           >
@@ -415,22 +415,20 @@ export default function Checkout() {
             <h3 className="text-xs font-semibold text-neutral-900 mb-0.5">Delivery Address</h3>
             <p className="text-[10px] text-neutral-600">Select or edit your saved address</p>
           </div>
-          
-          <div 
-            className={`border rounded-lg p-2.5 cursor-pointer transition-all ${
-              selectedAddress ? 'border-green-600 bg-green-50' : 'border-neutral-300 bg-white'
-            }`}
+
+          <div
+            className={`border rounded-lg p-2.5 cursor-pointer transition-all ${selectedAddress ? 'border-green-600 bg-green-50' : 'border-neutral-300 bg-white'
+              }`}
             onClick={() => setSelectedAddress(savedAddress)}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                    selectedAddress ? 'border-green-600 bg-green-600' : 'border-neutral-400'
-                  }`}>
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${selectedAddress ? 'border-green-600 bg-green-600' : 'border-neutral-400'
+                    }`}>
                     {selectedAddress && (
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     )}
                   </div>
@@ -462,13 +460,13 @@ export default function Checkout() {
           <div className="flex items-center gap-1.5 mb-2">
             <div className="w-5 h-5 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2"/>
-                <path d="M12 6v6l4 2" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2" />
+                <path d="M12 6v6l4 2" stroke="white" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </div>
             <span className="text-xs font-semibold text-neutral-900">Delivery in 8 minutes</span>
           </div>
-          
+
           <p className="text-[10px] text-neutral-600 mb-2.5">Shipment of {displayCart.itemCount} {displayCart.itemCount === 1 ? 'item' : 'items'}</p>
 
           {/* Cart Items */}
@@ -557,7 +555,7 @@ export default function Checkout() {
               >
                 <div className="bg-white rounded-lg overflow-hidden flex flex-col relative h-full" style={{ boxShadow: '0 1px 1px rgba(0, 0, 0, 0.03)' }}>
                   {/* Product Image Area */}
-                  <div 
+                  <div
                     onClick={() => navigate(`/product/${product.id}`)}
                     className="relative block cursor-pointer"
                   >
@@ -694,7 +692,7 @@ export default function Checkout() {
                     </div>
 
                     {/* Product Name */}
-                    <div 
+                    <div
                       onClick={() => navigate(`/product/${product.id}`)}
                       className="mb-0.5 cursor-pointer"
                     >
@@ -755,7 +753,7 @@ export default function Checkout() {
                       <div className="flex items-center gap-0.5">
                         <div className="w-px h-2 bg-green-300"></div>
                         <svg width="6" height="6" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M0 0L8 4L0 8Z" fill="#16a34a"/>
+                          <path d="M0 0L8 4L0 8Z" fill="#16a34a" />
                         </svg>
                       </div>
                     </div>
@@ -772,14 +770,14 @@ export default function Checkout() {
         <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
           <div className="flex items-center gap-2 mb-1.5">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 13h14M5 13l4-4m-4 4l4 4" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <circle cx="18" cy="5" r="2" fill="#3b82f6"/>
+              <path d="M5 13h14M5 13l4-4m-4 4l4 4" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="18" cy="5" r="2" fill="#3b82f6" />
             </svg>
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-blue-700">Get FREE delivery</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M9 18l6-6-6-6" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M9 18l6-6-6-6" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
               <p className="text-[10px] text-blue-600 mt-0.5">Add products worth ₹{amountNeededForFreeDelivery} more</p>
@@ -787,7 +785,7 @@ export default function Checkout() {
           </div>
           {/* Progress bar */}
           <div className="w-full h-1 bg-blue-200 rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-blue-600 transition-all duration-300"
               style={{ width: `${Math.min(100, ((199 - amountNeededForFreeDelivery) / 199) * 100)}%` }}
             />
@@ -802,7 +800,7 @@ export default function Checkout() {
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
@@ -820,22 +818,22 @@ export default function Checkout() {
         </div>
       ) : (
         <div className="px-4 py-1.5 flex justify-end border-b border-neutral-200">
-          <button 
+          <button
             onClick={() => setShowCouponSheet(true)}
             className="text-xs text-neutral-600 flex items-center gap-1"
           >
-          See all coupons
+            See all coupons
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-      </div>
+              <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
       )}
 
       {/* Bill details */}
       <div className="px-4 md:px-6 lg:px-8 py-2.5 md:py-3 border-b border-neutral-200">
         <h2 className="text-base font-bold text-neutral-900 mb-2.5">Bill details</h2>
-        
+
         <div className="space-y-2">
           {/* Items total */}
           <div className="flex items-center justify-between">
@@ -859,7 +857,7 @@ export default function Checkout() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2z" stroke="currentColor" strokeWidth="2" fill="none"/>
+                <path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2z" stroke="currentColor" strokeWidth="2" fill="none" />
               </svg>
               <span className="text-xs text-neutral-700">Handling charge</span>
             </div>
@@ -870,9 +868,9 @@ export default function Checkout() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z" stroke="currentColor" strokeWidth="2" fill="none"/>
-                <circle cx="5.5" cy="18.5" r="1.5" fill="currentColor"/>
-                <circle cx="18.5" cy="18.5" r="1.5" fill="currentColor"/>
+                <path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z" stroke="currentColor" strokeWidth="2" fill="none" />
+                <circle cx="5.5" cy="18.5" r="1.5" fill="currentColor" />
+                <circle cx="18.5" cy="18.5" r="1.5" fill="currentColor" />
               </svg>
               <span className="text-xs text-neutral-700">Delivery charge</span>
             </div>
@@ -893,7 +891,7 @@ export default function Checkout() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <span className="text-xs text-neutral-700">Coupon discount</span>
                 <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">
@@ -925,7 +923,7 @@ export default function Checkout() {
             </div>
           </div>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
       </div>
@@ -936,11 +934,11 @@ export default function Checkout() {
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-bold text-neutral-900">Donate to Feeding India</h3>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <p className="text-xs text-neutral-600 mb-2">Your continued support will help us serve daily meals to children</p>
-          
+
           <div className="flex gap-2 mb-2">
             <div className="flex-1 bg-white rounded-lg p-1.5 flex items-center justify-center">
               <div className="w-12 h-12 bg-gradient-to-br from-blue-200 to-purple-200 rounded-lg flex items-center justify-center">
@@ -974,11 +972,10 @@ export default function Checkout() {
               />
               <button
                 onClick={() => setShowDonationInput(!showDonationInput)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  showDonationInput 
-                    ? 'bg-green-600 text-white hover:bg-green-700' 
-                    : 'bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${showDonationInput
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50'
+                  }`}
               >
                 {showDonationInput ? 'Added' : 'Add'}
               </button>
@@ -991,45 +988,41 @@ export default function Checkout() {
       <div className="px-4 py-2 border-b border-neutral-200">
         <h3 className="text-sm font-bold text-neutral-900 mb-0.5">Tip your delivery partner</h3>
         <p className="text-xs text-neutral-600 mb-2">Your kindness means a lot! 100% of your tip will go directly to your delivery partner.</p>
-        
+
         <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1.5">
           <button
             onClick={() => setTipAmount(20)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${
-              tipAmount === 20
-                ? 'border-green-600 bg-green-50 text-green-700'
-                : 'border-neutral-300 bg-white text-neutral-700'
-            }`}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${tipAmount === 20
+              ? 'border-green-600 bg-green-50 text-green-700'
+              : 'border-neutral-300 bg-white text-neutral-700'
+              }`}
           >
             😊 ₹20
           </button>
           <button
             onClick={() => setTipAmount(30)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${
-              tipAmount === 30
-                ? 'border-green-600 bg-green-50 text-green-700'
-                : 'border-neutral-300 bg-white text-neutral-700'
-            }`}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${tipAmount === 30
+              ? 'border-green-600 bg-green-50 text-green-700'
+              : 'border-neutral-300 bg-white text-neutral-700'
+              }`}
           >
             🤩 ₹30
           </button>
           <button
             onClick={() => setTipAmount(50)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${
-              tipAmount === 50
-                ? 'border-green-600 bg-green-50 text-green-700'
-                : 'border-neutral-300 bg-white text-neutral-700'
-            }`}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${tipAmount === 50
+              ? 'border-green-600 bg-green-50 text-green-700'
+              : 'border-neutral-300 bg-white text-neutral-700'
+              }`}
           >
             😍 ₹50
           </button>
           <button
             onClick={() => setTipAmount(null)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${
-              tipAmount === null
-                ? 'border-green-600 bg-green-50 text-green-700'
-                : 'border-neutral-300 bg-white text-neutral-700'
-            }`}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${tipAmount === null
+              ? 'border-green-600 bg-green-50 text-green-700'
+              : 'border-neutral-300 bg-white text-neutral-700'
+              }`}
           >
             🎁 Custom
           </button>
@@ -1041,7 +1034,7 @@ export default function Checkout() {
         <div className="flex items-center justify-between bg-neutral-50 rounded-lg p-2">
           <div className="flex items-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2z" stroke="currentColor" strokeWidth="2" fill="none"/>
+              <path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2z" stroke="currentColor" strokeWidth="2" fill="none" />
             </svg>
             <div>
               <p className="text-xs font-semibold text-neutral-900">Gift Packaging</p>
@@ -1082,29 +1075,28 @@ export default function Checkout() {
               <SheetTitle className="text-base font-bold text-neutral-900">Available Coupons</SheetTitle>
               <SheetClose onClick={() => setShowCouponSheet(false)}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </SheetClose>
             </div>
           </SheetHeader>
-          
+
           <div className="px-4 pb-4 overflow-y-auto max-h-[calc(85vh-80px)]">
             <div className="space-y-2.5 mt-2">
               {AVAILABLE_COUPONS.map((coupon) => {
                 const subtotalBeforeCoupon = discountedTotal + handlingCharge + deliveryCharge;
                 const meetsMinOrder = !coupon.minOrderValue || subtotalBeforeCoupon >= coupon.minOrderValue;
                 const isSelected = selectedCoupon?.id === coupon.id;
-                
+
                 return (
                   <div
                     key={coupon.id}
-                    className={`border-2 rounded-lg p-2.5 transition-all ${
-                      isSelected
-                        ? 'border-green-600 bg-green-50'
-                        : meetsMinOrder
+                    className={`border-2 rounded-lg p-2.5 transition-all ${isSelected
+                      ? 'border-green-600 bg-green-50'
+                      : meetsMinOrder
                         ? 'border-neutral-200 bg-white'
                         : 'border-neutral-200 bg-neutral-50 opacity-60'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
@@ -1122,7 +1114,7 @@ export default function Checkout() {
                       {isSelected ? (
                         <div className="flex items-center gap-1 text-green-600">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                           <span className="text-xs font-medium">Applied</span>
                         </div>
@@ -1130,11 +1122,10 @@ export default function Checkout() {
                         <button
                           onClick={() => meetsMinOrder && handleApplyCoupon(coupon)}
                           disabled={!meetsMinOrder}
-                          className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                            meetsMinOrder
-                              ? 'bg-green-600 text-white hover:bg-green-700'
-                              : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
-                          }`}
+                          className={`px-3 py-1 rounded text-xs font-medium transition-colors ${meetsMinOrder
+                            ? 'bg-green-600 text-white hover:bg-green-700'
+                            : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                            }`}
                         >
                           Apply
                         </button>
@@ -1154,11 +1145,10 @@ export default function Checkout() {
           <button
             onClick={handlePlaceOrder}
             disabled={cart.items.length === 0}
-            className={`w-full py-3 px-4 font-bold text-sm uppercase tracking-wide transition-colors ${
-              cart.items.length > 0
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
-            }`}
+            className={`w-full py-3 px-4 font-bold text-sm uppercase tracking-wide transition-colors ${cart.items.length > 0
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+              }`}
           >
             Place Order
           </button>

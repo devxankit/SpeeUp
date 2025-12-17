@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { products } from '../data/products';
-import ProductCard from '../components/ProductCard';
-import { productImages } from '../utils/imagePaths';
+import { products } from '../../data/products';
+import ProductCard from './components/ProductCard';
+import { productImages } from '../../utils/imagePaths';
 
 // Trending categories data
 const trendingCategories = [
@@ -92,14 +92,14 @@ export default function Search() {
     if (!searchQuery.trim()) {
       return [];
     }
-    
+
     const query = searchQuery.toLowerCase().trim();
     return products.filter((product) => {
       const nameMatch = product.name.toLowerCase().includes(query);
       const packMatch = product.pack?.toLowerCase().includes(query);
       const categoryMatch = product.categoryId?.toLowerCase().includes(query);
       const tagMatch = product.tags?.some(tag => tag.toLowerCase().includes(query));
-      
+
       return nameMatch || packMatch || categoryMatch || tagMatch;
     });
   }, [searchQuery]);
@@ -230,7 +230,7 @@ export default function Search() {
                         <h3 className="text-xs font-semibold text-neutral-900 mb-1 line-clamp-2 min-h-[2rem]">
                           {product.name}
                         </h3>
-                        
+
                         {/* Rating */}
                         <div className="flex items-center gap-1 mb-1">
                           <div className="flex items-center">
@@ -243,8 +243,8 @@ export default function Search() {
                         {/* Delivery Time */}
                         <p className="text-[10px] text-green-600 mb-1.5 font-medium flex items-center gap-0.5">
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                            <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                            <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                           </svg>
                           {product.deliveryTime} MINS
                         </p>

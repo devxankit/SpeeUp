@@ -1,10 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useRef } from 'react';
-import { Product } from '../types/domain';
-import { useCart } from '../context/CartContext';
-import Button from './ui/button';
-import Badge from './ui/badge';
+import { Product } from '../../../types/domain';
+import { useCart } from '../../../context/CartContext';
+import Button from '../../../components/ui/button';
+import Badge from '../../../components/ui/badge';
 
 interface ProductCardProps {
   product: Product;
@@ -39,7 +39,7 @@ export default function ProductCard({
   const { cart, addToCart, updateQuantity } = useCart();
   const imageRef = useRef<HTMLImageElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
-  
+
   const cartItem = cart.items.find((item) => item.product.id === product.id);
   const inCartQty = cartItem?.quantity || 0;
 
@@ -100,14 +100,14 @@ export default function ProductCard({
               {product.name.charAt(0).toUpperCase()}
             </div>
           )}
-          
+
           {/* Discount badge - top-left of card (for categoryStyle) */}
           {categoryStyle && showBadge && discount > 0 && (
             <div className="absolute top-2 left-2 z-10 bg-green-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded">
               {discount}% off
             </div>
           )}
-          
+
           {/* Discount badge - inside image container at top-left (only if not categoryStyle) */}
           {!categoryStyle && showBadge && (badgeText || discount > 0) && (
             <Badge
@@ -246,8 +246,8 @@ export default function ProductCard({
           {categoryStyle && showStockInfo && (
             <p className="text-[10px] text-green-600 mb-1 font-medium flex items-center gap-0.5">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
               14 MINS
             </p>

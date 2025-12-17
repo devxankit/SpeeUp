@@ -1,114 +1,108 @@
 import { useNavigate, Link } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../../context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import Button from '../components/ui/button';
-import { Product } from '../types/domain';
+import Button from '../../components/ui/button';
+import { Product } from '../../types/domain';
 
-// Extended product type with rating and reviews for display
-interface PharmaProduct extends Product {
+interface StoreProduct extends Product {
   rating: number;
   reviews: number;
 }
 
-// Pharma products
-const pharmaProducts: PharmaProduct[] = [
+const hobbyProducts: StoreProduct[] = [
   {
-    id: 'paracetamol',
-    name: 'Paracetamol 500mg',
-    pack: '10 tablets',
-    price: 25,
-    mrp: 30,
+    id: 'sketchbook',
+    name: 'Sketchbook',
+    pack: 'A4 Size',
+    price: 199,
+    mrp: 299,
     rating: 4.5,
-    reviews: 3245,
-    imageUrl: '/assets/shopbystore/pharma.jpg',
-    categoryId: 'health-pharma',
+    reviews: 2345,
+    imageUrl: '/assets/shopbystore/hobby.jpg',
+    categoryId: 'hobby',
   },
   {
-    id: 'crocin',
-    name: 'Crocin Advance',
-    pack: '10 tablets',
-    price: 45,
-    mrp: 50,
+    id: 'watercolor-set',
+    name: 'Watercolor Set',
+    pack: '24 Colors',
+    price: 499,
+    mrp: 699,
     rating: 4.5,
     reviews: 1892,
-    imageUrl: '/assets/shopbystore/pharma.jpg',
-    categoryId: 'health-pharma',
+    imageUrl: '/assets/shopbystore/hobby.jpg',
+    categoryId: 'hobby',
   },
   {
-    id: 'vitamin-d',
-    name: 'Vitamin D3',
-    pack: '60 capsules',
-    price: 350,
-    mrp: 400,
-    rating: 4.5,
-    reviews: 2156,
-    imageUrl: '/assets/shopbystore/pharma.jpg',
-    categoryId: 'health-pharma',
-  },
-  {
-    id: 'calcium-tablets',
-    name: 'Calcium Tablets',
-    pack: '60 tablets',
-    price: 280,
-    mrp: 320,
+    id: 'guitar-strings',
+    name: 'Guitar Strings',
+    pack: 'Acoustic',
+    price: 299,
+    mrp: 399,
     rating: 4.0,
-    reviews: 1456,
-    imageUrl: '/assets/shopbystore/pharma.jpg',
-    categoryId: 'health-pharma',
+    reviews: 567,
+    imageUrl: '/assets/shopbystore/hobby.jpg',
+    categoryId: 'hobby',
   },
   {
-    id: 'protein-powder',
-    name: 'Protein Powder',
-    pack: '500 g',
-    price: 1200,
-    mrp: 1400,
-    rating: 4.5,
-    reviews: 892,
-    imageUrl: '/assets/shopbystore/pharma.jpg',
-    categoryId: 'health-pharma',
-  },
-  {
-    id: 'multivitamin',
-    name: 'Multivitamin Tablets',
-    pack: '30 tablets',
-    price: 199,
-    mrp: 250,
+    id: 'camera-lens',
+    name: 'Camera Lens',
+    pack: '50mm',
+    price: 4999,
+    mrp: 6999,
     rating: 4.5,
     reviews: 1234,
-    imageUrl: '/assets/shopbystore/pharma.jpg',
-    categoryId: 'health-pharma',
+    imageUrl: '/assets/shopbystore/hobby.jpg',
+    categoryId: 'hobby',
+  },
+  {
+    id: 'knitting-yarn',
+    name: 'Knitting Yarn',
+    pack: '500g',
+    price: 199,
+    mrp: 299,
+    rating: 4.5,
+    reviews: 892,
+    imageUrl: '/assets/shopbystore/hobby.jpg',
+    categoryId: 'hobby',
+  },
+  {
+    id: 'model-kit',
+    name: 'Model Building Kit',
+    pack: 'Plastic',
+    price: 799,
+    mrp: 1199,
+    rating: 4.0,
+    reviews: 456,
+    imageUrl: '/assets/shopbystore/hobby.jpg',
+    categoryId: 'hobby',
   },
 ];
 
-export default function PharmaStore() {
+export default function HobbyStore() {
   const navigate = useNavigate();
   const { cart, addToCart, updateQuantity } = useCart();
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Pharma Store Banner */}
       <div className="relative w-full">
         <img
-          src="/assets/shopbystore/pharma.jpg"
-          alt="Pharma Store"
+          src="/assets/shopbystore/hobby.jpg"
+          alt="Hobby Store"
           className="w-full h-full object-cover"
         />
-        
-        {/* Header Overlay */}
+
         <header className="absolute top-0 left-0 right-0 z-10">
           <div className="px-3 py-2 flex items-center justify-between gap-2">
-            {/* Back button */}
             <button
               onClick={() => navigate(-1)}
               className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-lg bg-white/70 shadow-sm hover:bg-white/80 transition-colors flex-shrink-0 border border-white/20"
               aria-label="Go back"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15 18L9 12L15 6" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M15 18L9 12L15 6" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
 
-            {/* Delivery address - compact */}
             <div className="flex-1 min-w-0 px-2">
               <div className="text-[10px] text-neutral-600 leading-tight">Delivering to▾</div>
               <div className="text-[10px] text-neutral-700 font-medium leading-tight line-clamp-1">
@@ -116,7 +110,6 @@ export default function PharmaStore() {
               </div>
             </div>
 
-            {/* Search and Share icons */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
                 onClick={() => navigate('/search')}
@@ -124,8 +117,8 @@ export default function PharmaStore() {
                 aria-label="Search"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="11" cy="11" r="8" stroke="#000000" strokeWidth="2"/>
-                  <path d="m21 21-4.35-4.35" stroke="#000000" strokeWidth="2" strokeLinecap="round"/>
+                  <circle cx="11" cy="11" r="8" stroke="#000000" strokeWidth="2" />
+                  <path d="m21 21-4.35-4.35" stroke="#000000" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               </button>
               <button
@@ -133,15 +126,14 @@ export default function PharmaStore() {
                 aria-label="Share"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 8A3 3 0 1 0 15 4.09M6 15a3 3 0 1 0 2.91-3M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm6 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M18 8A3 3 0 1 0 15 4.09M6 15a3 3 0 1 0 2.91-3M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm6 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
             </div>
           </div>
         </header>
 
-        {/* Fade-out gradient overlay from bottom */}
-        <div 
+        <div
           className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
           style={{
             background: 'linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.6) 80%, rgba(255, 255, 255, 1) 100%)'
@@ -149,12 +141,11 @@ export default function PharmaStore() {
         />
       </div>
 
-      {/* Top buys Section */}
       <div className="px-4 py-4">
         <h3 className="text-lg font-semibold text-neutral-900 mb-4">Top buys</h3>
-        
+
         <div className="grid grid-cols-3 gap-2">
-          {pharmaProducts.map((product) => {
+          {hobbyProducts.map((product) => {
             const cartItem = cart.items.find((item) => item.product.id === product.id);
             const inCartQty = cartItem?.quantity || 0;
             const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
@@ -168,7 +159,6 @@ export default function PharmaStore() {
                 className="bg-white rounded-lg overflow-hidden flex flex-col relative"
                 style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)' }}
               >
-                {/* Product Image */}
                 <Link to={`/product/${product.id}`} className="relative block">
                   <div className="w-full h-20 bg-neutral-100 flex items-center justify-center overflow-hidden relative">
                     {product.imageUrl ? (
@@ -183,7 +173,6 @@ export default function PharmaStore() {
                       </div>
                     )}
 
-                    {/* Heart Icon */}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -193,27 +182,23 @@ export default function PharmaStore() {
                       aria-label="Add to wishlist"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </button>
                   </div>
                 </Link>
 
-                {/* Product Details */}
                 <div className="p-1.5 flex-1 flex flex-col" style={{ background: '#fef9e7' }}>
-                  {/* Pack/Tags */}
                   <div className="text-[8px] text-neutral-600 mb-0.5 line-clamp-1">
                     {product.pack}
                   </div>
 
-                  {/* Product Name */}
                   <Link to={`/product/${product.id}`} className="mb-0.5">
                     <h3 className="text-[10px] font-bold text-neutral-900 line-clamp-2 leading-tight">
                       {product.name}
                     </h3>
                   </Link>
 
-                  {/* Rating */}
                   <div className="flex items-center gap-0.5 mb-0.5">
                     <div className="flex items-center">
                       {[...Array(5)].map((_, i) => (
@@ -232,25 +217,22 @@ export default function PharmaStore() {
                     <span className="text-[8px] text-neutral-500">({product.reviews.toLocaleString()})</span>
                   </div>
 
-                  {/* Delivery Time */}
                   <div className="text-[9px] text-neutral-600 mb-0.5">
                     15 MINS
                   </div>
 
-                  {/* Discount */}
                   {discount > 0 && (
                     <div className="text-[9px] text-blue-600 font-semibold mb-0.5">
                       {discount}% OFF
                     </div>
                   )}
 
-                  {/* Price */}
                   <div className="mb-1">
                     <div className="flex items-baseline gap-1">
                       <span className="text-[13px] font-bold text-neutral-900">
                         ₹{product.price.toLocaleString('en-IN')}
                       </span>
-                      {product.mrp && (
+                      {product.mrp && product.mrp !== product.price && (
                         <span className="text-[10px] text-neutral-400 line-through">
                           ₹{product.mrp.toLocaleString('en-IN')}
                         </span>
@@ -258,7 +240,6 @@ export default function PharmaStore() {
                     </div>
                   </div>
 
-                  {/* ADD button or Quantity stepper */}
                   <AnimatePresence mode="wait">
                     {inCartQty === 0 ? (
                       <motion.div
@@ -331,14 +312,13 @@ export default function PharmaStore() {
                     )}
                   </AnimatePresence>
 
-                  {/* Bottom Link */}
                   <Link
-                    to={`/category/health-pharma`}
+                    to={`/category/hobby`}
                     className="w-full bg-green-100 text-green-700 text-[8px] font-medium py-0.5 rounded-lg flex items-center justify-between px-1 hover:bg-green-200 transition-colors mt-1"
                   >
                     <span>See more like this</span>
                     <svg width="6" height="6" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M0 0L8 4L0 8Z" fill="#16a34a"/>
+                      <path d="M0 0L8 4L0 8Z" fill="#16a34a" />
                     </svg>
                   </Link>
                 </div>

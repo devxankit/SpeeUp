@@ -1,108 +1,114 @@
 import { useNavigate, Link } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../../context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import Button from '../components/ui/button';
-import { Product } from '../types/domain';
+import Button from '../../components/ui/button';
+import { Product } from '../../types/domain';
 
-interface StoreProduct extends Product {
+// Extended product type with rating and reviews for display
+interface SpiritualProduct extends Product {
   rating: number;
   reviews: number;
 }
 
-const hobbyProducts: StoreProduct[] = [
+// Sample spiritual products - you can replace with actual products from your data
+const spiritualProducts: SpiritualProduct[] = [
   {
-    id: 'sketchbook',
-    name: 'Sketchbook',
-    pack: 'A4 Size',
-    price: 199,
-    mrp: 299,
+    id: 'mangaldeep-incense',
+    name: 'Mangaldeep 3 in 1 Scent Incense Sticks / Agarbatti',
+    pack: 'Assorted',
+    price: 118,
+    mrp: 125,
     rating: 4.5,
-    reviews: 2345,
-    imageUrl: '/assets/shopbystore/hobby.jpg',
-    categoryId: 'hobby',
+    reviews: 5857,
+    imageUrl: '/assets/shopbystore/spiritual/spiritualheader.png',
+    categoryId: 'spiritual',
   },
   {
-    id: 'watercolor-set',
-    name: 'Watercolor Set',
-    pack: '24 Colors',
-    price: 499,
-    mrp: 699,
+    id: 'kuber-brass-diya',
+    name: 'Kuber Brass Diya by Shubhkart',
+    pack: '2.5 x 5.2 cm',
+    price: 128,
+    mrp: 149,
     rating: 4.5,
-    reviews: 1892,
-    imageUrl: '/assets/shopbystore/hobby.jpg',
-    categoryId: 'hobby',
+    reviews: 935,
+    imageUrl: '/assets/shopbystore/spiritual/diya.jpg',
+    categoryId: 'spiritual',
   },
   {
-    id: 'guitar-strings',
-    name: 'Guitar Strings',
-    pack: 'Acoustic',
+    id: 'mitti-kalash',
+    name: 'Mitti Kalash / Matka by Shubhika',
+    pack: '7" Light Brown',
+    price: 99,
+    mrp: 125,
+    rating: 3.5,
+    reviews: 1170,
+    imageUrl: '/assets/shopbystore/spiritual/kalash.jpg',
+    categoryId: 'spiritual',
+  },
+  {
+    id: 'laddu-gopal-dress',
+    name: 'Peacock Design Stones Studded Laddu Gopal Dress',
+    pack: 'Size-0-1 Satin',
     price: 299,
     mrp: 399,
     rating: 4.0,
-    reviews: 567,
-    imageUrl: '/assets/shopbystore/hobby.jpg',
-    categoryId: 'hobby',
+    reviews: 245,
+    imageUrl: '/assets/shopbystore/spiritual/dress.jpg',
+    categoryId: 'spiritual',
   },
   {
-    id: 'camera-lens',
-    name: 'Camera Lens',
-    pack: '50mm',
-    price: 4999,
-    mrp: 6999,
+    id: 'kalnirnaya-calendar',
+    name: 'Kalnirnaya Hindi Calendar / Panchang 2026 - Corepac',
+    pack: 'Calender',
+    price: 89,
+    mrp: 120,
     rating: 4.5,
-    reviews: 1234,
-    imageUrl: '/assets/shopbystore/hobby.jpg',
-    categoryId: 'hobby',
+    reviews: 812,
+    imageUrl: '/assets/shopbystore/spiritual/calendar.jpg',
+    categoryId: 'spiritual',
   },
   {
-    id: 'knitting-yarn',
-    name: 'Knitting Yarn',
-    pack: '500g',
-    price: 199,
-    mrp: 299,
+    id: 'om-shanti-camphor',
+    name: 'Om Shanti Bhimseni Camphor / Kapur by Cycle',
+    pack: '50 g 4"x3"x3"',
+    price: 45,
+    mrp: 55,
     rating: 4.5,
-    reviews: 892,
-    imageUrl: '/assets/shopbystore/hobby.jpg',
-    categoryId: 'hobby',
-  },
-  {
-    id: 'model-kit',
-    name: 'Model Building Kit',
-    pack: 'Plastic',
-    price: 799,
-    mrp: 1199,
-    rating: 4.0,
-    reviews: 456,
-    imageUrl: '/assets/shopbystore/hobby.jpg',
-    categoryId: 'hobby',
+    reviews: 1292,
+    imageUrl: '/assets/shopbystore/spiritual/camphor.jpg',
+    categoryId: 'spiritual',
   },
 ];
 
-export default function HobbyStore() {
+export default function SpiritualStore() {
   const navigate = useNavigate();
   const { cart, addToCart, updateQuantity } = useCart();
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Spiritual Store Banner */}
       <div className="relative w-full">
         <img
-          src="/assets/shopbystore/hobby.jpg"
-          alt="Hobby Store"
+          src="/assets/shopbystore/spiritual/spiritualheader.png"
+          alt="Spiritual items"
           className="w-full h-full object-cover"
         />
-        
+
+        {/* Header Overlay */}
         <header className="absolute top-0 left-0 right-0 z-10">
           <div className="px-3 py-2 flex items-center justify-between gap-2">
+            {/* Back button */}
             <button
               onClick={() => navigate(-1)}
               className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-lg bg-white/70 shadow-sm hover:bg-white/80 transition-colors flex-shrink-0 border border-white/20"
               aria-label="Go back"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15 18L9 12L15 6" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M15 18L9 12L15 6" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
 
+            {/* Delivery address - compact */}
             <div className="flex-1 min-w-0 px-2">
               <div className="text-[10px] text-neutral-600 leading-tight">Delivering to▾</div>
               <div className="text-[10px] text-neutral-700 font-medium leading-tight line-clamp-1">
@@ -110,6 +116,7 @@ export default function HobbyStore() {
               </div>
             </div>
 
+            {/* Search and Share icons */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
                 onClick={() => navigate('/search')}
@@ -117,8 +124,8 @@ export default function HobbyStore() {
                 aria-label="Search"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="11" cy="11" r="8" stroke="#000000" strokeWidth="2"/>
-                  <path d="m21 21-4.35-4.35" stroke="#000000" strokeWidth="2" strokeLinecap="round"/>
+                  <circle cx="11" cy="11" r="8" stroke="#000000" strokeWidth="2" />
+                  <path d="m21 21-4.35-4.35" stroke="#000000" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               </button>
               <button
@@ -126,14 +133,15 @@ export default function HobbyStore() {
                 aria-label="Share"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 8A3 3 0 1 0 15 4.09M6 15a3 3 0 1 0 2.91-3M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm6 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M18 8A3 3 0 1 0 15 4.09M6 15a3 3 0 1 0 2.91-3M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm6 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
             </div>
           </div>
         </header>
 
-        <div 
+        {/* Fade-out gradient overlay from bottom */}
+        <div
           className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
           style={{
             background: 'linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.6) 80%, rgba(255, 255, 255, 1) 100%)'
@@ -141,11 +149,12 @@ export default function HobbyStore() {
         />
       </div>
 
+      {/* Top buys Section */}
       <div className="px-4 py-4">
         <h3 className="text-lg font-semibold text-neutral-900 mb-4">Top buys</h3>
-        
+
         <div className="grid grid-cols-3 gap-2">
-          {hobbyProducts.map((product) => {
+          {spiritualProducts.map((product) => {
             const cartItem = cart.items.find((item) => item.product.id === product.id);
             const inCartQty = cartItem?.quantity || 0;
             const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
@@ -159,6 +168,7 @@ export default function HobbyStore() {
                 className="bg-white rounded-lg overflow-hidden flex flex-col relative"
                 style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)' }}
               >
+                {/* Product Image */}
                 <Link to={`/product/${product.id}`} className="relative block">
                   <div className="w-full h-20 bg-neutral-100 flex items-center justify-center overflow-hidden relative">
                     {product.imageUrl ? (
@@ -173,6 +183,7 @@ export default function HobbyStore() {
                       </div>
                     )}
 
+                    {/* Heart Icon */}
                     <button
                       onClick={(e) => {
                         e.preventDefault();
@@ -182,23 +193,27 @@ export default function HobbyStore() {
                       aria-label="Add to wishlist"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </button>
                   </div>
                 </Link>
 
+                {/* Product Details */}
                 <div className="p-1.5 flex-1 flex flex-col" style={{ background: '#fef9e7' }}>
+                  {/* Pack/Tags */}
                   <div className="text-[8px] text-neutral-600 mb-0.5 line-clamp-1">
                     {product.pack}
                   </div>
 
+                  {/* Product Name */}
                   <Link to={`/product/${product.id}`} className="mb-0.5">
                     <h3 className="text-[10px] font-bold text-neutral-900 line-clamp-2 leading-tight">
                       {product.name}
                     </h3>
                   </Link>
 
+                  {/* Rating */}
                   <div className="flex items-center gap-0.5 mb-0.5">
                     <div className="flex items-center">
                       {[...Array(5)].map((_, i) => (
@@ -217,22 +232,25 @@ export default function HobbyStore() {
                     <span className="text-[8px] text-neutral-500">({product.reviews.toLocaleString()})</span>
                   </div>
 
+                  {/* Delivery Time */}
                   <div className="text-[9px] text-neutral-600 mb-0.5">
                     15 MINS
                   </div>
 
+                  {/* Discount */}
                   {discount > 0 && (
                     <div className="text-[9px] text-blue-600 font-semibold mb-0.5">
                       {discount}% OFF
                     </div>
                   )}
 
+                  {/* Price */}
                   <div className="mb-1">
                     <div className="flex items-baseline gap-1">
                       <span className="text-[13px] font-bold text-neutral-900">
                         ₹{product.price.toLocaleString('en-IN')}
                       </span>
-                      {product.mrp && product.mrp !== product.price && (
+                      {product.mrp && (
                         <span className="text-[10px] text-neutral-400 line-through">
                           ₹{product.mrp.toLocaleString('en-IN')}
                         </span>
@@ -240,6 +258,7 @@ export default function HobbyStore() {
                     </div>
                   </div>
 
+                  {/* ADD button or Quantity stepper */}
                   <AnimatePresence mode="wait">
                     {inCartQty === 0 ? (
                       <motion.div
@@ -312,13 +331,14 @@ export default function HobbyStore() {
                     )}
                   </AnimatePresence>
 
+                  {/* Bottom Link */}
                   <Link
-                    to={`/category/hobby`}
+                    to={`/category/spiritual`}
                     className="w-full bg-green-100 text-green-700 text-[8px] font-medium py-0.5 rounded-lg flex items-center justify-between px-1 hover:bg-green-200 transition-colors mt-1"
                   >
                     <span>See more like this</span>
                     <svg width="6" height="6" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M0 0L8 4L0 8Z" fill="#16a34a"/>
+                      <path d="M0 0L8 4L0 8Z" fill="#16a34a" />
                     </svg>
                   </Link>
                 </div>

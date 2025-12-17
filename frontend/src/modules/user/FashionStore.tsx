@@ -1,8 +1,8 @@
 import { useNavigate, Link } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../../context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import Button from '../components/ui/button';
-import { Product } from '../types/domain';
+import Button from '../../components/ui/button';
+import { Product } from '../../types/domain';
 
 interface StoreProduct extends Product {
   rating: number;
@@ -90,7 +90,7 @@ export default function FashionStore() {
           alt="Fashion Basics Store"
           className="w-full h-full object-cover"
         />
-        
+
         <header className="absolute top-0 left-0 right-0 z-10">
           <div className="px-3 py-2 flex items-center justify-between gap-2">
             <button
@@ -99,7 +99,7 @@ export default function FashionStore() {
               aria-label="Go back"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15 18L9 12L15 6" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M15 18L9 12L15 6" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
 
@@ -117,8 +117,8 @@ export default function FashionStore() {
                 aria-label="Search"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="11" cy="11" r="8" stroke="#000000" strokeWidth="2"/>
-                  <path d="m21 21-4.35-4.35" stroke="#000000" strokeWidth="2" strokeLinecap="round"/>
+                  <circle cx="11" cy="11" r="8" stroke="#000000" strokeWidth="2" />
+                  <path d="m21 21-4.35-4.35" stroke="#000000" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               </button>
               <button
@@ -126,14 +126,14 @@ export default function FashionStore() {
                 aria-label="Share"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 8A3 3 0 1 0 15 4.09M6 15a3 3 0 1 0 2.91-3M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm6 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M18 8A3 3 0 1 0 15 4.09M6 15a3 3 0 1 0 2.91-3M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm6 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
             </div>
           </div>
         </header>
 
-        <div 
+        <div
           className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
           style={{
             background: 'linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.6) 80%, rgba(255, 255, 255, 1) 100%)'
@@ -143,7 +143,7 @@ export default function FashionStore() {
 
       <div className="px-4 py-4">
         <h3 className="text-lg font-semibold text-neutral-900 mb-4">Top buys</h3>
-        
+
         <div className="grid grid-cols-3 gap-2">
           {fashionProducts.map((product) => {
             const cartItem = cart.items.find((item) => item.product.id === product.id);
@@ -182,7 +182,7 @@ export default function FashionStore() {
                       aria-label="Add to wishlist"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </button>
                   </div>
@@ -318,7 +318,7 @@ export default function FashionStore() {
                   >
                     <span>See more like this</span>
                     <svg width="6" height="6" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M0 0L8 4L0 8Z" fill="#16a34a"/>
+                      <path d="M0 0L8 4L0 8Z" fill="#16a34a" />
                     </svg>
                   </Link>
                 </div>

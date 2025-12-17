@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import HomeHero from '../components/HomeHero';
-import { useOrders } from '../context/OrdersContext';
-import { useCart } from '../context/CartContext';
-import { products } from '../data/products';
+import HomeHero from './components/HomeHero';
+import { useOrders } from '../../context/OrdersContext';
+import { useCart } from '../../context/CartContext';
+import { products } from '../../data/products';
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -42,15 +42,15 @@ export default function OrderAgain() {
   const handleOrderAgain = (order: any, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Mark this order as added
     setAddedOrders(prev => new Set(prev).add(order.id));
-    
+
     // Add each item from the order to the cart
     order.items.forEach((item: any) => {
       // Check if product is already in cart
       const existingCartItem = cart.items.find(cartItem => cartItem.product.id === item.product.id);
-      
+
       if (existingCartItem) {
         // If already in cart, add the order quantity to existing quantity
         updateQuantity(item.product.id, existingCartItem.quantity + item.quantity);
@@ -76,7 +76,7 @@ export default function OrderAgain() {
   }, []);
 
   const hasOrders = orders && orders.length > 0;
-  
+
   return (
     <div className="pb-4">
       {/* BESSELLERS SECTION REMOVED - If you see this comment, new code is loaded */}
@@ -91,7 +91,7 @@ export default function OrderAgain() {
             {orders.map((order) => {
               const shortId = order.id.split('-').slice(-1)[0];
               const previewItems = order.items.slice(0, 3);
-              
+
               return (
                 <div
                   key={order.id}
@@ -113,7 +113,7 @@ export default function OrderAgain() {
                         </span>
                       </div>
                       <div className="text-[10px] text-neutral-500 mb-1">{formatDate(order.createdAt)}</div>
-                      
+
                       {/* Product Images Preview - Compact */}
                       <div className="flex items-center gap-1">
                         {previewItems.map((item, idx) => (
@@ -142,7 +142,7 @@ export default function OrderAgain() {
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
                       <div className="text-xs font-bold text-neutral-900">
                         ₹{order.totalAmount.toFixed(0)}
@@ -154,11 +154,10 @@ export default function OrderAgain() {
                       <button
                         onClick={(e) => handleOrderAgain(order, e)}
                         disabled={addedOrders.has(order.id)}
-                        className={`mt-1 text-[10px] font-semibold px-3 py-1 rounded-md transition-colors shadow-sm ${
-                          addedOrders.has(order.id)
-                            ? 'bg-orange-200 text-neutral-600 cursor-not-allowed'
-                            : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                        }`}
+                        className={`mt-1 text-[10px] font-semibold px-3 py-1 rounded-md transition-colors shadow-sm ${addedOrders.has(order.id)
+                          ? 'bg-orange-200 text-neutral-600 cursor-not-allowed'
+                          : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                          }`}
                       >
                         {addedOrders.has(order.id) ? 'Added to Cart!' : 'Order Again'}
                       </button>
@@ -191,7 +190,7 @@ export default function OrderAgain() {
               >
                 <div className="bg-white rounded-lg overflow-hidden flex flex-col relative h-full" style={{ boxShadow: '0 1px 1px rgba(0, 0, 0, 0.03)' }}>
                   {/* Product Image Area */}
-                  <div 
+                  <div
                     onClick={() => navigate(`/product/${product.id}`)}
                     className="relative block cursor-pointer"
                   >
@@ -330,7 +329,7 @@ export default function OrderAgain() {
                     </div>
 
                     {/* Product Name */}
-                    <div 
+                    <div
                       onClick={() => navigate(`/product/${product.id}`)}
                       className="mb-0.5 cursor-pointer"
                     >
@@ -391,7 +390,7 @@ export default function OrderAgain() {
                       <div className="flex items-center gap-0.5">
                         <div className="w-px h-2 bg-green-300"></div>
                         <svg width="6" height="6" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M0 0L8 4L0 8Z" fill="#16a34a"/>
+                          <path d="M0 0L8 4L0 8Z" fill="#16a34a" />
                         </svg>
                       </div>
                     </div>
@@ -414,7 +413,7 @@ export default function OrderAgain() {
                 <div className="relative w-40 h-48 bg-gradient-to-b from-yellow-400 via-yellow-300 to-yellow-500 rounded-b-2xl rounded-t-lg shadow-xl border-2 border-yellow-500/30 flex items-center justify-center">
                   {/* Enhanced bag opening/top with depth */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-36 h-8 bg-gradient-to-b from-yellow-500 to-yellow-400 rounded-t-lg shadow-inner"></div>
-                  
+
                   {/* Enhanced bag handle with 3D effect */}
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-20 h-7 border-[4px] border-yellow-600 rounded-full border-b-transparent shadow-lg">
                     <div className="absolute top-1 left-1/2 -translate-x-1/2 w-12 h-4 border-[2px] border-yellow-500/50 rounded-full border-b-transparent"></div>

@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
-import Button from '../components/ui/button';
+import { useCart } from '../../context/CartContext';
+import Button from '../../components/ui/button';
 
 export default function Cart() {
   const { cart, updateQuantity, removeFromCart, clearCart } = useCart();

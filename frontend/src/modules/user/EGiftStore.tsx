@@ -1,84 +1,84 @@
 import { useNavigate, Link } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../../context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import Button from '../components/ui/button';
-import { Product } from '../types/domain';
+import Button from '../../components/ui/button';
+import { Product } from '../../types/domain';
 
 interface StoreProduct extends Product {
   rating: number;
   reviews: number;
 }
 
-const sportsProducts: StoreProduct[] = [
+const egiftProducts: StoreProduct[] = [
   {
-    id: 'cricket-bat',
-    name: 'Cricket Bat',
-    pack: 'English Willow',
-    price: 2499,
-    mrp: 2999,
+    id: 'gift-card-500',
+    name: 'E-Gift Card',
+    pack: '₹500',
+    price: 500,
+    mrp: 500,
     rating: 4.5,
     reviews: 1234,
-    imageUrl: '/assets/shopbystore/sports.jpg',
-    categoryId: 'sports',
+    imageUrl: '/assets/shopbystore/egift.jpg',
+    categoryId: 'egifts',
   },
   {
-    id: 'football',
-    name: 'Football',
-    pack: 'Size 5',
-    price: 599,
-    mrp: 799,
+    id: 'gift-card-1000',
+    name: 'E-Gift Card',
+    pack: '₹1000',
+    price: 1000,
+    mrp: 1000,
     rating: 4.5,
     reviews: 892,
-    imageUrl: '/assets/shopbystore/sports.jpg',
-    categoryId: 'sports',
+    imageUrl: '/assets/shopbystore/egift.jpg',
+    categoryId: 'egifts',
   },
   {
-    id: 'badminton-racket',
-    name: 'Badminton Racket',
-    pack: 'Carbon Fiber',
-    price: 1299,
-    mrp: 1599,
-    rating: 4.0,
-    reviews: 567,
-    imageUrl: '/assets/shopbystore/sports.jpg',
-    categoryId: 'sports',
-  },
-  {
-    id: 'yoga-mat',
-    name: 'Yoga Mat',
-    pack: 'Premium',
-    price: 499,
-    mrp: 699,
+    id: 'gift-card-2000',
+    name: 'E-Gift Card',
+    pack: '₹2000',
+    price: 2000,
+    mrp: 2000,
     rating: 4.5,
-    reviews: 2345,
-    imageUrl: '/assets/shopbystore/sports.jpg',
-    categoryId: 'sports',
+    reviews: 567,
+    imageUrl: '/assets/shopbystore/egift.jpg',
+    categoryId: 'egifts',
   },
   {
-    id: 'dumbbells-set',
-    name: 'Dumbbells Set',
-    pack: '5 kg each',
-    price: 1999,
-    mrp: 2499,
+    id: 'gift-card-5000',
+    name: 'E-Gift Card',
+    pack: '₹5000',
+    price: 5000,
+    mrp: 5000,
+    rating: 4.5,
+    reviews: 345,
+    imageUrl: '/assets/shopbystore/egift.jpg',
+    categoryId: 'egifts',
+  },
+  {
+    id: 'gift-card-10000',
+    name: 'E-Gift Card',
+    pack: '₹10000',
+    price: 10000,
+    mrp: 10000,
+    rating: 4.5,
+    reviews: 234,
+    imageUrl: '/assets/shopbystore/egift.jpg',
+    categoryId: 'egifts',
+  },
+  {
+    id: 'custom-gift-card',
+    name: 'Custom E-Gift Card',
+    pack: 'Custom Amount',
+    price: 100,
+    mrp: 100,
     rating: 4.5,
     reviews: 456,
-    imageUrl: '/assets/shopbystore/sports.jpg',
-    categoryId: 'sports',
-  },
-  {
-    id: 'sports-shoes',
-    name: 'Sports Shoes',
-    pack: 'Size 8',
-    price: 2999,
-    mrp: 3999,
-    rating: 4.5,
-    reviews: 1234,
-    imageUrl: '/assets/shopbystore/sports.jpg',
-    categoryId: 'sports',
+    imageUrl: '/assets/shopbystore/egift.jpg',
+    categoryId: 'egifts',
   },
 ];
 
-export default function SportsStore() {
+export default function EGiftStore() {
   const navigate = useNavigate();
   const { cart, addToCart, updateQuantity } = useCart();
 
@@ -86,11 +86,11 @@ export default function SportsStore() {
     <div className="min-h-screen bg-white">
       <div className="relative w-full">
         <img
-          src="/assets/shopbystore/sports.jpg"
-          alt="Sports Store"
+          src="/assets/shopbystore/egift.jpg"
+          alt="E-Gifts Store"
           className="w-full h-full object-cover"
         />
-        
+
         <header className="absolute top-0 left-0 right-0 z-10">
           <div className="px-3 py-2 flex items-center justify-between gap-2">
             <button
@@ -99,7 +99,7 @@ export default function SportsStore() {
               aria-label="Go back"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15 18L9 12L15 6" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M15 18L9 12L15 6" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
 
@@ -117,8 +117,8 @@ export default function SportsStore() {
                 aria-label="Search"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="11" cy="11" r="8" stroke="#000000" strokeWidth="2"/>
-                  <path d="m21 21-4.35-4.35" stroke="#000000" strokeWidth="2" strokeLinecap="round"/>
+                  <circle cx="11" cy="11" r="8" stroke="#000000" strokeWidth="2" />
+                  <path d="m21 21-4.35-4.35" stroke="#000000" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               </button>
               <button
@@ -126,14 +126,14 @@ export default function SportsStore() {
                 aria-label="Share"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M18 8A3 3 0 1 0 15 4.09M6 15a3 3 0 1 0 2.91-3M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm6 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M18 8A3 3 0 1 0 15 4.09M6 15a3 3 0 1 0 2.91-3M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm6 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" stroke="#000000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
             </div>
           </div>
         </header>
 
-        <div 
+        <div
           className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
           style={{
             background: 'linear-gradient(to bottom, transparent 0%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.6) 80%, rgba(255, 255, 255, 1) 100%)'
@@ -143,9 +143,9 @@ export default function SportsStore() {
 
       <div className="px-4 py-4">
         <h3 className="text-lg font-semibold text-neutral-900 mb-4">Top buys</h3>
-        
+
         <div className="grid grid-cols-3 gap-2">
-          {sportsProducts.map((product) => {
+          {egiftProducts.map((product) => {
             const cartItem = cart.items.find((item) => item.product.id === product.id);
             const inCartQty = cartItem?.quantity || 0;
             const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
@@ -182,7 +182,7 @@ export default function SportsStore() {
                       aria-label="Add to wishlist"
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </button>
                   </div>
@@ -313,12 +313,12 @@ export default function SportsStore() {
                   </AnimatePresence>
 
                   <Link
-                    to={`/category/sports`}
+                    to={`/category/egifts`}
                     className="w-full bg-green-100 text-green-700 text-[8px] font-medium py-0.5 rounded-lg flex items-center justify-between px-1 hover:bg-green-200 transition-colors mt-1"
                   >
                     <span>See more like this</span>
                     <svg width="6" height="6" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M0 0L8 4L0 8Z" fill="#16a34a"/>
+                      <path d="M0 0L8 4L0 8Z" fill="#16a34a" />
                     </svg>
                   </Link>
                 </div>

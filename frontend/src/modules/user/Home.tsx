@@ -1,12 +1,12 @@
 import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import HomeHero from '../components/HomeHero';
-import PromoStrip from '../components/PromoStrip';
-import LowestPricesEver from '../components/LowestPricesEver';
-import CategoryTileSection from '../components/CategoryTileSection';
-import FeaturedThisWeek from '../components/FeaturedThisWeek';
-import ProductCard from '../components/ProductCard';
-import { products } from '../data/products';
+import HomeHero from './components/HomeHero';
+import PromoStrip from './components/PromoStrip';
+import LowestPricesEver from './components/LowestPricesEver';
+import CategoryTileSection from './components/CategoryTileSection';
+import FeaturedThisWeek from './components/FeaturedThisWeek';
+import ProductCard from './components/ProductCard';
+import { products } from '../../data/products';
 import {
   bestsellerTiles,
   groceryKitchenTiles,
@@ -14,7 +14,7 @@ import {
   beautyPersonalCareTiles,
   householdEssentialsTiles,
   shopByStoreTiles,
-} from '../data/homeTiles';
+} from '../../data/homeTiles';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -26,14 +26,14 @@ export default function Home() {
     if (tabId === 'all') {
       return products;
     }
-    
+
     // Grocery tab shows multiple grocery-related categories
     if (tabId === 'grocery') {
-      return products.filter((p) => 
+      return products.filter((p) =>
         ['snacks', 'atta-rice', 'dairy-breakfast', 'masala-oil', 'biscuits-bakery', 'cold-drinks', 'fruits-veg'].includes(p.categoryId)
       );
     }
-    
+
     // Other tabs filter by exact category match
     return products.filter((p) => p.categoryId === tabId);
   };
@@ -90,7 +90,7 @@ export default function Home() {
             <div className="mt-2 md:mt-4">
               <CategoryTileSection title="Bestsellers" tiles={bestsellerTiles} columns={3} showProductCount={true} />
             </div>
-            
+
             {/* Featured this week Section */}
             <FeaturedThisWeek />
 
@@ -113,7 +113,7 @@ export default function Home() {
                 <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-4">
                   {shopByStoreTiles.map((tile) => {
                     const hasImages = tile.productImages && tile.productImages.filter(Boolean).length > 0;
-                    
+
                     return (
                       <div key={tile.id} className="flex flex-col">
                         <div
@@ -147,9 +147,8 @@ export default function Home() {
                               className="w-full h-16 object-cover"
                             />
                           ) : (
-                            <div className={`w-full h-16 flex items-center justify-center text-3xl text-neutral-300 ${
-                              tile.bgColor || 'bg-neutral-50'
-                            }`}>
+                            <div className={`w-full h-16 flex items-center justify-center text-3xl text-neutral-300 ${tile.bgColor || 'bg-neutral-50'
+                              }`}>
                               {tile.name.charAt(0)}
                             </div>
                           )}
