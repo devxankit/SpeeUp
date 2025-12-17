@@ -16,11 +16,9 @@ interface LocationContextType {
   isLocationEnabled: boolean;
   isLocationLoading: boolean;
   locationError: string | null;
-  permissionStatus: 'prompt' | 'granted' | 'denied' | 'unsupported';
   requestLocation: () => Promise<void>;
   updateLocation: (location: Location) => Promise<void>;
   clearLocation: () => void;
-  checkPermissionStatus: () => Promise<void>;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
@@ -81,12 +79,10 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const [isLocationLoading, setIsLocationLoading] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [permissionStatus, setPermissionStatus] = useState<'prompt' | 'granted' | 'denied' | 'unsupported'>('prompt');
   
   // Refs for request cancellation and preventing race conditions
   const abortControllerRef = useRef<AbortController | null>(null);
   const isRequestingRef = useRef(false);
-  const requestLocationRef = useRef<(() => Promise<void>) | null>(null);
 
   // Load saved location - OPTIMIZED: localStorage first (instant), then backend in parallel
   useEffect(() => {
@@ -192,8 +188,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     loadSavedLocation();
   }, [isAuthenticated, user]);
 
-  // Request user's current location - OPTIMIZED with retry logic and fallback strategies
-  const requestLocation = useCallback(async (retryCount = 0): Promise<void> => {
+  // Request user's current location - OPTIMIZED for speed and accuracy
+  const requestLocation = useCallback(async (): Promise<void> => {
     if (!navigator.geolocation) {
       setLocationError('Geolocation is not supported by your browser');
       setIsLocationLoading(false);
@@ -201,35 +197,26 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     }
 
     // Prevent concurrent requests
-    if (isRequestingRef.current && retryCount === 0) {
+    if (isRequestingRef.current) {
       return;
     }
 
-    // Cancel any previous request only on first attempt
-    if (retryCount === 0 && abortControllerRef.current) {
+    // Cancel any previous request
+    if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
-    // Create new abort controller for this attempt
-    if (retryCount === 0) {
-      abortControllerRef.current = new AbortController();
-      isRequestingRef.current = true;
-      setIsLocationLoading(true);
-      setLocationError(null);
-    } else {
-      // Update error message for retry
-      setLocationError(`Getting your location... (Attempt ${retryCount + 1}/3)`);
-    }
+    isRequestingRef.current = true;
+    setIsLocationLoading(true);
+    setLocationError(null);
+    abortControllerRef.current = new AbortController();
 
     return new Promise((resolve, reject) => {
-      // Strategy: Try high accuracy first, then fallback to lower accuracy
-      const useHighAccuracy = retryCount < 2; // First 2 attempts use high accuracy
-      const timeoutDuration = useHighAccuracy ? 20000 : 30000; // 20s for high accuracy, 30s for low accuracy
-      
+      // Optimized geolocation options for faster and more accurate results
       const geoOptions = {
-        enableHighAccuracy: useHighAccuracy,
-        timeout: timeoutDuration,
-        maximumAge: retryCount === 0 ? 60000 : 0, // Use cache on first attempt, force fresh on retries
+        enableHighAccuracy: true, // Use GPS if available for better accuracy
+        timeout: 8000, // Reduced timeout for faster failure (was 10000)
+        maximumAge: 60000, // Accept cached position up to 1 minute old (faster response)
       };
 
       navigator.geolocation.getCurrentPosition(
@@ -265,7 +252,6 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             setLocation(tempLocation);
             setIsLocationEnabled(true);
             setIsLocationLoading(false); // Set loading false early
-            setLocationError(null); // Clear any retry messages
 
             // Reverse geocode in background (non-blocking)
             try {
@@ -338,64 +324,17 @@ export function LocationProvider({ children }: { children: ReactNode }) {
           }
 
           let errorMessage = 'Failed to get your location';
-          let shouldRetry = false;
-          
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              setPermissionStatus('denied');
-              errorMessage = 'Location permission denied. Please enable location access in your device settings.';
+              errorMessage = 'Location permission denied. Please enable location access.';
               break;
             case error.POSITION_UNAVAILABLE:
-              // Retry if GPS is unavailable (might be temporary)
-              if (retryCount < 2) {
-                shouldRetry = true;
-                errorMessage = `GPS signal unavailable. Retrying... (${retryCount + 1}/3)`;
-              } else {
-                errorMessage = 'Location information unavailable. Please check your GPS settings and ensure you are outdoors or near a window.';
-              }
+              errorMessage = 'Location information unavailable.';
               break;
             case error.TIMEOUT:
-              // Always retry timeout errors
-              if (retryCount < 2) {
-                shouldRetry = true;
-                errorMessage = `Location request taking longer than expected. Retrying with ${retryCount === 1 ? 'lower accuracy' : 'extended timeout'}... (${retryCount + 1}/3)`;
-              } else {
-                // On final attempt, try to use cached location if available
-                const cachedLocation = localStorage.getItem('userLocation');
-                if (cachedLocation) {
-                  try {
-                    const parsed = JSON.parse(cachedLocation);
-                    if (parsed.latitude && parsed.longitude) {
-                      console.warn('Using cached location due to timeout');
-                      setLocation(parsed);
-                      setIsLocationEnabled(true);
-                      setIsLocationLoading(false);
-                      setLocationError('Using previously saved location (GPS timeout)');
-                      isRequestingRef.current = false;
-                      resolve();
-                      return;
-                    }
-                  } catch (e) {
-                    // Ignore cache parse errors
-                  }
-                }
-                errorMessage = 'Location request timed out. Please ensure GPS is enabled and you have a clear view of the sky, or try again.';
-              }
+              errorMessage = 'Location request timed out. Please try again.';
               break;
           }
-
-          if (shouldRetry) {
-            // Wait before retrying (exponential backoff)
-            const delay = Math.min(1000 * (retryCount + 1), 3000); // 1s, 2s, max 3s
-            setTimeout(() => {
-              // Retry with updated count
-              requestLocation(retryCount + 1)
-                .then(() => resolve())
-                .catch((retryError) => reject(retryError));
-            }, delay);
-            return; // Exit early, retry will handle resolve/reject
-          }
-
           setLocationError(errorMessage);
           setIsLocationLoading(false);
           isRequestingRef.current = false;
@@ -405,48 +344,6 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       );
     });
   }, [isAuthenticated, user]);
-
-  // Store requestLocation in ref for use in checkPermissionStatus
-  useEffect(() => {
-    requestLocationRef.current = requestLocation;
-  }, [requestLocation]);
-
-  // Check permission status
-  const checkPermissionStatus = useCallback(async () => {
-    if (!navigator.geolocation) {
-      setPermissionStatus('unsupported');
-      return;
-    }
-
-    if (navigator.permissions) {
-      try {
-        const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
-        setPermissionStatus(permissionStatus.state);
-        
-        // Listen for permission changes (when user returns from settings)
-        permissionStatus.onchange = () => {
-          setPermissionStatus(permissionStatus.state);
-          // If permission is now granted, try to get location
-          if (permissionStatus.state === 'granted' && !isLocationEnabled && requestLocationRef.current) {
-            requestLocationRef.current().catch(() => {
-              // Error handled by requestLocation
-            });
-          }
-        };
-      } catch (error) {
-        // Permission API not supported, fallback to checking via geolocation
-        setPermissionStatus('prompt');
-      }
-    } else {
-      // Fallback for browsers without Permissions API
-      setPermissionStatus('prompt');
-    }
-  }, [isLocationEnabled]);
-
-  // Check permission status on mount
-  useEffect(() => {
-    checkPermissionStatus();
-  }, [checkPermissionStatus]);
 
   // Helper function to save location to backend (non-blocking)
   const saveLocationToBackend = async (locationData: Location): Promise<void> => {
@@ -653,11 +550,9 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         isLocationEnabled,
         isLocationLoading,
         locationError,
-        permissionStatus,
         requestLocation,
         updateLocation,
         clearLocation,
-        checkPermissionStatus,
       }}
     >
       {children}
@@ -665,8 +560,6 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Custom hook - Fast Refresh warning is acceptable here as hooks are meant to be exported with providers
-// eslint-disable-next-line react-refresh/only-export-components
 export function useLocation() {
   const context = useContext(LocationContext);
   if (context === undefined) {

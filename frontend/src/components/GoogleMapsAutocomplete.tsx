@@ -90,23 +90,10 @@ export default function GoogleMapsAutocomplete({
   const autocompleteRef = useRef<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string>('');
-  
-  // Use ref to store current value to avoid stale closure in event listener
-  const valueRef = useRef(value);
-  
-  // Update ref whenever value changes
-  useEffect(() => {
-    valueRef.current = value;
-  }, [value]);
 
   // Initialize autocomplete function
   const initializeAutocomplete = useCallback(() => {
     if (!inputRef.current || !window.google?.maps?.places) return;
-
-    // Clean up previous instance before creating new one
-    if (autocompleteRef.current) {
-      window.google?.maps?.event?.clearInstanceListeners?.(autocompleteRef.current);
-    }
 
     try {
       const Autocomplete = window.google.maps.places.Autocomplete;
@@ -128,8 +115,7 @@ export default function GoogleMapsAutocomplete({
 
         const lat = place.geometry.location.lat();
         const lng = place.geometry.location.lng();
-        // Use ref to get current value instead of captured closure value
-        const rawAddress = place.formatted_address || place.name || valueRef.current;
+        const rawAddress = place.formatted_address || place.name || value;
         // Clean address to remove Plus Codes
         const address = cleanAddress(rawAddress);
         const placeName = place.name || address;
@@ -141,30 +127,22 @@ export default function GoogleMapsAutocomplete({
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(`Failed to initialize autocomplete: ${errorMessage}`);
     }
-  }, [onChange]);
+  }, [onChange, value]);
 
   // Load Google Maps API script
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     
-    // Cleanup function - always register it first to ensure it runs on unmount/dependency change
-    const cleanup = () => {
-      if (autocompleteRef.current) {
-        window.google?.maps?.event?.clearInstanceListeners?.(autocompleteRef.current);
-        autocompleteRef.current = null;
-      }
-    };
-    
     if (!apiKey) {
       setError('Google Maps API key is not configured');
-      return cleanup; // Return cleanup even on early return
+      return;
     }
 
     // Check if Google Maps is already loaded
     if (window.google && window.google.maps && window.google.maps.places) {
       setIsLoaded(true);
       initializeAutocomplete();
-      return cleanup; // Return cleanup even on early return
+      return;
     }
 
     // Check if script is already being loaded
@@ -177,10 +155,7 @@ export default function GoogleMapsAutocomplete({
           initializeAutocomplete();
         }
       }, 100);
-      return () => {
-        clearInterval(checkInterval);
-        cleanup(); // Call cleanup when interval is cleared
-      };
+      return () => clearInterval(checkInterval);
     }
 
     // Load Google Maps script
@@ -197,7 +172,12 @@ export default function GoogleMapsAutocomplete({
     };
     document.head.appendChild(script);
 
-    return cleanup; // Return cleanup function
+    return () => {
+      // Cleanup
+      if (autocompleteRef.current) {
+        window.google?.maps?.event?.clearInstanceListeners?.(autocompleteRef.current);
+      }
+    };
   }, [initializeAutocomplete]);
 
   // Re-initialize when input ref is ready and Google Maps is loaded
