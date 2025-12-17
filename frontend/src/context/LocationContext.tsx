@@ -187,14 +187,18 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     initializeLocation();
   }, [isAuthenticated, user]);
 
-  // Request user's current location - OPTIMIZED with retry logic and fallback strategies
-  // Always gets fresh location when GPS is enabled, never uses cache when GPS is off
+  // Request user's current location - Standard retry logic, no fallback locations
+  // Always gets fresh location when GPS is enabled, never uses cache
   const requestLocation = useCallback(async (retryCount = 0): Promise<void> => {
     if (!navigator.geolocation) {
       setLocationError('Geolocation is not supported by your browser');
       setIsLocationLoading(false);
       return;
     }
+
+    // Standard retry configuration
+    const MAX_RETRIES = 2; // Total 3 attempts (0, 1, 2)
+    const timeoutDuration = 30000; // 30 seconds per attempt (standard for mobile GPS)
 
     // Prevent concurrent requests
     if (isRequestingRef.current && retryCount === 0) {
@@ -218,12 +222,11 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     }
 
     return new Promise((resolve, reject) => {
-      // Strategy: Try high accuracy first, then fallback to lower accuracy
-      const useHighAccuracy = retryCount < 2; // First 2 attempts use high accuracy
-      const timeoutDuration = useHighAccuracy ? 20000 : 30000; // 20s for high accuracy, 30s for low accuracy
+      // Standard retry strategy: All attempts use high accuracy for mobile GPS
+      // Mobile GPS needs more time to acquire signal, especially indoors
       
       const geoOptions = {
-        enableHighAccuracy: useHighAccuracy,
+        enableHighAccuracy: true, // Always use GPS for accurate location
         timeout: timeoutDuration,
         maximumAge: 0, // Always get fresh location, never use cached position
       };
@@ -342,50 +345,38 @@ export function LocationProvider({ children }: { children: ReactNode }) {
               errorMessage = 'Location permission denied. Please enable location access in your device settings.';
               break;
             case error.POSITION_UNAVAILABLE:
-              // Retry if GPS is unavailable (might be temporary)
-              if (retryCount < 2) {
+              // Standard retry for GPS unavailable (common on mobile)
+              if (retryCount < MAX_RETRIES) {
                 shouldRetry = true;
-                errorMessage = `GPS signal unavailable. Retrying... (${retryCount + 1}/3)`;
+                errorMessage = `GPS signal unavailable. Retrying... (Attempt ${retryCount + 1}/3)`;
               } else {
-                errorMessage = 'Location information unavailable. Please check your GPS settings and ensure you are outdoors or near a window.';
+                errorMessage = 'GPS signal unavailable. Please ensure GPS is enabled in your device settings and you have a clear view of the sky.';
               }
               break;
             case error.TIMEOUT:
-              // Always retry timeout errors
-              if (retryCount < 2) {
+              // Standard retry for timeout (GPS can take time to acquire on mobile)
+              if (retryCount < MAX_RETRIES) {
                 shouldRetry = true;
-                errorMessage = `Location request taking longer than expected. Retrying with ${retryCount === 1 ? 'lower accuracy' : 'extended timeout'}... (${retryCount + 1}/3)`;
+                errorMessage = `Location request taking longer than expected. Retrying... (Attempt ${retryCount + 1}/3)`;
               } else {
-                // On final attempt, only use cache if permission is granted (GPS might just be slow)
-                // If permission was denied, don't use cache - user needs to enable GPS
-                if (permissionStatus === 'granted') {
-                  const cachedLocation = localStorage.getItem('userLocation');
-                  if (cachedLocation) {
-                    try {
-                      const parsed = JSON.parse(cachedLocation);
-                      if (parsed.latitude && parsed.longitude) {
-                        console.warn('Using cached location due to timeout (permission granted)');
-                        setLocation(parsed);
-                        setIsLocationEnabled(true);
-                        setIsLocationLoading(false);
-                        setLocationError('Using previously saved location (GPS timeout)');
-                        isRequestingRef.current = false;
-                        resolve();
-                        return;
-                      }
-                    } catch (e) {
-                      // Ignore cache parse errors
-                    }
-                  }
-                }
-                errorMessage = 'Location request timed out. Please ensure GPS is enabled and you have a clear view of the sky, or try again.';
+                // No fallback locations - user must enable GPS properly
+                errorMessage = 'Location request timed out. Please ensure GPS is enabled in your device settings and try again.';
+              }
+              break;
+            default:
+              // Unknown error - retry once
+              if (retryCount < 1) {
+                shouldRetry = true;
+                errorMessage = `Location request failed. Retrying... (Attempt ${retryCount + 1}/3)`;
+              } else {
+                errorMessage = 'Failed to get your location. Please check your GPS settings and try again.';
               }
               break;
           }
 
           if (shouldRetry) {
-            // Wait before retrying (exponential backoff)
-            const delay = Math.min(1000 * (retryCount + 1), 3000); // 1s, 2s, max 3s
+            // Standard exponential backoff: 1s, 2s delays between retries
+            const delay = 1000 * (retryCount + 1); // 1s after first failure, 2s after second
             setTimeout(() => {
               // Retry with updated count
               requestLocation(retryCount + 1)
@@ -403,7 +394,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         geoOptions
       );
     });
-  }, [isAuthenticated, user, permissionStatus]);
+  }, [isAuthenticated, user]);
 
   // Store requestLocation in ref for use in checkPermissionStatus
   useEffect(() => {
