@@ -1,13 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-<<<<<<< HEAD:frontend/src/modules/user/SignUp.tsx
 import { register, sendOTP, verifyOTP } from '../../services/api/auth/customerAuthService';
+import { useAuth } from '../../context/AuthContext';
 import OTPInput from '../../components/OTPInput';
-=======
-import { register, sendOTP, verifyOTP } from '../services/api/auth/customerAuthService';
-import { useAuth } from '../context/AuthContext';
-import OTPInput from '../components/OTPInput';
->>>>>>> f00164bdf4b21e6ebc5c73e451ec8696cb91a5a3:frontend/src/pages/SignUp.tsx
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -184,7 +179,12 @@ export default function SignUp() {
           muted
           playsInline
           className="w-full h-full object-cover"
-<<<<<<< HEAD:frontend/src/modules/user/SignUp.tsx
+          key="login-video-v2"
+          onLoadedMetadata={() => {
+            if (videoRef.current) {
+              videoRef.current.playbackRate = 1.5;
+            }
+          }}
           style={{
             display: 'block',
             width: '100%',
@@ -193,22 +193,6 @@ export default function SignUp() {
             padding: 0,
             border: 'none',
             outline: 'none',
-=======
-          key="login-video-v2"
-          onLoadedMetadata={() => {
-            if (videoRef.current) {
-              videoRef.current.playbackRate = 1.5;
-            }
-          }}
-          style={{ 
-            display: 'block', 
-            width: '100%', 
-            height: '100%', 
-            margin: 0, 
-            padding: 0, 
-            border: 'none', 
-            outline: 'none', 
->>>>>>> f00164bdf4b21e6ebc5c73e451ec8696cb91a5a3:frontend/src/pages/SignUp.tsx
             boxShadow: 'none',
             verticalAlign: 'top',
             objectFit: 'cover',
@@ -324,8 +308,8 @@ export default function SignUp() {
               type="submit"
               disabled={loading || !formData.name || formData.mobile.length !== 10 || !formData.email}
               className={`w-full py-2 sm:py-2.5 rounded-lg font-semibold text-sm transition-colors border px-3 ${formData.name && formData.mobile.length === 10 && formData.email && !loading
-                  ? 'bg-orange-50 text-orange-600 border-orange-500 hover:bg-orange-100'
-                  : 'bg-neutral-300 text-neutral-500 cursor-not-allowed border-neutral-300'
+                ? 'bg-orange-50 text-orange-600 border-orange-500 hover:bg-orange-100'
+                : 'bg-neutral-300 text-neutral-500 cursor-not-allowed border-neutral-300'
                 }`}
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
