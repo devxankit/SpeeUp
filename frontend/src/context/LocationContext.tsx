@@ -175,36 +175,12 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('userLocation'); // Clear cache when denied
         setIsLocationLoading(false);
       } else {
-        // Permission prompt or unsupported - Check cache as fallback, but still request fresh
-        const saved = localStorage.getItem('userLocation');
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (parsed.latitude && parsed.longitude) {
-              // Temporarily show cached location while requesting fresh
-              setLocation(parsed);
-              setIsLocationEnabled(true);
-              setIsLocationLoading(false);
-              
-              // Try to get fresh location in background when requestLocation is ready
-              setTimeout(() => {
-                if (requestLocationRef.current) {
-                  requestLocationRef.current().catch(() => {
-                    // If fresh location fails, keep cached location
-                  });
-                }
-              }, 100);
-              return;
-            }
-          } catch (e) {
-            localStorage.removeItem('userLocation');
-          }
-        }
-        
-        // No cache available
+        // Permission prompt or unsupported - Always show modal, don't use cache
+        // User needs to explicitly grant permission and get fresh location
         setLocation(null);
         setIsLocationEnabled(false);
         setIsLocationLoading(false);
+        // Don't use cache - force user to grant permission for fresh location
       }
     };
 

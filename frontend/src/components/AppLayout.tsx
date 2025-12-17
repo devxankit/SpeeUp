@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import FloatingCartPill from './FloatingCartPill';
@@ -17,14 +17,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [categoriesRotation, setCategoriesRotation] = useState(0);
   const [prevCategoriesActive, setPrevCategoriesActive] = useState(false);
-  const { isLocationEnabled, isLocationLoading, location: userLocation } = useLocationContext();
+  const { isLocationEnabled, isLocationLoading, location: userLocation, permissionStatus } = useLocationContext();
   const [showLocationRequest, setShowLocationRequest] = useState(false);
   const [showLocationChangeModal, setShowLocationChangeModal] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
   // Check if location is required for current route
-  const requiresLocation = () => {
+  const requiresLocation = useCallback(() => {
     const publicRoutes = ['/login', '/signup', '/seller/login', '/seller/signup', '/delivery/login', '/delivery/signup', '/admin/login'];
     // Don't require location on login/signup pages
     if (publicRoutes.includes(location.pathname)) {
@@ -33,17 +33,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
     // Require location for ALL routes (not just authenticated users)
     // This ensures location is mandatory for everyone visiting the platform
     return true;
-  };
+  }, [location.pathname]);
 
   // Show location request if needed - check on every route change
   useEffect(() => {
     // Wait for location loading to complete, then check if location is required and not enabled
-    if (!isLocationLoading && requiresLocation() && !isLocationEnabled) {
-      setShowLocationRequest(true);
-    } else if (isLocationEnabled) {
+    // Show modal if:
+    // 1. Location loading is complete
+    // 2. Location is required for current route
+    // 3. Location is not enabled OR permission is denied/prompt (force fresh location)
+    if (!isLocationLoading && requiresLocation()) {
+      if (!isLocationEnabled || permissionStatus === 'denied' || permissionStatus === 'prompt') {
+        setShowLocationRequest(true);
+      } else {
+        setShowLocationRequest(false);
+      }
+    } else if (isLocationEnabled && permissionStatus === 'granted') {
       setShowLocationRequest(false);
     }
-  }, [isLocationLoading, isLocationEnabled, location.pathname]);
+  }, [isLocationLoading, isLocationEnabled, permissionStatus, requiresLocation]);
 
   // Update search query when URL params change
   useEffect(() => {
