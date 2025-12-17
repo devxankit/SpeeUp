@@ -94,8 +94,7 @@ export default function SalesLineChart({ thisMonthData, lastMonthData, height = 
       horizontalAlign: 'right',
       fontFamily: 'Inter, sans-serif',
       markers: {
-        width: 12,
-        height: 12,
+        size: 6,
       },
     },
   };

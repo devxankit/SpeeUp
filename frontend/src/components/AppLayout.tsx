@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { motion, AnimatePresence } from 'framer-motion';
 import FloatingCartPill from './FloatingCartPill';
 import { useLocation as useLocationContext } from '../context/LocationContext';
-import { useAuth } from '../context/AuthContext';
 import LocationPermissionRequest from './LocationPermissionRequest';
 
 interface AppLayoutProps {
