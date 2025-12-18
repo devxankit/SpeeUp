@@ -1,8 +1,11 @@
-import { Request, Response } from 'express';
-import Delivery from '../../models/Delivery';
-import { sendOTP as sendOTPService, verifyOTP as verifyOTPService } from '../../services/otpService';
-import { generateToken } from '../../services/jwtService';
-import { asyncHandler } from '../../utils/asyncHandler';
+import { Request, Response } from "express";
+import Delivery from "../../../models/Delivery";
+import {
+  sendOTP as sendOTPService,
+  verifyOTP as verifyOTPService,
+} from "../../../services/otpService";
+import { generateToken } from "../../../services/jwtService";
+import { asyncHandler } from "../../../utils/asyncHandler";
 
 /**
  * Send OTP to delivery mobile number
@@ -13,7 +16,7 @@ export const sendOTP = asyncHandler(async (req: Request, res: Response) => {
   if (!mobile || !/^[0-9]{10}$/.test(mobile)) {
     return res.status(400).json({
       success: false,
-      message: 'Valid 10-digit mobile number is required',
+      message: "Valid 10-digit mobile number is required",
     });
   }
 
@@ -22,12 +25,12 @@ export const sendOTP = asyncHandler(async (req: Request, res: Response) => {
   if (!delivery) {
     return res.status(404).json({
       success: false,
-      message: 'Delivery partner not found with this mobile number',
+      message: "Delivery partner not found with this mobile number",
     });
   }
 
   // Send OTP - for login, always use default OTP
-  const result = await sendOTPService(mobile, 'Delivery', true);
+  const result = await sendOTPService(mobile, "Delivery", true);
 
   return res.status(200).json({
     success: true,
@@ -44,41 +47,41 @@ export const verifyOTP = asyncHandler(async (req: Request, res: Response) => {
   if (!mobile || !/^[0-9]{10}$/.test(mobile)) {
     return res.status(400).json({
       success: false,
-      message: 'Valid 10-digit mobile number is required',
+      message: "Valid 10-digit mobile number is required",
     });
   }
 
   if (!otp || !/^[0-9]{6}$/.test(otp)) {
     return res.status(400).json({
       success: false,
-      message: 'Valid 6-digit OTP is required',
+      message: "Valid 6-digit OTP is required",
     });
   }
 
   // Verify OTP
-  const isValid = await verifyOTPService(mobile, otp, 'Delivery');
+  const isValid = await verifyOTPService(mobile, otp, "Delivery");
   if (!isValid) {
     return res.status(401).json({
       success: false,
-      message: 'Invalid or expired OTP',
+      message: "Invalid or expired OTP",
     });
   }
 
   // Find delivery partner
-  const delivery = await Delivery.findOne({ mobile }).select('-password');
+  const delivery = await Delivery.findOne({ mobile }).select("-password");
   if (!delivery) {
     return res.status(404).json({
       success: false,
-      message: 'Delivery partner not found',
+      message: "Delivery partner not found",
     });
   }
 
   // Generate JWT token
-  const token = generateToken(delivery._id.toString(), 'Delivery');
+  const token = generateToken(delivery._id.toString(), "Delivery");
 
   return res.status(200).json({
     success: true,
-    message: 'Login successful',
+    message: "Login successful",
     data: {
       token,
       user: {
@@ -119,14 +122,14 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   if (!name || !mobile || !email || !password || !address || !city) {
     return res.status(400).json({
       success: false,
-      message: 'Name, mobile, email, password, address, and city are required',
+      message: "Name, mobile, email, password, address, and city are required",
     });
   }
 
   if (!/^[0-9]{10}$/.test(mobile)) {
     return res.status(400).json({
       success: false,
-      message: 'Valid 10-digit mobile number is required',
+      message: "Valid 10-digit mobile number is required",
     });
   }
 
@@ -138,7 +141,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   if (existingDelivery) {
     return res.status(409).json({
       success: false,
-      message: 'Delivery partner already exists with this mobile or email',
+      message: "Delivery partner already exists with this mobile or email",
     });
   }
 
@@ -159,17 +162,18 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     accountNumber,
     ifscCode,
     bonusType,
-    status: 'Inactive', // New delivery partners start as Inactive
+    status: "Inactive", // New delivery partners start as Inactive
     balance: 0,
     cashCollected: 0,
   });
 
   // Generate token
-  const token = generateToken(delivery._id.toString(), 'Delivery');
+  const token = generateToken(delivery._id.toString(), "Delivery");
 
   return res.status(201).json({
     success: true,
-    message: 'Delivery partner registered successfully. Awaiting admin approval.',
+    message:
+      "Delivery partner registered successfully. Awaiting admin approval.",
     data: {
       token,
       user: {
@@ -183,4 +187,3 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 });
-
