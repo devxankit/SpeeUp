@@ -5,8 +5,8 @@ export default function AdminSettings() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redirect to store setting page
-    navigate('/admin/store-setting', { replace: true });
+    // Redirect to payment list page (first settings page)
+    navigate('/admin/payment-list', { replace: true });
   }, [navigate]);
 
   return null;
