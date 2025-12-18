@@ -44,11 +44,13 @@ const getCacheKey = (lat: number, lng: number, precision: number = 4): string =>
 const cleanAddress = (address: string): string => {
   if (!address) return address;
 
+
   // Remove Plus Codes more comprehensively:
   // 1. Match Plus Code at start (with optional trailing delimiters)
   // 2. Match Plus Code at end (with optional leading delimiters)
   // 3. Match Plus Code in middle (with surrounding delimiters)
   // 4. Match standalone Plus Code (with optional surrounding spaces)
+
 
   const cleaned = address
     // Remove Plus Code at start (with or without trailing delimiters)
@@ -70,6 +72,7 @@ const cleanAddress = (address: string): string => {
     .replace(/^[,\s]+|[,\s]+$/g, '') // Remove leading/trailing commas and spaces
     .trim();
 
+
   return cleaned;
 };
 
@@ -80,6 +83,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   const [isLocationLoading, setIsLocationLoading] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
 
+
   // Refs for request cancellation and preventing race conditions
   const abortControllerRef = useRef<AbortController | null>(null);
   const isRequestingRef = useRef(false);
@@ -88,6 +92,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadSavedLocation = async () => {
       setIsLocationLoading(true);
+
 
       // STEP 1: Load from localStorage FIRST (instant, no network delay)
       const saved = localStorage.getItem('userLocation');
@@ -99,6 +104,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             setLocation(parsed);
             setIsLocationEnabled(true);
             setIsLocationLoading(false); // Set loading false early for instant UI
+
 
             // Continue to check backend in background (non-blocking)
             if (isAuthenticated && user && user.userType === 'Customer') {
@@ -113,6 +119,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // STEP 2: If no localStorage, check backend (only if authenticated and NOT a seller)
+      if (isAuthenticated && user && !user.storeName) {
       // STEP 2: If no localStorage, check backend (only if authenticated AND user is a customer)
       if (isAuthenticated && user && user.userType === 'Customer') {
         try {
@@ -152,6 +160,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
     // Helper function to check backend location (non-blocking)
     const checkBackendLocation = async (localStorageLocation: Location) => {
+      if (!isAuthenticated || !user || user.storeName) return;
       try {
         const response = await api.get('/customer/location');
         if (response.data.success && response.data.data) {
@@ -160,6 +169,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             // Only update if backend location is different (more recent)
             const latDiff = Math.abs(backendLocation.latitude - localStorageLocation.latitude);
             const lngDiff = Math.abs(backendLocation.longitude - localStorageLocation.longitude);
+
 
             // Update if coordinates differ significantly (> 0.001 degrees ≈ 100m)
             if (latDiff > 0.001 || lngDiff > 0.001) {
@@ -257,6 +267,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             try {
               const address = await reverseGeocode(latitude, longitude, abortControllerRef.current?.signal);
 
+
               // Check if request was cancelled during geocoding
               if (abortControllerRef.current?.signal.aborted) {
                 isRequestingRef.current = false;
@@ -278,6 +289,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
               setLocation(newLocation);
               localStorage.setItem('userLocation', JSON.stringify(newLocation));
 
+              // Save to backend in background (non-blocking, don't wait - only for customers)
+              if (isAuthenticated && user && !user.storeName) {
               // Save to backend in background (non-blocking, don't wait)
               if (isAuthenticated && user && user.userType === 'Customer') {
                 saveLocationToBackend(newLocation).catch(err => {
@@ -299,7 +312,10 @@ export function LocationProvider({ children }: { children: ReactNode }) {
               setLocation(fallbackLocation);
               localStorage.setItem('userLocation', JSON.stringify(fallbackLocation));
 
+
               // Try to save to backend anyway
+              if (isAuthenticated && user) {
+                saveLocationToBackend(fallbackLocation).catch(() => { });
               if (isAuthenticated && user && user.userType === 'Customer') {
                 saveLocationToBackend(fallbackLocation).catch(() => { });
               }
@@ -465,6 +481,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         const err = error instanceof Error ? error : new Error(String(error));
         lastError = err;
 
+
         // Don't retry on abort
         if (signal?.aborted || err.name === 'AbortError') {
           throw err;
@@ -489,6 +506,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     // Validate location data
     if (!newLocation.latitude || !newLocation.longitude ||
       isNaN(newLocation.latitude) || isNaN(newLocation.longitude)) {
+    if (!newLocation.latitude || !newLocation.longitude ||
+      isNaN(newLocation.latitude) || isNaN(newLocation.longitude)) {
       throw new Error('Invalid location coordinates');
     }
 
@@ -511,6 +530,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       });
     }
 
+    // Save to backend in background (non-blocking - only for customers)
+    if (isAuthenticated && user && !user.storeName) {
     // Save to backend in background (non-blocking)
     if (isAuthenticated && user && user.userType === 'Customer') {
       saveLocationToBackend(newLocation).catch(err => {
@@ -527,6 +548,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       abortControllerRef.current.abort();
     }
     isRequestingRef.current = false;
+
 
     setLocation(null);
     setIsLocationEnabled(false);

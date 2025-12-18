@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import speeUpLogo from '@assets/speeup1.jpeg';
+import { useAuth } from '../../../context/AuthContext';
 
 interface SellerHeaderProps {
   onMenuClick: () => void;
@@ -12,6 +13,7 @@ export default function SellerHeader({ onMenuClick, isSidebarOpen }: SellerHeade
   const location = useLocation();
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const { user } = useAuth();
   const settingsRef = useRef<HTMLDivElement>(null);
   const locationRef = useRef<HTMLDivElement>(null);
 
@@ -105,9 +107,8 @@ export default function SellerHeader({ onMenuClick, isSidebarOpen }: SellerHeade
         <div className="hidden md:flex items-center gap-4 lg:gap-6">
           <button
             onClick={() => navigate('/seller/orders')}
-            className={`relative px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
-              isActive('/seller/orders') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
+            className={`relative px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${isActive('/seller/orders') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
           >
             Orders
             {!isActive('/seller/orders') && (
@@ -118,19 +119,17 @@ export default function SellerHeader({ onMenuClick, isSidebarOpen }: SellerHeade
           </button>
           <button
             onClick={() => navigate('/seller/return-order')}
-            className={`px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-              isActive('/seller/return-order') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
+            className={`px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${isActive('/seller/return-order') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
           >
             Return Order
           </button>
           <button
-            onClick={() => navigate('/seller/wallet-transaction')}
-            className={`px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-              isActive('/seller/wallet-transaction') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
+            onClick={() => navigate('/seller/wallet')}
+            className={`px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${isActive('/seller/wallet') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
           >
-            Wallet Transaction
+            Wallet
           </button>
         </div>
 
@@ -165,8 +164,7 @@ export default function SellerHeader({ onMenuClick, isSidebarOpen }: SellerHeade
                 <button
                   onClick={() => {
                     setShowSettingsDropdown(false);
-                    // Navigate to settings page if it exists, or show a message
-                    console.log('Settings clicked');
+                    navigate('/seller/account-settings');
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
                 >
@@ -221,8 +219,10 @@ export default function SellerHeader({ onMenuClick, isSidebarOpen }: SellerHeade
             {showLocationDropdown && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-neutral-200 py-2 z-50">
                 <div className="px-4 py-2 border-b border-neutral-200">
-                  <p className="text-xs text-neutral-500 mb-1">Current Location</p>
-                  <p className="text-sm font-medium text-neutral-900">New Palasia, Indore</p>
+                  <p className="text-xs text-neutral-500 mb-1">Store Location</p>
+                  <p className="text-sm font-medium text-neutral-900">
+                    {user?.city ? `${user.city}${user.address ? `, ${user.address}` : ''}` : 'No location set'}
+                  </p>
                 </div>
                 <button
                   onClick={() => {
@@ -267,4 +267,3 @@ export default function SellerHeader({ onMenuClick, isSidebarOpen }: SellerHeade
     </header>
   );
 }
-

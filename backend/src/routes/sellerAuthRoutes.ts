@@ -13,4 +13,9 @@ router.post("/verify-otp", loginRateLimiter, sellerAuthController.verifyOTP);
 // Register route
 router.post("/register", sellerAuthController.register);
 
+// Profile routes (protected)
+import { authenticate } from "../middleware/auth";
+router.get("/profile", authenticate, sellerAuthController.getProfile);
+router.put("/profile", authenticate, sellerAuthController.updateProfile);
+
 export default router;

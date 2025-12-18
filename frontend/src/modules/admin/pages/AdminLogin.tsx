@@ -1,3 +1,8 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { sendOTP, verifyOTP } from '../../../services/api/auth/adminAuthService';
+import OTPInput from '../../../components/OTPInput';
+import { useAuth } from '../../../context/AuthContext';
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,6 +14,8 @@ import OTPInput from "../../../components/OTPInput";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [mobileNumber, setMobileNumber] = useState('');
   const { login } = useAuth();
   const [mobileNumber, setMobileNumber] = useState("");
   const [showOTP, setShowOTP] = useState(false);
@@ -40,6 +47,13 @@ export default function AdminLogin() {
     try {
       const response = await verifyOTP(mobileNumber, otp);
       if (response.success && response.data) {
+        // Update auth context
+        login(response.data.token, {
+          ...response.data.user,
+          userType: 'Admin'
+        });
+        navigate('/admin');
+      if (response.success && response.data) {
         // Update AuthContext with token and user data
         login(response.data.token, {
           ...response.data.user,
@@ -70,6 +84,10 @@ export default function AdminLogin() {
       <button
         onClick={() => navigate(-1)}
         className="absolute top-4 left-4 z-10 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-neutral-50 transition-colors"
+        aria-label="Back"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         aria-label="Back">
         <svg
           width="20"
@@ -148,6 +166,12 @@ export default function AdminLogin() {
               <button
                 onClick={handleMobileLogin}
                 disabled={mobileNumber.length !== 10 || loading}
+                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${mobileNumber.length === 10 && !loading
+                    ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-md'
+                    : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                  }`}
+              >
+                {loading ? 'Sending...' : 'Continue'}
                 className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
                   mobileNumber.length === 10 && !loading
                     ? "bg-teal-600 text-white hover:bg-teal-700 shadow-md"
@@ -206,6 +230,11 @@ export default function AdminLogin() {
           {/* Login with SpeeUp Button */}
           <button
             onClick={handleSpeeUpLogin}
+            className="w-full py-2.5 rounded-lg font-semibold text-sm bg-gradient-to-r from-teal-600 to-green-600 text-white hover:from-teal-700 hover:to-green-700 transition-all shadow-md flex items-center justify-center gap-2"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
             className="w-full py-2.5 rounded-lg font-semibold text-sm bg-gradient-to-r from-teal-600 to-green-600 text-white hover:from-teal-700 hover:to-green-700 transition-all shadow-md flex items-center justify-center gap-2">
             <svg
               width="20"
@@ -225,6 +254,12 @@ export default function AdminLogin() {
           <div className="pt-2">
             <button
               onClick={handleSellerLogin}
+              className="w-full py-2.5 rounded-lg font-semibold text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-all border border-neutral-300 flex items-center justify-center gap-2"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <path d="M20 8v6M23 11h-6" />
               className="w-full py-2.5 rounded-lg font-semibold text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-all border border-neutral-300 flex items-center justify-center gap-2">
               <svg
                 width="20"

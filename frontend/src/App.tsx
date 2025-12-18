@@ -48,15 +48,13 @@ import SellerOrderDetail from "./modules/seller/pages/SellerOrderDetail";
 import SellerCategory from "./modules/seller/pages/SellerCategory";
 import SellerSubCategory from "./modules/seller/pages/SellerSubCategory";
 import SellerAddProduct from "./modules/seller/pages/SellerAddProduct";
-import SellerBulkImport from "./modules/seller/pages/SellerBulkImport";
-import SellerBulkUpdate from "./modules/seller/pages/SellerBulkUpdate";
 import SellerTaxes from "./modules/seller/pages/SellerTaxes";
 import SellerProductList from "./modules/seller/pages/SellerProductList";
 import SellerStockManagement from "./modules/seller/pages/SellerStockManagement";
-import SellerWalletTransaction from "./modules/seller/pages/SellerWalletTransaction";
-import SellerWithdrawalRequest from "./modules/seller/pages/SellerWithdrawalRequest";
+import SellerWallet from "./modules/seller/pages/SellerWallet";
 import SellerSalesReport from "./modules/seller/pages/SellerSalesReport";
 import SellerReturnRequest from "./modules/seller/pages/SellerReturnRequest";
+import SellerAccountSettings from "./modules/seller/pages/SellerAccountSettings";
 import SellerLogin from "./modules/seller/pages/SellerLogin";
 import SellerSignUp from "./modules/seller/pages/SellerSignUp";
 import DeliverySignUp from "./modules/delivery/pages/DeliverySignUp";
@@ -186,14 +184,6 @@ function App() {
                           path="product/add"
                           element={<SellerAddProduct />}
                         />
-                        <Route
-                          path="product/bulk-import"
-                          element={<SellerBulkImport />}
-                        />
-                        <Route
-                          path="product/bulk-update"
-                          element={<SellerBulkUpdate />}
-                        />
                         <Route path="product/taxes" element={<SellerTaxes />} />
                         <Route
                           path="product/list"
@@ -212,16 +202,16 @@ function App() {
                           element={<SellerReturnRequest />}
                         />
                         <Route
-                          path="wallet-transaction"
-                          element={<SellerWalletTransaction />}
-                        />
-                        <Route
-                          path="withdrawal-request"
-                          element={<SellerWithdrawalRequest />}
+                          path="wallet"
+                          element={<SellerWallet />}
                         />
                         <Route
                           path="reports/sales"
                           element={<SellerSalesReport />}
+                        />
+                        <Route
+                          path="account-settings"
+                          element={<SellerAccountSettings />}
                         />
                       </Routes>
                     </SellerLayout>

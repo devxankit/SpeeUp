@@ -1,23 +1,84 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { getOrderDetailById, SellerOrderDetail as SellerOrderDetailType } from '../data/mockData';
+import { getOrderById, updateOrderStatus, OrderDetail } from '../../../services/api/orderService';
 import jsPDF from 'jspdf';
 
 export default function SellerOrderDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const orderId = id ? parseInt(id, 10) : null;
-  const orderDetail = orderId ? getOrderDetailById(orderId) : null;
-  const [orderStatus, setOrderStatus] = useState<SellerOrderDetailType['status']>(
-    orderDetail?.status || 'Out For Delivery'
-  );
+  const [orderDetail, setOrderDetail] = useState<OrderDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+  const [orderStatus, setOrderStatus] = useState<string>('Out For Delivery');
 
-  // Update status when orderDetail changes
+  // Fetch order detail from API
   useEffect(() => {
-    if (orderDetail) {
-      setOrderStatus(orderDetail.status);
+    const fetchOrderDetail = async () => {
+      if (!id) return;
+
+      setLoading(true);
+      setError('');
+      try {
+        const response = await getOrderById(id);
+        if (response.success && response.data) {
+          setOrderDetail(response.data);
+          setOrderStatus(response.data.status);
+        } else {
+          setError(response.message || 'Failed to fetch order details');
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.message || err.message || 'Failed to fetch order details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrderDetail();
+  }, [id]);
+
+  // Handle status update
+  const handleStatusUpdate = async (newStatus: string) => {
+    if (!orderDetail) return;
+
+    try {
+      const response = await updateOrderStatus(orderDetail.id, { status: newStatus });
+      if (response.success) {
+        setOrderStatus(newStatus);
+        setOrderDetail({ ...orderDetail, status: newStatus });
+      } else {
+        alert('Failed to update order status');
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to update order status');
     }
-  }, [orderDetail]);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-neutral-500">Loading order details...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-neutral-900 mb-4">Error</h2>
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => navigate('/seller/orders')}
+            className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-lg transition-colors"
+          >
+            Back to Orders
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!orderDetail) {
     return (
@@ -25,10 +86,10 @@ export default function SellerOrderDetail() {
         <div className="text-center">
           <h2 className="text-xl font-bold text-neutral-900 mb-4">Order Not Found</h2>
           <button
-            onClick={() => navigate('/seller')}
+            onClick={() => navigate('/seller/orders')}
             className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded-lg transition-colors"
           >
-            Back to Dashboard
+            Back to Orders
           </button>
         </div>
       </div>
@@ -253,16 +314,22 @@ export default function SellerOrderDetail() {
     window.print();
   };
 
-  const getStatusBadgeClass = (status: SellerOrderDetailType['status']) => {
+  const getStatusBadgeClass = (status: string) => {
     switch (status) {
+      case 'Accepted':
+        return 'bg-blue-100 text-blue-800 border border-blue-400';
+      case 'On the way':
+        return 'bg-purple-100 text-purple-800 border border-purple-400';
+      case 'Delivered':
+        return 'bg-green-100 text-green-800 border border-green-400';
+      case 'Cancelled':
+        return 'bg-red-100 text-red-800 border border-red-400';
       case 'Out For Delivery':
         return 'bg-blue-600 text-white border border-blue-700';
       case 'Received':
         return 'bg-blue-50 text-blue-600 border border-blue-200';
       case 'Payment Pending':
         return 'bg-orange-50 text-orange-600 border border-orange-200';
-      case 'Cancelled':
-        return 'bg-red-50 text-red-600 border border-red-200';
       default:
         return 'bg-gray-50 text-gray-600 border border-gray-200';
     }
@@ -280,12 +347,12 @@ export default function SellerOrderDetail() {
             <div className="flex-1 w-full sm:w-auto">
               <select
                 value={orderStatus}
-                onChange={(e) => setOrderStatus(e.target.value as SellerOrderDetailType['status'])}
+                onChange={(e) => handleStatusUpdate(e.target.value)}
                 className="w-full sm:w-64 px-4 py-2 border border-neutral-300 rounded-lg text-sm text-neutral-900 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               >
-                <option value="Out For Delivery">Out For Delivery</option>
-                <option value="Received">Received</option>
-                <option value="Payment Pending">Payment Pending</option>
+                <option value="Accepted">Accepted</option>
+                <option value="On the way">On the way</option>
+                <option value="Delivered">Delivered</option>
                 <option value="Cancelled">Cancelled</option>
               </select>
             </div>

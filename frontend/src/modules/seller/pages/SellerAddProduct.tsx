@@ -1,11 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { uploadImage, uploadImages } from "../../../services/api/uploadService";
 import {
   validateImageFile,
   createImagePreview,
 } from "../../../utils/imageUpload";
+import { createProduct, ProductVariation } from "../../../services/api/productService";
+import { getCategories, getSubcategories, Category, SubCategory } from "../../../services/api/categoryService";
+import { getActiveTaxes, Tax } from "../../../services/api/taxService";
 
 export default function SellerAddProduct() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     productName: "",
     category: "",
@@ -27,9 +32,18 @@ export default function SellerAddProduct() {
     isReturnable: "No",
     maxReturnDays: "",
     fssaiLicNo: "",
-    totalAllowedQuantity: "",
+    totalAllowedQuantity: "10",
     mainImageUrl: "",
     galleryImageUrls: [] as string[],
+  });
+
+  const [variations, setVariations] = useState<ProductVariation[]>([]);
+  const [variationForm, setVariationForm] = useState({
+    title: "",
+    price: "",
+    discPrice: "0",
+    stock: "0",
+    status: "Available" as "Available" | "Sold out",
   });
 
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
@@ -40,6 +54,43 @@ export default function SellerAddProduct() {
   );
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string>("");
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<SubCategory[]>([]);
+  const [taxes, setTaxes] = useState<Tax[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [catRes, taxRes] = await Promise.all([
+          getCategories(),
+          getActiveTaxes()
+        ]);
+        if (catRes.success) setCategories(catRes.data);
+        if (taxRes.success) setTaxes(taxRes.data);
+      } catch (err) {
+        console.error("Error fetching form data:", err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchSubs = async () => {
+      if (formData.category) {
+        try {
+          const res = await getSubcategories(formData.category);
+          if (res.success) setSubcategories(res.data);
+        } catch (err) {
+          console.error("Error fetching subcategories:", err);
+        }
+      } else {
+        setSubcategories([]);
+      }
+    };
+    fetchSubs();
+  }, [formData.category]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -106,6 +157,44 @@ export default function SellerAddProduct() {
     setGalleryImagePreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const addVariation = () => {
+    if (!variationForm.title || !variationForm.price) {
+      setUploadError("Please fill in variation title and price");
+      return;
+    }
+
+    const price = parseFloat(variationForm.price);
+    const discPrice = parseFloat(variationForm.discPrice || "0");
+    const stock = parseInt(variationForm.stock || "0");
+
+    if (discPrice > price) {
+      setUploadError("Discounted price cannot be greater than price");
+      return;
+    }
+
+    const newVariation: ProductVariation = {
+      title: variationForm.title,
+      price,
+      discPrice,
+      stock,
+      status: variationForm.status,
+    };
+
+    setVariations([...variations, newVariation]);
+    setVariationForm({
+      title: "",
+      price: "",
+      discPrice: "0",
+      stock: "0",
+      status: "Available",
+    });
+    setUploadError("");
+  };
+
+  const removeVariation = (index: number) => {
+    setVariations((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploadError("");
@@ -145,45 +234,94 @@ export default function SellerAddProduct() {
         setFormData((prev) => ({ ...prev, galleryImageUrls: galleryUrls }));
       }
 
-      // Handle form submission with Cloudinary URLs
-      console.log("Form submitted:", formData);
-      alert("Product added successfully!");
+      // Validate variations
+      if (variations.length === 0) {
+        setUploadError("Please add at least one product variation");
+        setUploading(false);
+        return;
+      }
 
-      // Reset form
-      setFormData({
-        productName: "",
-        category: "",
-        subcategory: "",
-        publish: "No",
-        popular: "No",
-        dealOfDay: "No",
-        brand: "",
-        tags: "",
-        smallDescription: "",
-        seoTitle: "",
-        seoKeywords: "",
-        seoImageAlt: "",
-        seoDescription: "",
-        variationType: "",
-        manufacturer: "",
-        madeIn: "",
-        tax: "",
-        isReturnable: "No",
-        maxReturnDays: "",
-        fssaiLicNo: "",
-        totalAllowedQuantity: "",
-        mainImageUrl: "",
-        galleryImageUrls: [],
-      });
-      setMainImageFile(null);
-      setMainImagePreview("");
-      setGalleryImageFiles([]);
-      setGalleryImagePreviews([]);
+      // Prepare product data for API
+      const tagsArray = formData.tags
+        ? formData.tags.split(",").map((tag) => tag.trim()).filter(Boolean)
+        : [];
+
+      const productData = {
+        productName: formData.productName,
+        categoryId: formData.category || undefined,
+        subcategoryId: formData.subcategory || undefined,
+        brandId: formData.brand || undefined,
+        publish: formData.publish === "Yes",
+        popular: formData.popular === "Yes",
+        dealOfDay: formData.dealOfDay === "Yes",
+        seoTitle: formData.seoTitle || undefined,
+        seoKeywords: formData.seoKeywords || undefined,
+        seoImageAlt: formData.seoImageAlt || undefined,
+        seoDescription: formData.seoDescription || undefined,
+        smallDescription: formData.smallDescription || undefined,
+        tags: tagsArray,
+        manufacturer: formData.manufacturer || undefined,
+        madeIn: formData.madeIn || undefined,
+        taxId: formData.tax || undefined,
+        isReturnable: formData.isReturnable === "Yes",
+        maxReturnDays: formData.maxReturnDays ? parseInt(formData.maxReturnDays) : undefined,
+        totalAllowedQuantity: parseInt(formData.totalAllowedQuantity || "10"),
+        fssaiLicNo: formData.fssaiLicNo || undefined,
+        mainImageUrl: formData.mainImageUrl || undefined,
+        galleryImageUrls: formData.galleryImageUrls,
+        variations: variations,
+        variationType: formData.variationType || undefined,
+      };
+
+      // Create product via API
+      const response = await createProduct(productData);
+
+      if (response.success) {
+        setSuccessMessage("Product added successfully!");
+        setTimeout(() => {
+          // Reset form
+          setFormData({
+            productName: "",
+            category: "",
+            subcategory: "",
+            publish: "No",
+            popular: "No",
+            dealOfDay: "No",
+            brand: "",
+            tags: "",
+            smallDescription: "",
+            seoTitle: "",
+            seoKeywords: "",
+            seoImageAlt: "",
+            seoDescription: "",
+            variationType: "",
+            manufacturer: "",
+            madeIn: "",
+            tax: "",
+            isReturnable: "No",
+            maxReturnDays: "",
+            fssaiLicNo: "",
+            totalAllowedQuantity: "10",
+            mainImageUrl: "",
+            galleryImageUrls: [],
+          });
+          setVariations([]);
+          setMainImageFile(null);
+          setMainImagePreview("");
+          setGalleryImageFiles([]);
+          setGalleryImagePreviews([]);
+          setSuccessMessage("");
+          // Navigate to product list
+          navigate("/seller/product/list");
+        }, 2000);
+      } else {
+        setUploadError(response.message || "Failed to create product");
+      }
     } catch (error: any) {
       setUploadError(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to upload images. Please try again."
+        error.message ||
+        "Failed to upload images. Please try again."
       );
     } finally {
       setUploading(false);
@@ -225,9 +363,11 @@ export default function SellerAddProduct() {
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
                     <option value="">Select Category</option>
-                    <option value="pet-care">Pet Care</option>
-                    <option value="sweet-tooth">Sweet Tooth</option>
-                    <option value="tea-coffee">Tea Coffee</option>
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={cat._id}>
+                        {cat.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -240,6 +380,11 @@ export default function SellerAddProduct() {
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
                     <option value="">Select Subcategory</option>
+                    {subcategories.map((sub) => (
+                      <option key={sub._id} value={sub._id}>
+                        {sub.subcategoryName}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -392,7 +537,7 @@ export default function SellerAddProduct() {
             <div className="bg-teal-600 text-white px-4 sm:px-6 py-3">
               <h2 className="text-lg font-semibold">Add Variation</h2>
             </div>
-            <div className="p-4 sm:p-6">
+            <div className="p-4 sm:p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Select Product Variation Type
@@ -403,8 +548,98 @@ export default function SellerAddProduct() {
                   onChange={handleChange}
                   className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
                   <option value="">Select Product Type</option>
+                  <option value="Size">Size</option>
+                  <option value="Weight">Weight</option>
+                  <option value="Color">Color</option>
+                  <option value="Pack">Pack</option>
                 </select>
               </div>
+
+              {/* Variation Form */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 bg-neutral-50 rounded-lg">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Title (e.g., 100g)
+                  </label>
+                  <input
+                    type="text"
+                    value={variationForm.title}
+                    onChange={(e) => setVariationForm({ ...variationForm, title: e.target.value })}
+                    placeholder="100g"
+                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Price *
+                  </label>
+                  <input
+                    type="number"
+                    value={variationForm.price}
+                    onChange={(e) => setVariationForm({ ...variationForm, price: e.target.value })}
+                    placeholder="100"
+                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Discounted Price
+                  </label>
+                  <input
+                    type="number"
+                    value={variationForm.discPrice}
+                    onChange={(e) => setVariationForm({ ...variationForm, discPrice: e.target.value })}
+                    placeholder="80"
+                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Stock (0 = Unlimited)
+                  </label>
+                  <input
+                    type="number"
+                    value={variationForm.stock}
+                    onChange={(e) => setVariationForm({ ...variationForm, stock: e.target.value })}
+                    placeholder="0"
+                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={addVariation}
+                    className="w-full px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium">
+                    Add Variation
+                  </button>
+                </div>
+              </div>
+
+              {/* Variations List */}
+              {variations.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="text-sm font-medium text-neutral-700 mb-2">Added Variations:</h3>
+                  <div className="space-y-2">
+                    {variations.map((variation, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-white border border-neutral-200 rounded-lg">
+                        <div className="flex-1">
+                          <span className="font-medium">{variation.title}</span> - ₹{variation.price}
+                          {variation.discPrice > 0 && <span className="text-green-600 ml-2">(₹{variation.discPrice})</span>}
+                          <span className="ml-4 text-sm text-neutral-600">
+                            Stock: {variation.stock === 0 ? "Unlimited" : variation.stock} | Status: {variation.status}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeVariation(index)}
+                          className="text-red-600 hover:text-red-700 ml-4">
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -451,6 +686,11 @@ export default function SellerAddProduct() {
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
                     <option value="">Select Tax</option>
+                    {taxes.map((tax) => (
+                      <option key={tax._id} value={tax._id}>
+                        {tax.name} ({tax.rate}%)
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -521,6 +761,11 @@ export default function SellerAddProduct() {
               {uploadError && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                   {uploadError}
+                </div>
+              )}
+              {successMessage && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+                  {successMessage}
                 </div>
               )}
               <div>
@@ -664,11 +909,10 @@ export default function SellerAddProduct() {
             <button
               type="submit"
               disabled={uploading}
-              className={`px-8 py-3 rounded-lg font-medium text-lg transition-colors shadow-sm ${
-                uploading
-                  ? "bg-neutral-400 cursor-not-allowed text-white"
-                  : "bg-teal-600 hover:bg-teal-700 text-white"
-              }`}>
+              className={`px-8 py-3 rounded-lg font-medium text-lg transition-colors shadow-sm ${uploading
+                ? "bg-neutral-400 cursor-not-allowed text-white"
+                : "bg-teal-600 hover:bg-teal-700 text-white"
+                }`}>
               {uploading ? "Uploading Images..." : "Add Product"}
             </button>
           </div>

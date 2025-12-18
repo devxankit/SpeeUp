@@ -1,3 +1,5 @@
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getAuthToken, removeAuthToken, setAuthToken } from '../services/api/config';
 import {
   createContext,
   useContext,
@@ -9,6 +11,7 @@ import { getAuthToken, removeAuthToken } from "../services/api/config";
 
 interface User {
   id: string;
+  userType?: 'Admin' | 'Seller' | 'Customer' | 'Delivery';
   [key: string]: any;
 }
 
@@ -83,6 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(newToken);
     setUser(userData);
     setIsAuthenticated(true);
+    setAuthToken(newToken);
+    localStorage.setItem('userData', JSON.stringify(userData));
     localStorage.setItem("userData", JSON.stringify(userData));
   };
 

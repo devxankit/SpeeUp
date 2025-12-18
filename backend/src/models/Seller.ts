@@ -15,6 +15,18 @@ export interface ISeller extends Document {
   taxName?: string;
   address: string;
   taxNumber?: string;
+  storeDescription?: string;
+  storeBanner?: string;
+  workingHours?: {
+    open: string;
+    close: string;
+    offDays: string[];
+  };
+  socialLinks?: {
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+  };
 
   // Store Location Info
   city: string;
@@ -118,6 +130,24 @@ const SellerSchema = new Schema<ISeller>(
     taxNumber: {
       type: String,
       trim: true,
+    },
+    storeDescription: {
+      type: String,
+      trim: true,
+    },
+    storeBanner: {
+      type: String,
+      trim: true,
+    },
+    workingHours: {
+      open: { type: String },
+      close: { type: String },
+      offDays: [{ type: String }],
+    },
+    socialLinks: {
+      facebook: { type: String },
+      instagram: { type: String },
+      twitter: { type: String },
     },
 
     // Store Location Info

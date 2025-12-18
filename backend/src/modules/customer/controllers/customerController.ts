@@ -8,10 +8,10 @@ import { asyncHandler } from "../../../utils/asyncHandler";
 export const getProfile = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user?.userId;
 
-  if (!userId) {
+  if (!userId || (req as any).user?.userType !== "Customer") {
     return res.status(401).json({
       success: false,
-      message: "Unauthorized",
+      message: "Unauthorized or not a customer",
     });
   }
 
@@ -58,10 +58,10 @@ export const updateProfile = asyncHandler(
     const userId = req.user?.userId;
     const { name, email, dateOfBirth } = req.body;
 
-    if (!userId) {
+    if (!userId || (req as any).user?.userType !== "Customer") {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized",
+        message: "Unauthorized or not a customer",
       });
     }
 
@@ -130,10 +130,10 @@ export const updateLocation = asyncHandler(
     const userId = req.user?.userId;
     const { latitude, longitude, address, city, state, pincode } = req.body;
 
-    if (!userId) {
+    if (!userId || (req as any).user?.userType !== "Customer") {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized",
+        message: "Unauthorized or not a customer",
       });
     }
 
@@ -186,10 +186,10 @@ export const updateLocation = asyncHandler(
 export const getLocation = asyncHandler(async (req: Request, res: Response) => {
   const userId = req.user?.userId;
 
-  if (!userId) {
+  if (!userId || (req as any).user?.userType !== "Customer") {
     return res.status(401).json({
       success: false,
-      message: "Unauthorized",
+      message: "Unauthorized or not a customer",
     });
   }
 

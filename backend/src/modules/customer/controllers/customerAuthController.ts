@@ -23,7 +23,7 @@ export const sendOTP = asyncHandler(async (req: Request, res: Response) => {
   // Check if customer exists with this mobile
   const customer = await Customer.findOne({ phone: mobile });
   if (!customer) {
-    return res.status(404).json({
+    return res.status(400).json({
       success: false,
       message: "Customer not found with this mobile number",
     });
@@ -70,7 +70,7 @@ export const verifyOTP = asyncHandler(async (req: Request, res: Response) => {
   // Find customer
   const customer = await Customer.findOne({ phone: mobile });
   if (!customer) {
-    return res.status(404).json({
+    return res.status(400).json({
       success: false,
       message: "Customer not found",
     });

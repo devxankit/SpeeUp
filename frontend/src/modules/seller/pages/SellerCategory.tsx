@@ -1,44 +1,42 @@
-import { useState } from 'react';
-
-// Mock Data
-const CATEGORIES = [
-    {
-        id: 2,
-        name: 'Pet Care',
-        image: '/assets/category-pet-care.png', // Placeholder
-        totalSubcategory: 2
-    },
-    {
-        id: 3,
-        name: 'Sweet Tooth',
-        image: '/assets/category-sweet-tooth.png',
-        totalSubcategory: 3
-    },
-    {
-        id: 4,
-        name: 'Tea Coffee',
-        image: '/assets/category-tea-coffee.png',
-        totalSubcategory: 3
-    },
-    {
-        id: 6,
-        name: 'Instant Food',
-        image: '/assets/category-instant-food.png',
-        totalSubcategory: 3
-    },
-    {
-        id: 7,
-        name: 'Cleaning Essentials',
-        image: '/assets/category-cleaning.png',
-        totalSubcategory: 2
-    }
-];
+import { useState, useEffect } from 'react';
+import { getCategories, Category } from '../../../services/api/categoryService';
 
 export default function SellerCategory() {
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState('');
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    const filteredCategories = CATEGORIES.filter(cat =>
+    // Fetch categories from API
+    useEffect(() => {
+        const fetchCategories = async () => {
+            setLoading(true);
+            setError('');
+            try {
+                const params: any = {};
+                if (searchTerm) {
+                    params.search = searchTerm;
+                }
+
+                const response = await getCategories(params);
+                if (response.success && response.data) {
+                    setCategories(response.data);
+                } else {
+                    setError(response.message || 'Failed to fetch categories');
+                }
+            } catch (err: any) {
+                setError(err.response?.data?.message || err.message || 'Failed to fetch categories');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, [searchTerm]);
+
+    // Client-side filtering for display (API handles search, but we can filter further if needed)
+    const filteredCategories = categories.filter(cat =>
         cat.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -111,7 +109,20 @@ export default function SellerCategory() {
                     </div>
                 </div>
 
+                {/* Loading and Error States */}
+                {loading && (
+                    <div className="flex items-center justify-center p-8">
+                        <div className="text-neutral-500">Loading categories...</div>
+                    </div>
+                )}
+                {error && !loading && (
+                    <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg m-4">
+                        {error}
+                    </div>
+                )}
+
                 {/* Table */}
+                {!loading && !error && (
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse border border-neutral-200">
                         <thead>
@@ -132,13 +143,13 @@ export default function SellerCategory() {
                         </thead>
                         <tbody>
                             {filteredCategories.map((category) => (
-                                <tr key={category.id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700">
-                                    <td className="p-4 align-middle border border-neutral-200">{category.id}</td>
+                                <tr key={category._id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700">
+                                    <td className="p-4 align-middle border border-neutral-200">{category._id}</td>
                                     <td className="p-4 align-middle border border-neutral-200">{category.name}</td>
                                     <td className="p-4 border border-neutral-200">
                                         <div className="w-16 h-12 bg-white border border-neutral-200 rounded p-1 flex items-center justify-center mx-auto">
                                             <img
-                                                src={category.image}
+                                                src={category.imageUrl || '/assets/category-placeholder.png'}
                                                 alt={category.name}
                                                 className="max-w-full max-h-full object-contain"
                                                 onError={(e) => {
@@ -147,7 +158,7 @@ export default function SellerCategory() {
                                             />
                                         </div>
                                     </td>
-                                    <td className="p-4 align-middle border border-neutral-200">{category.totalSubcategory}</td>
+                                    <td className="p-4 align-middle border border-neutral-200">{category.totalSubcategory || 0}</td>
                                 </tr>
                             ))}
                             {filteredCategories.length === 0 && (
@@ -160,6 +171,7 @@ export default function SellerCategory() {
                         </tbody>
                     </table>
                 </div>
+                )}
 
                 {/* Pagination (Visual only mostly for now as per image doesn't show bottom) */}
                 <div className="p-4 border-t border-neutral-100 mt-auto">
