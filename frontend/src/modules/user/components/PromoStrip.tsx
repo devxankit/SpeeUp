@@ -331,30 +331,40 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
 
   // Animate product change with left swipe
   useEffect(() => {
-    if (priceContainerRef.current && productNameRef.current && productImageRef.current) {
-      // Swipe left (out)
-      gsap.to([priceContainerRef.current, productNameRef.current, productImageRef.current], {
-        opacity: 0,
-        x: -30,
-        duration: 0.3,
-        ease: 'power2.in',
-        onComplete: () => {
-          // Reset position and update content
-          gsap.set([priceContainerRef.current, productNameRef.current, productImageRef.current], {
-            x: 30,
-            opacity: 0,
-          });
+    const elements = [priceContainerRef.current, productNameRef.current, productImageRef.current];
+    // Check if all elements exist
+    if (elements.some(el => !el)) return;
 
-          // Swipe in from right
-          gsap.to([priceContainerRef.current, productNameRef.current, productImageRef.current], {
-            opacity: 1,
-            x: 0,
-            duration: 0.4,
-            ease: 'power2.out',
-          });
-        },
-      });
-    }
+    // Swipe left (out)
+    const tween = gsap.to(elements, {
+      opacity: 0,
+      x: -30,
+      duration: 0.3,
+      ease: 'power2.in',
+      onComplete: () => {
+        // Re-check if elements exist in case component unmounted
+        const currentElements = [priceContainerRef.current, productNameRef.current, productImageRef.current];
+        if (currentElements.some(el => !el)) return;
+
+        // Reset position and update content
+        gsap.set(currentElements, {
+          x: 30,
+          opacity: 0,
+        });
+
+        // Swipe in from right
+        gsap.to(currentElements, {
+          opacity: 1,
+          x: 0,
+          duration: 0.4,
+          ease: 'power2.out',
+        });
+      },
+    });
+
+    return () => {
+      tween.kill();
+    };
   }, [currentProductIndex]);
 
   const currentProduct = featuredProducts[currentProductIndex];

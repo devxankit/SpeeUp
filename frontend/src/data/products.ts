@@ -1409,56 +1409,11 @@ export const products: Product[] = [
   },
 
   // Additional products for winter
-  {
-    id: 'winter-woolen-cap',
-    name: 'Woolen Cap',
-    pack: '1 piece',
-    price: 299,
-    mrp: 399,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'winter',
-    tags: [],
-  },
-  {
-    id: 'winter-gloves',
-    name: 'Woolen Gloves',
-    pack: '1 pair',
-    price: 199,
-    mrp: 249,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'winter',
-    tags: [],
-  },
-  {
-    id: 'winter-scarf',
-    name: 'Woolen Scarf',
-    pack: '1 piece',
-    price: 399,
-    mrp: 499,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'winter',
-    tags: [],
-  },
-  {
-    id: 'winter-socks',
-    name: 'Woolen Socks',
-    pack: '1 pair',
-    price: 149,
-    mrp: 199,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'winter',
-    tags: [],
-  },
-  {
-    id: 'winter-blanket',
-    name: 'Woolen Blanket',
-    pack: '1 piece',
-    price: 1299,
-    mrp: 1599,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'winter',
-    tags: [],
-  },
+
+
+
+
+
 
   // Additional products for electronics
   {
@@ -1471,88 +1426,16 @@ export const products: Product[] = [
     categoryId: 'electronics',
     tags: [],
   },
-  {
-    id: 'electronics-cable',
-    name: 'USB Cable',
-    pack: '1 piece',
-    price: 199,
-    mrp: 249,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'electronics',
-    tags: [],
-  },
-  {
-    id: 'electronics-powerbank',
-    name: 'Power Bank 10000mAh',
-    pack: '1 piece',
-    price: 899,
-    mrp: 1199,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'electronics',
-    tags: [],
-  },
-  {
-    id: 'electronics-earphones',
-    name: 'Wired Earphones',
-    pack: '1 piece',
-    price: 399,
-    mrp: 499,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'electronics',
-    tags: [],
-  },
-  {
-    id: 'electronics-mouse',
-    name: 'USB Mouse',
-    pack: '1 piece',
-    price: 299,
-    mrp: 399,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'electronics',
-    tags: [],
-  },
+
+
+
+
 
   // Additional products for fashion
-  {
-    id: 'fashion-tshirt',
-    name: 'Cotton T-Shirt',
-    pack: '1 piece',
-    price: 499,
-    mrp: 699,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'fashion',
-    tags: [],
-  },
-  {
-    id: 'fashion-jeans',
-    name: 'Denim Jeans',
-    pack: '1 piece',
-    price: 1299,
-    mrp: 1799,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'fashion',
-    tags: [],
-  },
-  {
-    id: 'fashion-shoes',
-    name: 'Casual Shoes',
-    pack: '1 pair',
-    price: 999,
-    mrp: 1399,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'fashion',
-    tags: [],
-  },
-  {
-    id: 'fashion-watch',
-    name: 'Digital Watch',
-    pack: '1 piece',
-    price: 799,
-    mrp: 999,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'fashion',
-    tags: [],
-  },
+
+
+
+
   {
     id: 'fashion-bag',
     name: 'Backpack',
@@ -1565,78 +1448,15 @@ export const products: Product[] = [
   },
 
   // Additional products for sports
-  {
-    id: 'sports-football',
-    name: 'Football',
-    pack: '1 piece',
-    price: 499,
-    mrp: 699,
-    imageUrl: productImages['daawat-rice'],
-    categoryId: 'sports',
-    tags: [],
-  },
-  {
-    id: 'sports-cricket-bat',
-    name: 'Cricket Bat',
-    pack: '1 piece',
-    price: 1299,
-    mrp: 1799,
-    imageUrl: productImages['daawat-rice'],
-    categoryId: 'sports',
-    tags: [],
-  },
-  {
-    id: 'sports-badminton',
-    name: 'Badminton Racket',
-    pack: '1 piece',
-    price: 599,
-    mrp: 799,
-    imageUrl: productImages['daawat-rice'],
-    categoryId: 'sports',
-    tags: [],
-  },
-  {
-    id: 'sports-yoga-mat',
-    name: 'Yoga Mat',
-    pack: '1 piece',
-    price: 399,
-    mrp: 599,
-    imageUrl: productImages['daawat-rice'],
-    categoryId: 'sports',
-    tags: [],
-  },
-  {
-    id: 'sports-dumbbells',
-    name: 'Dumbbells Set',
-    pack: '1 set',
-    price: 1999,
-    mrp: 2499,
-    imageUrl: productImages['daawat-rice'],
-    categoryId: 'sports',
-    tags: [],
-  },
+
+
+
+
+
 
   // Breakfast & Instant Food
-  {
-    id: 'mtr-poha',
-    name: 'MTR Poha',
-    pack: '200 g',
-    price: 35,
-    mrp: 40,
-    imageUrl: productImages['mtr-poha'],
-    categoryId: 'breakfast-instant',
-    tags: ['under-99'],
-  },
-  {
-    id: 'mtr-upma',
-    name: 'MTR Upma',
-    pack: '200 g',
-    price: 35,
-    mrp: 40,
-    imageUrl: productImages['mtr-upma'],
-    categoryId: 'breakfast-instant',
-    tags: ['under-99'],
-  },
+
+
   {
     id: 'mtr-idli-mix',
     name: 'MTR Idli Mix',
@@ -1657,36 +1477,7 @@ export const products: Product[] = [
     categoryId: 'breakfast-instant',
     tags: ['under-99'],
   },
-  {
-    id: 'maggi-noodles',
-    name: 'Maggi Noodles',
-    pack: '70 g',
-    price: 14,
-    mrp: 16,
-    imageUrl: productImages['mtr-poha'],
-    categoryId: 'breakfast-instant',
-    tags: ['bestseller', 'under-99'],
-  },
-  {
-    id: 'yippee-noodles',
-    name: 'Yippee Noodles',
-    pack: '70 g',
-    price: 14,
-    mrp: 16,
-    imageUrl: productImages['mtr-poha'],
-    categoryId: 'breakfast-instant',
-    tags: ['under-99'],
-  },
-  {
-    id: 'top-ramen',
-    name: 'Top Ramen Noodles',
-    pack: '70 g',
-    price: 14,
-    mrp: 16,
-    imageUrl: productImages['mtr-poha'],
-    categoryId: 'breakfast-instant',
-    tags: ['under-99'],
-  },
+
   {
     id: 'cornflakes',
     name: 'Kellogg\'s Corn Flakes',
@@ -1779,16 +1570,7 @@ export const products: Product[] = [
     categoryId: 'biscuits-bakery',
     tags: ['under-99'],
   },
-  {
-    id: 'monaco-biscuits',
-    name: 'Monaco Salted Biscuits',
-    pack: '200 g',
-    price: 35,
-    mrp: 40,
-    imageUrl: productImages['parle-rusk'],
-    categoryId: 'biscuits-bakery',
-    tags: ['under-99'],
-  },
+
   {
     id: 'coconut-cookies',
     name: 'Britannia Coconut Cookies',
@@ -2017,16 +1799,7 @@ export const products: Product[] = [
   },
 
   // Additional products for personal-care
-  {
-    id: 'colgate-toothpaste',
-    name: 'Colgate Toothpaste',
-    pack: '200 g',
-    price: 85,
-    mrp: 100,
-    imageUrl: productImages['amul-curd'],
-    categoryId: 'personal-care',
-    tags: ['under-99'],
-  },
+
   {
     id: 'colgate-toothbrush',
     name: 'Colgate Toothbrush',
@@ -2057,16 +1830,7 @@ export const products: Product[] = [
     categoryId: 'personal-care',
     tags: [],
   },
-  {
-    id: 'pantene-shampoo',
-    name: 'Pantene Shampoo',
-    pack: '340 ml',
-    price: 199,
-    mrp: 225,
-    imageUrl: productImages['amul-curd'],
-    categoryId: 'personal-care',
-    tags: [],
-  },
+
   {
     id: 'dove-conditioner',
     name: 'Dove Conditioner',
@@ -2119,16 +1883,7 @@ export const products: Product[] = [
   },
 
   // Additional products for dairy-breakfast
-  {
-    id: 'amul-milk',
-    name: 'Amul Full Cream Milk',
-    pack: '1 L',
-    price: 66,
-    mrp: 70,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'dairy-breakfast',
-    tags: ['bestseller'],
-  },
+
   {
     id: 'mother-dairy-milk',
     name: 'Mother Dairy Full Cream Milk',
@@ -2283,16 +2038,7 @@ export const products: Product[] = [
   },
 
   // Additional products for fruits-veg
-  {
-    id: 'carrots',
-    name: 'Fresh Carrots',
-    pack: '500 g',
-    price: 40,
-    mrp: 45,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'fruits-veg',
-    tags: ['bestseller'],
-  },
+
   {
     id: 'cabbage',
     name: 'Fresh Cabbage',
@@ -2323,16 +2069,7 @@ export const products: Product[] = [
     categoryId: 'fruits-veg',
     tags: [],
   },
-  {
-    id: 'cucumber',
-    name: 'Fresh Cucumber',
-    pack: '500 g',
-    price: 25,
-    mrp: 30,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'fruits-veg',
-    tags: ['under-99'],
-  },
+
   {
     id: 'ladyfinger',
     name: 'Fresh Ladyfinger',
@@ -2789,36 +2526,9 @@ export const products: Product[] = [
   },
 
   // Dairy & Breakfast - Additional products for subcategories
-  {
-    id: 'mother-dairy-milk',
-    name: 'Mother Dairy Full Cream Milk',
-    pack: '1 L',
-    price: 68,
-    mrp: 72,
-    imageUrl: productImages['mother-dairy-milk'],
-    categoryId: 'dairy-breakfast',
-    tags: ['bestseller'],
-  },
-  {
-    id: 'amul-cream',
-    name: 'Amul Fresh Cream',
-    pack: '200 ml',
-    price: 55,
-    mrp: 60,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'dairy-breakfast',
-    tags: [],
-  },
-  {
-    id: 'britannia-bread',
-    name: 'Britannia Bread',
-    pack: '400 g',
-    price: 42,
-    mrp: 45,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'dairy-breakfast',
-    tags: ['bestseller'],
-  },
+
+
+
   {
     id: 'eggs-6',
     name: 'Table White Eggs',
@@ -2851,16 +2561,7 @@ export const products: Product[] = [
     categoryId: 'snacks',
     tags: [],
   },
-  {
-    id: 'uncle-chips',
-    name: 'Uncle Chips Classic',
-    pack: '52 g',
-    price: 20,
-    mrp: 22,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'snacks',
-    tags: [],
-  },
+
   {
     id: 'haldiram-namkeen',
     name: 'Haldiram Namkeen',
@@ -2871,26 +2572,8 @@ export const products: Product[] = [
     categoryId: 'snacks',
     tags: [],
   },
-  {
-    id: 'balaji-sev',
-    name: 'Balaji Bhujia Sev',
-    pack: '200 g',
-    price: 55,
-    mrp: 60,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'snacks',
-    tags: [],
-  },
-  {
-    id: 'parle-g',
-    name: 'Parle-G Glucose Biscuits',
-    pack: '200 g',
-    price: 25,
-    mrp: 28,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'snacks',
-    tags: [],
-  },
+
+
   {
     id: 'good-day-biscuits',
     name: 'Britannia Good Day Cookies',
@@ -2921,16 +2604,6 @@ export const products: Product[] = [
     categoryId: 'snacks',
     tags: [],
   },
-  {
-    id: 'act2-popcorn',
-    name: 'ACT II Popcorn',
-    pack: '100 g',
-    price: 35,
-    mrp: 40,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'snacks',
-    tags: [],
-  },
 
   // Cold Drinks - Additional products
   {
@@ -2943,26 +2616,8 @@ export const products: Product[] = [
     categoryId: 'cold-drinks',
     tags: [],
   },
-  {
-    id: 'pepsi',
-    name: 'Pepsi Soft Drink',
-    pack: '750 ml',
-    price: 45,
-    mrp: 50,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'cold-drinks',
-    tags: [],
-  },
-  {
-    id: 'sprite',
-    name: 'Sprite Soft Drink',
-    pack: '750 ml',
-    price: 45,
-    mrp: 50,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'cold-drinks',
-    tags: [],
-  },
+
+
   {
     id: 'tropicana-juice',
     name: 'Tropicana Orange Juice',
@@ -2973,26 +2628,8 @@ export const products: Product[] = [
     categoryId: 'cold-drinks',
     tags: [],
   },
-  {
-    id: 'real-juice',
-    name: 'Real Fruit Juice',
-    pack: '1 L',
-    price: 110,
-    mrp: 130,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'cold-drinks',
-    tags: [],
-  },
-  {
-    id: 'red-bull',
-    name: 'Red Bull Energy Drink',
-    pack: '250 ml',
-    price: 115,
-    mrp: 125,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'cold-drinks',
-    tags: [],
-  },
+
+
   {
     id: 'bisleri-water',
     name: 'Bisleri Packaged Water',
@@ -3015,16 +2652,7 @@ export const products: Product[] = [
     categoryId: 'atta-rice',
     tags: [],
   },
-  {
-    id: 'basmati-rice',
-    name: 'India Gate Basmati Rice',
-    pack: '1 kg',
-    price: 120,
-    mrp: 140,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'atta-rice',
-    tags: [],
-  },
+
   {
     id: 'sona-rice',
     name: 'Sona Masoori Rice',
@@ -3035,16 +2663,7 @@ export const products: Product[] = [
     categoryId: 'atta-rice',
     tags: [],
   },
-  {
-    id: 'toor-dal',
-    name: 'Toor Dal',
-    pack: '1 kg',
-    price: 140,
-    mrp: 160,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'atta-rice',
-    tags: [],
-  },
+
   {
     id: 'moong-dal',
     name: 'Moong Dal',
@@ -3055,16 +2674,7 @@ export const products: Product[] = [
     categoryId: 'atta-rice',
     tags: [],
   },
-  {
-    id: 'chana-dal',
-    name: 'Chana Dal',
-    pack: '1 kg',
-    price: 120,
-    mrp: 140,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'atta-rice',
-    tags: [],
-  },
+
   {
     id: 'besan',
     name: 'Besan Gram Flour',
@@ -3087,36 +2697,9 @@ export const products: Product[] = [
   },
 
   // Masala Oil - Additional products
-  {
-    id: 'fortune-oil',
-    name: 'Fortune Sunflower Oil',
-    pack: '1 L',
-    price: 155,
-    mrp: 170,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'masala-oil',
-    tags: [],
-  },
-  {
-    id: 'mustard-oil',
-    name: 'Mustard Oil',
-    pack: '1 L',
-    price: 140,
-    mrp: 160,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'masala-oil',
-    tags: [],
-  },
-  {
-    id: 'amul-ghee',
-    name: 'Amul Pure Ghee',
-    pack: '500 g',
-    price: 320,
-    mrp: 350,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'masala-oil',
-    tags: [],
-  },
+
+
+
   {
     id: 'everest-masala',
     name: 'Everest Garam Masala',
@@ -3137,16 +2720,7 @@ export const products: Product[] = [
     categoryId: 'masala-oil',
     tags: [],
   },
-  {
-    id: 'tata-salt',
-    name: 'Tata Salt',
-    pack: '1 kg',
-    price: 25,
-    mrp: 28,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'masala-oil',
-    tags: [],
-  },
+
   {
     id: 'red-chilli',
     name: 'Red Chilli Powder',
@@ -3179,16 +2753,7 @@ export const products: Product[] = [
     categoryId: 'biscuits-bakery',
     tags: [],
   },
-  {
-    id: 'tiger-biscuits',
-    name: 'Britannia Tiger Biscuits',
-    pack: '200 g',
-    price: 30,
-    mrp: 35,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'biscuits-bakery',
-    tags: [],
-  },
+
   {
     id: 'oreo-cookies',
     name: 'Oreo Chocolate Cookies',
@@ -3209,16 +2774,7 @@ export const products: Product[] = [
     categoryId: 'biscuits-bakery',
     tags: [],
   },
-  {
-    id: 'britannia-cake',
-    name: 'Britannia Fruit Cake',
-    pack: '200 g',
-    price: 45,
-    mrp: 50,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'biscuits-bakery',
-    tags: [],
-  },
+
   {
     id: 'rusk',
     name: 'Britannia Rusk',
@@ -3231,56 +2787,11 @@ export const products: Product[] = [
   },
 
   // Personal Care - Additional products
-  {
-    id: 'dove-soap',
-    name: 'Dove Soap',
-    pack: '125 g',
-    price: 55,
-    mrp: 60,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'personal-care',
-    tags: [],
-  },
-  {
-    id: 'lux-soap',
-    name: 'Lux Soap',
-    pack: '125 g',
-    price: 35,
-    mrp: 40,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'personal-care',
-    tags: [],
-  },
-  {
-    id: 'sunsilk-shampoo',
-    name: 'Sunsilk Shampoo',
-    pack: '180 ml',
-    price: 95,
-    mrp: 110,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'personal-care',
-    tags: [],
-  },
-  {
-    id: 'pantene-shampoo',
-    name: 'Pantene Shampoo',
-    pack: '180 ml',
-    price: 120,
-    mrp: 140,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'personal-care',
-    tags: [],
-  },
-  {
-    id: 'colgate-toothpaste',
-    name: 'Colgate Toothpaste',
-    pack: '200 g',
-    price: 95,
-    mrp: 110,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'personal-care',
-    tags: [],
-  },
+
+
+
+
+
   {
     id: 'pepsodent',
     name: 'Pepsodent Toothpaste',
@@ -3291,26 +2802,8 @@ export const products: Product[] = [
     categoryId: 'personal-care',
     tags: [],
   },
-  {
-    id: 'himalaya-facewash',
-    name: 'Himalaya Face Wash',
-    pack: '150 ml',
-    price: 95,
-    mrp: 110,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'personal-care',
-    tags: [],
-  },
-  {
-    id: 'dove-conditioner',
-    name: 'Dove Conditioner',
-    pack: '180 ml',
-    price: 120,
-    mrp: 140,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'personal-care',
-    tags: [],
-  },
+
+
 
   // Cleaning - Additional products
   {
@@ -3323,16 +2816,7 @@ export const products: Product[] = [
     categoryId: 'cleaning',
     tags: [],
   },
-  {
-    id: 'ariel-detergent',
-    name: 'Ariel Detergent',
-    pack: '1 kg',
-    price: 195,
-    mrp: 220,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'cleaning',
-    tags: [],
-  },
+
   {
     id: 'vim-cleaner',
     name: 'Vim Dishwash Gel',
@@ -3363,68 +2847,14 @@ export const products: Product[] = [
     categoryId: 'cleaning',
     tags: [],
   },
-  {
-    id: 'broom',
-    name: 'Plastic Broom',
-    pack: '1 piece',
-    price: 120,
-    mrp: 140,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'cleaning',
-    tags: [],
-  },
-  {
-    id: 'mop',
-    name: 'Cotton Mop',
-    pack: '1 piece',
-    price: 150,
-    mrp: 180,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'cleaning',
-    tags: [],
-  },
-  {
-    id: 'sponge',
-    name: 'Kitchen Sponge',
-    pack: '2 pieces',
-    price: 25,
-    mrp: 30,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'cleaning',
-    tags: [],
-  },
+
+
+
 
   // Breakfast Instant - Additional products
-  {
-    id: 'maggi-noodles',
-    name: 'Maggi 2-Minute Noodles',
-    pack: '280 g',
-    price: 56,
-    mrp: 60,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'breakfast-instant',
-    tags: [],
-  },
-  {
-    id: 'yippee-noodles',
-    name: 'Yippee Noodles',
-    pack: '280 g',
-    price: 52,
-    mrp: 58,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'breakfast-instant',
-    tags: [],
-  },
-  {
-    id: 'top-ramen',
-    name: 'Top Ramen Noodles',
-    pack: '280 g',
-    price: 50,
-    mrp: 55,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'breakfast-instant',
-    tags: [],
-  },
+
+
+
   {
     id: 'mtr-poha-mix',
     name: 'MTR Poha Mix',
@@ -3455,36 +2885,9 @@ export const products: Product[] = [
     categoryId: 'breakfast-instant',
     tags: [],
   },
-  {
-    id: 'oats',
-    name: 'Quaker Oats',
-    pack: '1 kg',
-    price: 195,
-    mrp: 220,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'breakfast-instant',
-    tags: [],
-  },
-  {
-    id: 'mtr-idli-mix',
-    name: 'MTR Idli Mix',
-    pack: '400 g',
-    price: 75,
-    mrp: 85,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'breakfast-instant',
-    tags: [],
-  },
-  {
-    id: 'mtr-dosa-mix',
-    name: 'MTR Dosa Mix',
-    pack: '400 g',
-    price: 75,
-    mrp: 85,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'breakfast-instant',
-    tags: [],
-  },
+
+
+
 
   // Wedding - Additional products
   {
@@ -3579,16 +2982,7 @@ export const products: Product[] = [
     categoryId: 'winter',
     tags: [],
   },
-  {
-    id: 'winter-gloves',
-    name: 'Winter Gloves',
-    pack: '1 pair',
-    price: 150,
-    mrp: 180,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'winter',
-    tags: [],
-  },
+
   {
     id: 'woolen-blanket',
     name: 'Woolen Blanket',
@@ -3838,16 +3232,7 @@ export const products: Product[] = [
     categoryId: 'dry-fruits',
     tags: [],
   },
-  {
-    id: 'kelloggs-cornflakes',
-    name: "Kellogg's Corn Flakes",
-    pack: '475 g',
-    price: 180,
-    mrp: 200,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'dry-fruits',
-    tags: [],
-  },
+
   // Chicken, Meat & Fish
   {
     id: 'chicken-breast',
@@ -4237,26 +3622,8 @@ export const products: Product[] = [
     tags: [],
   },
   // Oral Care
-  {
-    id: 'colgate-toothpaste',
-    name: "Colgate Total Toothpaste",
-    pack: '200 g',
-    price: 120,
-    mrp: 140,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'oral-care',
-    tags: [],
-  },
-  {
-    id: 'pepsodent-toothpaste',
-    name: "Pepsodent Toothpaste",
-    pack: '200 g',
-    price: 100,
-    mrp: 120,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'oral-care',
-    tags: [],
-  },
+
+
   {
     id: 'oral-b-toothbrush',
     name: "Oral-B Toothbrush",
