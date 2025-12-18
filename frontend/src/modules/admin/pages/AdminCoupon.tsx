@@ -1,4 +1,9 @@
-import { useState } from 'react';
+import { useState } from "react";
+import { uploadImage } from "../../../services/api/uploadService";
+import {
+  validateImageFile,
+  createImagePreview,
+} from "../../../utils/imageUpload";
 
 interface Coupon {
   id: number;
@@ -6,12 +11,12 @@ interface Coupon {
   couponImage: string;
   couponCode: string;
   couponDiscount: number;
-  userType: 'All Users' | 'Specific User';
+  userType: "All Users" | "Specific User";
   specificUserName?: string;
-  numberOfTimes: 'Single Time' | 'Multi Time';
-  discountType: 'Value' | 'Percentage';
+  numberOfTimes: "Single Time" | "Multi Time";
+  discountType: "Value" | "Percentage";
   couponExpiryDate: string;
-  couponStatus: 'Published' | 'Draft';
+  couponStatus: "Published" | "Draft";
   couponOrderMinValue: number;
   couponDescription: string;
 }
@@ -20,197 +25,258 @@ interface Coupon {
 const INITIAL_COUPONS: Coupon[] = [
   {
     id: 1,
-    couponTitle: 'FREE10',
-    couponImage: '/api/placeholder/40/40',
-    couponCode: 'KTR1VIWZ',
+    couponTitle: "FREE10",
+    couponImage: "/api/placeholder/40/40",
+    couponCode: "KTR1VIWZ",
     couponDiscount: 10,
-    userType: 'All Users',
-    numberOfTimes: 'Single Time',
-    discountType: 'Value',
-    couponExpiryDate: '2025-03-31',
-    couponStatus: 'Published',
+    userType: "All Users",
+    numberOfTimes: "Single Time",
+    discountType: "Value",
+    couponExpiryDate: "2025-03-31",
+    couponStatus: "Published",
     couponOrderMinValue: 100,
-    couponDescription: 'Get 10 off on orders above 100',
+    couponDescription: "Get 10 off on orders above 100",
   },
   {
     id: 2,
-    couponTitle: 'try',
-    couponImage: '/api/placeholder/40/40',
-    couponCode: '1AGD89DT',
+    couponTitle: "try",
+    couponImage: "/api/placeholder/40/40",
+    couponCode: "1AGD89DT",
     couponDiscount: 30,
-    userType: 'All Users',
-    numberOfTimes: 'Multi Time',
-    discountType: 'Value',
-    couponExpiryDate: '2025-03-31',
-    couponStatus: 'Published',
+    userType: "All Users",
+    numberOfTimes: "Multi Time",
+    discountType: "Value",
+    couponExpiryDate: "2025-03-31",
+    couponStatus: "Published",
     couponOrderMinValue: 100,
-    couponDescription: 'Try this coupon',
+    couponDescription: "Try this coupon",
   },
   {
     id: 3,
-    couponTitle: 'FRee',
-    couponImage: '/api/placeholder/40/40',
-    couponCode: 'B5N6NPOM',
+    couponTitle: "FRee",
+    couponImage: "/api/placeholder/40/40",
+    couponCode: "B5N6NPOM",
     couponDiscount: 10,
-    userType: 'All Users',
-    numberOfTimes: 'Multi Time',
-    discountType: 'Value',
-    couponExpiryDate: '2025-03-28',
-    couponStatus: 'Published',
+    userType: "All Users",
+    numberOfTimes: "Multi Time",
+    discountType: "Value",
+    couponExpiryDate: "2025-03-28",
+    couponStatus: "Published",
     couponOrderMinValue: 1500,
-    couponDescription: 'Free discount',
+    couponDescription: "Free discount",
   },
   {
     id: 4,
-    couponTitle: '100 OFF',
-    couponImage: '/api/placeholder/40/40',
-    couponCode: 'CGCGHCGD',
+    couponTitle: "100 OFF",
+    couponImage: "/api/placeholder/40/40",
+    couponCode: "CGCGHCGD",
     couponDiscount: 100,
-    userType: 'All Users',
-    numberOfTimes: 'Multi Time',
-    discountType: 'Value',
-    couponExpiryDate: '2025-04-19',
-    couponStatus: 'Published',
+    userType: "All Users",
+    numberOfTimes: "Multi Time",
+    discountType: "Value",
+    couponExpiryDate: "2025-04-19",
+    couponStatus: "Published",
     couponOrderMinValue: 500,
-    couponDescription: '100 off on orders above 500',
+    couponDescription: "100 off on orders above 500",
   },
   {
     id: 5,
-    couponTitle: 'OnlyForYou',
-    couponImage: '/api/placeholder/40/40',
-    couponCode: 'AA794EKI',
+    couponTitle: "OnlyForYou",
+    couponImage: "/api/placeholder/40/40",
+    couponCode: "AA794EKI",
     couponDiscount: 50,
-    userType: 'Specific User',
-    specificUserName: 'Pratik',
-    numberOfTimes: 'Single Time',
-    discountType: 'Value',
-    couponExpiryDate: '2025-04-05',
-    couponStatus: 'Published',
+    userType: "Specific User",
+    specificUserName: "Pratik",
+    numberOfTimes: "Single Time",
+    discountType: "Value",
+    couponExpiryDate: "2025-04-05",
+    couponStatus: "Published",
     couponOrderMinValue: 500,
-    couponDescription: 'Only for you',
+    couponDescription: "Only for you",
   },
   {
     id: 6,
-    couponTitle: '50 OFF',
-    couponImage: '/api/placeholder/40/40',
-    couponCode: 'Y3KJ8DRO',
+    couponTitle: "50 OFF",
+    couponImage: "/api/placeholder/40/40",
+    couponCode: "Y3KJ8DRO",
     couponDiscount: 50,
-    userType: 'Specific User',
-    specificUserName: 'Pratik',
-    numberOfTimes: 'Single Time',
-    discountType: 'Value',
-    couponExpiryDate: '2025-04-05',
-    couponStatus: 'Published',
+    userType: "Specific User",
+    specificUserName: "Pratik",
+    numberOfTimes: "Single Time",
+    discountType: "Value",
+    couponExpiryDate: "2025-04-05",
+    couponStatus: "Published",
     couponOrderMinValue: 500,
-    couponDescription: '50 off coupon',
+    couponDescription: "50 off coupon",
   },
 ];
 
 export default function AdminCoupon() {
   const [formData, setFormData] = useState({
-    userType: '',
-    numberOfTimes: 'Single Time Valid',
-    couponImage: null as File | null,
-    couponExpiryDate: '',
-    couponCode: '',
-    couponTitle: '',
-    couponStatus: '',
-    couponMinOrderAmount: '',
-    couponValue: '',
-    couponType: 'Percentage',
-    couponDescription: '',
+    userType: "",
+    numberOfTimes: "Single Time Valid",
+    couponImageUrl: "",
+    couponExpiryDate: "",
+    couponCode: "",
+    couponTitle: "",
+    couponStatus: "",
+    couponMinOrderAmount: "",
+    couponValue: "",
+    couponType: "Percentage",
+    couponDescription: "",
   });
+
+  const [couponImageFile, setCouponImageFile] = useState<File | null>(null);
+  const [couponImagePreview, setCouponImagePreview] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string>("");
 
   const [coupons, setCoupons] = useState<Coupon[]>(INITIAL_COUPONS);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFormData(prev => ({ ...prev, couponImage: e.target.files![0] }));
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setUploadError(validation.error || "Invalid image file");
+      return;
+    }
+
+    setCouponImageFile(file);
+    setUploadError("");
+
+    try {
+      const preview = await createImagePreview(file);
+      setCouponImagePreview(preview);
+    } catch (error) {
+      setUploadError("Failed to create image preview");
     }
   };
 
   const generateCouponCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code = '';
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let code = "";
     for (let i = 0; i < 8; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    setFormData(prev => ({ ...prev, couponCode: code }));
+    setFormData((prev) => ({ ...prev, couponCode: code }));
   };
 
-  const handleAddCoupon = (e: React.FormEvent) => {
+  const handleAddCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setUploadError("");
+
     // Validation
-    if (!formData.userType || !formData.couponTitle || !formData.couponCode || 
-        !formData.couponExpiryDate || !formData.couponStatus || !formData.couponMinOrderAmount ||
-        !formData.couponValue || !formData.couponDescription) {
-      alert('Please fill in all required fields');
+    if (
+      !formData.userType ||
+      !formData.couponTitle ||
+      !formData.couponCode ||
+      !formData.couponExpiryDate ||
+      !formData.couponStatus ||
+      !formData.couponMinOrderAmount ||
+      !formData.couponValue ||
+      !formData.couponDescription
+    ) {
+      setUploadError("Please fill in all required fields");
       return;
     }
 
-    const newCoupon: Coupon = {
-      id: coupons.length > 0 ? Math.max(...coupons.map(c => c.id)) + 1 : 1,
-      couponTitle: formData.couponTitle,
-      couponImage: formData.couponImage ? URL.createObjectURL(formData.couponImage) : '/api/placeholder/40/40',
-      couponCode: formData.couponCode,
-      couponDiscount: parseFloat(formData.couponValue),
-      userType: formData.userType === 'All Users' ? 'All Users' : 'Specific User',
-      numberOfTimes: formData.numberOfTimes === 'Single Time Valid' ? 'Single Time' : 'Multi Time',
-      discountType: formData.couponType === 'Percentage' ? 'Percentage' : 'Value',
-      couponExpiryDate: formData.couponExpiryDate,
-      couponStatus: formData.couponStatus === 'Published' ? 'Published' : 'Draft',
-      couponOrderMinValue: parseFloat(formData.couponMinOrderAmount),
-      couponDescription: formData.couponDescription,
-    };
+    if (!couponImageFile) {
+      setUploadError("Coupon image is required");
+      return;
+    }
 
-    setCoupons([...coupons, newCoupon]);
-    
-    // Reset form
-    setFormData({
-      userType: '',
-      numberOfTimes: 'Single Time Valid',
-      couponImage: null,
-      couponExpiryDate: '',
-      couponCode: '',
-      couponTitle: '',
-      couponStatus: '',
-      couponMinOrderAmount: '',
-      couponValue: '',
-      couponType: 'Percentage',
-      couponDescription: '',
-    });
-    
-    alert('Coupon added successfully!');
+    setUploading(true);
+
+    try {
+      // Upload coupon image
+      const imageResult = await uploadImage(couponImageFile, "speeup/coupons");
+      const imageUrl = imageResult.secureUrl;
+
+      const newCoupon: Coupon = {
+        id: coupons.length > 0 ? Math.max(...coupons.map((c) => c.id)) + 1 : 1,
+        couponTitle: formData.couponTitle,
+        couponImage: imageUrl,
+        couponCode: formData.couponCode,
+        couponDiscount: parseFloat(formData.couponValue),
+        userType:
+          formData.userType === "All Users" ? "All Users" : "Specific User",
+        numberOfTimes:
+          formData.numberOfTimes === "Single Time Valid"
+            ? "Single Time"
+            : "Multi Time",
+        discountType:
+          formData.couponType === "Percentage" ? "Percentage" : "Value",
+        couponExpiryDate: formData.couponExpiryDate,
+        couponStatus:
+          formData.couponStatus === "Published" ? "Published" : "Draft",
+        couponOrderMinValue: parseFloat(formData.couponMinOrderAmount),
+        couponDescription: formData.couponDescription,
+      };
+
+      setCoupons([...coupons, newCoupon]);
+
+      // Reset form
+      setFormData({
+        userType: "",
+        numberOfTimes: "Single Time Valid",
+        couponImageUrl: "",
+        couponExpiryDate: "",
+        couponCode: "",
+        couponTitle: "",
+        couponStatus: "",
+        couponMinOrderAmount: "",
+        couponValue: "",
+        couponType: "Percentage",
+        couponDescription: "",
+      });
+      setCouponImageFile(null);
+      setCouponImagePreview("");
+
+      alert("Coupon added successfully!");
+    } catch (error: any) {
+      setUploadError(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to upload coupon image. Please try again."
+      );
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleDelete = (id: number) => {
-    if (window.confirm('Are you sure you want to delete this coupon?')) {
-      setCoupons(coupons.filter(coupon => coupon.id !== id));
+    if (window.confirm("Are you sure you want to delete this coupon?")) {
+      setCoupons(coupons.filter((coupon) => coupon.id !== id));
     }
   };
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortColumn(column);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
   const SortIcon = ({ column }: { column: string }) => (
     <span className="text-neutral-400 text-xs ml-1">
-      {sortColumn === column ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}
+      {sortColumn === column ? (sortDirection === "asc" ? "↑" : "↓") : "⇅"}
     </span>
   );
 
@@ -222,27 +288,27 @@ export default function AdminCoupon() {
       let bValue: any;
 
       switch (sortColumn) {
-        case 'couponTitle':
+        case "couponTitle":
           aValue = a.couponTitle;
           bValue = b.couponTitle;
           break;
-        case 'couponCode':
+        case "couponCode":
           aValue = a.couponCode;
           bValue = b.couponCode;
           break;
-        case 'couponDiscount':
+        case "couponDiscount":
           aValue = a.couponDiscount;
           bValue = b.couponDiscount;
           break;
-        case 'couponExpiryDate':
+        case "couponExpiryDate":
           aValue = a.couponExpiryDate;
           bValue = b.couponExpiryDate;
           break;
-        case 'couponStatus':
+        case "couponStatus":
           aValue = a.couponStatus;
           bValue = b.couponStatus;
           break;
-        case 'couponOrderMinValue':
+        case "couponOrderMinValue":
           aValue = a.couponOrderMinValue;
           bValue = b.couponOrderMinValue;
           break;
@@ -250,8 +316,8 @@ export default function AdminCoupon() {
           return 0;
       }
 
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
       return 0;
     });
   }
@@ -269,7 +335,9 @@ export default function AdminCoupon() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <h1 className="text-2xl font-semibold text-neutral-800">Coupon</h1>
           <div className="text-sm">
-            <span className="text-blue-600 hover:underline cursor-pointer">Home</span>
+            <span className="text-blue-600 hover:underline cursor-pointer">
+              Home
+            </span>
             <span className="text-neutral-400 mx-1">/</span>
             <span className="text-neutral-600">Coupon</span>
           </div>
@@ -280,8 +348,13 @@ export default function AdminCoupon() {
           <div className="bg-teal-600 text-white px-6 py-4 rounded-t-lg">
             <h2 className="text-lg font-semibold">Add Coupon</h2>
           </div>
-          
+
           <form onSubmit={handleAddCoupon} className="p-6">
+            {uploadError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                {uploadError}
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               {/* Row 1 */}
               <div>
@@ -294,13 +367,13 @@ export default function AdminCoupon() {
                   onChange={handleInputChange}
                   required
                   className="w-full px-3 py-2 border border-neutral-300 rounded focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white"
-                >
+                  disabled={uploading}>
                   <option value="">Select User Type</option>
                   <option value="All Users">All Users</option>
                   <option value="Specific User">Specific User</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Number of Times <span className="text-red-500">*</span>
@@ -311,31 +384,65 @@ export default function AdminCoupon() {
                   onChange={handleInputChange}
                   required
                   className="w-full px-3 py-2 border border-neutral-300 rounded focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white"
-                >
+                  disabled={uploading}>
                   <option value="Single Time Valid">Single Time Valid</option>
                   <option value="Multi Time Valid">Multi Time Valid</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Coupon Image <span className="text-red-500">*</span>
                 </label>
-                <div className="flex items-center gap-2">
-                  <label className="flex-1 px-3 py-2 border border-neutral-300 rounded cursor-pointer hover:bg-neutral-50 transition-colors">
-                    <span className="text-sm text-neutral-600">Choose File</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      required
-                    />
-                  </label>
-                  <span className="text-sm text-neutral-500">
-                    {formData.couponImage ? formData.couponImage.name : 'No file chosen'}
-                  </span>
-                </div>
+                <label className="block border-2 border-dashed border-neutral-300 rounded-lg p-4 text-center cursor-pointer hover:border-teal-500 transition-colors">
+                  {couponImagePreview ? (
+                    <div className="space-y-2">
+                      <img
+                        src={couponImagePreview}
+                        alt="Coupon preview"
+                        className="max-h-24 mx-auto rounded-lg object-cover"
+                      />
+                      <p className="text-xs text-neutral-600">
+                        {couponImageFile?.name}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCouponImageFile(null);
+                          setCouponImagePreview("");
+                        }}
+                        className="text-xs text-red-600 hover:text-red-700">
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <svg
+                        width="32"
+                        height="32"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className="mx-auto mb-2 text-neutral-400">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                      </svg>
+                      <p className="text-xs text-neutral-600">Choose File</p>
+                      <p className="text-xs text-neutral-500 mt-1">Max 5MB</p>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    required
+                    disabled={uploading}
+                  />
+                </label>
               </div>
             </div>
 
@@ -358,13 +465,17 @@ export default function AdminCoupon() {
                     className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400 pointer-events-none"
                     fill="none"
                     stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
                   </svg>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Coupon Code <span className="text-red-500">*</span>
@@ -383,9 +494,16 @@ export default function AdminCoupon() {
                     type="button"
                     onClick={generateCouponCode}
                     className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-full transition-colors"
-                    title="Generate Code"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    title="Generate Code">
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round">
                       <polyline points="23 4 23 10 17 10"></polyline>
                       <polyline points="1 20 1 14 7 14"></polyline>
                       <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
@@ -393,7 +511,7 @@ export default function AdminCoupon() {
                   </button>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Coupon title <span className="text-red-500">*</span>
@@ -421,17 +539,17 @@ export default function AdminCoupon() {
                   value={formData.couponStatus}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-neutral-300 rounded focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white"
-                >
+                  className="w-full px-3 py-2 border border-neutral-300 rounded focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white">
                   <option value="">Select Coupon Status</option>
                   <option value="Published">Published</option>
                   <option value="Draft">Draft</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2">
-                  Coupon Min Order Amount <span className="text-red-500">*</span>
+                  Coupon Min Order Amount{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -445,7 +563,7 @@ export default function AdminCoupon() {
                   placeholder="Enter min order amount"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Coupon Value <span className="text-red-500">*</span>
@@ -462,7 +580,7 @@ export default function AdminCoupon() {
                   placeholder="Enter coupon value"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-neutral-700 mb-2">
                   Coupon Type <span className="text-red-500">*</span>
@@ -472,8 +590,7 @@ export default function AdminCoupon() {
                   value={formData.couponType}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-neutral-300 rounded focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white"
-                >
+                  className="w-full px-3 py-2 border border-neutral-300 rounded focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none bg-white">
                   <option value="Percentage">Percentage</option>
                   <option value="Value">Value</option>
                 </select>
@@ -498,9 +615,13 @@ export default function AdminCoupon() {
 
             <button
               type="submit"
-              className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded font-medium transition-colors"
-            >
-              Add Coupon
+              disabled={uploading}
+              className={`w-full px-6 py-3 rounded font-medium transition-colors ${
+                uploading
+                  ? "bg-neutral-400 cursor-not-allowed text-white"
+                  : "bg-green-600 hover:bg-green-700 text-white"
+              }`}>
+              {uploading ? "Uploading Image..." : "Add Coupon"}
             </button>
           </form>
         </div>
@@ -508,7 +629,9 @@ export default function AdminCoupon() {
         {/* View Coupon Section */}
         <div className="bg-white rounded-lg shadow-sm border border-neutral-200">
           <div className="px-6 py-4 border-b border-neutral-200">
-            <h2 className="text-lg font-semibold text-neutral-800">View Coupon</h2>
+            <h2 className="text-lg font-semibold text-neutral-800">
+              View Coupon
+            </h2>
           </div>
 
           {/* Controls */}
@@ -521,8 +644,7 @@ export default function AdminCoupon() {
                   setRowsPerPage(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-white border border-neutral-300 rounded py-1.5 px-3 text-sm focus:ring-1 focus:ring-teal-500 focus:outline-none cursor-pointer"
-              >
+                className="bg-white border border-neutral-300 rounded py-1.5 px-3 text-sm focus:ring-1 focus:ring-teal-500 focus:outline-none cursor-pointer">
                 <option value={10}>10</option>
                 <option value={20}>20</option>
                 <option value={50}>50</option>
@@ -539,32 +661,28 @@ export default function AdminCoupon() {
                 <tr className="bg-neutral-50 text-xs font-bold text-neutral-800 border-b border-neutral-200">
                   <th
                     className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('id')}
-                  >
+                    onClick={() => handleSort("id")}>
                     <div className="flex items-center">
                       Sr No. <SortIcon column="id" />
                     </div>
                   </th>
                   <th
                     className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('couponTitle')}
-                  >
+                    onClick={() => handleSort("couponTitle")}>
                     <div className="flex items-center">
                       Coupon Title <SortIcon column="couponTitle" />
                     </div>
                   </th>
                   <th
                     className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('couponCode')}
-                  >
+                    onClick={() => handleSort("couponCode")}>
                     <div className="flex items-center">
                       Coupon Code <SortIcon column="couponCode" />
                     </div>
                   </th>
                   <th
                     className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('couponDiscount')}
-                  >
+                    onClick={() => handleSort("couponDiscount")}>
                     <div className="flex items-center">
                       Coupon Discount? <SortIcon column="couponDiscount" />
                     </div>
@@ -581,26 +699,24 @@ export default function AdminCoupon() {
                   </th>
                   <th
                     className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('couponExpiryDate')}
-                  >
+                    onClick={() => handleSort("couponExpiryDate")}>
                     <div className="flex items-center">
                       Coupon Expiry Date <SortIcon column="couponExpiryDate" />
                     </div>
                   </th>
                   <th
                     className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('couponStatus')}
-                  >
+                    onClick={() => handleSort("couponStatus")}>
                     <div className="flex items-center">
                       Coupon Status <SortIcon column="couponStatus" />
                     </div>
                   </th>
                   <th
                     className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('couponOrderMinValue')}
-                  >
+                    onClick={() => handleSort("couponOrderMinValue")}>
                     <div className="flex items-center">
-                      Coupon Order Min Value <SortIcon column="couponOrderMinValue" />
+                      Coupon Order Min Value{" "}
+                      <SortIcon column="couponOrderMinValue" />
                     </div>
                   </th>
                   <th className="p-4">
@@ -614,9 +730,10 @@ export default function AdminCoupon() {
                 {displayedCoupons.map((coupon, index) => (
                   <tr
                     key={coupon.id}
-                    className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200"
-                  >
-                    <td className="p-4 align-middle">{startIndex + index + 1}</td>
+                    className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200">
+                    <td className="p-4 align-middle">
+                      {startIndex + index + 1}
+                    </td>
                     <td className="p-4 align-middle">
                       <div className="flex items-center gap-2">
                         <img
@@ -628,27 +745,40 @@ export default function AdminCoupon() {
                       </div>
                     </td>
                     <td className="p-4 align-middle">{coupon.couponCode}</td>
-                    <td className="p-4 align-middle">{coupon.couponDiscount}</td>
+                    <td className="p-4 align-middle">
+                      {coupon.couponDiscount}
+                    </td>
                     <td className="p-4 align-middle">
                       <div className="text-xs">
-                        <div>{coupon.userType === 'All Users' ? 'Applicable for All Users' : `Only applicable for ${coupon.specificUserName || 'User'}`}</div>
-                        <div className="text-neutral-500">{coupon.numberOfTimes}</div>
+                        <div>
+                          {coupon.userType === "All Users"
+                            ? "Applicable for All Users"
+                            : `Only applicable for ${
+                                coupon.specificUserName || "User"
+                              }`}
+                        </div>
+                        <div className="text-neutral-500">
+                          {coupon.numberOfTimes}
+                        </div>
                       </div>
                     </td>
                     <td className="p-4 align-middle">{coupon.discountType}</td>
-                    <td className="p-4 align-middle">{coupon.couponExpiryDate}</td>
+                    <td className="p-4 align-middle">
+                      {coupon.couponExpiryDate}
+                    </td>
                     <td className="p-4 align-middle">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
                         {coupon.couponStatus}
                       </span>
                     </td>
-                    <td className="p-4 align-middle">{coupon.couponOrderMinValue}</td>
+                    <td className="p-4 align-middle">
+                      {coupon.couponOrderMinValue}
+                    </td>
                     <td className="p-4 align-middle">
                       <button
                         onClick={() => handleDelete(coupon.id)}
                         className="p-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
-                        title="Delete"
-                      >
+                        title="Delete">
                         <svg
                           width="16"
                           height="16"
@@ -657,8 +787,7 @@ export default function AdminCoupon() {
                           stroke="currentColor"
                           strokeWidth="2"
                           strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
+                          strokeLinejoin="round">
                           <line x1="18" y1="6" x2="6" y2="18"></line>
                           <line x1="6" y1="6" x2="18" y2="18"></line>
                         </svg>
@@ -668,7 +797,9 @@ export default function AdminCoupon() {
                 ))}
                 {displayedCoupons.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="p-8 text-center text-neutral-400">
+                    <td
+                      colSpan={10}
+                      className="p-8 text-center text-neutral-400">
                       No coupons found.
                     </td>
                   </tr>
@@ -680,7 +811,9 @@ export default function AdminCoupon() {
           {/* Pagination Footer */}
           <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
             <div className="text-xs sm:text-sm text-neutral-700">
-              Showing {startIndex + 1} to {Math.min(endIndex, sortedCoupons.length)} of {sortedCoupons.length} entries
+              Showing {startIndex + 1} to{" "}
+              {Math.min(endIndex, sortedCoupons.length)} of{" "}
+              {sortedCoupons.length} entries
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -688,18 +821,16 @@ export default function AdminCoupon() {
                 disabled={currentPage === 1}
                 className={`p-2 border border-teal-600 rounded ${
                   currentPage === 1
-                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                    : 'text-teal-600 hover:bg-teal-50'
+                    ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
+                    : "text-teal-600 hover:bg-teal-50"
                 }`}
-                aria-label="Previous page"
-              >
+                aria-label="Previous page">
                 <svg
                   width="16"
                   height="16"
                   viewBox="0 0 24 24"
                   fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                  xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M15 18L9 12L15 6"
                     stroke="currentColor"
@@ -713,22 +844,22 @@ export default function AdminCoupon() {
                 {currentPage}
               </button>
               <button
-                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                }
                 disabled={currentPage === totalPages}
                 className={`p-2 border border-teal-600 rounded ${
                   currentPage === totalPages
-                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                    : 'text-teal-600 hover:bg-teal-50'
+                    ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
+                    : "text-teal-600 hover:bg-teal-50"
                 }`}
-                aria-label="Next page"
-              >
+                aria-label="Next page">
                 <svg
                   width="16"
                   height="16"
                   viewBox="0 0 24 24"
                   fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                  xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M9 18L15 12L9 6"
                     stroke="currentColor"
@@ -745,7 +876,7 @@ export default function AdminCoupon() {
 
       {/* Footer */}
       <footer className="text-center py-4 text-sm text-neutral-600 border-t border-neutral-200 bg-white">
-        Copyright © 2025. Developed By{' '}
+        Copyright © 2025. Developed By{" "}
         <a href="#" className="text-blue-600 hover:underline">
           SpeeUp - 10 Minute App
         </a>
@@ -753,4 +884,3 @@ export default function AdminCoupon() {
     </div>
   );
 }
-

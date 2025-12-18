@@ -5,6 +5,7 @@ import customerAuthRoutes from "./customerAuthRoutes";
 import deliveryAuthRoutes from "./deliveryAuthRoutes";
 import customerRoutes from "./customerRoutes";
 import sellerRoutes from "./sellerRoutes";
+import uploadRoutes from "./uploadRoutes";
 
 const router = Router();
 
@@ -28,6 +29,9 @@ router.use("/customer", customerRoutes);
 
 // Seller management routes (protected, admin only)
 router.use("/sellers", sellerRoutes);
+
+// Upload routes (protected)
+router.use("/upload", uploadRoutes);
 
 // Add more routes here
 // router.use('/users', userRoutes);
