@@ -1,11 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { uploadImage, uploadImages } from "../../../services/api/uploadService";
 import {
   validateImageFile,
   createImagePreview,
 } from "../../../utils/imageUpload";
+import {
+  createProduct,
+  type CreateProductData,
+  getCategories,
+  getSubCategories,
+  getBrands,
+  type Category,
+  type SubCategory,
+  type Brand,
+} from "../../../services/api/admin/adminProductService";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function AdminAddProduct() {
+  const { isAuthenticated, token } = useAuth();
   const [formData, setFormData] = useState({
     productName: "",
     category: "",
@@ -30,7 +42,15 @@ export default function AdminAddProduct() {
     totalAllowedQuantity: "",
     mainImageUrl: "",
     galleryImageUrls: [] as string[],
+    // Required fields for product creation
+    price: "",
+    stock: "",
+    seller: "", // This would typically be set from context or selected
   });
+
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<SubCategory[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
 
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [mainImagePreview, setMainImagePreview] = useState<string>("");
@@ -39,7 +59,68 @@ export default function AdminAddProduct() {
     []
   );
   const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [uploadError, setUploadError] = useState<string>("");
+  const [submitError, setSubmitError] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+
+  // Fetch categories, subcategories, and brands on component mount
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [categoriesResponse, brandsResponse] = await Promise.all([
+          getCategories(),
+          getBrands(),
+        ]);
+
+        if (categoriesResponse.success) {
+          setCategories(categoriesResponse.data);
+        }
+        if (brandsResponse.success) {
+          setBrands(brandsResponse.data);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setSubmitError(
+          "Failed to load categories and brands. Please refresh the page."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [isAuthenticated, token]);
+
+  // Fetch subcategories when category changes
+  useEffect(() => {
+    if (!formData.category) {
+      setSubcategories([]);
+      return;
+    }
+
+    const fetchSubcategories = async () => {
+      try {
+        const response = await getSubCategories({
+          category: formData.category,
+        });
+        if (response.success) {
+          setSubcategories(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching subcategories:", error);
+        setSubcategories([]);
+      }
+    };
+
+    fetchSubcategories();
+  }, [formData.category]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -109,86 +190,154 @@ export default function AdminAddProduct() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploadError("");
+    setSubmitError("");
 
     // Basic validation
     if (!formData.productName.trim()) {
-      setUploadError("Please enter a product name.");
+      setSubmitError("Please enter a product name.");
       return;
     }
     if (!formData.category) {
-      setUploadError("Please select a category.");
+      setSubmitError("Please select a category.");
+      return;
+    }
+    if (!formData.price || parseFloat(formData.price) <= 0) {
+      setSubmitError("Please enter a valid price.");
+      return;
+    }
+    if (!formData.stock || parseInt(formData.stock) < 0) {
+      setSubmitError("Please enter a valid stock quantity.");
       return;
     }
 
     setUploading(true);
+    setSubmitting(true);
 
     try {
       // Upload main image if provided
+      let mainImageUrl = formData.mainImageUrl;
       if (mainImageFile) {
         const mainImageResult = await uploadImage(
           mainImageFile,
           "speeup/products"
         );
-        setFormData((prev) => ({
-          ...prev,
-          mainImageUrl: mainImageResult.secureUrl,
-        }));
+        mainImageUrl = mainImageResult.secureUrl;
       }
 
       // Upload gallery images if provided
+      let galleryImageUrls = formData.galleryImageUrls;
       if (galleryImageFiles.length > 0) {
         const galleryResults = await uploadImages(
           galleryImageFiles,
           "speeup/products/gallery"
         );
-        const galleryUrls = galleryResults.map((result) => result.secureUrl);
-        setFormData((prev) => ({ ...prev, galleryImageUrls: galleryUrls }));
+        galleryImageUrls = galleryResults.map((result) => result.secureUrl);
       }
 
-      // Handle form submission with Cloudinary URLs
-      console.log("Form submitted:", formData);
-      alert("Product added successfully!");
+      // Prepare product data for API
+      const productData: CreateProductData = {
+        productName: formData.productName,
+        category: formData.category,
+        subcategory: formData.subcategory || undefined,
+        brand: formData.brand || undefined,
+        mainImage: mainImageUrl || undefined,
+        galleryImages: galleryImageUrls,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock),
+        publish: formData.publish === "Yes",
+        popular: formData.popular === "Yes",
+        dealOfDay: formData.dealOfDay === "Yes",
+        smallDescription: formData.smallDescription || undefined,
+        seoTitle: formData.seoTitle || undefined,
+        seoKeywords: formData.seoKeywords || undefined,
+        seoDescription: formData.seoDescription || undefined,
+        seoImageAlt: formData.seoImageAlt || undefined,
+        tags: formData.tags
+          ? formData.tags.split(",").map((tag) => tag.trim())
+          : undefined,
+        variationType: formData.variationType || undefined,
+        manufacturer: formData.manufacturer || undefined,
+        madeIn: formData.madeIn || undefined,
+        tax: formData.tax || undefined,
+        fssaiLicNo: formData.fssaiLicNo || undefined,
+        totalAllowedQuantity: formData.totalAllowedQuantity
+          ? parseInt(formData.totalAllowedQuantity)
+          : undefined,
+        isReturnable: formData.isReturnable === "Yes",
+        maxReturnDays: formData.maxReturnDays
+          ? parseInt(formData.maxReturnDays)
+          : undefined,
+        // For now, we'll use a placeholder seller ID - this should be handled by the backend or context
+        seller: formData.seller || "default-seller-id",
+      };
 
-      // Reset form
-      setFormData({
-        productName: "",
-        category: "",
-        subcategory: "",
-        publish: "No",
-        popular: "No",
-        dealOfDay: "No",
-        brand: "",
-        tags: "",
-        smallDescription: "",
-        seoTitle: "",
-        seoKeywords: "",
-        seoImageAlt: "",
-        seoDescription: "",
-        variationType: "",
-        manufacturer: "",
-        madeIn: "",
-        tax: "",
-        isReturnable: "No",
-        maxReturnDays: "",
-        fssaiLicNo: "",
-        totalAllowedQuantity: "",
-        mainImageUrl: "",
-        galleryImageUrls: [],
-      });
-      setMainImageFile(null);
-      setMainImagePreview("");
-      setGalleryImageFiles([]);
-      setGalleryImagePreviews([]);
+      // Create product via API
+      const response = await createProduct(productData);
+
+      if (response.success) {
+        alert("Product added successfully!");
+
+        // Reset form
+        setFormData({
+          productName: "",
+          category: "",
+          subcategory: "",
+          publish: "No",
+          popular: "No",
+          dealOfDay: "No",
+          brand: "",
+          tags: "",
+          smallDescription: "",
+          seoTitle: "",
+          seoKeywords: "",
+          seoImageAlt: "",
+          seoDescription: "",
+          variationType: "",
+          manufacturer: "",
+          madeIn: "",
+          tax: "",
+          isReturnable: "No",
+          maxReturnDays: "",
+          fssaiLicNo: "",
+          totalAllowedQuantity: "",
+          mainImageUrl: "",
+          galleryImageUrls: [],
+          price: "",
+          stock: "",
+          seller: "",
+        });
+        setMainImageFile(null);
+        setMainImagePreview("");
+        setGalleryImageFiles([]);
+        setGalleryImagePreviews([]);
+      } else {
+        setSubmitError(response.message || "Failed to create product.");
+      }
     } catch (error: any) {
-      setUploadError(
+      console.error("Error creating product:", error);
+      setSubmitError(
         error.response?.data?.message ||
           error.message ||
-          "Failed to upload images. Please try again."
+          "Failed to create product. Please try again."
       );
     } finally {
       setUploading(false);
+      setSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+            <p className="text-neutral-600">Loading categories and brands...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -223,11 +372,14 @@ export default function AdminAddProduct() {
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
+                    disabled={loading}
+                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white disabled:bg-neutral-100 disabled:cursor-not-allowed">
                     <option value="">Select Category</option>
-                    <option value="pet-care">Pet Care</option>
-                    <option value="sweet-tooth">Sweet Tooth</option>
-                    <option value="tea-coffee">Tea Coffee</option>
+                    {categories.map((category) => (
+                      <option key={category._id} value={category._id}>
+                        {category.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -238,8 +390,14 @@ export default function AdminAddProduct() {
                     name="subcategory"
                     value={formData.subcategory}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
+                    disabled={!formData.category}
+                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white disabled:bg-neutral-100 disabled:cursor-not-allowed">
                     <option value="">Select Subcategory</option>
+                    {subcategories.map((subcategory) => (
+                      <option key={subcategory._id} value={subcategory._id}>
+                        {subcategory.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -283,14 +441,49 @@ export default function AdminAddProduct() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Price <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleChange}
+                    step="0.01"
+                    min="0"
+                    placeholder="Enter price"
+                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Stock <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="stock"
+                    value={formData.stock}
+                    onChange={handleChange}
+                    min="0"
+                    placeholder="Enter stock quantity"
+                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Select Brand
                   </label>
                   <select
                     name="brand"
                     value={formData.brand}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
+                    disabled={loading}
+                    className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white disabled:bg-neutral-100 disabled:cursor-not-allowed">
                     <option value="">Select Brand</option>
+                    {brands.map((brand) => (
+                      <option key={brand._id} value={brand._id}>
+                        {brand.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -518,9 +711,9 @@ export default function AdminAddProduct() {
               <h2 className="text-lg font-semibold">Add Images</h2>
             </div>
             <div className="p-4 sm:p-6 space-y-6">
-              {uploadError && (
+              {(uploadError || submitError) && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                  {uploadError}
+                  {uploadError || submitError}
                 </div>
               )}
               <div>
@@ -663,13 +856,19 @@ export default function AdminAddProduct() {
           <div className="flex justify-end pb-6">
             <button
               type="submit"
-              disabled={uploading}
+              disabled={uploading || submitting || loading}
               className={`px-8 py-3 rounded-lg font-medium text-lg transition-colors shadow-sm ${
-                uploading
+                uploading || submitting || loading
                   ? "bg-neutral-400 cursor-not-allowed text-white"
                   : "bg-teal-600 hover:bg-teal-700 text-white"
               }`}>
-              {uploading ? "Uploading Images..." : "Add Product"}
+              {uploading
+                ? "Uploading Images..."
+                : submitting
+                ? "Creating Product..."
+                : loading
+                ? "Loading..."
+                : "Add Product"}
             </button>
           </div>
         </form>

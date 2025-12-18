@@ -1,114 +1,74 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getUsers, updateUserStatus, type User as UserType } from '../../../services/api/admin/adminMiscService';
+import { useAuth } from '../../../context/AuthContext';
 
 interface User {
-    id: number;
+    _id: string;
     name: string;
     email: string;
-    phone: string;
+    phone?: string;
     registrationDate: string;
-    status: 'Active' | 'Inactive';
-    refCode: string;
+    status: 'Active' | 'Inactive' | 'Suspended';
+    refCode?: string;
     walletAmount: number;
+    totalOrders: number;
+    totalSpent: number;
 }
 
-// Mock data matching the image
-const USERS: User[] = [
-    {
-        id: 1,
-        name: 'Pratik',
-        email: 'pratik@gmail.com',
-        phone: '8966846429',
-        registrationDate: '06:26 PM, 21st Mar 2025',
-        status: 'Active',
-        refCode: 'PRATEF2C',
-        walletAmount: 10.00,
-    },
-    {
-        id: 2,
-        name: 'fyz.srd@gmail.com',
-        email: 'fyz.srd@gmail.com',
-        phone: '9123452139',
-        registrationDate: '11:50 AM, 24th Mar 2025',
-        status: 'Active',
-        refCode: 'FYZ.A25D',
-        walletAmount: 200.00,
-    },
-    {
-        id: 3,
-        name: 'Faycal Dous',
-        email: 'drous@gmail.com',
-        phone: '9876543210',
-        registrationDate: '05:15 PM, 08th Apr 2025',
-        status: 'Active',
-        refCode: 'FAYCB513',
-        walletAmount: 500.00,
-    },
-    {
-        id: 4,
-        name: 'Filmy Tube',
-        email: 'filmy@gmail.com',
-        phone: '9876543211',
-        registrationDate: '05:59 PM, 08th Apr 2025',
-        status: 'Inactive',
-        refCode: 'FILM63F3',
-        walletAmount: 0,
-    },
-    {
-        id: 5,
-        name: 'Sameer',
-        email: 'sameer@gmail.com',
-        phone: '9876542338',
-        registrationDate: '11:30 PM, 08th Apr 2025',
-        status: 'Inactive',
-        refCode: 'SAME07DD',
-        walletAmount: 0,
-    },
-    {
-        id: 6,
-        name: 'Sameer',
-        email: 'sameer@protonmail.com',
-        phone: '9876542338',
-        registrationDate: '11:30 PM, 08th Apr 2025',
-        status: 'Inactive',
-        refCode: 'SAME5040',
-        walletAmount: 0,
-    },
-    {
-        id: 7,
-        name: 'Yest',
-        email: 'test@gmail.com',
-        phone: '3212342536',
-        registrationDate: '11:40 PM, 08th Apr 2025',
-        status: 'Inactive',
-        refCode: 'YEST77CE',
-        walletAmount: 0,
-    },
-];
-
-// Function to mask email
-const maskEmail = (email: string): string => {
-    const [localPart, domain] = email.split('@');
-    if (localPart.length <= 2) {
-        return `${localPart[0]}******@${domain}`;
-    }
-    const visible = localPart.substring(0, 2);
-    return `${visible}********@${domain}`;
-};
-
-// Function to mask phone
-const maskPhone = (phone: string): string => {
-    if (phone.length < 4) return phone;
-    const visible = phone.substring(0, 2);
-    const lastTwo = phone.substring(phone.length - 4);
-    return `${visible}****${lastTwo}`;
-};
-
 export default function AdminUsers() {
-    const [searchTerm] = useState('');
-    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const { isAuthenticated, token } = useAuth();
+    const [users, setUsers] = useState<User[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('All');
+    const [entriesPerPage, setEntriesPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+    // Fetch users on component mount
+    useEffect(() => {
+        if (!isAuthenticated || !token) {
+            setLoading(false);
+            return;
+        }
+
+        const fetchUsers = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                const params: any = {
+                    page: currentPage,
+                    limit: entriesPerPage,
+                };
+
+                if (statusFilter !== 'All') {
+                    params.status = statusFilter;
+                }
+
+                if (searchTerm) {
+                    params.search = searchTerm;
+                }
+
+                const response = await getUsers(params);
+
+                if (response.success) {
+                    setUsers(response.data);
+                } else {
+                    setError('Failed to load users');
+                }
+            } catch (err: any) {
+                console.error('Error fetching users:', err);
+                setError(err.response?.data?.message || 'Failed to load users. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUsers();
+    }, [isAuthenticated, token, currentPage, entriesPerPage, statusFilter, searchTerm]);
 
     const handleSort = (column: string) => {
         if (sortColumn === column) {
@@ -119,77 +79,63 @@ export default function AdminUsers() {
         }
     };
 
+    const handleExport = () => {
+        const headers = ['ID', 'Name', 'Email', 'Phone', 'Registration Date', 'Status', 'Wallet Amount', 'Total Orders', 'Total Spent'];
+        const csvContent = [
+            headers.join(','),
+            ...users.map(user => [
+                user._id.slice(-6),
+                `"${user.name}"`,
+                `"${user.email}"`,
+                `"${user.phone || ''}"`,
+                `"${new Date(user.registrationDate).toLocaleString()}"`,
+                user.status,
+                user.walletAmount.toFixed(2),
+                user.totalOrders,
+                user.totalSpent.toFixed(2),
+            ].join(','))
+        ].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `users_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    // Calculate pagination
+    const totalPages = Math.ceil(users.length / entriesPerPage);
+    const startIndex = (currentPage - 1) * entriesPerPage;
+    const endIndex = startIndex + entriesPerPage;
+    const displayedUsers = users.slice(startIndex, endIndex);
+
+    const handleStatusChange = async (userId: string, newStatus: 'Active' | 'Suspended') => {
+        try {
+            const response = await updateUserStatus(userId, newStatus);
+
+            if (response.success) {
+                // Update local state
+                setUsers(users.map(user =>
+                    user._id === userId ? { ...user, status: newStatus } : user
+                ));
+                alert(`User status updated to ${newStatus} successfully!`);
+            } else {
+                alert('Failed to update user status: ' + (response.message || 'Unknown error'));
+            }
+        } catch (err: any) {
+            console.error('Error updating user status:', err);
+            alert('Failed to update user status: ' + (err.response?.data?.message || 'Please try again.'));
+        }
+    };
+
     const SortIcon = ({ column }: { column: string }) => (
         <span className="text-neutral-400 text-xs ml-1">
             {sortColumn === column ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}
         </span>
     );
-
-    // Filter users
-    let filteredUsers = USERS.filter(user =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.phone.includes(searchTerm) ||
-        user.refCode.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    // Sort users
-    if (sortColumn) {
-        filteredUsers = [...filteredUsers].sort((a, b) => {
-            let aValue: any;
-            let bValue: any;
-
-            switch (sortColumn) {
-                case 'id':
-                    aValue = a.id;
-                    bValue = b.id;
-                    break;
-                case 'name':
-                    aValue = a.name.toLowerCase();
-                    bValue = b.name.toLowerCase();
-                    break;
-                case 'registrationDate':
-                    aValue = a.registrationDate;
-                    bValue = b.registrationDate;
-                    break;
-                case 'status':
-                    aValue = a.status;
-                    bValue = b.status;
-                    break;
-                case 'refCode':
-                    aValue = a.refCode.toLowerCase();
-                    bValue = b.refCode.toLowerCase();
-                    break;
-                case 'walletAmount':
-                    aValue = a.walletAmount;
-                    bValue = b.walletAmount;
-                    break;
-                default:
-                    return 0;
-            }
-
-            if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-            if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-            return 0;
-        });
-    }
-
-    const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const displayedUsers = filteredUsers.slice(startIndex, endIndex);
-
-    const handleEdit = (id: number) => {
-        console.log('Edit user:', id);
-        alert(`Edit user ${id}`);
-    };
-
-    const handleDelete = (id: number) => {
-        if (window.confirm('Are you sure you want to delete this user?')) {
-            console.log('Delete user:', id);
-            alert(`Delete user ${id}`);
-        }
-    };
 
     return (
         <div className="flex flex-col h-full bg-gray-50">
@@ -214,9 +160,9 @@ export default function AdminUsers() {
                         <div className="flex items-center gap-2">
                             <span className="text-sm">Show</span>
                             <select
-                                value={rowsPerPage}
+                                value={entriesPerPage}
                                 onChange={(e) => {
-                                    setRowsPerPage(Number(e.target.value));
+                                    setEntriesPerPage(Number(e.target.value));
                                     setCurrentPage(1);
                                 }}
                                 className="bg-white text-teal-600 border border-teal-300 rounded py-1 px-2 text-sm focus:ring-1 focus:ring-teal-500 focus:outline-none cursor-pointer"
@@ -286,77 +232,102 @@ export default function AdminUsers() {
                                             Wallet Amt <SortIcon column="walletAmount" />
                                         </div>
                                     </th>
+                                    <th
+                                        className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                        onClick={() => handleSort('totalOrders')}
+                                    >
+                                        <div className="flex items-center">
+                                            Total Orders <SortIcon column="totalOrders" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                        onClick={() => handleSort('totalSpent')}
+                                    >
+                                        <div className="flex items-center">
+                                            Total Spent <SortIcon column="totalSpent" />
+                                        </div>
+                                    </th>
                                     <th className="p-4">
                                         Action
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {displayedUsers.map((user, index) => (
-                                    <tr key={user.id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200">
-                                        <td className="p-4 align-middle">{startIndex + index + 1}</td>
-                                        <td className="p-4 align-middle">{user.name}</td>
-                                        <td className="p-4 align-middle">
-                                            <div className="text-xs">
-                                                <div>{maskEmail(user.email)}</div>
-                                                {user.phone && (
-                                                    <div className="text-neutral-500">{maskPhone(user.phone)}</div>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="p-4 align-middle">{user.registrationDate}</td>
-                                        <td className="p-4 align-middle">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.status === 'Active'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-red-100 text-red-800'
-                                                }`}>
-                                                {user.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 align-middle">{user.refCode}</td>
-                                        <td className="p-4 align-middle">
-                                            <div className="flex items-center gap-2">
-                                                <span>₹ {user.walletAmount.toFixed(2)}</span>
-                                                <input
-                                                    type="text"
-                                                    className="w-8 h-6 border border-neutral-300 rounded text-xs text-center"
-                                                    defaultValue=""
-                                                    placeholder=""
-                                                />
-                                            </div>
-                                        </td>
-                                        <td className="p-4 align-middle">
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => handleEdit(user.id)}
-                                                    className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
-                                                    title="Edit"
-                                                >
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(user.id)}
-                                                    className="p-1.5 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
-                                                    title="Delete"
-                                                >
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                    </svg>
-                                                </button>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={11} className="p-8 text-center">
+                                            <div className="flex items-center justify-center">
+                                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-teal-600 mr-2"></div>
+                                                Loading users...
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
-                                {displayedUsers.length === 0 && (
+                                ) : error ? (
                                     <tr>
-                                        <td colSpan={8} className="p-8 text-center text-neutral-400">
+                                        <td colSpan={11} className="p-8 text-center text-red-600">
+                                            {error}
+                                        </td>
+                                    </tr>
+                                ) : displayedUsers.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={11} className="p-8 text-center text-neutral-400">
                                             No users found.
                                         </td>
                                     </tr>
+                                ) : (
+                                    displayedUsers.map((user, index) => (
+                                        <tr key={user._id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200">
+                                            <td className="p-4 align-middle">{startIndex + index + 1}</td>
+                                            <td className="p-4 align-middle">{user.name}</td>
+                                            <td className="p-4 align-middle">
+                                                <div className="text-xs">
+                                                    <div>{user.email}</div>
+                                                    {user.phone && (
+                                                        <div className="text-neutral-500">{user.phone}</div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="p-4 align-middle">{new Date(user.registrationDate).toLocaleString()}</td>
+                                            <td className="p-4 align-middle">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.status === 'Active'
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : user.status === 'Suspended'
+                                                        ? 'bg-red-100 text-red-800'
+                                                        : 'bg-yellow-100 text-yellow-800'
+                                                    }`}>
+                                                    {user.status}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 align-middle">{user.refCode || '-'}</td>
+                                            <td className="p-4 align-middle">₹{user.walletAmount.toFixed(2)}</td>
+                                            <td className="p-4 align-middle">{user.totalOrders}</td>
+                                            <td className="p-4 align-middle">₹{user.totalSpent.toFixed(2)}</td>
+                                            <td className="p-4 align-middle">
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => handleStatusChange(user._id, user.status === 'Active' ? 'Suspended' : 'Active')}
+                                                        className={`p-1.5 text-white rounded transition-colors ${user.status === 'Active'
+                                                            ? 'bg-red-600 hover:bg-red-700'
+                                                            : 'bg-green-600 hover:bg-green-700'
+                                                            }`}
+                                                        title={user.status === 'Active' ? 'Suspend User' : 'Activate User'}
+                                                    >
+                                                        {user.status === 'Active' ? (
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <circle cx="12" cy="12" r="10"></circle>
+                                                                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                                            </svg>
+                                                        ) : (
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
                                 )}
                             </tbody>
                         </table>
@@ -365,15 +336,15 @@ export default function AdminUsers() {
                     {/* Pagination Footer */}
                     <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
                         <div className="text-xs sm:text-sm text-neutral-700">
-                            Showing {startIndex + 1} to {Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length} entries
+                            Showing {startIndex + 1} to {Math.min(endIndex, users.length)} of {users.length} entries
                         </div>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                                 disabled={currentPage === 1}
                                 className={`p-2 border border-teal-600 rounded ${currentPage === 1
-                                        ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                        : 'text-teal-600 hover:bg-teal-50'
+                                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                    : 'text-teal-600 hover:bg-teal-50'
                                     }`}
                                 aria-label="Previous page"
                             >
@@ -400,8 +371,8 @@ export default function AdminUsers() {
                                         key={pageNum}
                                         onClick={() => setCurrentPage(pageNum)}
                                         className={`px-3 py-1.5 border border-teal-600 rounded font-medium text-sm ${currentPage === pageNum
-                                                ? 'bg-teal-600 text-white'
-                                                : 'text-teal-600 hover:bg-teal-50'
+                                            ? 'bg-teal-600 text-white'
+                                            : 'text-teal-600 hover:bg-teal-50'
                                             }`}
                                     >
                                         {pageNum}
@@ -415,8 +386,8 @@ export default function AdminUsers() {
                                 onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                                 disabled={currentPage === totalPages}
                                 className={`p-2 border border-teal-600 rounded ${currentPage === totalPages
-                                        ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                        : 'text-teal-600 hover:bg-teal-50'
+                                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                    : 'text-teal-600 hover:bg-teal-50'
                                     }`}
                                 aria-label="Next page"
                             >

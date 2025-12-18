@@ -1,21 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { uploadImage } from "../../../services/api/uploadService";
 import {
   validateImageFile,
   createImagePreview,
 } from "../../../utils/imageUpload";
-
-interface Category {
-  id: number;
-  name: string;
-  image: string;
-  totalSubcategory: number;
-  groupCategory: string;
-  isBestseller: boolean;
-  hasWarning: boolean;
-}
+import {
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  type Category,
+} from "../../../services/api/admin/adminProductService";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function AdminCategory() {
+  const { isAuthenticated, token } = useAuth();
+  const [categories, setCategories] = useState<Category[]>([]);
   const [categoryName, setCategoryName] = useState("");
   const [categoryImageFile, setCategoryImageFile] = useState<File | null>(null);
   const [categoryImagePreview, setCategoryImagePreview] = useState<string>("");
@@ -30,9 +30,40 @@ export default function AdminCategory() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Mock data
-  const categories: Category[] = [
+  // Fetch categories on component mount
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getCategories({ search: searchTerm });
+        if (response.success) {
+          setCategories(response.data);
+        }
+      } catch (err: any) {
+        console.error("Error fetching categories:", err);
+        setError(
+          err.response?.data?.message ||
+            "Failed to load categories. Please try again."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, [isAuthenticated, token, searchTerm]);
+
+  const mockCategories = [
     {
       id: 2,
       name: "Pet Care",
@@ -89,16 +120,11 @@ export default function AdminCategory() {
     }
   };
 
-  const filteredCategories = categories.filter(
-    (category) =>
-      category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      category.id.toString().includes(searchTerm)
-  );
-
-  const totalPages = Math.ceil(filteredCategories.length / entriesPerPage);
+  // Backend handles filtering, so we just use the categories directly
+  const totalPages = Math.ceil(categories.length / entriesPerPage);
   const startIndex = (currentPage - 1) * entriesPerPage;
   const endIndex = startIndex + entriesPerPage;
-  const displayedCategories = filteredCategories.slice(startIndex, endIndex);
+  const displayedCategories = categories.slice(startIndex, endIndex);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -127,7 +153,7 @@ export default function AdminCategory() {
       return;
     }
 
-    if (!categoryImageFile) {
+    if (!categoryImageFile && !editingId) {
       setUploadError("Category image is required");
       return;
     }
@@ -136,16 +162,43 @@ export default function AdminCategory() {
     setUploadError("");
 
     try {
-      // Upload category image
-      const imageResult = await uploadImage(
-        categoryImageFile,
-        "speeup/categories"
-      );
-      const imageUrl = imageResult.secureUrl;
+      let imageUrl = categoryImageUrl;
 
-      // Handle add category logic here with Cloudinary URL
-      console.log("Category added:", { name: categoryName, imageUrl });
-      alert("Category added successfully!");
+      // Upload category image if a new file is selected
+      if (categoryImageFile) {
+        const imageResult = await uploadImage(
+          categoryImageFile,
+          "speeup/categories"
+        );
+        imageUrl = imageResult.secureUrl;
+      }
+
+      const categoryData = {
+        name: categoryName.trim(),
+        image: imageUrl,
+        isBestseller: isBestseller === "Yes",
+        hasWarning: hasWarning === "Yes",
+        groupCategory: selectedGroupCategory || undefined,
+      };
+
+      if (editingId) {
+        // Update existing category
+        const response = await updateCategory(editingId, categoryData);
+        if (response.success) {
+          setCategories((prev) =>
+            prev.map((cat) => (cat._id === editingId ? response.data : cat))
+          );
+          alert("Category updated successfully!");
+          setEditingId(null);
+        }
+      } else {
+        // Create new category
+        const response = await createCategory(categoryData);
+        if (response.success) {
+          setCategories((prev) => [...prev, response.data]);
+          alert("Category added successfully!");
+        }
+      }
 
       // Reset form
       setCategoryName("");
@@ -159,27 +212,39 @@ export default function AdminCategory() {
       setUploadError(
         error.response?.data?.message ||
           error.message ||
-          "Failed to upload category image. Please try again."
+          "Failed to save category. Please try again."
       );
     } finally {
       setUploading(false);
     }
   };
 
-  const handleEdit = (id: number) => {
-    const category = categories.find((cat) => cat.id === id);
+  const handleEdit = (id: string) => {
+    const category = categories.find((cat) => cat._id === id);
     if (category) {
+      setEditingId(id);
       setCategoryName(category.name);
+      setCategoryImageUrl(category.image || "");
       setIsBestseller(category.isBestseller ? "Yes" : "No");
       setHasWarning(category.hasWarning ? "Yes" : "No");
-      // You can add more edit logic here
+      setSelectedGroupCategory(category.groupCategory || "");
     }
   };
 
-  const handleDelete = (_id: number) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this category?")) {
-      // Handle delete logic here
-      alert("Category deleted successfully!");
+      try {
+        const response = await deleteCategory(id);
+        if (response.success) {
+          setCategories((prev) => prev.filter((cat) => cat._id !== id));
+          alert("Category deleted successfully!");
+        }
+      } catch (error: any) {
+        alert(
+          error.response?.data?.message ||
+            "Failed to delete category. Please try again."
+        );
+      }
     }
   };
 
@@ -335,8 +400,28 @@ export default function AdminCategory() {
                   ? "bg-neutral-400 cursor-not-allowed text-white"
                   : "bg-teal-600 hover:bg-teal-700 text-white"
               }`}>
-              {uploading ? "Uploading Image..." : "Add Category"}
+              {uploading
+                ? "Saving..."
+                : editingId
+                ? "Update Category"
+                : "Add Category"}
             </button>
+            {editingId && (
+              <button
+                onClick={() => {
+                  setEditingId(null);
+                  setCategoryName("");
+                  setCategoryImageFile(null);
+                  setCategoryImagePreview("");
+                  setCategoryImageUrl("");
+                  setIsBestseller("No");
+                  setSelectedGroupCategory("");
+                  setHasWarning("No");
+                }}
+                className="w-full py-2.5 rounded text-sm font-medium bg-neutral-200 hover:bg-neutral-300 text-neutral-700 transition-colors mt-2">
+                Cancel Edit
+              </button>
+            )}
           </div>
         </div>
 
@@ -422,26 +507,8 @@ export default function AdminCategory() {
             <table className="w-full min-w-[800px]">
               <thead className="bg-neutral-50 border-b border-neutral-200">
                 <tr>
-                  <th
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider cursor-pointer hover:bg-neutral-100"
-                    onClick={() => handleSort("id")}>
-                    <div className="flex items-center gap-2">
-                      ID
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        className="text-neutral-400">
-                        <path
-                          d="M7 10L12 5L17 10M7 14L12 19L17 14"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                    ID
                   </th>
                   <th
                     className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider cursor-pointer hover:bg-neutral-100"
@@ -497,7 +564,23 @@ export default function AdminCategory() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-neutral-200">
-                {displayedCategories.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-4 sm:px-6 py-8 text-center text-sm text-neutral-500">
+                      Loading categories...
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="px-4 sm:px-6 py-8 text-center text-sm text-red-600">
+                      {error}
+                    </td>
+                  </tr>
+                ) : displayedCategories.length === 0 ? (
                   <tr>
                     <td
                       colSpan={6}
@@ -507,22 +590,16 @@ export default function AdminCategory() {
                   </tr>
                 ) : (
                   displayedCategories.map((category) => (
-                    <tr key={category.id} className="hover:bg-neutral-50">
+                    <tr key={category._id} className="hover:bg-neutral-50">
                       <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900">
-                        {category.id}
+                        {category._id.slice(-6)}
                       </td>
                       <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900 font-medium">
                         {category.name}
                       </td>
                       <td className="px-4 sm:px-6 py-3">
                         <div className="w-16 h-16 bg-neutral-100 rounded overflow-hidden flex items-center justify-center">
-                          {categoryImage ? (
-                            <img
-                              src={URL.createObjectURL(categoryImage)}
-                              alt={category.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
+                          {category.image ? (
                             <img
                               src={category.image}
                               alt={category.name}
@@ -532,11 +609,15 @@ export default function AdminCategory() {
                                   'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%239ca3af" font-size="12"%3ENo Image%3C/text%3E%3C/svg%3E';
                               }}
                             />
+                          ) : (
+                            <div className="text-xs text-neutral-400">
+                              No Image
+                            </div>
                           )}
                         </div>
                       </td>
                       <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900">
-                        {category.totalSubcategory}
+                        {category.totalSubcategories || 0}
                       </td>
                       <td className="px-4 sm:px-6 py-3 text-sm text-neutral-500">
                         {category.groupCategory || "-"}
@@ -544,7 +625,7 @@ export default function AdminCategory() {
                       <td className="px-4 sm:px-6 py-3">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleEdit(category.id)}
+                            onClick={() => handleEdit(category._id)}
                             className="p-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors"
                             title="Edit">
                             <svg
@@ -561,7 +642,7 @@ export default function AdminCategory() {
                             </svg>
                           </button>
                           <button
-                            onClick={() => handleDelete(category.id)}
+                            onClick={() => handleDelete(category._id)}
                             className="p-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded transition-colors"
                             title="Delete">
                             <svg
@@ -590,8 +671,8 @@ export default function AdminCategory() {
           <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
             <div className="text-xs sm:text-sm text-neutral-700">
               Showing {startIndex + 1} to{" "}
-              {Math.min(endIndex, filteredCategories.length)} of{" "}
-              {filteredCategories.length} entries
+              {Math.min(endIndex, categories.length)} of {categories.length}{" "}
+              entries
             </div>
             <div className="flex items-center gap-2">
               <button

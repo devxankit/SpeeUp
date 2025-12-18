@@ -1,22 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-
-interface Order {
-  orderId: string;
-  customerDetails: string;
-  address: string;
-  deliveryDate: string;
-  orderDate: string;
-  status: string;
-  deliveryBoyStatus: string;
-  amount: string;
-}
+import { getOrdersByStatus, type Order } from '../../../services/api/admin/adminOrderService';
+import { useAuth } from '../../../context/AuthContext';
 
 type SortField = 'orderId' | 'customerDetails' | 'address' | 'deliveryDate' | 'orderDate' | 'status' | 'deliveryBoyStatus' | 'amount';
 type SortDirection = 'asc' | 'desc';
 
 export default function AdminDeliveredOrders() {
-  const [dateRange, setDateRange] = useState('12/09/2025 - 12/09/2025');
+  const { isAuthenticated, token } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [dateRange, setDateRange] = useState('');
   const [seller, setSeller] = useState('All Sellers');
   const [status, setStatus] = useState('Delivered');
   const [entriesPerPage, setEntriesPerPage] = useState('10');
@@ -24,9 +17,60 @@ export default function AdminDeliveredOrders() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data - empty for now as shown in image
-  const orders: Order[] = [];
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchOrders = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const params: any = {
+          page: currentPage,
+          limit: parseInt(entriesPerPage),
+        };
+
+        if (searchQuery) {
+          params.search = searchQuery;
+        }
+
+        if (dateRange && dateRange.includes(' - ')) {
+          const [dateFrom, dateTo] = dateRange.split(' - ').map(d => {
+            const parts = d.trim().split('/');
+            if (parts.length === 3) {
+              return `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+            }
+            return d.trim();
+          });
+          params.dateFrom = dateFrom;
+          params.dateTo = dateTo;
+        }
+
+        const response = await getOrdersByStatus('Delivered', params);
+        if (response.success) {
+          setOrders(response.data);
+        }
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+        if (err && typeof err === 'object' && 'response' in err) {
+          const axiosError = err as { response?: { data?: { message?: string } } };
+          setError(axiosError.response?.data?.message || 'Failed to load orders. Please try again.');
+        } else {
+          setError('Failed to load orders. Please try again.');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [isAuthenticated, token, currentPage, entriesPerPage, searchQuery, dateRange]);
 
   const handleClearDate = () => {
     setDateRange('');
@@ -47,7 +91,16 @@ export default function AdminDeliveredOrders() {
     const csvContent = [
       headers.join(','),
       ...filteredAndSortedOrders.map(order => 
-        [order.orderId, order.customerDetails, order.address, order.deliveryDate, order.orderDate, order.status, order.deliveryBoyStatus, order.amount].join(',')
+        [
+          order.orderNumber || '',
+          order.customerName || '',
+          order.deliveryAddress?.address || '',
+          order.estimatedDeliveryDate ? new Date(order.estimatedDeliveryDate).toLocaleDateString() : '',
+          order.orderDate ? new Date(order.orderDate).toLocaleDateString() : '',
+          order.status || '',
+          order.deliveryBoyStatus || 'Not Assigned',
+          `₹${order.total?.toFixed(2) || '0.00'}`
+        ].join(',')
       )
     ].join('\n');
 
@@ -65,31 +118,53 @@ export default function AdminDeliveredOrders() {
   const filteredAndSortedOrders = useMemo(() => {
     let filtered = [...orders];
 
-    // Filter by search query
-    if (searchQuery) {
-      filtered = filtered.filter(order =>
-        order.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customerDetails.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.amount.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Filter by seller
-    if (seller !== 'All Sellers') {
-      // Add seller filter logic here if needed
-    }
-
-    // Filter by status - default to Delivered
-    if (status !== 'All Status') {
-      filtered = filtered.filter(order => order.status === status);
-    }
-
-    // Sort
     if (sortField) {
       filtered.sort((a, b) => {
-        const aValue = a[sortField];
-        const bValue = b[sortField];
+        let aValue: string | number;
+        let bValue: string | number;
+
+        switch (sortField) {
+          case 'orderId':
+            aValue = a.orderNumber || '';
+            bValue = b.orderNumber || '';
+            break;
+          case 'customerDetails':
+            aValue = a.customerName || '';
+            bValue = b.customerName || '';
+            break;
+          case 'address':
+            aValue = a.deliveryAddress?.address || '';
+            bValue = b.deliveryAddress?.address || '';
+            break;
+          case 'deliveryDate':
+            aValue = a.estimatedDeliveryDate || '';
+            bValue = b.estimatedDeliveryDate || '';
+            break;
+          case 'orderDate':
+            aValue = a.orderDate || '';
+            bValue = b.orderDate || '';
+            break;
+          case 'status':
+            aValue = a.status || '';
+            bValue = b.status || '';
+            break;
+          case 'deliveryBoyStatus':
+            aValue = a.deliveryBoyStatus || '';
+            bValue = b.deliveryBoyStatus || '';
+            break;
+          case 'amount':
+            aValue = a.total || 0;
+            bValue = b.total || 0;
+            break;
+          default:
+            return 0;
+        }
+
+        if (typeof aValue === 'string') {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
+
         if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
         if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
         return 0;
@@ -97,7 +172,7 @@ export default function AdminDeliveredOrders() {
     }
 
     return filtered;
-  }, [orders, searchQuery, seller, status, sortField, sortDirection]);
+  }, [orders, sortField, sortDirection]);
 
   const totalPages = Math.ceil(filteredAndSortedOrders.length / parseInt(entriesPerPage));
   const startIndex = (currentPage - 1) * parseInt(entriesPerPage);
@@ -536,7 +611,19 @@ export default function AdminDeliveredOrders() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-neutral-200">
-                {paginatedOrders.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={9} className="px-4 sm:px-6 py-8 text-center text-sm text-neutral-500">
+                      Loading orders...
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan={9} className="px-4 sm:px-6 py-8 text-center text-sm text-red-600">
+                      {error}
+                    </td>
+                  </tr>
+                ) : paginatedOrders.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="px-4 sm:px-6 py-8 text-center text-sm text-neutral-500">
                       No data available in table
@@ -544,30 +631,40 @@ export default function AdminDeliveredOrders() {
                   </tr>
                 ) : (
                   paginatedOrders.map((order) => (
-                    <tr key={order.orderId} className="hover:bg-neutral-50">
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900">{order.orderId}</td>
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">{order.customerDetails}</td>
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">{order.address}</td>
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">{order.deliveryDate}</td>
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">{order.orderDate}</td>
+                    <tr key={order._id} className="hover:bg-neutral-50">
+                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900">{order.orderNumber}</td>
+                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">
+                        {order.customerName || (typeof order.customer === 'object' ? order.customer.name : '')}
+                      </td>
+                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">
+                        {order.deliveryAddress?.address || '-'}
+                      </td>
+                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">
+                        {order.estimatedDeliveryDate ? new Date(order.estimatedDeliveryDate).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">
+                        {order.orderDate ? new Date(order.orderDate).toLocaleDateString() : '-'}
+                      </td>
                       <td className="px-4 sm:px-6 py-3">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                           {order.status}
                         </span>
                       </td>
                       <td className="px-4 sm:px-6 py-3">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDeliveryBoyStatusColor(order.deliveryBoyStatus)}`}>
-                          {order.deliveryBoyStatus}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDeliveryBoyStatusColor(order.deliveryBoyStatus || 'Not Assigned')}`}>
+                          {order.deliveryBoyStatus || 'Not Assigned'}
                         </span>
                       </td>
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900 font-medium">{order.amount}</td>
+                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900 font-medium">₹{order.total?.toFixed(2) || '0.00'}</td>
                       <td className="px-4 sm:px-6 py-3">
-                        <button className="bg-teal-600 hover:bg-teal-700 text-white p-2 rounded transition-colors" aria-label="View order">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </button>
+                        <Link to={`/admin/orders/${order._id}`}>
+                          <button className="bg-teal-600 hover:bg-teal-700 text-white p-2 rounded transition-colors" aria-label="View order">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                        </Link>
                       </td>
                     </tr>
                   ))

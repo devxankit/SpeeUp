@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { uploadDocument } from "../../../services/api/uploadService";
 import { validateDocumentFile } from "../../../utils/imageUpload";
+import {
+  createDeliveryBoy,
+  type CreateDeliveryBoyData,
+} from "../../../services/api/admin/adminDeliveryService";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function AdminAddDeliveryBoy() {
   const [formData, setFormData] = useState({
@@ -29,13 +34,16 @@ export default function AdminAddDeliveryBoy() {
   });
 
   // File state for UI
+  const { isAuthenticated, token } = useAuth();
   const [drivingLicenseFile, setDrivingLicenseFile] = useState<File | null>(
     null
   );
   const [nationalIdentityCardFile, setNationalIdentityCardFile] =
     useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [uploadError, setUploadError] = useState<string>("");
+  const [submitError, setSubmitError] = useState<string>("");
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -72,26 +80,33 @@ export default function AdminAddDeliveryBoy() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploadError("");
+    setSubmitError("");
 
     // Basic validation
     if (
       !formData.name ||
       !formData.mobile ||
       !formData.password ||
-      !formData.city
+      !formData.address ||
+      !formData.city ||
+      !formData.bankAccountNumber ||
+      !formData.bankName ||
+      !formData.accountName ||
+      !formData.ifscCode
     ) {
-      setUploadError("Please fill all required fields");
+      setSubmitError("Please fill all required fields");
       return;
     }
 
     if (!drivingLicenseFile || !nationalIdentityCardFile) {
-      setUploadError(
+      setSubmitError(
         "Both driving license and national identity card are required"
       );
       return;
     }
 
     setUploading(true);
+    setSubmitting(true);
 
     try {
       // Upload driving license
@@ -99,53 +114,77 @@ export default function AdminAddDeliveryBoy() {
         drivingLicenseFile,
         "speeup/delivery/documents"
       );
-      setFormData((prev) => ({
-        ...prev,
-        drivingLicenseUrl: drivingLicenseResult.secureUrl,
-      }));
+      const drivingLicenseUrl = drivingLicenseResult.secureUrl;
 
       // Upload national identity card
       const nationalIdResult = await uploadDocument(
         nationalIdentityCardFile,
         "speeup/delivery/documents"
       );
-      setFormData((prev) => ({
-        ...prev,
-        nationalIdentityCardUrl: nationalIdResult.secureUrl,
-      }));
+      const nationalIdentityCardUrl = nationalIdResult.secureUrl;
 
-      // Handle form submission with Cloudinary URLs
-      console.log("Form submitted:", formData);
-      alert("Delivery boy added successfully!");
+      // Prepare delivery boy data for API
+      const deliveryBoyData: CreateDeliveryBoyData = {
+        name: formData.name,
+        mobile: formData.mobile,
+        password: formData.password,
+        dateOfBirth: formData.dateOfBirth || undefined,
+        address: formData.address,
+        city: formData.city,
+        pincode: formData.pincode || undefined,
+        drivingLicense: drivingLicenseUrl,
+        nationalIdentityCard: nationalIdentityCardUrl,
+        bankAccountNumber: formData.bankAccountNumber,
+        bankName: formData.bankName,
+        accountName: formData.accountName,
+        ifscCode: formData.ifscCode,
+        otherPaymentInformation: formData.otherPaymentInformation || undefined,
+        bonusType: formData.bonusType || undefined,
+        commissionType: "Percentage" as const,
+        commission: 5, // Default commission
+        minAmount: 5,
+        maxAmount: 25,
+      };
 
-      // Reset form
-      setFormData({
-        name: "",
-        mobile: "",
-        dateOfBirth: "",
-        password: "",
-        address: "",
-        drivingLicenseUrl: "",
-        nationalIdentityCardUrl: "",
-        bankAccountNumber: "",
-        bankName: "",
-        accountName: "",
-        ifscCode: "",
-        city: "",
-        pincode: "",
-        otherPaymentInformation: "",
-        bonusType: "",
-      });
-      setDrivingLicenseFile(null);
-      setNationalIdentityCardFile(null);
+      // Create delivery boy via API
+      const response = await createDeliveryBoy(deliveryBoyData);
+
+      if (response.success) {
+        alert("Delivery boy added successfully!");
+
+        // Reset form
+        setFormData({
+          name: "",
+          mobile: "",
+          dateOfBirth: "",
+          password: "",
+          address: "",
+          drivingLicenseUrl: "",
+          nationalIdentityCardUrl: "",
+          bankAccountNumber: "",
+          bankName: "",
+          accountName: "",
+          ifscCode: "",
+          city: "",
+          pincode: "",
+          otherPaymentInformation: "",
+          bonusType: "",
+        });
+        setDrivingLicenseFile(null);
+        setNationalIdentityCardFile(null);
+      } else {
+        setSubmitError(response.message || "Failed to create delivery boy.");
+      }
     } catch (error: any) {
-      setUploadError(
+      console.error("Error creating delivery boy:", error);
+      setSubmitError(
         error.response?.data?.message ||
           error.message ||
-          "Failed to upload documents. Please try again."
+          "Failed to create delivery boy. Please try again."
       );
     } finally {
       setUploading(false);
+      setSubmitting(false);
     }
   };
 
@@ -270,9 +309,9 @@ export default function AdminAddDeliveryBoy() {
           </div>
 
           {/* Document Upload Section */}
-          {uploadError && (
+          {(uploadError || submitError) && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {uploadError}
+              {uploadError || submitError}
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
@@ -529,13 +568,17 @@ export default function AdminAddDeliveryBoy() {
         <div className="p-4 sm:p-6 flex justify-center">
           <button
             type="submit"
-            disabled={uploading}
+            disabled={uploading || submitting}
             className={`px-8 py-3 rounded-lg text-base font-medium transition-colors ${
-              uploading
+              uploading || submitting
                 ? "bg-neutral-400 cursor-not-allowed text-white"
                 : "bg-teal-600 hover:bg-teal-700 text-white"
             }`}>
-            {uploading ? "Uploading Documents..." : "Add Delivery Boy"}
+            {uploading
+              ? "Uploading Documents..."
+              : submitting
+              ? "Creating Delivery Boy..."
+              : "Add Delivery Boy"}
           </button>
         </div>
       </form>

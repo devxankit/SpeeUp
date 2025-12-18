@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   uploadImage,
   uploadDocument,
@@ -8,8 +8,14 @@ import {
   validateDocumentFile,
   createImagePreview,
 } from "../../../utils/imageUpload";
+import {
+  createSeller,
+  type CreateSellerData,
+} from "../../../services/api/sellerService";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function AdminAddSeller() {
+  const { isAuthenticated, token } = useAuth();
   const [formData, setFormData] = useState({
     // Seller Info
     sellerName: "",
@@ -56,7 +62,9 @@ export default function AdminAddSeller() {
   const [idProofFile, setIdProofFile] = useState<File | null>(null);
   const [addressProofFile, setAddressProofFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [uploadError, setUploadError] = useState<string>("");
+  const [submitError, setSubmitError] = useState<string>("");
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -105,102 +113,153 @@ export default function AdminAddSeller() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploadError("");
+    setSubmitError("");
 
     // Basic validation
     if (
       !formData.sellerName ||
       !formData.email ||
       !formData.password ||
-      !formData.mobile
+      !formData.mobile ||
+      !formData.storeName ||
+      !formData.category ||
+      !formData.city ||
+      !formData.serviceableArea ||
+      !formData.commission
     ) {
-      setUploadError("Please fill all required fields");
+      setSubmitError("Please fill all required fields");
       return;
     }
 
     if (!profileFile) {
-      setUploadError("Profile image is required");
+      setSubmitError("Profile image is required");
+      return;
+    }
+
+    if (
+      parseFloat(formData.commission) < 0 ||
+      parseFloat(formData.commission) > 100
+    ) {
+      setSubmitError("Commission must be between 0 and 100");
       return;
     }
 
     setUploading(true);
+    setSubmitting(true);
 
     try {
       // Upload profile image
-      const profileResult = await uploadImage(
-        profileFile,
-        "speeup/sellers/profile"
-      );
-      setFormData((prev) => ({ ...prev, profileUrl: profileResult.secureUrl }));
+      let profileUrl = formData.profileUrl;
+      if (profileFile) {
+        const profileResult = await uploadImage(
+          profileFile,
+          "speeup/sellers/profile"
+        );
+        profileUrl = profileResult.secureUrl;
+      }
 
       // Upload ID proof if provided
+      let idProofUrl = formData.idProofUrl;
       if (idProofFile) {
         const idProofResult = await uploadDocument(
           idProofFile,
           "speeup/sellers/documents"
         );
-        setFormData((prev) => ({
-          ...prev,
-          idProofUrl: idProofResult.secureUrl,
-        }));
+        idProofUrl = idProofResult.secureUrl;
       }
 
       // Upload address proof if provided
+      let addressProofUrl = formData.addressProofUrl;
       if (addressProofFile) {
         const addressProofResult = await uploadDocument(
           addressProofFile,
           "speeup/sellers/documents"
         );
-        setFormData((prev) => ({
-          ...prev,
-          addressProofUrl: addressProofResult.secureUrl,
-        }));
+        addressProofUrl = addressProofResult.secureUrl;
       }
 
-      // Handle form submission with Cloudinary URLs
-      console.log("Form submitted:", formData);
-      alert("Seller added successfully!");
+      // Prepare seller data for API
+      const sellerData: CreateSellerData = {
+        sellerName: formData.sellerName,
+        storeName: formData.storeName,
+        email: formData.email,
+        mobile: formData.mobile,
+        password: formData.password,
+        category: formData.category,
+        city: formData.city,
+        serviceableArea: formData.serviceableArea,
+        address: formData.address || undefined,
+        searchLocation: formData.searchLocation || undefined,
+        latitude: formData.latitude || undefined,
+        longitude: formData.longitude || undefined,
+        panCard: formData.panCard || undefined,
+        taxName: formData.taxName || undefined,
+        taxNumber: formData.taxNumber || undefined,
+        accountName: formData.accountName || undefined,
+        bankName: formData.bankName || undefined,
+        branch: formData.branch || undefined,
+        accountNumber: formData.accountNumber || undefined,
+        ifsc: formData.ifsc || undefined,
+        profile: profileUrl,
+        idProof: idProofUrl || undefined,
+        addressProof: addressProofUrl || undefined,
+        requireProductApproval: formData.requireProductApproval === "Yes",
+        viewCustomerDetails: formData.viewCustomerDetails === "Yes",
+        commission: parseFloat(formData.commission),
+      };
 
-      // Reset form
-      setFormData({
-        sellerName: "",
-        password: "",
-        email: "",
-        mobile: "",
-        storeName: "",
-        panCard: "",
-        category: "",
-        taxName: "",
-        address: "",
-        taxNumber: "",
-        city: "",
-        serviceableArea: "",
-        searchLocation: "",
-        latitude: "",
-        longitude: "",
-        accountName: "",
-        bankName: "",
-        branch: "",
-        accountNumber: "",
-        ifsc: "",
-        profileUrl: "",
-        idProofUrl: "",
-        addressProofUrl: "",
-        requireProductApproval: "No",
-        viewCustomerDetails: "No",
-        commission: "",
-      });
-      setProfileFile(null);
-      setProfilePreview("");
-      setIdProofFile(null);
-      setAddressProofFile(null);
+      // Create seller via API
+      const response = await createSeller(sellerData);
+
+      if (response.success) {
+        alert("Seller added successfully!");
+
+        // Reset form
+        setFormData({
+          sellerName: "",
+          password: "",
+          email: "",
+          mobile: "",
+          storeName: "",
+          panCard: "",
+          category: "",
+          taxName: "",
+          address: "",
+          taxNumber: "",
+          city: "",
+          serviceableArea: "",
+          searchLocation: "",
+          latitude: "",
+          longitude: "",
+          accountName: "",
+          bankName: "",
+          branch: "",
+          accountNumber: "",
+          ifsc: "",
+          profileUrl: "",
+          idProofUrl: "",
+          addressProofUrl: "",
+          requireProductApproval: "No",
+          viewCustomerDetails: "No",
+          commission: "",
+        });
+        setProfileFile(null);
+        setProfilePreview("");
+        setIdProofFile(null);
+        setAddressProofFile(null);
+      } else {
+        setSubmitError(response.message || "Failed to create seller.");
+      }
     } catch (error: any) {
-      setUploadError(
+      console.error("Error creating seller:", error);
+      setSubmitError(
         error.response?.data?.message ||
           error.message ||
-          "Failed to upload documents. Please try again."
+          "Failed to create seller. Please try again."
       );
     } finally {
       setUploading(false);
+      setSubmitting(false);
     }
   };
 
@@ -597,9 +656,9 @@ export default function AdminAddSeller() {
             </h2>
           </div>
           <div className="p-4 sm:p-6">
-            {uploadError && (
+            {(uploadError || submitError) && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-                {uploadError}
+                {uploadError || submitError}
               </div>
             )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
@@ -852,13 +911,17 @@ export default function AdminAddSeller() {
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={uploading}
+            disabled={uploading || submitting}
             className={`px-8 py-3 rounded-lg text-base font-medium transition-colors ${
-              uploading
+              uploading || submitting
                 ? "bg-neutral-400 cursor-not-allowed text-white"
                 : "bg-teal-600 hover:bg-teal-700 text-white"
             }`}>
-            {uploading ? "Uploading Documents..." : "Add Seller"}
+            {uploading
+              ? "Uploading Documents..."
+              : submitting
+              ? "Creating Seller..."
+              : "Add Seller"}
           </button>
         </div>
       </form>

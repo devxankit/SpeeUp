@@ -1,103 +1,161 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from "react";
+import {
+  getAllCustomers,
+  type Customer,
+} from "../../../services/api/admin/adminCustomerService";
+import { useAuth } from "../../../context/AuthContext";
 
-interface Customer {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  registrationDate: string;
-  status: 'Active' | 'Inactive';
-  refCode: string;
-  walletAmount: number;
-  totalOrders: number;
-  totalSpent: number;
-}
-
-type SortField = 'id' | 'name' | 'email' | 'phone' | 'registrationDate' | 'status' | 'walletAmount' | 'totalOrders' | 'totalSpent';
-type SortDirection = 'asc' | 'desc';
+type SortField =
+  | "id"
+  | "name"
+  | "email"
+  | "phone"
+  | "registrationDate"
+  | "status"
+  | "walletAmount"
+  | "totalOrders"
+  | "totalSpent";
+type SortDirection = "asc" | "desc";
 
 export default function AdminManageCustomer() {
-  const [dateRange, setDateRange] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [entriesPerPage, setEntriesPerPage] = useState('10');
-  const [searchQuery, setSearchQuery] = useState('');
+  const { isAuthenticated, token } = useAuth();
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [dateRange, setDateRange] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [entriesPerPage, setEntriesPerPage] = useState("10");
+  const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data
-  const customers: Customer[] = [
-    {
-      id: 1,
-      name: 'Pratik',
-      email: 'pratik@gmail.com',
-      phone: '8966846429',
-      registrationDate: '06:26 PM, 21st Mar 2025',
-      status: 'Active',
-      refCode: 'PRATEF2C',
-      walletAmount: 10.00,
-      totalOrders: 15,
-      totalSpent: 2500.00,
-    },
-    {
-      id: 2,
-      name: 'Faycal Dous',
-      email: 'fyz.srd@gmail.com',
-      phone: '9123452139',
-      registrationDate: '11:50 AM, 24th Mar 2025',
-      status: 'Active',
-      refCode: 'FYZ.A25D',
-      walletAmount: 200.00,
-      totalOrders: 8,
-      totalSpent: 1800.00,
-    },
-    {
-      id: 3,
-      name: 'Sameer',
-      email: 'sameer@gmail.com',
-      phone: '9876543210',
-      registrationDate: '05:15 PM, 08th Apr 2025',
-      status: 'Inactive',
-      refCode: 'SAME07DD',
-      walletAmount: 0,
-      totalOrders: 3,
-      totalSpent: 450.00,
-    },
-  ];
+  // Fetch customers on component mount
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchCustomers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const params: {
+          page: number;
+          limit: number;
+          status?: "Active" | "Inactive";
+          search?: string;
+        } = {
+          page: currentPage,
+          limit: parseInt(entriesPerPage),
+        };
+
+        if (statusFilter !== "All") {
+          params.status = statusFilter;
+        }
+
+        if (searchQuery) {
+          params.search = searchQuery;
+        }
+
+        const response = await getAllCustomers(params);
+        if (response.success) {
+          setCustomers(response.data);
+        }
+      } catch (err) {
+        console.error("Error fetching customers:", err);
+        if (err && typeof err === "object" && "response" in err) {
+          const axiosError = err as {
+            response?: { data?: { message?: string } };
+          };
+          setError(
+            axiosError.response?.data?.message ||
+              "Failed to load customers. Please try again."
+          );
+        } else {
+          setError("Failed to load customers. Please try again.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCustomers();
+  }, [
+    isAuthenticated,
+    token,
+    currentPage,
+    entriesPerPage,
+    statusFilter,
+    searchQuery,
+  ]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
   const filteredAndSortedCustomers = useMemo(() => {
-    let filtered = customers.filter(customer => {
-      const matchesSearch = 
-        customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        customer.phone.includes(searchQuery) ||
-        customer.refCode.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'All' || customer.status === statusFilter;
-      
-      return matchesSearch && matchesStatus;
-    });
+    let filtered = [...customers];
 
     if (sortField) {
       filtered = [...filtered].sort((a, b) => {
-        let aValue: any = a[sortField];
-        let bValue: any = b[sortField];
+        let aValue: string | number;
+        let bValue: string | number;
 
-        if (typeof aValue === 'string') {
+        switch (sortField) {
+          case "id":
+            aValue = a._id || "";
+            bValue = b._id || "";
+            break;
+          case "name":
+            aValue = a.name || "";
+            bValue = b.name || "";
+            break;
+          case "email":
+            aValue = a.email || "";
+            bValue = b.email || "";
+            break;
+          case "phone":
+            aValue = a.phone || "";
+            bValue = b.phone || "";
+            break;
+          case "registrationDate":
+            aValue = a.registrationDate || "";
+            bValue = b.registrationDate || "";
+            break;
+          case "status":
+            aValue = a.status || "";
+            bValue = b.status || "";
+            break;
+          case "walletAmount":
+            aValue = a.walletAmount || 0;
+            bValue = b.walletAmount || 0;
+            break;
+          case "totalOrders":
+            aValue = a.totalOrders || 0;
+            bValue = b.totalOrders || 0;
+            break;
+          case "totalSpent":
+            aValue = a.totalSpent || 0;
+            bValue = b.totalSpent || 0;
+            break;
+          default:
+            return 0;
+        }
+
+        if (typeof aValue === "string") {
           aValue = aValue.toLowerCase();
           bValue = bValue.toLowerCase();
         }
 
-        if (sortDirection === 'asc') {
+        if (sortDirection === "asc") {
           return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
         } else {
           return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
@@ -106,39 +164,60 @@ export default function AdminManageCustomer() {
     }
 
     return filtered;
-  }, [customers, searchQuery, statusFilter, sortField, sortDirection]);
+  }, [customers, sortField, sortDirection]);
 
-  const totalPages = Math.ceil(filteredAndSortedCustomers.length / Number(entriesPerPage));
+  const totalPages = Math.ceil(
+    filteredAndSortedCustomers.length / Number(entriesPerPage)
+  );
   const startIndex = (currentPage - 1) * Number(entriesPerPage);
   const endIndex = startIndex + Number(entriesPerPage);
-  const displayedCustomers = filteredAndSortedCustomers.slice(startIndex, endIndex);
+  const displayedCustomers = filteredAndSortedCustomers.slice(
+    startIndex,
+    endIndex
+  );
 
   const handleExport = () => {
-    const headers = ['ID', 'Name', 'Email', 'Phone', 'Registration Date', 'Status', 'Ref Code', 'Wallet Amount', 'Total Orders', 'Total Spent'];
+    const headers = [
+      "ID",
+      "Name",
+      "Email",
+      "Phone",
+      "Registration Date",
+      "Status",
+      "Ref Code",
+      "Wallet Amount",
+      "Total Orders",
+      "Total Spent",
+    ];
     const csvContent = [
-      headers.join(','),
-      ...filteredAndSortedCustomers.map(customer => 
+      headers.join(","),
+      ...filteredAndSortedCustomers.map((customer) =>
         [
-          customer.id,
+          customer._id.slice(-6),
           customer.name,
           customer.email,
           customer.phone,
-          customer.registrationDate,
+          customer.registrationDate
+            ? new Date(customer.registrationDate).toLocaleString()
+            : "",
           customer.status,
           customer.refCode,
-          customer.walletAmount,
+          customer.walletAmount.toFixed(2),
           customer.totalOrders,
-          customer.totalSpent
-        ].join(',')
-      )
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+          customer.totalSpent.toFixed(2),
+        ].join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `customers_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `customers_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -146,7 +225,7 @@ export default function AdminManageCustomer() {
 
   const SortIcon = ({ field }: { field: SortField }) => (
     <span className="text-neutral-300 text-[10px]">
-      {sortField === field ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}
+      {sortField === field ? (sortDirection === "asc" ? "↑" : "↓") : "⇅"}
     </span>
   );
 
@@ -156,10 +235,13 @@ export default function AdminManageCustomer() {
       <div className="bg-white px-4 sm:px-6 py-4 border-b border-neutral-200">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Manage Customer</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">
+              Manage Customer
+            </h1>
           </div>
           <div className="text-sm text-neutral-600">
-            <span className="text-blue-600">Home</span> / <span className="text-neutral-900">Manage Customer</span>
+            <span className="text-blue-600">Home</span> /{" "}
+            <span className="text-neutral-900">Manage Customer</span>
           </div>
         </div>
       </div>
@@ -171,7 +253,9 @@ export default function AdminManageCustomer() {
           <div className="p-4 sm:p-6 border-b border-neutral-200 bg-neutral-50">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">Date Range</label>
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  Date Range
+                </label>
                 <input
                   type="text"
                   value={dateRange}
@@ -181,30 +265,32 @@ export default function AdminManageCustomer() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">Status</label>
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  Status
+                </label>
                 <select
                   value={statusFilter}
                   onChange={(e) => {
                     setStatusFilter(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full px-3 py-2 text-sm border border-neutral-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
-                >
+                  className="w-full px-3 py-2 text-sm border border-neutral-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
                   <option value="All">All</option>
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-neutral-700 mb-1">Show</label>
+                <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  Show
+                </label>
                 <select
                   value={entriesPerPage}
                   onChange={(e) => {
                     setEntriesPerPage(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="w-full px-3 py-2 text-sm border border-neutral-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
-                >
+                  className="w-full px-3 py-2 text-sm border border-neutral-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
                   <option value="10">10</option>
                   <option value="20">20</option>
                   <option value="50">50</option>
@@ -214,10 +300,15 @@ export default function AdminManageCustomer() {
               <div className="flex items-end">
                 <button
                   onClick={handleExport}
-                  className="w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                >
+                  className="w-full bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center gap-2">
                   Export
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2">
                     <polyline points="6 9 12 15 18 9"></polyline>
                   </svg>
                 </button>
@@ -228,7 +319,9 @@ export default function AdminManageCustomer() {
           {/* Search */}
           <div className="p-4 sm:p-6 border-b border-neutral-200">
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-sm">Search:</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-sm">
+                Search:
+              </span>
               <input
                 type="text"
                 value={searchQuery}
@@ -249,48 +342,42 @@ export default function AdminManageCustomer() {
                 <tr className="bg-neutral-50 text-xs font-bold text-neutral-800">
                   <th
                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('id')}
-                  >
+                    onClick={() => handleSort("id")}>
                     <div className="flex items-center justify-between">
                       ID <SortIcon field="id" />
                     </div>
                   </th>
                   <th
                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('name')}
-                  >
+                    onClick={() => handleSort("name")}>
                     <div className="flex items-center justify-between">
                       Name <SortIcon field="name" />
                     </div>
                   </th>
                   <th
                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('email')}
-                  >
+                    onClick={() => handleSort("email")}>
                     <div className="flex items-center justify-between">
                       Email <SortIcon field="email" />
                     </div>
                   </th>
                   <th
                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('phone')}
-                  >
+                    onClick={() => handleSort("phone")}>
                     <div className="flex items-center justify-between">
                       Phone <SortIcon field="phone" />
                     </div>
                   </th>
                   <th
                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('registrationDate')}
-                  >
+                    onClick={() => handleSort("registrationDate")}>
                     <div className="flex items-center justify-between">
                       Registration Date <SortIcon field="registrationDate" />
                     </div>
                   </th>
                   <th
                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('status')}
-                  >
+                    onClick={() => handleSort("status")}>
                     <div className="flex items-center justify-between">
                       Status <SortIcon field="status" />
                     </div>
@@ -298,24 +385,21 @@ export default function AdminManageCustomer() {
                   <th className="p-4 border border-neutral-200">Ref Code</th>
                   <th
                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('walletAmount')}
-                  >
+                    onClick={() => handleSort("walletAmount")}>
                     <div className="flex items-center justify-between">
                       Wallet Amount <SortIcon field="walletAmount" />
                     </div>
                   </th>
                   <th
                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('totalOrders')}
-                  >
+                    onClick={() => handleSort("totalOrders")}>
                     <div className="flex items-center justify-between">
                       Total Orders <SortIcon field="totalOrders" />
                     </div>
                   </th>
                   <th
                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort('totalSpent')}
-                  >
+                    onClick={() => handleSort("totalSpent")}>
                     <div className="flex items-center justify-between">
                       Total Spent <SortIcon field="totalSpent" />
                     </div>
@@ -324,54 +408,108 @@ export default function AdminManageCustomer() {
                 </tr>
               </thead>
               <tbody>
-                {displayedCustomers.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700">
-                    <td className="p-4 border border-neutral-200">{customer.id}</td>
-                    <td className="p-4 border border-neutral-200">{customer.name}</td>
-                    <td className="p-4 border border-neutral-200">{customer.email}</td>
-                    <td className="p-4 border border-neutral-200">{customer.phone}</td>
-                    <td className="p-4 border border-neutral-200">{customer.registrationDate}</td>
-                    <td className="p-4 border border-neutral-200">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        customer.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {customer.status}
-                      </span>
-                    </td>
-                    <td className="p-4 border border-neutral-200">{customer.refCode}</td>
-                    <td className="p-4 border border-neutral-200">₹{customer.walletAmount.toFixed(2)}</td>
-                    <td className="p-4 border border-neutral-200">{customer.totalOrders}</td>
-                    <td className="p-4 border border-neutral-200">₹{customer.totalSpent.toFixed(2)}</td>
-                    <td className="p-4 border border-neutral-200">
-                      <div className="flex items-center gap-2">
-                        <button
-                          className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-                          title="View Details"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                          </svg>
-                        </button>
-                        <button
-                          className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
-                          title="Edit"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                          </svg>
-                        </button>
-                      </div>
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={11}
+                      className="p-8 text-center text-neutral-400 border border-neutral-200">
+                      Loading customers...
                     </td>
                   </tr>
-                ))}
-                {displayedCustomers.length === 0 && (
+                ) : error ? (
                   <tr>
-                    <td colSpan={11} className="p-8 text-center text-neutral-400 border border-neutral-200">
+                    <td
+                      colSpan={11}
+                      className="p-8 text-center text-red-600 border border-neutral-200">
+                      {error}
+                    </td>
+                  </tr>
+                ) : displayedCustomers.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={11}
+                      className="p-8 text-center text-neutral-400 border border-neutral-200">
                       No customers found.
                     </td>
                   </tr>
+                ) : (
+                  displayedCustomers.map((customer) => (
+                    <tr
+                      key={customer._id}
+                      className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700">
+                      <td className="p-4 border border-neutral-200">
+                        {customer._id.slice(-6)}
+                      </td>
+                      <td className="p-4 border border-neutral-200">
+                        {customer.name}
+                      </td>
+                      <td className="p-4 border border-neutral-200">
+                        {customer.email}
+                      </td>
+                      <td className="p-4 border border-neutral-200">
+                        {customer.phone}
+                      </td>
+                      <td className="p-4 border border-neutral-200">
+                        {customer.registrationDate
+                          ? new Date(customer.registrationDate).toLocaleString()
+                          : "-"}
+                      </td>
+                      <td className="p-4 border border-neutral-200">
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-medium ${
+                            customer.status === "Active"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}>
+                          {customer.status}
+                        </span>
+                      </td>
+                      <td className="p-4 border border-neutral-200">
+                        {customer.refCode}
+                      </td>
+                      <td className="p-4 border border-neutral-200">
+                        ₹{customer.walletAmount.toFixed(2)}
+                      </td>
+                      <td className="p-4 border border-neutral-200">
+                        {customer.totalOrders}
+                      </td>
+                      <td className="p-4 border border-neutral-200">
+                        ₹{customer.totalSpent.toFixed(2)}
+                      </td>
+                      <td className="p-4 border border-neutral-200">
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                            title="View Details">
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                              <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                          </button>
+                          <button
+                            className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
+                            title="Edit">
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
@@ -380,7 +518,9 @@ export default function AdminManageCustomer() {
           {/* Pagination */}
           <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
             <div className="text-xs sm:text-sm text-neutral-700">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredAndSortedCustomers.length)} of {filteredAndSortedCustomers.length} entries
+              Showing {startIndex + 1} to{" "}
+              {Math.min(endIndex, filteredAndSortedCustomers.length)} of{" "}
+              {filteredAndSortedCustomers.length} entries
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -388,11 +528,16 @@ export default function AdminManageCustomer() {
                 disabled={currentPage === 1}
                 className={`p-2 border border-teal-600 rounded ${
                   currentPage === 1
-                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                    : 'text-teal-600 hover:bg-teal-50'
-                }`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
+                    : "text-teal-600 hover:bg-teal-50"
+                }`}>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2">
                   <path d="M15 18L9 12L15 6"></path>
                 </svg>
               </button>
@@ -400,15 +545,22 @@ export default function AdminManageCustomer() {
                 {currentPage}
               </button>
               <button
-                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                }
                 disabled={currentPage === totalPages}
                 className={`p-2 border border-teal-600 rounded ${
                   currentPage === totalPages
-                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                    : 'text-teal-600 hover:bg-teal-50'
-                }`}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
+                    : "text-teal-600 hover:bg-teal-50"
+                }`}>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2">
                   <path d="M9 18L15 12L9 6"></path>
                 </svg>
               </button>
@@ -419,4 +571,3 @@ export default function AdminManageCustomer() {
     </div>
   );
 }
-
