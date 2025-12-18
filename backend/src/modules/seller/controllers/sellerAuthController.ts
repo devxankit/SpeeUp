@@ -1,8 +1,11 @@
-import { Request, Response } from 'express';
-import Seller from '../../models/Seller';
-import { sendOTP as sendOTPService, verifyOTP as verifyOTPService } from '../../services/otpService';
-import { generateToken } from '../../services/jwtService';
-import { asyncHandler } from '../../utils/asyncHandler';
+import { Request, Response } from "express";
+import Seller from "../../../models/Seller";
+import {
+  sendOTP as sendOTPService,
+  verifyOTP as verifyOTPService,
+} from "../../../services/otpService";
+import { generateToken } from "../../../services/jwtService";
+import { asyncHandler } from "../../../utils/asyncHandler";
 
 /**
  * Send OTP to seller mobile number
@@ -13,7 +16,7 @@ export const sendOTP = asyncHandler(async (req: Request, res: Response) => {
   if (!mobile || !/^[0-9]{10}$/.test(mobile)) {
     return res.status(400).json({
       success: false,
-      message: 'Valid 10-digit mobile number is required',
+      message: "Valid 10-digit mobile number is required",
     });
   }
 
@@ -22,12 +25,12 @@ export const sendOTP = asyncHandler(async (req: Request, res: Response) => {
   if (!seller) {
     return res.status(404).json({
       success: false,
-      message: 'Seller not found with this mobile number',
+      message: "Seller not found with this mobile number",
     });
   }
 
   // Send OTP - for login, always use default OTP
-  const result = await sendOTPService(mobile, 'Seller', true);
+  const result = await sendOTPService(mobile, "Seller", true);
 
   return res.status(200).json({
     success: true,
@@ -44,41 +47,41 @@ export const verifyOTP = asyncHandler(async (req: Request, res: Response) => {
   if (!mobile || !/^[0-9]{10}$/.test(mobile)) {
     return res.status(400).json({
       success: false,
-      message: 'Valid 10-digit mobile number is required',
+      message: "Valid 10-digit mobile number is required",
     });
   }
 
   if (!otp || !/^[0-9]{6}$/.test(otp)) {
     return res.status(400).json({
       success: false,
-      message: 'Valid 6-digit OTP is required',
+      message: "Valid 6-digit OTP is required",
     });
   }
 
   // Verify OTP
-  const isValid = await verifyOTPService(mobile, otp, 'Seller');
+  const isValid = await verifyOTPService(mobile, otp, "Seller");
   if (!isValid) {
     return res.status(401).json({
       success: false,
-      message: 'Invalid or expired OTP',
+      message: "Invalid or expired OTP",
     });
   }
 
   // Find seller
-  const seller = await Seller.findOne({ mobile }).select('-password');
+  const seller = await Seller.findOne({ mobile }).select("-password");
   if (!seller) {
     return res.status(404).json({
       success: false,
-      message: 'Seller not found',
+      message: "Seller not found",
     });
   }
 
   // Generate JWT token
-  const token = generateToken(seller._id.toString(), 'Seller');
+  const token = generateToken(seller._id.toString(), "Seller");
 
   return res.status(200).json({
     success: true,
-    message: 'Login successful',
+    message: "Login successful",
     data: {
       token,
       user: {
@@ -111,17 +114,26 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   } = req.body;
 
   // Validation
-  if (!sellerName || !mobile || !email || !password || !storeName || !category || !address || !city) {
+  if (
+    !sellerName ||
+    !mobile ||
+    !email ||
+    !password ||
+    !storeName ||
+    !category ||
+    !address ||
+    !city
+  ) {
     return res.status(400).json({
       success: false,
-      message: 'All required fields must be provided',
+      message: "All required fields must be provided",
     });
   }
 
   if (!/^[0-9]{10}$/.test(mobile)) {
     return res.status(400).json({
       success: false,
-      message: 'Valid 10-digit mobile number is required',
+      message: "Valid 10-digit mobile number is required",
     });
   }
 
@@ -133,7 +145,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   if (existingSeller) {
     return res.status(409).json({
       success: false,
-      message: 'Seller already exists with this mobile or email',
+      message: "Seller already exists with this mobile or email",
     });
   }
 
@@ -151,7 +163,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     searchLocation: req.body.searchLocation,
     latitude: req.body.latitude,
     longitude: req.body.longitude,
-    status: 'Pending',
+    status: "Pending",
     requireProductApproval: false,
     viewCustomerDetails: false,
     commission: 0,
@@ -160,11 +172,11 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   });
 
   // Generate token
-  const token = generateToken(seller._id.toString(), 'Seller');
+  const token = generateToken(seller._id.toString(), "Seller");
 
   return res.status(201).json({
     success: true,
-    message: 'Seller registered successfully. Awaiting admin approval.',
+    message: "Seller registered successfully. Awaiting admin approval.",
     data: {
       token,
       user: {
@@ -178,4 +190,3 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 });
-
