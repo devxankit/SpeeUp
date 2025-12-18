@@ -119,8 +119,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // STEP 2: If no localStorage, check backend (only if authenticated and NOT a seller)
-      if (isAuthenticated && user && !user.storeName) {
+
       // STEP 2: If no localStorage, check backend (only if authenticated AND user is a customer)
       if (isAuthenticated && user && user.userType === 'Customer') {
         try {
@@ -290,7 +289,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
               localStorage.setItem('userLocation', JSON.stringify(newLocation));
 
               // Save to backend in background (non-blocking, don't wait - only for customers)
-              if (isAuthenticated && user && !user.storeName) {
+
               // Save to backend in background (non-blocking, don't wait)
               if (isAuthenticated && user && user.userType === 'Customer') {
                 saveLocationToBackend(newLocation).catch(err => {
@@ -301,39 +300,50 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
               isRequestingRef.current = false;
               resolve();
-            } catch (geocodeError: unknown) {
-              // Geocoding failed but we have coordinates - still success
-              console.warn('Geocoding failed, using coordinates:', geocodeError);
-              const fallbackLocation: Location = {
-                latitude,
-                longitude,
-                address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-              };
-              setLocation(fallbackLocation);
-              localStorage.setItem('userLocation', JSON.stringify(fallbackLocation));
+            } catch (error: unknown) {
+              // First try to recover if it was just a geocoding error
+              const geocodeError = error;
+              if (latitude && longitude) {
+                // Geocoding failed but we have coordinates - still success
+                console.warn('Geocoding failed, using coordinates:', geocodeError);
+                const fallbackLocation: Location = {
+                  latitude,
+                  longitude,
+                  address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+                };
+                setLocation(fallbackLocation);
+                localStorage.setItem('userLocation', JSON.stringify(fallbackLocation));
 
+                // Try to save to backend anyway
+                if (isAuthenticated && user && user.userType === 'Customer') {
+                  saveLocationToBackend(fallbackLocation).catch(() => { });
+                }
 
-              // Try to save to backend anyway
-              if (isAuthenticated && user) {
-                saveLocationToBackend(fallbackLocation).catch(() => { });
-              if (isAuthenticated && user && user.userType === 'Customer') {
-                saveLocationToBackend(fallbackLocation).catch(() => { });
+                isRequestingRef.current = false;
+                resolve(); // Still resolve - we have coordinates
+                return;
               }
 
+              // Real error - fail
+              if (!abortControllerRef.current?.signal.aborted) {
+                const errorMessage = error instanceof Error ? error.message : 'Failed to get location address';
+                setLocationError(errorMessage);
+              }
+              setIsLocationLoading(false);
               isRequestingRef.current = false;
-              resolve(); // Still resolve - we have coordinates
+              reject(error);
             }
-          } catch (error: unknown) {
+          } catch (error: any) {
+            console.error('Error in location success callback:', error);
             if (!abortControllerRef.current?.signal.aborted) {
-              const errorMessage = error instanceof Error ? error.message : 'Failed to get location address';
-              setLocationError(errorMessage);
+              setLocationError('Failed to process location data');
             }
             setIsLocationLoading(false);
             isRequestingRef.current = false;
             reject(error);
           }
         },
-        (error) => {
+        (error: any) => {
           if (abortControllerRef.current?.signal.aborted) {
             isRequestingRef.current = false;
             return;
@@ -506,8 +516,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     // Validate location data
     if (!newLocation.latitude || !newLocation.longitude ||
       isNaN(newLocation.latitude) || isNaN(newLocation.longitude)) {
-    if (!newLocation.latitude || !newLocation.longitude ||
-      isNaN(newLocation.latitude) || isNaN(newLocation.longitude)) {
+
       throw new Error('Invalid location coordinates');
     }
 
@@ -531,7 +540,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     }
 
     // Save to backend in background (non-blocking - only for customers)
-    if (isAuthenticated && user && !user.storeName) {
+
     // Save to backend in background (non-blocking)
     if (isAuthenticated && user && user.userType === 'Customer') {
       saveLocationToBackend(newLocation).catch(err => {
