@@ -5,12 +5,8 @@ import {
   updateSellerStatus,
   updateSeller,
   deleteSeller,
-} from "../controllers/sellerController";
-import {
-  authenticate,
-  requireUserType,
-  authorize,
-} from "../../../middleware/auth";
+} from "../modules/seller/controllers/sellerController";
+import { authenticate, requireUserType, authorize } from "../middleware/auth";
 
 const router = Router();
 

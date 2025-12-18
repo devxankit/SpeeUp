@@ -1,10 +1,10 @@
 import { Router } from "express";
-import adminAuthRoutes from "../modules/admin/routes/adminAuthRoutes";
-import sellerAuthRoutes from "../modules/seller/routes/sellerAuthRoutes";
-import customerAuthRoutes from "../modules/customer/routes/customerAuthRoutes";
-import deliveryAuthRoutes from "../modules/delivery/routes/deliveryAuthRoutes";
-import customerRoutes from "../modules/customer/routes/customerRoutes";
-import sellerRoutes from "../modules/seller/routes/sellerRoutes";
+import adminAuthRoutes from "./adminAuthRoutes";
+import sellerAuthRoutes from "./sellerAuthRoutes";
+import customerAuthRoutes from "./customerAuthRoutes";
+import deliveryAuthRoutes from "./deliveryAuthRoutes";
+import customerRoutes from "./customerRoutes";
+import sellerRoutes from "./sellerRoutes";
 
 const router = Router();
 

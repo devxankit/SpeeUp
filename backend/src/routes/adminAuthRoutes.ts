@@ -1,9 +1,6 @@
 import { Router } from "express";
-import * as adminAuthController from "../controllers/adminAuthController";
-import {
-  otpRateLimiter,
-  loginRateLimiter,
-} from "../../../middleware/rateLimiter";
+import * as adminAuthController from "../modules/admin/controllers/adminAuthController";
+import { otpRateLimiter, loginRateLimiter } from "../middleware/rateLimiter";
 
 const router = Router();
 
