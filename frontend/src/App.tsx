@@ -64,7 +64,6 @@ import AdminDashboard from "./modules/admin/pages/AdminDashboard";
 import AdminLogin from "./modules/admin/pages/AdminLogin";
 
 import AdminCategory from "./modules/admin/pages/AdminCategory";
-import AdminGroupCategory from "./modules/admin/pages/AdminGroupCategory";
 import AdminHeaderCategory from "./modules/admin/pages/AdminHeaderCategory";
 import AdminSubCategory from "./modules/admin/pages/AdminSubCategory";
 import AdminBrand from "./modules/admin/pages/AdminBrand";
@@ -80,25 +79,19 @@ import AdminSellerTransaction from "./modules/admin/pages/AdminSellerTransaction
 import AdminStockManagement from "./modules/admin/pages/AdminStockManagement";
 import AdminSubcategoryOrder from "./modules/admin/pages/AdminSubcategoryOrder";
 import AdminManageSellerList from "./modules/admin/pages/AdminManageSellerList";
-import AdminDeliverableAreaList from "./modules/admin/pages/AdminDeliverableAreaList";
 import AdminCoupon from "./modules/admin/pages/AdminCoupon";
 import AdminNotification from "./modules/admin/pages/AdminNotification";
-import AdminBanner from "./modules/admin/pages/AdminBanner";
-import AdminAIInsightReport from "./modules/admin/pages/AdminAIInsightReport";
-import AdminManageCity from "./modules/admin/pages/AdminManageCity";
-import AdminDeliverableArea from "./modules/admin/pages/AdminDeliverableArea";
+import AdminSellerLocation from "./modules/admin/pages/AdminSellerLocation";
+import AdminWallet from "./modules/admin/pages/AdminWallet";
 import AdminAddDeliveryBoy from "./modules/admin/pages/AdminAddDeliveryBoy";
 import AdminManageDeliveryBoy from "./modules/admin/pages/AdminManageDeliveryBoy";
 import AdminFundTransfer from "./modules/admin/pages/AdminFundTransfer";
 import AdminCashCollection from "./modules/admin/pages/AdminCashCollection";
-import AdminHighlights from "./modules/admin/pages/AdminHighlights";
 import AdminReturnRequest from "./modules/admin/pages/AdminReturnRequest";
 import AdminPaymentList from "./modules/admin/pages/AdminPaymentList";
 import AdminSmsGateway from "./modules/admin/pages/AdminSmsGateway";
-import AdminAppSetting from "./modules/admin/pages/AdminAppSetting";
 import AdminSystemUser from "./modules/admin/pages/AdminSystemUser";
 import AdminManageRoles from "./modules/admin/pages/AdminManageRoles";
-import AdminTimeSlot from "./modules/admin/pages/AdminTimeSlot";
 import AdminUsers from "./modules/admin/pages/AdminUsers";
 import AdminFAQ from "./modules/admin/pages/AdminFAQ";
 import AdminHomeSection from "./modules/admin/pages/AdminHomeSection";
@@ -111,58 +104,11 @@ import AdminShippedOrders from "./modules/admin/pages/AdminShippedOrders";
 import AdminOutForDeliveryOrders from "./modules/admin/pages/AdminOutForDeliveryOrders";
 import AdminDeliveredOrders from "./modules/admin/pages/AdminDeliveredOrders";
 import AdminCancelledOrders from "./modules/admin/pages/AdminCancelledOrders";
-import AdminStoreSetting from "./modules/admin/pages/AdminStoreSetting";
 import AdminCustomerAppPolicy from "./modules/admin/pages/AdminCustomerAppPolicy";
 import AdminDeliveryAppPolicy from "./modules/admin/pages/AdminDeliveryAppPolicy";
 import AdminOrders from "./modules/admin/pages/AdminOrders";
 import AdminSettings from "./modules/admin/pages/AdminSettings";
 import AdminManageCustomer from "./modules/admin/pages/AdminManageCustomer";
-import AdminCategory from './modules/admin/pages/AdminCategory';
-import AdminHeaderCategory from './modules/admin/pages/AdminHeaderCategory';
-import AdminSubCategory from './modules/admin/pages/AdminSubCategory';
-import AdminBrand from './modules/admin/pages/AdminBrand';
-import AdminAddProduct from './modules/admin/pages/AdminAddProduct';
-import AdminBulkImport from './modules/admin/pages/AdminBulkImport';
-import AdminBulkUpdate from './modules/admin/pages/AdminBulkUpdate';
-import AdminTaxes from './modules/admin/pages/AdminTaxes';
-import AdminProductOrder from './modules/admin/pages/AdminProductOrder';
-import AdminProductRequest from './modules/admin/pages/AdminProductRequest';
-import AdminCategoryOrder from './modules/admin/pages/AdminCategoryOrder';
-import AdminAddSeller from './modules/admin/pages/AdminAddSeller';
-import AdminSellerTransaction from './modules/admin/pages/AdminSellerTransaction';
-import AdminStockManagement from './modules/admin/pages/AdminStockManagement';
-import AdminSubcategoryOrder from './modules/admin/pages/AdminSubcategoryOrder';
-import AdminManageSellerList from './modules/admin/pages/AdminManageSellerList';
-import AdminCoupon from './modules/admin/pages/AdminCoupon';
-import AdminNotification from './modules/admin/pages/AdminNotification';
-import AdminSellerLocation from './modules/admin/pages/AdminSellerLocation';
-import AdminWallet from './modules/admin/pages/AdminWallet';
-import AdminAddDeliveryBoy from './modules/admin/pages/AdminAddDeliveryBoy';
-import AdminManageDeliveryBoy from './modules/admin/pages/AdminManageDeliveryBoy';
-import AdminFundTransfer from './modules/admin/pages/AdminFundTransfer';
-import AdminCashCollection from './modules/admin/pages/AdminCashCollection';
-import AdminReturnRequest from './modules/admin/pages/AdminReturnRequest';
-import AdminPaymentList from './modules/admin/pages/AdminPaymentList';
-import AdminSmsGateway from './modules/admin/pages/AdminSmsGateway';
-import AdminSystemUser from './modules/admin/pages/AdminSystemUser';
-import AdminManageRoles from './modules/admin/pages/AdminManageRoles';
-import AdminUsers from './modules/admin/pages/AdminUsers';
-import AdminFAQ from './modules/admin/pages/AdminFAQ';
-import AdminHomeSection from './modules/admin/pages/AdminHomeSection';
-import AdminShopByStore from './modules/admin/pages/AdminShopByStore';
-import AdminAllOrders from './modules/admin/pages/AdminAllOrders';
-import AdminPendingOrders from './modules/admin/pages/AdminPendingOrders';
-import AdminReceivedOrders from './modules/admin/pages/AdminReceivedOrders';
-import AdminProcessedOrders from './modules/admin/pages/AdminProcessedOrders';
-import AdminShippedOrders from './modules/admin/pages/AdminShippedOrders';
-import AdminOutForDeliveryOrders from './modules/admin/pages/AdminOutForDeliveryOrders';
-import AdminDeliveredOrders from './modules/admin/pages/AdminDeliveredOrders';
-import AdminCancelledOrders from './modules/admin/pages/AdminCancelledOrders';
-import AdminCustomerAppPolicy from './modules/admin/pages/AdminCustomerAppPolicy';
-import AdminDeliveryAppPolicy from './modules/admin/pages/AdminDeliveryAppPolicy';
-import AdminOrders from './modules/admin/pages/AdminOrders';
-import AdminSettings from './modules/admin/pages/AdminSettings';
-import AdminManageCustomer from './modules/admin/pages/AdminManageCustomer';
 
 function App() {
   return (
@@ -285,10 +231,6 @@ function App() {
 
                         <Route path="category" element={<AdminCategory />} />
                         <Route
-                          path="category/group"
-                          element={<AdminGroupCategory />}
-                        />
-                        <Route
                           path="category/header"
                           element={<AdminHeaderCategory />}
                         />
@@ -359,31 +301,15 @@ function App() {
                           element={<AdminStockManagement />}
                         />
                         <Route
-                          path="manage-location/deliverable-area-list"
-                          element={<AdminDeliverableAreaList />}
+                          path="manage-location/seller-location"
+                          element={<AdminSellerLocation />}
                         />
+                        <Route path="wallet" element={<AdminWallet />} />
                         <Route path="coupon" element={<AdminCoupon />} />
-                        <Route
-                          path="highlights"
-                          element={<AdminHighlights />}
-                        />
                         <Route path="return" element={<AdminReturnRequest />} />
                         <Route
                           path="notification"
                           element={<AdminNotification />}
-                        />
-                        <Route path="banner" element={<AdminBanner />} />
-                        <Route
-                          path="ai-insight-report"
-                          element={<AdminAIInsightReport />}
-                        />
-                        <Route
-                          path="manage-location/city"
-                          element={<AdminManageCity />}
-                        />
-                        <Route
-                          path="manage-location/deliverable-area"
-                          element={<AdminDeliverableArea />}
                         />
                         <Route path="orders" element={<AdminOrders />} />
                         <Route path="settings" element={<AdminSettings />} />
@@ -395,7 +321,6 @@ function App() {
                           path="collect-cash"
                           element={<AdminCashCollection />}
                         />
-                        <Route path="time-slot" element={<AdminTimeSlot />} />
                         <Route
                           path="payment-list"
                           element={<AdminPaymentList />}
@@ -403,14 +328,6 @@ function App() {
                         <Route
                           path="sms-gateway"
                           element={<AdminSmsGateway />}
-                        />
-                        <Route
-                          path="app-setting"
-                          element={<AdminAppSetting />}
-                        />
-                        <Route
-                          path="store-setting"
-                          element={<AdminStoreSetting />}
                         />
                         <Route
                           path="system-user"
@@ -471,56 +388,6 @@ function App() {
                     </AdminLayout>
                   }
                 />
-                      <Route path="category" element={<AdminCategory />} />
-                      <Route path="category/header" element={<AdminHeaderCategory />} />
-                      <Route path="subcategory" element={<AdminSubCategory />} />
-                      <Route path="subcategory-order" element={<AdminSubcategoryOrder />} />
-                      <Route path="brand" element={<AdminBrand />} />
-                      <Route path="product/add" element={<AdminAddProduct />} />
-                      <Route path="product/bulk-import" element={<AdminBulkImport />} />
-                      <Route path="product/bulk-update" element={<AdminBulkUpdate />} />
-                      <Route path="product/taxes" element={<AdminTaxes />} />
-                      <Route path="product/order" element={<AdminProductOrder />} />
-                      <Route path="product/request" element={<AdminProductRequest />} />
-                      <Route path="category-order" element={<AdminCategoryOrder />} />
-                      <Route path="manage-seller/add" element={<AdminAddSeller />} />
-                      <Route path="manage-seller/list" element={<AdminManageSellerList />} />
-                      <Route path="manage-seller/transaction" element={<AdminSellerTransaction />} />
-                      <Route path="delivery-boy/add" element={<AdminAddDeliveryBoy />} />
-                      <Route path="delivery-boy/manage" element={<AdminManageDeliveryBoy />} />
-                      <Route path="delivery-boy/fund-transfer" element={<AdminFundTransfer />} />
-                      <Route path="delivery-boy/cash-collection" element={<AdminCashCollection />} />
-                      <Route path="stock-management" element={<AdminStockManagement />} />
-                      <Route path="manage-location/seller-location" element={<AdminSellerLocation />} />
-                      <Route path="wallet" element={<AdminWallet />} />
-                      <Route path="coupon" element={<AdminCoupon />} />
-                      <Route path="return" element={<AdminReturnRequest />} />
-                      <Route path="notification" element={<AdminNotification />} />
-                      <Route path="orders" element={<AdminOrders />} />
-                      <Route path="settings" element={<AdminSettings />} />
-                      <Route path="customers" element={<AdminManageCustomer />} />
-                      <Route path="collect-cash" element={<AdminCashCollection />} />
-                      <Route path="payment-list" element={<AdminPaymentList />} />
-                      <Route path="sms-gateway" element={<AdminSmsGateway />} />
-                      <Route path="system-user" element={<AdminSystemUser />} />
-                      <Route path="manage-roles" element={<AdminManageRoles />} />
-                      <Route path="customer-app-policy" element={<AdminCustomerAppPolicy />} />
-                      <Route path="delivery-app-policy" element={<AdminDeliveryAppPolicy />} />
-                      <Route path="users" element={<AdminUsers />} />
-                      <Route path="faq" element={<AdminFAQ />} />
-                      <Route path="home-section" element={<AdminHomeSection />} />
-                      <Route path="shop-by-store" element={<AdminShopByStore />} />
-                      <Route path="orders/all" element={<AdminAllOrders />} />
-                      <Route path="orders/pending" element={<AdminPendingOrders />} />
-                      <Route path="orders/received" element={<AdminReceivedOrders />} />
-                      <Route path="orders/processed" element={<AdminProcessedOrders />} />
-                      <Route path="orders/shipped" element={<AdminShippedOrders />} />
-                      <Route path="orders/out-for-delivery" element={<AdminOutForDeliveryOrders />} />
-                      <Route path="orders/delivered" element={<AdminDeliveredOrders />} />
-                      <Route path="orders/cancelled" element={<AdminCancelledOrders />} />
-                    </Routes>
-                  </AdminLayout>
-                } />
                 {/* Main App Routes */}
                 <Route
                   path="/*"
