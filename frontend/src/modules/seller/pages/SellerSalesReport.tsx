@@ -1,63 +1,82 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-
-// Mock Data - Sample data as shown in image
-interface SalesReport {
-    orderId: number;
-    orderItemId: number;
-    product: string;
-    variant: string;
-    total: number;
-    date: string;
-}
-
-const SALES_REPORTS: SalesReport[] = [
-    {
-        orderId: 406,
-        orderItemId: 1086,
-        product: 'Maggi Masala 2 Minutes Instant Noodles',
-        variant: '100g',
-        total: 60.00,
-        date: '2025-12-06 15:22:52'
-    },
-    {
-        orderId: 406,
-        orderItemId: 1087,
-        product: 'Maggi Masala 2 Minutes Instant Noodles',
-        variant: '200g',
-        total: 120.00,
-        date: '2025-12-06 15:22:52'
-    }
-];
+import { getSalesReport, SalesReport } from '../../../services/api/reportService';
 
 export default function SellerSalesReport() {
-    const [fromDate, setFromDate] = useState('12/06/2025');
-    const [toDate, setToDate] = useState('12/06/2025');
+    const [reports, setReports] = useState<SalesReport[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
-    const [sortColumn, setSortColumn] = useState<string | null>(null);
-    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-
-    const filteredReports = SALES_REPORTS.filter(report => {
-        return Object.values(report).some(value =>
-            String(value).toLowerCase().includes(searchTerm.toLowerCase())
-        );
+    const [sortColumn, setSortColumn] = useState<string>('createdAt');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+    const [pagination, setPagination] = useState({
+        total: 0,
+        pages: 0
     });
 
-    const totalPages = Math.ceil(filteredReports.length / rowsPerPage);
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const displayedReports = filteredReports.slice(startIndex, endIndex);
+    const fetchReports = useCallback(async () => {
+        try {
+            setLoading(true);
+            const response = await getSalesReport({
+                fromDate,
+                toDate,
+                search: searchTerm,
+                page: currentPage,
+                limit: rowsPerPage,
+                sortBy: sortColumn,
+                sortOrder: sortDirection,
+            });
+
+            if (response.success) {
+                setReports(response.data);
+                setPagination({
+                    total: response.pagination.total,
+                    pages: response.pagination.pages
+                });
+            } else {
+                setError(response.message || 'Failed to fetch sales reports');
+            }
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Error loading sales reports');
+        } finally {
+            setLoading(false);
+        }
+    }, [fromDate, toDate, searchTerm, currentPage, rowsPerPage, sortColumn, sortDirection]);
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            fetchReports();
+        }, 500); // Debounce search
+
+        return () => clearTimeout(timeoutId);
+    }, [fetchReports]);
 
     const handleSort = (column: string) => {
-        if (sortColumn === column) {
+        // Map frontend table column names to backend model fields if necessary
+        const columnMap: Record<string, string> = {
+            'orderId': 'orderId',
+            'orderItemId': '_id',
+            'product': 'productName',
+            'variant': 'variantTitle',
+            'total': 'subtotal',
+            'date': 'createdAt'
+        };
+
+        const backendColumn = columnMap[column] || column;
+
+        if (sortColumn === backendColumn) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
         } else {
-            setSortColumn(column);
+            setSortColumn(backendColumn);
             setSortDirection('asc');
         }
+        setCurrentPage(1);
     };
+
 
     const SortIcon = ({ column }: { column: string }) => (
         <span className="text-neutral-300 text-[10px]">
@@ -158,7 +177,7 @@ export default function SellerSalesReport() {
                                     const headers = ['Order Id', 'Order Item Id', 'Product', 'Variant', 'Total', 'Date'];
                                     const csvContent = [
                                         headers.join(','),
-                                        ...filteredReports.map(report => [
+                                        ...reports.map(report => [
                                             report.orderId,
                                             report.orderItemId,
                                             `"${report.product}"`,
@@ -197,7 +216,10 @@ export default function SellerSalesReport() {
                                     type="text"
                                     className="pl-14 pr-3 py-1.5 bg-neutral-100 border-none rounded text-sm focus:ring-1 focus:ring-teal-500 w-full sm:w-48"
                                     value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onChange={(e) => {
+                                        setSearchTerm(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
                                     placeholder=""
                                 />
                             </div>
@@ -205,126 +227,135 @@ export default function SellerSalesReport() {
                     </div>
 
                     {/* Table */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse border border-neutral-200">
-                            <thead>
-                                <tr className="bg-neutral-50 text-xs font-bold text-neutral-800">
-                                    <th
-                                        className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                        onClick={() => handleSort('orderId')}
-                                    >
-                                        <div className="flex items-center gap-1">
-                                            Order Id
-                                            <SortIcon column="orderId" />
-                                        </div>
-                                    </th>
-                                    <th
-                                        className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                        onClick={() => handleSort('orderItemId')}
-                                    >
-                                        <div className="flex items-center gap-1">
-                                            Order Item Id
-                                            <SortIcon column="orderItemId" />
-                                        </div>
-                                    </th>
-                                    <th
-                                        className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                        onClick={() => handleSort('product')}
-                                    >
-                                        <div className="flex items-center gap-1">
-                                            Product
-                                            <SortIcon column="product" />
-                                        </div>
-                                    </th>
-                                    <th
-                                        className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                        onClick={() => handleSort('variant')}
-                                    >
-                                        <div className="flex items-center gap-1">
-                                            Variant
-                                            <SortIcon column="variant" />
-                                        </div>
-                                    </th>
-                                    <th
-                                        className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                        onClick={() => handleSort('total')}
-                                    >
-                                        <div className="flex items-center gap-1">
-                                            Total
-                                            <SortIcon column="total" />
-                                        </div>
-                                    </th>
-                                    <th
-                                        className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                        onClick={() => handleSort('date')}
-                                    >
-                                        <div className="flex items-center gap-1">
-                                            Date
-                                            <SortIcon column="date" />
-                                        </div>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {displayedReports.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={6} className="p-8 text-center text-neutral-500">
-                                            No data available in table
-                                        </td>
+                    <div className="overflow-x-auto min-h-[400px]">
+                        {loading ? (
+                            <div className="flex items-center justify-center p-20">
+                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+                            </div>
+                        ) : error ? (
+                            <div className="p-8 text-center text-red-500">{error}</div>
+                        ) : (
+                            <table className="w-full text-left border-collapse border border-neutral-200">
+                                <thead>
+                                    <tr className="bg-neutral-50 text-xs font-bold text-neutral-800">
+                                        <th
+                                            className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('orderId')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Order Id
+                                                <SortIcon column="orderId" />
+                                            </div>
+                                        </th>
+                                        <th
+                                            className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('orderItemId')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Order Item Id
+                                                <SortIcon column="orderItemId" />
+                                            </div>
+                                        </th>
+                                        <th
+                                            className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('product')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Product
+                                                <SortIcon column="product" />
+                                            </div>
+                                        </th>
+                                        <th
+                                            className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('variant')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Variant
+                                                <SortIcon column="variant" />
+                                            </div>
+                                        </th>
+                                        <th
+                                            className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('total')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Total
+                                                <SortIcon column="total" />
+                                            </div>
+                                        </th>
+                                        <th
+                                            className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('date')}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Date
+                                                <SortIcon column="date" />
+                                            </div>
+                                        </th>
                                     </tr>
-                                ) : (
-                                    displayedReports.map((report, index) => (
-                                        <tr key={index} className="hover:bg-neutral-50">
-                                            <td className="p-4 border border-neutral-200 text-sm">
-                                                <Link 
-                                                    to={`/seller/orders/${report.orderId}`}
-                                                    className="text-blue-600 hover:text-blue-700 hover:underline"
-                                                >
-                                                    {report.orderId}
-                                                </Link>
+                                </thead>
+                                <tbody>
+                                    {reports.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="p-8 text-center text-neutral-500">
+                                                No data available in table
                                             </td>
-                                            <td className="p-4 border border-neutral-200 text-sm text-neutral-900">{report.orderItemId}</td>
-                                            <td className="p-4 border border-neutral-200 text-sm text-neutral-900">{report.product}</td>
-                                            <td className="p-4 border border-neutral-200 text-sm text-neutral-900">{report.variant}</td>
-                                            <td className="p-4 border border-neutral-200 text-sm text-neutral-900">{report.total.toFixed(2)}</td>
-                                            <td className="p-4 border border-neutral-200 text-sm text-neutral-900">{report.date}</td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                                    ) : (
+                                        reports.map((report, index) => (
+                                            <tr key={index} className="hover:bg-neutral-50">
+                                                <td className="p-4 border border-neutral-200 text-sm">
+                                                    <span className="text-blue-600 hover:text-blue-700 font-medium">
+                                                        {report.orderId}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 border border-neutral-200 text-sm text-neutral-900">{report.orderItemId}</td>
+                                                <td className="p-4 border border-neutral-200 text-sm text-neutral-900">{report.product}</td>
+                                                <td className="p-4 border border-neutral-200 text-sm text-neutral-900">{report.variant}</td>
+                                                <td className="p-4 border border-neutral-200 text-sm text-neutral-900">{report.total.toFixed(2)}</td>
+                                                <td className="p-4 border border-neutral-200 text-sm text-neutral-900">{report.date}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        )}
                     </div>
 
                     {/* Pagination Footer */}
                     <div className="p-4 border-t border-neutral-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                         <div className="text-sm text-neutral-600">
-                            Showing {filteredReports.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredReports.length)} of {filteredReports.length} entries
+                            Showing {reports.length === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, pagination.total)} of {pagination.total} entries
                         </div>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                disabled={currentPage === 1 || totalPages === 0}
+                                disabled={currentPage === 1 || pagination.pages === 0}
                                 className="w-8 h-8 flex items-center justify-center border border-teal-300 rounded hover:bg-teal-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <polyline points="15 18 9 12 15 6"></polyline>
                                 </svg>
                             </button>
-                            {totalPages > 0 && (
-                                <button
-                                    onClick={() => setCurrentPage(1)}
-                                    className={`w-8 h-8 flex items-center justify-center border rounded transition-colors ${
-                                        currentPage === 1
-                                            ? 'border-teal-600 bg-teal-600 text-white'
-                                            : 'border-teal-300 hover:bg-teal-50 text-neutral-900'
-                                    }`}
-                                >
-                                    1
-                                </button>
-                            )}
+                            {pagination.pages > 0 && Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                                // Simple pagination logic for showing first few pages
+                                const pageNum = i + 1;
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        className={`w-8 h-8 flex items-center justify-center border rounded transition-colors ${currentPage === pageNum
+                                                ? 'border-teal-600 bg-teal-600 text-white'
+                                                : 'border-teal-300 hover:bg-teal-50 text-neutral-900'
+                                            }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
                             <button
-                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages || totalPages === 0}
+                                onClick={() => setCurrentPage(prev => Math.min(pagination.pages, prev + 1))}
+                                disabled={currentPage === pagination.pages || pagination.pages === 0}
                                 className="w-8 h-8 flex items-center justify-center border border-teal-300 rounded hover:bg-teal-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

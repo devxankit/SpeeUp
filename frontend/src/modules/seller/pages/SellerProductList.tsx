@@ -1,126 +1,120 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getProducts, Product, ProductVariation } from '../../../services/api/productService';
+import { getCategories, Category as apiCategory } from '../../../services/api/categoryService';
+import { useAuth } from '../../../context/AuthContext';
 
-// Mock Data based on the image
-interface ProductVariation {
-    variationId: number;
+interface ProductVariationDisplay extends ProductVariation {
+    variationId: string;
     productName: string;
     sellerName: string;
     productImage: string;
     brandName: string;
     category: string;
     subCategory: string;
-    price: number;
-    discPrice: number;
     variation: string;
     isPopular?: boolean;
 }
 
-interface Product {
-    productId: number;
-    variations: ProductVariation[];
+interface ProductDisplay {
+    productId: string;
+    variations: ProductVariationDisplay[];
 }
 
-const PRODUCTS: Product[] = [
-    {
-        productId: 2,
-        variations: [
-            {
-                variationId: 16,
-                productName: 'Maggi Masala 2 Minutes Instant Noodles',
-                sellerName: 'SpeeUp store',
-                productImage: '/assets/product-mtr-poha.jpg',
-                brandName: 'Amul',
-                category: 'Instant Food',
-                subCategory: 'Noodles',
-                price: 60.00,
-                discPrice: 55.00,
-                variation: '100g',
-                isPopular: true
-            },
-            {
-                variationId: 18,
-                productName: 'Maggi Masala 2 Minutes Instant Noodles',
-                sellerName: 'SpeeUp store',
-                productImage: '/assets/product-mtr-poha.jpg',
-                brandName: 'Amul',
-                category: 'Instant Food',
-                subCategory: 'Noodles',
-                price: 120.00,
-                discPrice: 110.00,
-                variation: '200g',
-                isPopular: true
-            }
-        ]
-    },
-    {
-        productId: 3,
-        variations: [
-            {
-                variationId: 3,
-                productName: 'Maggi 2 - Minute Instant Noodles (Pack of 12)',
-                sellerName: 'SpeeUp store',
-                productImage: '/assets/product-mtr-poha.jpg',
-                brandName: 'Amul',
-                category: 'Instant Food',
-                subCategory: 'Noodles',
-                price: 180.00,
-                discPrice: 160.00,
-                variation: '840 g (12 x 70 g)'
-            }
-        ]
-    },
-    {
-        productId: 5,
-        variations: [
-            {
-                variationId: 39,
-                productName: 'Safal Frozen Green Peas',
-                sellerName: 'SpeeUp store',
-                productImage: '/assets/category-fruits-veg.png',
-                brandName: '',
-                category: 'Instant Food',
-                subCategory: 'Frozen Veg',
-                price: 50.00,
-                discPrice: 0,
-                variation: '250g'
-            }
-        ]
-    },
-    {
-        productId: 11,
-        variations: [
-            {
-                variationId: 14,
-                productName: 'Sumeru Grated Coconut',
-                sellerName: 'SpeeUp store',
-                productImage: '/assets/category-fruits-veg.png',
-                brandName: 'Amul',
-                category: 'Instant Food',
-                subCategory: 'Frozen Veg',
-                price: 108.00,
-                discPrice: 0,
-                variation: '200 g'
-            }
-        ]
-    }
-];
-
 export default function SellerProductList() {
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All Category');
     const [statusFilter, setStatusFilter] = useState('All Products');
     const [stockFilter, setStockFilter] = useState('All Products');
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
-    const [expandedProducts, setExpandedProducts] = useState<Set<number>>(new Set());
+    const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [totalPages, setTotalPages] = useState(1);
+    const [allCategories, setAllCategories] = useState<apiCategory[]>([]);
+    const { user } = useAuth();
+
+    // Fetch categories for filter
+    useEffect(() => {
+        const fetchCats = async () => {
+            try {
+                const res = await getCategories();
+                if (res.success) setAllCategories(res.data);
+            } catch (err) {
+                console.error("Error fetching categories:", err);
+            }
+        };
+        fetchCats();
+    }, []);
+
+    // Fetch products from API
+    useEffect(() => {
+        const fetchProducts = async () => {
+            setLoading(true);
+            setError('');
+            try {
+                const params: any = {
+                    page: currentPage,
+                    limit: rowsPerPage,
+                    sortBy: sortColumn || 'createdAt',
+                    sortOrder: sortDirection,
+                };
+
+                if (searchTerm) {
+                    params.search = searchTerm;
+                }
+                if (categoryFilter !== 'All Category') {
+                    params.category = categoryFilter;
+                }
+                if (statusFilter === 'Published') {
+                    params.status = 'published';
+                } else if (statusFilter === 'Unpublished') {
+                    params.status = 'unpublished';
+                }
+                if (stockFilter === 'In Stock') {
+                    params.stock = 'inStock';
+                } else if (stockFilter === 'Out of Stock') {
+                    params.stock = 'outOfStock';
+                }
+
+                const response = await getProducts(params);
+                if (response.success && response.data) {
+                    setProducts(response.data);
+                    // Extract pagination info if available
+                    if ((response as any).pagination) {
+                        setTotalPages((response as any).pagination.pages);
+                    }
+                } else {
+                    setError(response.message || 'Failed to fetch products');
+                }
+            } catch (err: any) {
+                setError(err.response?.data?.message || err.message || 'Failed to fetch products');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, [currentPage, rowsPerPage, searchTerm, categoryFilter, statusFilter, stockFilter, sortColumn, sortDirection]);
 
     // Flatten products with variations for display
-    const allVariations = PRODUCTS.flatMap(product =>
-        product.variations.map(variation => ({
-            ...variation,
-            productId: product.productId
+    const allVariations = products.flatMap(product =>
+        product.variations.map((variation, index) => ({
+            variationId: variation._id || `${product._id}-${index}`,
+            productName: product.productName,
+            sellerName: user?.storeName || '',
+            productImage: product.mainImageUrl || '/assets/product-placeholder.jpg',
+            brandName: (product.brandId as any)?.name || '-',
+            category: (product.categoryId as any)?.name || '-',
+            subCategory: (product.subcategoryId as any)?.name || '-',
+            price: variation.price,
+            discPrice: variation.discPrice,
+            variation: variation.title,
+            isPopular: product.popular,
+            productId: product._id,
         }))
     );
 
@@ -152,7 +146,8 @@ export default function SellerProductList() {
         });
     }
 
-    const totalPages = Math.ceil(filteredVariations.length / rowsPerPage);
+    // Use API pagination if available, otherwise client-side pagination
+    const displayTotalPages = totalPages > 1 ? totalPages : Math.ceil(filteredVariations.length / rowsPerPage);
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
     const displayedVariations = filteredVariations.slice(startIndex, endIndex);
@@ -166,7 +161,7 @@ export default function SellerProductList() {
         }
     };
 
-    const toggleProduct = (productId: number) => {
+    const toggleProduct = (productId: string) => {
         setExpandedProducts(prev => {
             const newSet = new Set(prev);
             if (newSet.has(productId)) {
@@ -185,7 +180,7 @@ export default function SellerProductList() {
     );
 
     // Get unique categories for filter
-    const categories = Array.from(new Set(allVariations.map(v => v.category)));
+    const categories = allCategories.map(cat => cat.name);
 
     return (
         <div className="flex flex-col h-full">
@@ -320,7 +315,7 @@ export default function SellerProductList() {
                                         Product Id
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('variationId')}
                                 >
@@ -328,7 +323,7 @@ export default function SellerProductList() {
                                         Variation Id <SortIcon column="variationId" />
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('productName')}
                                 >
@@ -336,7 +331,7 @@ export default function SellerProductList() {
                                         Product Name <SortIcon column="productName" />
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('sellerName')}
                                 >
@@ -349,7 +344,7 @@ export default function SellerProductList() {
                                         product Image
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('brandName')}
                                 >
@@ -357,7 +352,7 @@ export default function SellerProductList() {
                                         Brand Name <SortIcon column="brandName" />
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('category')}
                                 >
@@ -365,7 +360,7 @@ export default function SellerProductList() {
                                         Category <SortIcon column="category" />
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('subCategory')}
                                 >
@@ -373,7 +368,7 @@ export default function SellerProductList() {
                                         SubCategory <SortIcon column="subCategory" />
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('price')}
                                 >
@@ -381,7 +376,7 @@ export default function SellerProductList() {
                                         Price <SortIcon column="price" />
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('discPrice')}
                                 >
@@ -389,7 +384,7 @@ export default function SellerProductList() {
                                         Disc Price <SortIcon column="discPrice" />
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('variation')}
                                 >
@@ -402,7 +397,7 @@ export default function SellerProductList() {
                         <tbody>
                             {displayedVariations.map((variation, index) => {
                                 const isFirstVariation = index === 0 || displayedVariations[index - 1].productId !== variation.productId;
-                                const product = PRODUCTS.find(p => p.productId === variation.productId);
+                                const product = products.find(p => p._id === variation.productId);
                                 const hasMultipleVariations = product && product.variations.length > 1;
                                 const isExpanded = expandedProducts.has(variation.productId);
 
@@ -487,11 +482,10 @@ export default function SellerProductList() {
                         <button
                             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                             disabled={currentPage === 1}
-                            className={`p-2 border border-teal-600 rounded ${
-                                currentPage === 1
-                                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                    : 'text-teal-600 hover:bg-teal-50'
-                            }`}
+                            className={`p-2 border border-teal-600 rounded ${currentPage === 1
+                                ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                : 'text-teal-600 hover:bg-teal-50'
+                                }`}
                             aria-label="Previous page"
                         >
                             <svg
@@ -510,27 +504,25 @@ export default function SellerProductList() {
                                 />
                             </svg>
                         </button>
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        {Array.from({ length: displayTotalPages }, (_, i) => i + 1).map(page => (
                             <button
                                 key={page}
                                 onClick={() => setCurrentPage(page)}
-                                className={`px-3 py-1.5 border border-teal-600 rounded font-medium text-sm ${
-                                    currentPage === page
-                                        ? 'bg-teal-600 text-white'
-                                        : 'text-teal-600 hover:bg-teal-50'
-                                }`}
+                                className={`px-3 py-1.5 border border-teal-600 rounded font-medium text-sm ${currentPage === page
+                                    ? 'bg-teal-600 text-white'
+                                    : 'text-teal-600 hover:bg-teal-50'
+                                    }`}
                             >
                                 {page}
                             </button>
                         ))}
                         <button
-                            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                            disabled={currentPage === totalPages}
-                            className={`p-2 border border-teal-600 rounded ${
-                                currentPage === totalPages
-                                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                    : 'text-teal-600 hover:bg-teal-50'
-                            }`}
+                            onClick={() => setCurrentPage((prev) => Math.min(displayTotalPages, prev + 1))}
+                            disabled={currentPage === displayTotalPages}
+                            className={`p-2 border border-teal-600 rounded ${currentPage === displayTotalPages
+                                ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                : 'text-teal-600 hover:bg-teal-50'
+                                }`}
                             aria-label="Next page"
                         >
                             <svg

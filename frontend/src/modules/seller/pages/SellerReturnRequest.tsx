@@ -1,22 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-
-// Mock Data - Empty for now as shown in image
-interface ReturnRequest {
-    orderItemId: number;
-    product: string;
-    variant: string;
-    price: number;
-    discPrice: number;
-    quantity: number;
-    total: number;
-    status: string;
-    date: string;
-}
-
-const RETURN_REQUESTS: ReturnRequest[] = []; // Empty as shown in image
+import { getReturnRequests, ReturnRequest, GetReturnRequestsParams } from '../../../services/api/returnService';
 
 export default function SellerReturnRequest() {
+    const [returnRequests, setReturnRequests] = useState<ReturnRequest[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string>('');
     const [fromDate, setFromDate] = useState('12/06/2025');
     const [toDate, setToDate] = useState('12/06/2025');
     const [statusFilter, setStatusFilter] = useState('All Status');
@@ -26,18 +15,56 @@ export default function SellerReturnRequest() {
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-    const filteredRequests = RETURN_REQUESTS.filter(request => {
-        const matchesSearch = Object.values(request).some(value =>
-            String(value).toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        const matchesStatus = statusFilter === 'All Status' || request.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
+    // Fetch return requests from API
+    useEffect(() => {
+        const fetchReturnRequests = async () => {
+            setLoading(true);
+            setError('');
+            try {
+                const params: GetReturnRequestsParams = {
+                    page: currentPage,
+                    limit: rowsPerPage,
+                    sortBy: sortColumn || 'returnDate',
+                    sortOrder: sortDirection,
+                };
 
-    const totalPages = Math.ceil(filteredRequests.length / rowsPerPage);
+                // Parse date range
+                if (fromDate && toDate && fromDate !== '12/06/2025') {
+                    params.dateFrom = fromDate;
+                    params.dateTo = toDate;
+                }
+
+                // Add status filter
+                if (statusFilter !== 'All Status') {
+                    params.status = statusFilter;
+                }
+
+                // Add search
+                if (searchTerm) {
+                    params.search = searchTerm;
+                }
+
+                const response = await getReturnRequests(params);
+                if (response.success && response.data) {
+                    setReturnRequests(response.data);
+                } else {
+                    setError(response.message || 'Failed to fetch return requests');
+                }
+            } catch (err: any) {
+                setError(err.response?.data?.message || err.message || 'Failed to fetch return requests');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchReturnRequests();
+    }, [fromDate, toDate, statusFilter, searchTerm, currentPage, rowsPerPage, sortColumn, sortDirection]);
+
+    // Client-side pagination (can be moved to backend later)
+    const totalPages = Math.ceil(returnRequests.length / rowsPerPage);
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
-    const displayedRequests = filteredRequests.slice(startIndex, endIndex);
+    const displayedRequests = returnRequests.slice(startIndex, endIndex);
 
     const handleSort = (column: string) => {
         if (sortColumn === column) {
@@ -161,33 +188,33 @@ export default function SellerReturnRequest() {
                             </div>
 
                             {/* Export Button */}
-                            <button
-                                onClick={() => {
-                                    const headers = ['Order Item Id', 'Product', 'Variant', 'Price', 'Disc Price', 'Quantity', 'Total', 'Status', 'Date'];
-                                    const csvContent = [
-                                        headers.join(','),
-                                        ...filteredRequests.map(request => [
-                                            request.orderItemId,
-                                            `"${request.product}"`,
-                                            `"${request.variant}"`,
-                                            request.price,
-                                            request.discPrice,
-                                            request.quantity,
-                                            request.total,
-                                            `"${request.status}"`,
-                                            request.date
-                                        ].join(','))
-                                    ].join('\n');
-                                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                                    const link = document.createElement('a');
-                                    const url = URL.createObjectURL(blob);
-                                    link.setAttribute('href', url);
-                                    link.setAttribute('download', `return_requests_${new Date().toISOString().split('T')[0]}.csv`);
-                                    link.style.visibility = 'hidden';
-                                    document.body.appendChild(link);
-                                    link.click();
-                                    document.body.removeChild(link);
-                                }}
+                                    <button
+                                        onClick={() => {
+                                            const headers = ['Order Item Id', 'Product', 'Variant', 'Price', 'Disc Price', 'Quantity', 'Total', 'Status', 'Date'];
+                                            const csvContent = [
+                                                headers.join(','),
+                                                ...returnRequests.map(request => [
+                                                    request.orderItemId,
+                                                    `"${request.product}"`,
+                                                    `"${request.variant}"`,
+                                                    request.price,
+                                                    request.discPrice,
+                                                    request.quantity,
+                                                    request.total,
+                                                    `"${request.status}"`,
+                                                    request.date
+                                                ].join(','))
+                                            ].join('\n');
+                                            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                                            const link = document.createElement('a');
+                                            const url = URL.createObjectURL(blob);
+                                            link.setAttribute('href', url);
+                                            link.setAttribute('download', `return_requests_${new Date().toISOString().split('T')[0]}.csv`);
+                                            link.style.visibility = 'hidden';
+                                            document.body.appendChild(link);
+                                            link.click();
+                                            document.body.removeChild(link);
+                                        }}
                                 className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-sm font-medium flex items-center gap-1 transition-colors"
                             >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -215,7 +242,20 @@ export default function SellerReturnRequest() {
                         </div>
                     </div>
 
+                    {/* Loading and Error States */}
+                    {loading && (
+                        <div className="flex items-center justify-center p-8">
+                            <div className="text-neutral-500">Loading return requests...</div>
+                        </div>
+                    )}
+                    {error && !loading && (
+                        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg m-4">
+                            {error}
+                        </div>
+                    )}
+
                     {/* Table */}
+                    {!loading && !error && (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse border border-neutral-200">
                             <thead>
@@ -343,11 +383,12 @@ export default function SellerReturnRequest() {
                             </tbody>
                         </table>
                     </div>
+                    )}
 
                     {/* Pagination Footer */}
                     <div className="p-4 border-t border-neutral-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                         <div className="text-sm text-neutral-600">
-                            Showing {filteredRequests.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredRequests.length)} of {filteredRequests.length} entries
+                            Showing {returnRequests.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, returnRequests.length)} of {returnRequests.length} entries
                         </div>
                         <div className="flex items-center gap-2">
                             <button

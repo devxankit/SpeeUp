@@ -1,60 +1,52 @@
-import { useState } from 'react';
-
-// Mock Data based on the image
-const SUBCATEGORIES = [
-    {
-        id: 5,
-        categoryName: 'Pet Care',
-        subcategoryName: 'Accessories & Other Supplies',
-        subcategoryImage: '/assets/category-pet-care.png', // Placeholder - blue pet food bowl
-        totalProduct: 2
-    },
-    {
-        id: 6,
-        categoryName: 'Pet Care',
-        subcategoryName: 'Dog Need',
-        subcategoryImage: '/assets/category-pet-care.png', // Placeholder - red and yellow dog food bag
-        totalProduct: 8
-    },
-    {
-        id: 7,
-        categoryName: 'Sweet Tooth',
-        subcategoryName: 'Indian Sweet',
-        subcategoryImage: '/assets/category-sweet-tooth.png', // Placeholder - pink Rasgulla box
-        totalProduct: 1
-    },
-    {
-        id: 8,
-        categoryName: 'Sweet Tooth',
-        subcategoryName: 'Cake & Rolls',
-        subcategoryImage: '/assets/category-sweet-tooth.png', // Placeholder - round cake
-        totalProduct: 2
-    },
-    {
-        id: 9,
-        categoryName: 'Sweet Tooth',
-        subcategoryName: 'Syrup',
-        subcategoryImage: '/assets/category-sweet-tooth.png', // Placeholder - Hershey's syrup
-        totalProduct: 1
-    },
-    {
-        id: 10,
-        categoryName: 'Tea Coffee',
-        subcategoryName: 'Tea',
-        subcategoryImage: '/assets/category-tea-coffee.png', // Placeholder - tea bags
-        totalProduct: 1
-    }
-];
+import { useState, useEffect } from 'react';
+import { getAllSubcategories, SubCategory } from '../../../services/api/categoryService';
 
 export default function SellerSubCategory() {
+    const [subcategories, setSubcategories] = useState<SubCategory[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string>('');
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [totalPages, setTotalPages] = useState(1);
 
-    // Sort subcategories
-    let sortedSubcategories = [...SUBCATEGORIES];
-    if (sortColumn) {
+    // Fetch subcategories from API
+    useEffect(() => {
+        const fetchSubcategories = async () => {
+            setLoading(true);
+            setError('');
+            try {
+                const params: any = {
+                    page: currentPage,
+                    limit: rowsPerPage,
+                    sortBy: sortColumn || 'subcategoryName',
+                    sortOrder: sortDirection,
+                };
+
+                const response = await getAllSubcategories(params);
+                if (response.success && response.data) {
+                    setSubcategories(response.data);
+                    // Extract pagination info if available
+                    if ((response as any).pagination) {
+                        setTotalPages((response as any).pagination.pages);
+                    }
+                } else {
+                    setError(response.message || 'Failed to fetch subcategories');
+                }
+            } catch (err: any) {
+                setError(err.response?.data?.message || err.message || 'Failed to fetch subcategories');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSubcategories();
+    }, [currentPage, rowsPerPage, sortColumn, sortDirection]);
+
+    // Client-side sorting (if API doesn't handle it)
+    let sortedSubcategories = [...subcategories];
+    if (sortColumn && !sortColumn.includes('.')) {
         sortedSubcategories.sort((a, b) => {
             let aVal: any = a[sortColumn as keyof typeof a];
             let bVal: any = b[sortColumn as keyof typeof b];
@@ -70,8 +62,8 @@ export default function SellerSubCategory() {
         });
     }
 
-    // Pagination
-    const totalPages = Math.ceil(sortedSubcategories.length / rowsPerPage);
+    // Pagination (client-side if API doesn't handle it)
+    const displayTotalPages = totalPages > 1 ? totalPages : Math.ceil(sortedSubcategories.length / rowsPerPage);
     const startIndex = (currentPage - 1) * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
     const displayedSubcategories = sortedSubcategories.slice(startIndex, endIndex);
@@ -147,7 +139,7 @@ export default function SellerSubCategory() {
                                     <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             </button>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            {Array.from({ length: displayTotalPages }, (_, i) => i + 1).map(page => (
                                 <button
                                     key={page}
                                     onClick={() => setCurrentPage(page)}
@@ -161,10 +153,10 @@ export default function SellerSubCategory() {
                                 </button>
                             ))}
                             <button
-                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(prev => Math.min(displayTotalPages, prev + 1))}
+                                disabled={currentPage === displayTotalPages}
                                 className={`p-2 border border-teal-600 rounded ${
-                                    currentPage === totalPages
+                                    currentPage === displayTotalPages
                                         ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
                                         : 'text-teal-600 hover:bg-teal-50'
                                 }`}
@@ -177,7 +169,20 @@ export default function SellerSubCategory() {
                     </div>
                 )}
 
+                {/* Loading and Error States */}
+                {loading && (
+                    <div className="flex items-center justify-center p-8">
+                        <div className="text-neutral-500">Loading subcategories...</div>
+                    </div>
+                )}
+                {error && !loading && (
+                    <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg m-4">
+                        {error}
+                    </div>
+                )}
+
                 {/* Table */}
+                {!loading && !error && (
                 <div className="overflow-x-auto flex-1">
                     <table className="w-full text-left border-collapse border border-neutral-200">
                         <thead>
@@ -226,14 +231,14 @@ export default function SellerSubCategory() {
                         </thead>
                         <tbody>
                             {displayedSubcategories.map((subcategory) => (
-                                <tr key={subcategory.id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700">
-                                    <td className="p-4 align-middle border border-neutral-200">{subcategory.id}</td>
+                                <tr key={subcategory._id || subcategory.id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700">
+                                    <td className="p-4 align-middle border border-neutral-200">{subcategory._id || subcategory.id}</td>
                                     <td className="p-4 align-middle border border-neutral-200">{subcategory.categoryName}</td>
                                     <td className="p-4 align-middle border border-neutral-200">{subcategory.subcategoryName}</td>
                                     <td className="p-4 border border-neutral-200">
                                         <div className="w-16 h-12 bg-white border border-neutral-200 rounded p-1 flex items-center justify-center mx-auto">
                                             <img
-                                                src={subcategory.subcategoryImage}
+                                                src={subcategory.subcategoryImage || '/assets/category-placeholder.png'}
                                                 alt={subcategory.subcategoryName}
                                                 className="max-w-full max-h-full object-contain"
                                                 onError={(e) => {
@@ -242,7 +247,7 @@ export default function SellerSubCategory() {
                                             />
                                         </div>
                                     </td>
-                                    <td className="p-4 align-middle border border-neutral-200">{subcategory.totalProduct}</td>
+                                    <td className="p-4 align-middle border border-neutral-200">{subcategory.totalProduct || 0}</td>
                                 </tr>
                             ))}
                             {displayedSubcategories.length === 0 && (
@@ -255,6 +260,7 @@ export default function SellerSubCategory() {
                         </tbody>
                     </table>
                 </div>
+                )}
             </div>
         </div>
     );

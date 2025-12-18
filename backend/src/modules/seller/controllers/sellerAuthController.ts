@@ -92,6 +92,8 @@ export const verifyOTP = asyncHandler(async (req: Request, res: Response) => {
         storeName: seller.storeName,
         status: seller.status,
         logo: seller.logo,
+        address: seller.address,
+        city: seller.city,
       },
     },
   });
@@ -168,7 +170,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     viewCustomerDetails: false,
     commission: 0,
     balance: 0,
-    categories: [],
+    categories: req.body.categories || [],
   });
 
   // Generate token
@@ -186,7 +188,59 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
         email: seller.email,
         storeName: seller.storeName,
         status: seller.status,
+        address: seller.address,
+        city: seller.city,
       },
     },
+  });
+});
+
+/**
+ * Get seller's profile
+ */
+export const getProfile = asyncHandler(async (req: Request, res: Response) => {
+  const sellerId = (req as any).user.userId;
+
+  const seller = await Seller.findById(sellerId).select("-password");
+  if (!seller) {
+    return res.status(404).json({
+      success: false,
+      message: "Seller not found",
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: seller,
+  });
+});
+
+/**
+ * Update seller's profile
+ */
+export const updateProfile = asyncHandler(async (req: Request, res: Response) => {
+  const sellerId = (req as any).user.userId;
+  const updates = req.body;
+
+  // Prevent updating sensitive fields directly
+  const restrictedFields = ["password", "mobile", "email", "status", "balance"];
+  restrictedFields.forEach((field) => delete updates[field]);
+
+  const seller = await Seller.findByIdAndUpdate(sellerId, updates, {
+    new: true,
+    runValidators: true,
+  }).select("-password");
+
+  if (!seller) {
+    return res.status(404).json({
+      success: false,
+      message: "Seller not found",
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    data: seller,
   });
 });
