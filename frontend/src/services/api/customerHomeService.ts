@@ -9,6 +9,7 @@ export interface HomeContentResponse {
         promoBanners: any[];
         trending: any[];
         cookingIdeas: any[];
+        promoCards?: any[];
     };
 }
 

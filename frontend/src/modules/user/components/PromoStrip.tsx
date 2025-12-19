@@ -1,16 +1,8 @@
 import { useLayoutEffect, useRef, useState, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { Link } from 'react-router-dom';
-// import { products } from '../../../data/products';
-const products = [
-  { id: 'lays-magic-masala', name: 'Lays Magic Masala', imageUrl: '/assets/product-lays-magic-masala.jpg' },
-  { id: 'amul-butter', name: 'Amul Butter', imageUrl: '/assets/product-amul-butter.jpg' },
-  { id: 'britannia-bread', name: 'Britannia Bread', imageUrl: '/assets/product-britannia-bread.jpg' },
-  { id: 'amul-curd', name: 'Amul Curd', imageUrl: '/assets/product-amul-curd.jpg' },
-  { id: 'mother-dairy-curd', name: 'Mother Dairy Curd', imageUrl: '/assets/product-mother-dairy-curd.jpg' },
-];
-
 import { getTheme } from '../../../utils/themes';
+import { getHomeContent } from '../../../services/api/customerHomeService';
 
 interface PromoCard {
   id: string;
@@ -20,37 +12,6 @@ interface PromoCard {
   categoryId?: string;
   bgColor?: string;
 }
-
-const promoCards: PromoCard[] = [
-  {
-    id: 'self-care',
-    badge: 'Up to 55% OFF',
-    title: 'Self Care & Wellness',
-    categoryId: 'personal-care',
-    bgColor: 'bg-yellow-50',
-  },
-  {
-    id: 'hot-meals',
-    badge: 'Up to 55% OFF',
-    title: 'Hot Meals & Drinks',
-    categoryId: 'breakfast-instant',
-    bgColor: 'bg-yellow-50',
-  },
-  {
-    id: 'kitchen-essentials',
-    badge: 'Up to 55% OFF',
-    title: 'Kitchen Essentials',
-    categoryId: 'atta-rice',
-    bgColor: 'bg-yellow-50',
-  },
-  {
-    id: 'cleaning-home',
-    badge: 'Up to 75% OFF',
-    title: 'Cleaning & Home Needs',
-    categoryId: 'household',
-    bgColor: 'bg-yellow-50',
-  },
-];
 
 // Icon mappings for each category
 const getCategoryIcons = (categoryId: string) => {
@@ -70,118 +31,9 @@ const getCategoryIcons = (categoryId: string) => {
   return iconMap[categoryId] || ['📦', '📦', '📦', '📦'];
 };
 
-// Get featured products based on active tab
-const getFeaturedProducts = (activeTab: string) => {
-  const allProducts: Record<string, Array<{ id: string; name: string; originalPrice: number; discountedPrice: number }>> = {
-    all: [
-      { id: 'lays-magic-masala', name: 'Biscuit', originalPrice: 198, discountedPrice: 129 },
-      { id: 'amul-butter', name: 'Body Lotion', originalPrice: 750, discountedPrice: 339 },
-      { id: 'britannia-bread', name: 'French Fries', originalPrice: 299, discountedPrice: 174 },
-      { id: 'amul-curd', name: 'Shampoo', originalPrice: 450, discountedPrice: 249 },
-    ],
-    wedding: [
-      { id: 'amul-butter', name: 'Decor Set', originalPrice: 1200, discountedPrice: 599 },
-      { id: 'britannia-bread', name: 'Gift Box', originalPrice: 899, discountedPrice: 449 },
-      { id: 'lays-magic-masala', name: 'Essentials', originalPrice: 699, discountedPrice: 349 },
-      { id: 'amul-curd', name: 'Accessories', originalPrice: 599, discountedPrice: 299 },
-    ],
-    winter: [
-      { id: 'amul-butter', name: 'Winter Wear', originalPrice: 1999, discountedPrice: 999 },
-      { id: 'britannia-bread', name: 'Warmers', originalPrice: 799, discountedPrice: 399 },
-      { id: 'lays-magic-masala', name: 'Care Kit', originalPrice: 599, discountedPrice: 299 },
-      { id: 'amul-curd', name: 'Accessories', originalPrice: 499, discountedPrice: 249 },
-    ],
-    electronics: [
-      { id: 'amul-butter', name: 'Smartphone', originalPrice: 19999, discountedPrice: 14999 },
-      { id: 'britannia-bread', name: 'Laptop', originalPrice: 49999, discountedPrice: 39999 },
-      { id: 'lays-magic-masala', name: 'Accessories', originalPrice: 1999, discountedPrice: 999 },
-      { id: 'amul-curd', name: 'Gadgets', originalPrice: 2999, discountedPrice: 1499 },
-    ],
-    beauty: [
-      { id: 'amul-butter', name: 'Makeup Kit', originalPrice: 1999, discountedPrice: 999 },
-      { id: 'britannia-bread', name: 'Skincare', originalPrice: 1499, discountedPrice: 749 },
-      { id: 'lays-magic-masala', name: 'Haircare', originalPrice: 899, discountedPrice: 449 },
-      { id: 'amul-curd', name: 'Fragrance', originalPrice: 1299, discountedPrice: 649 },
-    ],
-    grocery: [
-      { id: 'lays-magic-masala', name: 'Biscuit', originalPrice: 198, discountedPrice: 129 },
-      { id: 'amul-butter', name: 'Butter', originalPrice: 299, discountedPrice: 199 },
-      { id: 'britannia-bread', name: 'Bread', originalPrice: 45, discountedPrice: 35 },
-      { id: 'amul-curd', name: 'Curd', originalPrice: 89, discountedPrice: 69 },
-    ],
-    fashion: [
-      { id: 'amul-butter', name: 'Clothing', originalPrice: 1999, discountedPrice: 999 },
-      { id: 'britannia-bread', name: 'Footwear', originalPrice: 2999, discountedPrice: 1499 },
-      { id: 'lays-magic-masala', name: 'Accessories', originalPrice: 799, discountedPrice: 399 },
-      { id: 'amul-curd', name: 'Jewelry', originalPrice: 4999, discountedPrice: 2499 },
-    ],
-    sports: [
-      { id: 'amul-butter', name: 'Fitness Kit', originalPrice: 2999, discountedPrice: 1499 },
-      { id: 'britannia-bread', name: 'Sports Wear', originalPrice: 1999, discountedPrice: 999 },
-      { id: 'lays-magic-masala', name: 'Equipment', originalPrice: 4999, discountedPrice: 2499 },
-      { id: 'amul-curd', name: 'Accessories', originalPrice: 899, discountedPrice: 449 },
-    ],
-  };
-
-  return allProducts[activeTab] || allProducts.all;
-};
-
 interface PromoStripProps {
   activeTab?: string;
 }
-
-// Get category cards based on active tab
-const getCategoryCards = (activeTab: string): PromoCard[] => {
-  const allCards: Record<string, PromoCard[]> = {
-    all: promoCards,
-    wedding: [
-      { id: 'wedding-decor', badge: 'Up to 60% OFF', title: 'Wedding Decor', categoryId: 'home-office', bgColor: 'bg-pink-50' },
-      { id: 'wedding-gifts', badge: 'Up to 50% OFF', title: 'Wedding Gifts', categoryId: 'home-office', bgColor: 'bg-pink-50' },
-      { id: 'wedding-essentials', badge: 'Up to 55% OFF', title: 'Wedding Essentials', categoryId: 'home-office', bgColor: 'bg-pink-50' },
-      { id: 'wedding-accessories', badge: 'Up to 45% OFF', title: 'Wedding Accessories', categoryId: 'home-office', bgColor: 'bg-pink-50' },
-    ],
-    winter: [
-      { id: 'winter-wear', badge: 'Up to 70% OFF', title: 'Winter Wear', categoryId: 'fashion', bgColor: 'bg-blue-50' },
-      { id: 'winter-essentials', badge: 'Up to 60% OFF', title: 'Winter Essentials', categoryId: 'home-office', bgColor: 'bg-blue-50' },
-      { id: 'winter-care', badge: 'Up to 55% OFF', title: 'Winter Care', categoryId: 'personal-care', bgColor: 'bg-blue-50' },
-      { id: 'winter-accessories', badge: 'Up to 50% OFF', title: 'Winter Accessories', categoryId: 'fashion', bgColor: 'bg-blue-50' },
-    ],
-    electronics: [
-      { id: 'mobile-phones', badge: 'Up to 40% OFF', title: 'Mobile Phones', categoryId: 'electronics', bgColor: 'bg-yellow-50' },
-      { id: 'laptops', badge: 'Up to 35% OFF', title: 'Laptops', categoryId: 'electronics', bgColor: 'bg-yellow-50' },
-      { id: 'accessories', badge: 'Up to 50% OFF', title: 'Accessories', categoryId: 'electronics', bgColor: 'bg-yellow-50' },
-      { id: 'gadgets', badge: 'Up to 45% OFF', title: 'Gadgets', categoryId: 'electronics', bgColor: 'bg-yellow-50' },
-    ],
-    beauty: [
-      { id: 'makeup', badge: 'Up to 60% OFF', title: 'Makeup', categoryId: 'personal-care', bgColor: 'bg-pink-50' },
-      { id: 'skincare', badge: 'Up to 55% OFF', title: 'Skincare', categoryId: 'personal-care', bgColor: 'bg-pink-50' },
-      { id: 'haircare', badge: 'Up to 50% OFF', title: 'Haircare', categoryId: 'personal-care', bgColor: 'bg-pink-50' },
-      { id: 'fragrances', badge: 'Up to 45% OFF', title: 'Fragrances', categoryId: 'personal-care', bgColor: 'bg-pink-50' },
-    ],
-    grocery: [
-      { id: 'fresh-vegetables', badge: 'Up to 30% OFF', title: 'Fresh Vegetables', categoryId: 'fruits-veg', bgColor: 'bg-green-50' },
-      { id: 'dairy-products', badge: 'Up to 25% OFF', title: 'Dairy Products', categoryId: 'dairy-breakfast', bgColor: 'bg-green-50' },
-      { id: 'staples', badge: 'Up to 20% OFF', title: 'Staples', categoryId: 'atta-rice', bgColor: 'bg-green-50' },
-      { id: 'snacks', badge: 'Up to 35% OFF', title: 'Snacks', categoryId: 'snacks', bgColor: 'bg-green-50' },
-    ],
-    fashion: [
-      { id: 'clothing', badge: 'Up to 60% OFF', title: 'Clothing', categoryId: 'fashion', bgColor: 'bg-purple-50' },
-      { id: 'footwear', badge: 'Up to 55% OFF', title: 'Footwear', categoryId: 'fashion', bgColor: 'bg-purple-50' },
-      { id: 'accessories', badge: 'Up to 50% OFF', title: 'Accessories', categoryId: 'fashion', bgColor: 'bg-purple-50' },
-      { id: 'jewelry', badge: 'Up to 45% OFF', title: 'Jewelry', categoryId: 'fashion', bgColor: 'bg-purple-50' },
-    ],
-    sports: [
-      { id: 'fitness', badge: 'Up to 50% OFF', title: 'Fitness', categoryId: 'sports', bgColor: 'bg-blue-50' },
-      { id: 'sports-wear', badge: 'Up to 45% OFF', title: 'Sports Wear', categoryId: 'sports', bgColor: 'bg-blue-50' },
-      { id: 'equipment', badge: 'Up to 40% OFF', title: 'Equipment', categoryId: 'sports', bgColor: 'bg-blue-50' },
-      { id: 'accessories', badge: 'Up to 35% OFF', title: 'Accessories', categoryId: 'sports', bgColor: 'bg-blue-50' },
-    ],
-  };
-
-  return allCards[activeTab] || promoCards;
-};
-
-import { getHomeContent } from '../../../services/api/customerHomeService';
 
 export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
   const theme = getTheme(activeTab);
@@ -197,34 +49,54 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
   const productNameRef = useRef<HTMLDivElement>(null);
   const productImageRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
+  const [hasData, setHasData] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         const response = await getHomeContent();
-        if (response.success && response.data) {
-          // Map backend promoBanners or other data to categoryCards if needed
-          // For now, let's keep the getCategoryCards(activeTab) logic but maybe filter by real categories
-          const dynamicCards = getCategoryCards(activeTab);
-          setCategoryCards(dynamicCards);
 
-          // Use bestsellers for featuredProducts
+        let fetchedCards: PromoCard[] = [];
+        let fetchedProducts: any[] = [];
+
+        if (response.success && response.data) {
+          // 1. Check for specific Promo Cards (curated from backend)
+          if (response.data.promoCards && response.data.promoCards.length > 0) {
+            fetchedCards = response.data.promoCards;
+          }
+          // 2. Fallback to categories if no promo cards
+          else if (response.data.categories && response.data.categories.length > 0) {
+            fetchedCards = response.data.categories.slice(0, 4).map((c: any) => ({
+              id: c._id || c.id,
+              badge: 'Up to 50% OFF',
+              title: c.name,
+              categoryId: c.slug || c._id,
+              bgColor: c.color || 'bg-yellow-50'
+            }));
+          }
+
+          // Map bestsellers to FeaturedProducts
           if (response.data.bestsellers && response.data.bestsellers.length > 0) {
-            setFeaturedProducts(response.data.bestsellers.map((p: any) => ({
+            fetchedProducts = response.data.bestsellers.map((p: any) => ({
               id: p._id,
-              name: p.productName,
+              name: p.productName || p.name,
               originalPrice: p.mrp || Math.round(p.price * 1.2),
               discountedPrice: p.price,
-              imageUrl: p.mainImage
-            })));
-          } else {
-            setFeaturedProducts(getFeaturedProducts(activeTab));
+              imageUrl: p.mainImage || p.image
+            }));
           }
         }
+
+        setCategoryCards(fetchedCards);
+        setFeaturedProducts(fetchedProducts);
+        setHasData(fetchedCards.length > 0 || fetchedProducts.length > 0);
+
       } catch (error) {
         console.error("Error fetching home content for PromoStrip:", error);
-        setCategoryCards(getCategoryCards(activeTab));
-        setFeaturedProducts(getFeaturedProducts(activeTab));
+        setCategoryCards([]);
+        setFeaturedProducts([]);
+        setHasData(false);
       } finally {
         setLoading(false);
       }
@@ -238,29 +110,33 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
   }, [activeTab, featuredProducts.length]);
 
   useLayoutEffect(() => {
+    if (!hasData) return;
     const container = containerRef.current;
     if (!container) return;
 
     const ctx = gsap.context(() => {
       const cards = container.querySelectorAll('.promo-card');
-      gsap.fromTo(
-        cards,
-        { y: 30, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.5,
-          stagger: 0.08,
-          ease: 'power3.out',
-        }
-      );
+      if (cards.length > 0) {
+        gsap.fromTo(
+          cards,
+          { y: 30, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.5,
+            stagger: 0.08,
+            ease: 'power3.out',
+          }
+        );
+      }
     }, container);
 
     return () => ctx.revert();
-  }, []);
+  }, [hasData]);
 
   // Snowflake animation
   useLayoutEffect(() => {
+    if (!hasData) return;
     const snowflakesContainer = snowflakesRef.current;
     if (!snowflakesContainer) return;
 
@@ -293,10 +169,11 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
         gsap.killTweensOf(snowflake);
       });
     };
-  }, []);
+  }, [hasData]);
 
-  // HOUSEFULL SALE animation: shrink down, pop out, then letter-by-letter pop - repeats every few seconds
+  // HOUSEFULL SALE animation
   useLayoutEffect(() => {
+    if (!hasData) return;
     const housefullContainer = housefullRef.current;
     const saleText = saleRef.current;
     const dateText = dateRef.current;
@@ -305,99 +182,86 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
     const letters = housefullContainer.querySelectorAll('.housefull-letter');
 
     const animate = () => {
-      // Animation timeline
       const tl = gsap.timeline();
-
-      // Set initial state - start at normal size
       gsap.set([housefullContainer, saleText, dateText], { scale: 1, opacity: 1 });
 
-      // Step 1: Shrink down (going into a hole) - all elements together
       tl.to([housefullContainer, saleText, dateText], {
         scale: 0,
         opacity: 0,
         duration: 0.6,
         ease: 'power2.in',
       })
-        // Step 2: Pop out with bounce - all elements together
         .to([housefullContainer, saleText, dateText], {
           scale: 1.2,
           opacity: 1,
           duration: 0.5,
           ease: 'back.out(1.7)',
         })
-        // Step 3: Pop back to normal size - all elements together
         .to([housefullContainer, saleText, dateText], {
           scale: 1,
           duration: 0.4,
           ease: 'power2.out',
         })
-        // Step 4: Wait a bit before letter animation
         .to({}, { duration: 0.4 })
-        // Step 5: Letter-by-letter pop up animation (first to last)
         .to(letters, {
           y: -15,
           duration: 0.2,
           stagger: 0.06,
           ease: 'power2.out',
         })
-        // Step 6: Letters go back to place
         .to(letters, {
           y: 0,
           duration: 0.2,
           stagger: 0.06,
           ease: 'power2.in',
         })
-        // Step 7: Wait before repeating
         .to({}, {
           duration: 2,
           onComplete: () => {
-            // Repeat animation after delay
+            // Check if component is still mounted implicitly by closure not being killed, 
+            // but better to rely on cleanup. 
+            // However, for layoutEffect loop, it's fine.
             setTimeout(animate, 1000);
           }
         });
     };
 
-    // Start initial animation
     animate();
 
     return () => {
       gsap.killTweensOf([housefullContainer, saleText, dateText, letters]);
     };
-  }, []);
+  }, [hasData]);
 
   // Product rotation animation
   useEffect(() => {
+    if (featuredProducts.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentProductIndex((prev) => (prev + 1) % featuredProducts.length);
-    }, 3000); // Change product every 3 seconds
+    }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [featuredProducts.length]);
 
-  // Animate product change with left swipe
+  // Animate product change
   useEffect(() => {
     const elements = [priceContainerRef.current, productNameRef.current, productImageRef.current];
-    // Check if all elements exist
     if (elements.some(el => !el)) return;
 
-    // Swipe left (out)
     const tween = gsap.to(elements, {
       opacity: 0,
       x: -30,
       duration: 0.3,
       ease: 'power2.in',
       onComplete: () => {
-        // Re-check if elements exist in case component unmounted
         const currentElements = [priceContainerRef.current, productNameRef.current, productImageRef.current];
         if (currentElements.some(el => !el)) return;
 
-        // Reset position and update content
         gsap.set(currentElements, {
           x: 30,
           opacity: 0,
         });
 
-        // Swipe in from right
         gsap.to(currentElements, {
           opacity: 1,
           x: 0,
@@ -413,10 +277,17 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
   }, [currentProductIndex]);
 
   const currentProduct = featuredProducts[currentProductIndex];
-  const product = currentProduct ? products.find(p => p.id === currentProduct.id) : null;
 
-  if (loading || !currentProduct) {
+  if (loading) {
     return <div className="h-[200px] w-full bg-neutral-100 animate-pulse rounded-lg mx-0 mt-4" />;
+  }
+
+  if (!hasData || !currentProduct) {
+    return (
+      <div className="text-center py-6 text-neutral-400 text-sm">
+        No active promotions
+      </div>
+    );
   }
 
   return (
@@ -448,7 +319,6 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.9))' }}>
-                {/* Longer, thinner stems */}
                 <path d="M12 1V5M12 19V23M3 12H1M23 12H21M20.5 20.5L18.5 18.5M20.5 3.5L18.5 5.5M3.5 20.5L5.5 18.5M3.5 3.5L5.5 5.5M18.5 18.5L16.5 16.5M18.5 5.5L16.5 7.5M5.5 18.5L7.5 16.5M5.5 5.5L7.5 7.5" stroke="rgba(255, 255, 255, 1)" strokeWidth="1.2" strokeLinecap="round" />
                 <circle cx="12" cy="12" r="1.8" fill="rgba(255, 255, 255, 1)" />
               </svg>
@@ -465,7 +335,6 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.9))' }}>
-                {/* Longer, thinner stems */}
                 <path d="M12 1V5M12 19V23M3 12H1M23 12H21M20.5 20.5L18.5 18.5M20.5 3.5L18.5 5.5M3.5 20.5L5.5 18.5M3.5 3.5L5.5 5.5M18.5 18.5L16.5 16.5M18.5 5.5L16.5 7.5M5.5 18.5L7.5 16.5M5.5 5.5L7.5 7.5" stroke="rgba(255, 255, 255, 1)" strokeWidth="1.2" strokeLinecap="round" />
                 <circle cx="12" cy="12" r="1.8" fill="rgba(255, 255, 255, 1)" />
               </svg>
@@ -599,9 +468,9 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
               {/* Product Thumbnail - Bottom Center, sized to container */}
               <div ref={productImageRef} className="flex-1 flex items-end justify-center w-full" style={{ minHeight: '50px', maxHeight: '65px' }}>
                 <div className="w-12 h-16 rounded flex items-center justify-center overflow-visible" style={{ background: 'transparent' }}>
-                  {(product?.imageUrl || currentProduct.imageUrl) ? (
+                  {currentProduct.imageUrl ? (
                     <img
-                      src={product?.imageUrl || currentProduct.imageUrl}
+                      src={currentProduct.imageUrl}
                       alt={currentProduct.name}
                       className="w-full h-full object-contain"
                       style={{
@@ -676,4 +545,3 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
     </div>
   );
 }
-

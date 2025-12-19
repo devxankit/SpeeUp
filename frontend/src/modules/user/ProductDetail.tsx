@@ -180,6 +180,7 @@ export default function ProductDetail() {
                 src={product.imageUrl}
                 alt={product.name}
                 className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-neutral-400 text-6xl">
@@ -506,6 +507,7 @@ export default function ProductDetail() {
                             src={similarProduct.imageUrl || similarProduct.mainImage}
                             alt={similarProduct.name || similarProduct.productName}
                             className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-2xl">
