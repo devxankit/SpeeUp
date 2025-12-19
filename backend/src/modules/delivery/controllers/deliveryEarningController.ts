@@ -7,7 +7,7 @@ import mongoose from "mongoose";
  * Get Earnings History
  */
 export const getEarningsHistory = asyncHandler(async (req: Request, res: Response) => {
-    const deliveryId = req.user?.id;
+    const deliveryId = (req.user as any)?.userId;
     const objectId = new mongoose.Types.ObjectId(deliveryId);
 
     // Aggregation to group earnings by day

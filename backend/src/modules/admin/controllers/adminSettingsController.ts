@@ -7,7 +7,7 @@ import PaymentMethod from "../../../models/PaymentMethod";
  * Get app settings
  */
 export const getAppSettings = asyncHandler(
-  async (req: Request, res: Response) => {
+  async (_req: Request, res: Response) => {
     let settings = await AppSettings.findOne();
 
     // Create default settings if none exist
@@ -58,7 +58,7 @@ export const updateAppSettings = asyncHandler(
  * Get payment methods
  */
 export const getPaymentMethods = asyncHandler(
-  async (req: Request, res: Response) => {
+  async (_req: Request, res: Response) => {
     const paymentMethods = await PaymentMethod.find().sort({ order: 1 });
 
     return res.status(200).json({
@@ -108,7 +108,7 @@ export const updatePaymentMethods = asyncHandler(
  * Get SMS gateway settings
  */
 export const getSMSGatewaySettings = asyncHandler(
-  async (req: Request, res: Response) => {
+  async (_req: Request, res: Response) => {
     const settings = await AppSettings.findOne().select("smsGateway");
 
     return res.status(200).json({
@@ -137,7 +137,7 @@ export const updateSMSGatewaySettings = asyncHandler(
       });
     } else {
       settings.smsGateway = smsGateway;
-      settings.updatedBy = req.user?.userId;
+      settings.updatedBy = req.user?.userId as any;
       await settings.save();
     }
 

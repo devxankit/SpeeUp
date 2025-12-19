@@ -162,7 +162,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Create new delivery partner
-  const delivery = await Delivery.create({
+  await Delivery.create({
     name,
     mobile,
     email,
