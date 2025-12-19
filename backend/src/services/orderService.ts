@@ -1,5 +1,5 @@
 import Order from "../models/Order";
-import OrderItem from "../models/OrderItem";
+import { IOrderItem } from "../models/OrderItem";
 import Inventory from "../models/Inventory";
 import Commission from "../models/Commission";
 import Seller from "../models/Seller";
@@ -44,7 +44,7 @@ export const processOrderStatusTransition = async (
 /**
  * Reserve inventory for order items
  */
-const reserveInventory = async (items: OrderItem[]) => {
+const reserveInventory = async (items: IOrderItem[]) => {
   for (const item of items) {
     const inventory = await Inventory.findOne({ product: item.product });
     if (inventory) {
@@ -61,7 +61,7 @@ const reserveInventory = async (items: OrderItem[]) => {
 /**
  * Restore inventory when order is cancelled
  */
-const restoreInventory = async (items: OrderItem[]) => {
+const restoreInventory = async (items: IOrderItem[]) => {
   for (const item of items) {
     const inventory = await Inventory.findOne({ product: item.product });
     if (inventory) {
@@ -79,7 +79,7 @@ const restoreInventory = async (items: OrderItem[]) => {
 /**
  * Create commissions for sellers when order is delivered
  */
-const createCommissions = async (items: OrderItem[]) => {
+const createCommissions = async (items: IOrderItem[]) => {
   for (const item of items) {
     const seller = await Seller.findById(item.seller);
     if (seller && seller.commission > 0) {
@@ -135,7 +135,7 @@ export const validateStatusTransition = (
  * Calculate order totals
  */
 export const calculateOrderTotals = async (
-  items: OrderItem[],
+  items: IOrderItem[],
   couponCode?: string
 ) => {
   let subtotal = 0;

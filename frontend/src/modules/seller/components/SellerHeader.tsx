@@ -111,11 +111,6 @@ export default function SellerHeader({ onMenuClick, isSidebarOpen }: SellerHeade
               }`}
           >
             Orders
-            {!isActive('/seller/orders') && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">
-                1
-              </span>
-            )}
           </button>
           <button
             onClick={() => navigate('/seller/return-order')}

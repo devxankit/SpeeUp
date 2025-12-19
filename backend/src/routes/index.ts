@@ -14,6 +14,16 @@ import returnRoutes from "./returnRoutes";
 import reportRoutes from "./reportRoutes";
 import walletRoutes from "./walletRoutes";
 import taxRoutes from "./taxRoutes";
+import customerProductRoutes from "./customerProductRoutes";
+import customerOrderRoutes from "./customerOrderRoutes";
+import customerCategoryRoutes from "./customerCategoryRoutes";
+import customerCouponRoutes from "./customerCouponRoutes";
+import customerAddressRoutes from "./customerAddressRoutes";
+import customerHomeRoutes from "./customerHomeRoutes";
+import customerWalletRoutes from "./customerWalletRoutes";
+import customerCartRoutes from "./customerCartRoutes";
+import wishlistRoutes from "./wishlistRoutes";
+import productReviewRoutes from "./productReviewRoutes";
 import adminRoutes from "./adminRoutes";
 
 const router = Router();
@@ -35,6 +45,16 @@ router.use("/auth/delivery", deliveryAuthRoutes);
 
 // Customer routes (protected)
 router.use("/customer", customerRoutes);
+router.use("/customer/products", customerProductRoutes);
+router.use("/customer/categories", customerCategoryRoutes);
+router.use("/customer/orders", customerOrderRoutes);
+router.use("/customer/coupons", customerCouponRoutes);
+router.use("/customer/addresses", customerAddressRoutes);
+router.use("/customer/home", customerHomeRoutes);
+router.use("/customer/cart", customerCartRoutes);
+router.use("/customer/wallet", customerWalletRoutes);
+router.use("/customer/wishlist", wishlistRoutes);
+router.use("/customer/reviews", productReviewRoutes);
 
 // Seller dashboard routes
 router.use("/seller/dashboard", dashboardRoutes);

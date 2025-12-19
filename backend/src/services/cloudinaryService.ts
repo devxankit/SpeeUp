@@ -1,5 +1,5 @@
 import cloudinary, { CLOUDINARY_FOLDERS } from "../config/cloudinary";
-import { UploadApiResponse, UploadApiErrorResponse } from "cloudinary";
+import { UploadApiErrorResponse } from "cloudinary";
 
 export interface UploadResult {
   url: string;
@@ -98,8 +98,7 @@ export async function uploadDocument(
   } catch (error) {
     const uploadError = error as UploadApiErrorResponse;
     throw new Error(
-      `Cloudinary document upload failed: ${
-        uploadError.message || "Unknown error"
+      `Cloudinary document upload failed: ${uploadError.message || "Unknown error"
       }`
     );
   }

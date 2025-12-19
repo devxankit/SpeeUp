@@ -1,7 +1,7 @@
 import Seller from "../models/Seller";
 import Customer from "../models/Customer";
 import Commission from "../models/Commission";
-import Order from "../models/Order";
+
 
 /**
  * Process seller commission payment

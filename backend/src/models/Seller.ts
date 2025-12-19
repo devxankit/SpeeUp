@@ -17,6 +17,7 @@ export interface ISeller extends Document {
   taxNumber?: string;
   storeDescription?: string;
   storeBanner?: string;
+  fssaiLicNo?: string;
   workingHours?: {
     open: string;
     close: string;
@@ -136,6 +137,10 @@ const SellerSchema = new Schema<ISeller>(
       trim: true,
     },
     storeBanner: {
+      type: String,
+      trim: true,
+    },
+    fssaiLicNo: {
       type: String,
       trim: true,
     },

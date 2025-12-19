@@ -43,7 +43,7 @@ router.post(
       resourceType: "image",
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: result,
     });
@@ -79,7 +79,7 @@ router.post(
 
     const results = await Promise.all(uploadPromises);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: results,
     });
@@ -122,7 +122,7 @@ router.post(
       resourceType,
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: result,
     });
@@ -169,7 +169,7 @@ router.post(
 
     const results = await Promise.all(uploadPromises);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: results,
     });
@@ -195,7 +195,7 @@ router.delete(
 
     await deleteImage(publicId);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Image deleted successfully",
     });

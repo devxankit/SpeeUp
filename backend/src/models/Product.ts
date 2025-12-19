@@ -60,6 +60,19 @@ export interface IProduct extends Document {
   seoDescription?: string;
   seoImageAlt?: string;
 
+  // Details
+  pack?: string;
+  shelfLife?: string;
+  marketer?: string;
+
+  // Ratings
+  rating: number;
+  reviewsCount: number;
+  discount: number; // Calculated percentage
+
+
+  returnPolicyText?: string;
+
   // Tags
   tags: string[];
 
@@ -238,6 +251,19 @@ const ProductSchema = new Schema<IProduct>(
       trim: true,
     },
 
+    // Details
+    pack: { type: String, trim: true },
+    shelfLife: { type: String, trim: true },
+    marketer: { type: String, trim: true },
+
+    // Ratings
+    rating: { type: Number, default: 0, min: 0, max: 5 },
+    reviewsCount: { type: Number, default: 0, min: 0 },
+    discount: { type: Number, default: 0, min: 0, max: 100 },
+
+
+    returnPolicyText: { type: String, trim: true },
+
     // Tags
     tags: {
       type: [String],
@@ -265,8 +291,26 @@ const ProductSchema = new Schema<IProduct>(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
+
+// Virtual for mrp (alias for compareAtPrice to match frontend)
+ProductSchema.virtual('mrp').get(function () {
+  return this.compareAtPrice;
+});
+
+// Calculate discount before saving
+ProductSchema.pre('save', function (next) {
+  if (this.compareAtPrice && this.compareAtPrice > this.price) {
+    this.discount = Math.round(((this.compareAtPrice - this.price) / this.compareAtPrice) * 100);
+  } else {
+    this.discount = 0;
+  }
+  next();
+});
+
 
 // Indexes for faster queries
 ProductSchema.index({ seller: 1, status: 1 });
@@ -279,6 +323,8 @@ ProductSchema.index({
   productName: "text",
   smallDescription: "text",
   description: "text",
+  tags: "text",
+  pack: "text",
 });
 
 const Product = mongoose.model<IProduct>("Product", ProductSchema);

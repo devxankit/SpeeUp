@@ -56,7 +56,8 @@ export const getProfile = asyncHandler(async (req: Request, res: Response) => {
 export const updateProfile = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user?.userId;
-    const { name, email, dateOfBirth } = req.body;
+    const { name, email, dateOfBirth, notificationPreferences, accountPrivacy } = req.body;
+
 
     if (!userId || (req as any).user?.userType !== "Customer") {
       return res.status(401).json({
@@ -93,6 +94,9 @@ export const updateProfile = asyncHandler(
       customer.email = email;
     }
     if (dateOfBirth) customer.dateOfBirth = new Date(dateOfBirth);
+    if (notificationPreferences) customer.notificationPreferences = { ...customer.notificationPreferences, ...notificationPreferences };
+    if (accountPrivacy) customer.accountPrivacy = { ...customer.accountPrivacy, ...accountPrivacy };
+
 
     await customer.save();
 
@@ -117,7 +121,11 @@ export const updateProfile = asyncHandler(
         city: customer.city,
         state: customer.state,
         pincode: customer.pincode,
+        notificationPreferences: customer.notificationPreferences,
+        accountPrivacy: customer.accountPrivacy,
+        donationStats: customer.donationStats,
       },
+
     });
   }
 );

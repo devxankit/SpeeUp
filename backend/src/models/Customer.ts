@@ -20,8 +20,23 @@ export interface ICustomer extends Document {
   pincode?: string;
   locationUpdatedAt?: Date;
   createdAt: Date;
+  createdAt: Date;
   updatedAt: Date;
+  notificationPreferences?: {
+    email: boolean;
+    sms: boolean;
+    push: boolean;
+  };
+  donationStats?: {
+    totalDonated: number;
+    lastDonationDate?: Date;
+    impactDescription?: string;
+  };
+  accountPrivacy?: {
+    hideSensitiveItems: boolean;
+  };
 }
+
 
 const CustomerSchema = new Schema<ICustomer>(
   {
@@ -114,7 +129,21 @@ const CustomerSchema = new Schema<ICustomer>(
     locationUpdatedAt: {
       type: Date,
     },
+    notificationPreferences: {
+      email: { type: Boolean, default: true },
+      sms: { type: Boolean, default: true },
+      push: { type: Boolean, default: true },
+    },
+    donationStats: {
+      totalDonated: { type: Number, default: 0 },
+      lastDonationDate: Date,
+      impactDescription: String,
+    },
+    accountPrivacy: {
+      hideSensitiveItems: { type: Boolean, default: false },
+    },
   },
+
   {
     timestamps: true,
   }

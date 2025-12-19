@@ -3,8 +3,8 @@ import Category from "../models/Category";
 import SubCategory from "../models/SubCategory";
 import Product from "../models/Product";
 import Order from "../models/Order";
-import OrderItem from "../models/OrderItem";
-import Seller from "../models/Seller";
+// import OrderItem from "../models/OrderItem";
+// import Seller from "../models/Seller";
 
 export interface DashboardStats {
   totalUser: number;
@@ -103,7 +103,7 @@ export const getSalesAnalytics = async (
   let startDate: Date;
   let lastPeriodStart: Date;
   let groupFormat: string;
-  let dateFormat: string;
+  // let dateFormat: string;
 
   switch (period) {
     case "day":
@@ -118,25 +118,25 @@ export const getSalesAnalytics = async (
         now.getDate() - 14
       );
       groupFormat = "%Y-%m-%d";
-      dateFormat = "DD-MMM";
+      // dateFormat = "DD-MMM";
       break;
     case "week":
       startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       lastPeriodStart = new Date(now.getFullYear(), now.getMonth() - 2, 1);
       groupFormat = "%Y-%U";
-      dateFormat = "Week %U";
+      // dateFormat = "Week %U";
       break;
     case "month":
       startDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
       lastPeriodStart = new Date(now.getFullYear() - 1, now.getMonth(), 1);
       groupFormat = "%Y-%m";
-      dateFormat = "%B";
+      // dateFormat = "%B";
       break;
     case "year":
       startDate = new Date(now.getFullYear() - 4, 0, 1);
       lastPeriodStart = new Date(now.getFullYear() - 9, 0, 1);
       groupFormat = "%Y";
-      dateFormat = "%Y";
+      // dateFormat = "%Y";
       break;
   }
 
@@ -273,9 +273,9 @@ export const getRecentOrders = async (limit: number = 10) => {
     amount: order.total,
     deliveryBoy: order.deliveryBoy
       ? {
-          name: (order.deliveryBoy as any).name,
-          mobile: (order.deliveryBoy as any).mobile,
-        }
+        name: (order.deliveryBoy as any).name,
+        mobile: (order.deliveryBoy as any).mobile,
+      }
       : null,
   }));
 };
