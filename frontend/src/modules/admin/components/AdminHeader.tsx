@@ -98,9 +98,8 @@ export default function AdminHeader({ onMenuClick, isSidebarOpen }: AdminHeaderP
         <div className="hidden md:flex items-center gap-4 lg:gap-6">
           <button
             onClick={() => navigate('/admin/orders')}
-            className={`relative px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
-              isActive('/admin/orders') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
+            className={`relative px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${isActive('/admin/orders') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
           >
             Orders
             {!isActive('/admin/orders') && (
@@ -111,25 +110,22 @@ export default function AdminHeader({ onMenuClick, isSidebarOpen }: AdminHeaderP
           </button>
           <button
             onClick={() => navigate('/admin/settings')}
-            className={`px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-              isActive('/admin/settings') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
+            className={`px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${isActive('/admin/settings') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
           >
             Setting
           </button>
           <button
             onClick={() => navigate('/admin/customers')}
-            className={`px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-              isActive('/admin/customers') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
+            className={`px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${isActive('/admin/customers') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
           >
             Manage Customer
           </button>
           <button
             onClick={() => navigate('/admin/collect-cash')}
-            className={`px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-              isActive('/admin/collect-cash') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
-            }`}
+            className={`px-3 lg:px-4 py-2 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${isActive('/admin/collect-cash') ? 'text-neutral-900' : 'text-neutral-600 hover:text-neutral-900'
+              }`}
           >
             Collect Cash
           </button>
@@ -276,15 +272,7 @@ export default function AdminHeader({ onMenuClick, isSidebarOpen }: AdminHeaderP
                 >
                   Account Settings
                 </button>
-                <button
-                  onClick={() => {
-                    setShowSettingsDropdown(false);
-                    console.log('Preferences clicked');
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                >
-                  Preferences
-                </button>
+
               </div>
             )}
           </div>

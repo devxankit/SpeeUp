@@ -1,22 +1,24 @@
-import { useState } from "react";
-// import { shopByStoreTiles } from "../../../data/homeTiles"; // REMOVED
-
+import { useState, useEffect } from "react";
 import { uploadImage } from "../../../services/api/uploadService";
 import {
   validateImageFile,
   createImagePreview,
 } from "../../../utils/imageUpload";
+import { getCategories, getSubcategories, Category, SubCategory } from "../../../services/api/categoryService";
+import { getProducts, Product } from "../../../services/api/productService";
 
 interface ShopByStoreTile {
   id: string;
   name: string;
   productImages: string[];
   bgColor: string;
+  categoryId?: string;
+  subCategoryId?: string;
+  productIds?: string[];
 }
 
 export default function AdminShopByStore() {
   const [storeName, setStoreName] = useState("");
-  const [storeId, setStoreId] = useState("");
   const [storeImageFile, setStoreImageFile] = useState<File | null>(null);
   const [storeImagePreview, setStoreImagePreview] = useState<string>("");
   const [bgColor, setBgColor] = useState("bg-yellow-100");
@@ -29,23 +31,19 @@ export default function AdminShopByStore() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string>("");
 
-  // Initialize with existing shop by store tiles
-  const [stores, setStores] = useState<ShopByStoreTile[]>([
-    {
-      id: 'spiritual',
-      name: 'Spiritual Store',
-      productImages: ['/assets/products/incense.jpg'],
-      bgColor: 'bg-orange-50'
-    },
-    {
-      id: 'fashion',
-      name: 'Fashion Store',
-      productImages: ['/assets/products/tshirt.jpg'],
-      bgColor: 'bg-blue-50'
-    }
-    // ... Add more if needed or fetch from API
-  ]);
+  // New State for Selections
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<string>("");
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
 
+  // Data State
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingData, setLoadingData] = useState(false);
+
+  // Initialize with empty shops
+  const [stores, setStores] = useState<ShopByStoreTile[]>([]);
 
   const bgColorOptions = [
     { value: "bg-yellow-100", label: "Yellow" },
@@ -59,6 +57,89 @@ export default function AdminShopByStore() {
     { value: "bg-amber-50", label: "Amber" },
     { value: "bg-indigo-50", label: "Indigo" },
   ];
+
+  // Fetch Initial Data (Categories)
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  // Fetch Subcategories when Category changes
+  useEffect(() => {
+    if (selectedCategoryId) {
+      fetchSubCategories(selectedCategoryId);
+      // Reset subcategory selection if category changes
+      if (!subCategories.find(sub => sub._id === selectedSubCategoryId)) {
+        setSelectedSubCategoryId("");
+      }
+    } else {
+      setSubCategories([]);
+      setSelectedSubCategoryId("");
+    }
+  }, [selectedCategoryId]);
+
+  // Fetch Products based on Category/Subcategory
+  useEffect(() => {
+    // Only fetch if category is selected, otherwise we might fetch too many or none depending on logic
+    if (selectedCategoryId) {
+      fetchProducts();
+    } else {
+      setProducts([]);
+    }
+  }, [selectedCategoryId, selectedSubCategoryId]);
+
+
+  const fetchCategories = async () => {
+    try {
+      const res = await getCategories();
+      if (res.success) {
+        setCategories(res.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch categories", error);
+    }
+  };
+
+  const fetchSubCategories = async (categoryId: string) => {
+    try {
+      const res = await getSubcategories(categoryId);
+      if (res.success) {
+        setSubCategories(res.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch subcategories", error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    setLoadingData(true);
+    try {
+      const params: any = {};
+      if (selectedCategoryId) params.category = selectedCategoryId;
+      // Filter by subcategory if productService supports it logic or client side
+      // Assuming getProducts supports basic filtering
+      // If the API doesn't filter strictly by subcategory, we might need to filter client side
+
+      const res = await getProducts(params);
+      if (res.success && res.data) {
+        let prods = res.data;
+        // Client-side subcategory filter as fallback if API ignores it or to be safe
+        if (selectedSubCategoryId) {
+          prods = prods.filter(p => {
+            // p.subcategory could be string id or object
+            const pSubId = (typeof p.subcategory === 'string') ? p.subcategory : p.subcategory?._id;
+            const pSubId2 = (typeof p.subcategoryId === 'string') ? p.subcategoryId : undefined;
+            return pSubId === selectedSubCategoryId || pSubId2 === selectedSubCategoryId;
+          });
+        }
+        setProducts(prods);
+      }
+    } catch (error) {
+      console.error("Failed to fetch products", error);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -126,13 +207,17 @@ export default function AdminShopByStore() {
     }
   };
 
+  const toggleProductSelection = (productId: string) => {
+    setSelectedProductIds(prev =>
+      prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
   const handleAddStore = async () => {
     if (!storeName.trim()) {
       setUploadError("Please enter a store name");
-      return;
-    }
-    if (!storeId.trim()) {
-      setUploadError("Please enter a store ID");
       return;
     }
 
@@ -148,6 +233,9 @@ export default function AdminShopByStore() {
         imageUrl = imageResult.secureUrl;
       }
 
+      // Generate ID from name
+      const generatedId = storeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
       if (editingId !== null) {
         // Update existing store
         setStores(
@@ -156,9 +244,12 @@ export default function AdminShopByStore() {
               ? {
                 ...store,
                 name: storeName.trim(),
-                id: storeId.trim(),
+                id: generatedId,
                 bgColor: bgColor,
                 productImages: imageUrl ? [imageUrl] : store.productImages,
+                categoryId: selectedCategoryId,
+                subCategoryId: selectedSubCategoryId,
+                productIds: selectedProductIds
               }
               : store
           )
@@ -166,32 +257,30 @@ export default function AdminShopByStore() {
         alert("Store updated successfully!");
         setEditingId(null);
       } else {
-        // Check if ID already exists
-        if (stores.some((s) => s.id === storeId.trim())) {
-          setUploadError("Store ID already exists. Please use a different ID.");
-          setUploading(false);
-          return;
+        // Check if ID already exists (generated)
+        let finalId = generatedId;
+        if (stores.some((s) => s.id === finalId)) {
+          finalId = `${generatedId}-${Math.floor(Math.random() * 1000)}`;
         }
 
         // Add new store
         const newStore: ShopByStoreTile = {
-          id: storeId.trim(),
+          id: finalId,
           name: storeName.trim(),
           bgColor: bgColor,
           productImages: imageUrl
             ? [imageUrl]
             : ["/assets/shopbystore/default.jpg"],
+          categoryId: selectedCategoryId,
+          subCategoryId: selectedSubCategoryId,
+          productIds: selectedProductIds
         };
         setStores([...stores, newStore]);
         alert("Store added successfully!");
       }
 
       // Reset form
-      setStoreName("");
-      setStoreId("");
-      setStoreImageFile(null);
-      setStoreImagePreview("");
-      setBgColor("bg-yellow-100");
+      handleReset();
     } catch (error: any) {
       setUploadError(
         error.response?.data?.message ||
@@ -207,10 +296,22 @@ export default function AdminShopByStore() {
     const store = stores.find((s) => s.id === id);
     if (store) {
       setStoreName(store.name);
-      setStoreId(store.id);
       setBgColor(store.bgColor);
+      setSelectedCategoryId(store.categoryId || "");
+      // trigger subcat fetch? effect will handle it, but we need to wait or just set state
+      // Effect handles fetch, but we need to set Selected SubCat after. 
+      // Simplified: Just set state, effect runs, subCats load. 
+      // Ideally we should wait for subcats to load to show selected value correctly but React state might handle it if options match value.
+      setSelectedSubCategoryId(store.subCategoryId || "");
+      setSelectedProductIds(store.productIds || []);
+
+      if (store.productImages && store.productImages.length > 0) {
+        setStoreImagePreview(store.productImages[0]);
+      } else {
+        setStoreImagePreview("");
+      }
+
       setEditingId(id);
-      // Scroll to top form
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
@@ -219,12 +320,7 @@ export default function AdminShopByStore() {
     if (window.confirm("Are you sure you want to delete this store?")) {
       setStores(stores.filter((store) => store.id !== id));
       if (editingId === id) {
-        setStoreName("");
-        setStoreId("");
-        setStoreImageFile(null);
-        setStoreImagePreview("");
-        setBgColor("bg-yellow-100");
-        setEditingId(null);
+        handleReset();
       }
       alert("Store deleted successfully!");
     }
@@ -232,12 +328,14 @@ export default function AdminShopByStore() {
 
   const handleReset = () => {
     setStoreName("");
-    setStoreId("");
     setStoreImageFile(null);
     setStoreImagePreview("");
     setBgColor("bg-yellow-100");
     setEditingId(null);
     setUploadError("");
+    setSelectedCategoryId("");
+    setSelectedSubCategoryId("");
+    setSelectedProductIds([]);
   };
 
   const handleExport = () => {
@@ -268,24 +366,6 @@ export default function AdminShopByStore() {
             </h2>
           </div>
           <div className="p-4 sm:p-6 space-y-4">
-            {/* Store ID */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Store ID: <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={storeId}
-                onChange={(e) => setStoreId(e.target.value)}
-                placeholder="e.g., spiritual-store"
-                disabled={editingId !== null}
-                className={`w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 ${editingId ? "bg-neutral-100 cursor-not-allowed" : ""
-                  }`}
-              />
-              <p className="text-xs text-neutral-500 mt-1">
-                Used for routing (e.g., /store/spiritual)
-              </p>
-            </div>
 
             {/* Store Name */}
             <div>
@@ -301,6 +381,74 @@ export default function AdminShopByStore() {
               />
             </div>
 
+            {/* Category Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">
+                Category:
+              </label>
+              <select
+                value={selectedCategoryId}
+                onChange={(e) => {
+                  setSelectedCategoryId(e.target.value);
+                }}
+                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer bg-white"
+              >
+                <option value="">Select Category</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* SubCategory Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">
+                SubCategory:
+              </label>
+              <select
+                value={selectedSubCategoryId}
+                onChange={(e) => setSelectedSubCategoryId(e.target.value)}
+                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer bg-white"
+                disabled={!selectedCategoryId}
+              >
+                <option value="">Select SubCategory</option>
+                {subCategories.map((sub) => (
+                  <option key={sub._id || sub.id} value={sub._id || sub.id}>{sub.subcategoryName}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Product Selection */}
+            <div>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">
+                Select Products: {selectedProductIds.length} selected
+              </label>
+              <div className="border border-neutral-300 rounded-md max-h-48 overflow-y-auto p-2 bg-neutral-50">
+                {loadingData ? (
+                  <div className="text-center text-sm text-neutral-500 py-2">Loading products...</div>
+                ) : products.length > 0 ? (
+                  products.map((product) => (
+                    <div key={product._id} className="flex items-center mb-2 hover:bg-neutral-100 p-1 rounded">
+                      <input
+                        type="checkbox"
+                        id={`prod-${product._id}`}
+                        checked={selectedProductIds.includes(product._id)}
+                        onChange={() => toggleProductSelection(product._id)}
+                        className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded cursor-pointer"
+                      />
+                      <label htmlFor={`prod-${product._id}`} className="ml-2 block text-sm text-gray-900 truncate cursor-pointer flex-1">
+                        {product.productName}
+                      </label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-sm text-neutral-500 py-2">
+                    {selectedCategoryId ? "No products found in this category" : "Select a category to view products"}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Background Color */}
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-2">
@@ -309,7 +457,7 @@ export default function AdminShopByStore() {
               <select
                 value={bgColor}
                 onChange={(e) => setBgColor(e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
+                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 bg-white">
                 {bgColorOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -328,7 +476,7 @@ export default function AdminShopByStore() {
               <label className="block text-sm font-medium text-neutral-700 mb-2">
                 Store Image:
               </label>
-              <label className="block border-2 border-dashed border-neutral-300 rounded-lg p-4 text-center cursor-pointer hover:border-teal-500 transition-colors">
+              <label className="block border-2 border-dashed border-neutral-300 rounded-lg p-4 text-center cursor-pointer hover:border-teal-500 transition-colors bg-white">
                 {storeImagePreview ? (
                   <div className="space-y-2">
                     <img
@@ -384,14 +532,14 @@ export default function AdminShopByStore() {
                 onClick={handleAddStore}
                 disabled={uploading}
                 className={`flex-1 py-2.5 rounded text-sm font-medium transition-colors ${uploading
-                    ? "bg-neutral-400 cursor-not-allowed text-white"
-                    : "bg-teal-600 hover:bg-teal-700 text-white"
+                  ? "bg-neutral-400 cursor-not-allowed text-white"
+                  : "bg-teal-600 hover:bg-teal-700 text-white"
                   }`}>
                 {uploading
                   ? "Uploading..."
                   : editingId
                     ? "Update Store"
-                    : "Add Store"}
+                    : "Create Store"}
               </button>
               {editingId && (
                 <button
@@ -422,7 +570,7 @@ export default function AdminShopByStore() {
                     setEntriesPerPage(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="px-2 py-1 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
+                  className="px-2 py-1 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 cursor-pointer">
                   <option value={10}>10</option>
                   <option value={25}>25</option>
                   <option value={50}>50</option>
@@ -516,6 +664,9 @@ export default function AdminShopByStore() {
                     </div>
                   </th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                    Details
+                  </th>
+                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
                     Image
                   </th>
                   <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
@@ -527,7 +678,7 @@ export default function AdminShopByStore() {
                 {displayedStores.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={5}
                       className="px-4 sm:px-6 py-8 text-center text-sm text-neutral-500">
                       No stores found
                     </td>
@@ -541,8 +692,11 @@ export default function AdminShopByStore() {
                       <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900 font-medium">
                         {store.name}
                       </td>
+                      <td className="px-4 sm:px-6 py-3 text-xs text-neutral-500">
+                        {store.productIds?.length || 0} Products
+                      </td>
                       <td className="px-4 sm:px-6 py-3">
-                        <div className="w-20 h-16 bg-neutral-100 rounded overflow-hidden flex items-center justify-center">
+                        <div className="w-12 h-12 bg-neutral-100 rounded overflow-hidden flex items-center justify-center border border-neutral-200">
                           {store.productImages &&
                             store.productImages.length > 0 ? (
                             <img
@@ -555,8 +709,8 @@ export default function AdminShopByStore() {
                               }}
                             />
                           ) : (
-                            <span className="text-xs text-neutral-400">
-                              No Image
+                            <span className="text-[10px] text-neutral-400">
+                              No Img
                             </span>
                           )}
                         </div>
@@ -618,8 +772,8 @@ export default function AdminShopByStore() {
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
                 className={`p-2 border border-neutral-300 rounded ${currentPage === 1
-                    ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
-                    : "text-neutral-700 hover:bg-neutral-50"
+                  ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
+                  : "text-neutral-700 hover:bg-neutral-50"
                   }`}
                 aria-label="Previous page">
                 <svg
@@ -643,8 +797,8 @@ export default function AdminShopByStore() {
                     key={page}
                     onClick={() => setCurrentPage(page)}
                     className={`px-3 py-1 border border-neutral-300 rounded text-sm ${currentPage === page
-                        ? "bg-teal-600 text-white border-teal-600"
-                        : "text-neutral-700 hover:bg-neutral-50"
+                      ? "bg-teal-600 text-white border-teal-600"
+                      : "text-neutral-700 hover:bg-neutral-50"
                       }`}>
                     {page}
                   </button>
@@ -656,8 +810,8 @@ export default function AdminShopByStore() {
                 }
                 disabled={currentPage === totalPages || totalPages === 0}
                 className={`p-2 border border-neutral-300 rounded ${currentPage === totalPages || totalPages === 0
-                    ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
-                    : "text-neutral-700 hover:bg-neutral-50"
+                  ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
+                  : "text-neutral-700 hover:bg-neutral-50"
                   }`}
                 aria-label="Next page">
                 <svg
