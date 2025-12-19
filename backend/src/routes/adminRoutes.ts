@@ -41,6 +41,8 @@ import * as faqController from "../modules/admin/controllers/adminFAQController"
 import * as roleController from "../modules/admin/controllers/adminRoleController";
 
 import * as paymentController from "../modules/admin/controllers/adminPaymentController";
+import * as policyController from "../modules/admin/controllers/adminPolicyController";
+import * as sellerController from "../modules/admin/controllers/adminSellerController";
 
 const router = Router();
 
@@ -89,6 +91,7 @@ router.delete("/brands/:id", productController.deleteBrand);
 // ==================== Product Routes ====================
 router.post("/products", productController.createProduct);
 router.get("/products", productController.getProducts);
+router.put("/products/order", productController.updateProductOrder);
 router.get("/products/:id", productController.getProductById);
 router.put("/products/:id", productController.updateProduct);
 router.delete("/products/:id", productController.deleteProduct);
@@ -124,11 +127,14 @@ router.get("/delivery", deliveryController.getAllDeliveryBoys);
 router.get("/delivery/:id", deliveryController.getDeliveryBoyById);
 router.put("/delivery/:id", deliveryController.updateDeliveryBoy);
 router.patch("/delivery/:id/status", deliveryController.updateDeliveryStatus);
+router.patch("/delivery/:id/availability", deliveryController.updateDeliveryBoyAvailability);
+router.delete("/delivery/:id", deliveryController.deleteDeliveryBoy);
 router.get(
   "/delivery/:id/assignments",
   deliveryController.getDeliveryAssignments
 );
 router.post("/delivery/:id/collect-cash", deliveryController.collectCash);
+router.get("/delivery/:id/cash-collections", deliveryController.getDeliveryBoyCashCollections);
 
 // ==================== Payment Routes ====================
 router.get("/payment-methods", paymentController.getPaymentMethods);
@@ -162,12 +168,12 @@ router.post("/coupons/validate", couponController.validateCoupon);
 router.post("/notifications", notificationController.createNotification);
 router.get("/notifications", notificationController.getNotifications);
 router.get("/notifications/:id", notificationController.getNotificationById);
-router.patch("/notifications/:id/read", notificationController.markAsRead);
-router.patch(
-  "/notifications/mark-read",
-  notificationController.markMultipleAsRead
-);
+router.put("/notifications/:id", notificationController.updateNotification);
 router.delete("/notifications/:id", notificationController.deleteNotification);
+router.post("/notifications/:id/send", notificationController.sendNotification);
+router.patch("/notifications/:id/read", notificationController.markAsRead);
+router.patch("/notifications/read-all", notificationController.markMultipleAsRead);
+router.patch("/notifications/mark-read", notificationController.markMultipleAsRead); // Legacy support
 
 // ==================== Wallet Routes ====================
 router.get("/wallet/transactions", walletController.getWalletTransactions);
@@ -207,5 +213,14 @@ router.get("/roles/:id", roleController.getRoleById);
 router.post("/roles", roleController.createRole);
 router.put("/roles/:id", roleController.updateRole);
 router.delete("/roles/:id", roleController.deleteRole);
+
+// ==================== Policy Routes ====================
+router.post("/policies", policyController.createPolicy);
+router.get("/policies", policyController.getPolicies);
+router.put("/policies/:id", policyController.updatePolicy);
+router.delete("/policies/:id", policyController.deletePolicy);
+
+// ==================== Seller Routes ====================
+router.get("/sellers", sellerController.getAllSellers);
 
 export default router;

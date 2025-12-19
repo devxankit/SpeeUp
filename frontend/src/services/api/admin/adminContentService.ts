@@ -1,10 +1,7 @@
 import api from "../config";
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
+
+import { ApiResponse } from "./types";
 
 export interface FAQ {
   _id: string;
@@ -31,44 +28,6 @@ export interface UpdateFAQData {
   category?: string;
   isActive?: boolean;
   order?: number;
-}
-
-export interface Notification {
-  _id: string;
-  title: string;
-  message: string;
-  description?: string;
-  targetUsers: "all" | "customers" | "sellers" | "specific";
-  specificUserIds?: string[];
-  type: "info" | "warning" | "success" | "error";
-  isSystemGenerated: boolean;
-  isActive: boolean;
-  scheduledAt?: string;
-  sentAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface CreateNotificationData {
-  title: string;
-  message: string;
-  description?: string;
-  targetUsers: "all" | "customers" | "sellers" | "specific";
-  specificUserIds?: string[];
-  type?: "info" | "warning" | "success" | "error";
-  isActive?: boolean;
-  scheduledAt?: string;
-}
-
-export interface UpdateNotificationData {
-  title?: string;
-  message?: string;
-  description?: string;
-  targetUsers?: "all" | "customers" | "sellers" | "specific";
-  specificUserIds?: string[];
-  type?: "info" | "warning" | "success" | "error";
-  isActive?: boolean;
-  scheduledAt?: string;
 }
 
 export interface Policy {
@@ -137,55 +96,27 @@ export const deleteFAQ = async (id: string): Promise<ApiResponse<void>> => {
   return response.data;
 };
 
-/**
- * Notification APIs
- */
-export const getNotifications = async (
-  params?: GetContentParams
-): Promise<ApiResponse<Notification[]>> => {
-  const response = await api.get<ApiResponse<Notification[]>>(
-    "/admin/notifications",
-    { params }
-  );
+
+export interface ContentNotification {
+  _id: string;
+  title: string;
+  message: string;
+  type: string;
+  createdAt: string;
+}
+
+export const getContentNotifications = async (): Promise<ApiResponse<ContentNotification[]>> => {
+  const response = await api.get("/admin/content/notifications");
   return response.data;
 };
 
-export const createNotification = async (
-  data: CreateNotificationData
-): Promise<ApiResponse<Notification>> => {
-  const response = await api.post<ApiResponse<Notification>>(
-    "/admin/notifications",
-    data
-  );
+export const createContentNotification = async (data: any): Promise<ApiResponse<ContentNotification>> => {
+  const response = await api.post("/admin/content/notifications", data);
   return response.data;
 };
 
-export const updateNotification = async (
-  id: string,
-  data: UpdateNotificationData
-): Promise<ApiResponse<Notification>> => {
-  const response = await api.put<ApiResponse<Notification>>(
-    `/admin/notifications/${id}`,
-    data
-  );
-  return response.data;
-};
-
-export const deleteNotification = async (
-  id: string
-): Promise<ApiResponse<void>> => {
-  const response = await api.delete<ApiResponse<void>>(
-    `/admin/notifications/${id}`
-  );
-  return response.data;
-};
-
-export const sendNotification = async (
-  id: string
-): Promise<ApiResponse<void>> => {
-  const response = await api.post<ApiResponse<void>>(
-    `/admin/notifications/${id}/send`
-  );
+export const deleteContentNotification = async (id: string): Promise<ApiResponse<null>> => {
+  const response = await api.delete(`/admin/content/notifications/${id}`);
   return response.data;
 };
 

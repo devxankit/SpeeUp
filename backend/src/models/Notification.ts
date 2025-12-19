@@ -9,13 +9,13 @@ export interface INotification extends Document {
   title: string;
   message: string;
   type:
-    | "Info"
-    | "Success"
-    | "Warning"
-    | "Error"
-    | "Order"
-    | "Payment"
-    | "System";
+  | "Info"
+  | "Success"
+  | "Warning"
+  | "Error"
+  | "Order"
+  | "Payment"
+  | "System";
 
   // Link/Action
   link?: string;
@@ -30,6 +30,9 @@ export interface INotification extends Document {
 
   // Expiry
   expiresAt?: Date;
+
+  // Sent At (for push notifications)
+  sentAt?: Date;
 
   // Created By
   createdBy?: mongoose.Types.ObjectId;
@@ -103,6 +106,11 @@ const NotificationSchema = new Schema<INotification>(
 
     // Expiry
     expiresAt: {
+      type: Date,
+    },
+
+    // Sent At (for push notifications)
+    sentAt: {
       type: Date,
     },
 

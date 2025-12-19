@@ -1,10 +1,7 @@
 import api from "../config";
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
+
+import { ApiResponse } from "./types";
 
 export interface PaymentMethod {
   _id: string;
@@ -105,7 +102,7 @@ export interface AppSettings {
   updatedAt?: string;
 }
 
-export interface UpdateAppSettingsData extends Partial<AppSettings> {}
+export interface UpdateAppSettingsData extends Partial<AppSettings> { }
 
 export interface UpdatePaymentMethodsData {
   paymentMethods: PaymentMethod[];

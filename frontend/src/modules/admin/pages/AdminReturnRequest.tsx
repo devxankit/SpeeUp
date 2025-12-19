@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   getReturnRequests,
   updateReturnRequest,
-  type ReturnRequest,
+  type MiscReturnRequest as ReturnRequest,
 } from "../../../services/api/admin/adminMiscService";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -673,12 +673,12 @@ export default function AdminReturnRequest() {
                     <td className="px-4 sm:px-6 py-3">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${request.status === "Approved"
-                            ? "bg-green-100 text-green-800"
-                            : request.status === "Pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : request.status === "Rejected"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-blue-100 text-blue-800"
+                          ? "bg-green-100 text-green-800"
+                          : request.status === "Pending"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : request.status === "Rejected"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-blue-100 text-blue-800"
                           }`}>
                         {request.status}
                       </span>
@@ -754,8 +754,8 @@ export default function AdminReturnRequest() {
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1 || totalPages === 0}
               className={`p-2 border border-green-300 rounded bg-white ${currentPage === 1 || totalPages === 0
-                  ? "text-neutral-400 cursor-not-allowed"
-                  : "text-neutral-700 hover:bg-green-50"
+                ? "text-neutral-400 cursor-not-allowed"
+                : "text-neutral-700 hover:bg-green-50"
                 }`}
               aria-label="Previous page">
               <svg
@@ -779,8 +779,8 @@ export default function AdminReturnRequest() {
               }
               disabled={currentPage === totalPages || totalPages === 0}
               className={`p-2 border border-green-300 rounded bg-white ${currentPage === totalPages || totalPages === 0
-                  ? "text-neutral-400 cursor-not-allowed"
-                  : "text-neutral-700 hover:bg-green-50"
+                ? "text-neutral-400 cursor-not-allowed"
+                : "text-neutral-700 hover:bg-green-50"
                 }`}
               aria-label="Next page">
               <svg

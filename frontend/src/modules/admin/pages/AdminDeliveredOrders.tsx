@@ -30,7 +30,7 @@ export default function AdminDeliveredOrders() {
       try {
         setLoading(true);
         setError(null);
-        
+
         const params: any = {
           page: currentPage,
           limit: parseInt(entriesPerPage),
@@ -90,7 +90,7 @@ export default function AdminDeliveredOrders() {
     const headers = ['O. Id', 'Customer Details', 'Address', 'D. Date', 'O. Date', 'Status', 'Delivery Boy Assign Status', 'Amount'];
     const csvContent = [
       headers.join(','),
-      ...filteredAndSortedOrders.map(order => 
+      ...filteredAndSortedOrders.map(order =>
         [
           order.orderNumber || '',
           order.customerName || '',
@@ -162,6 +162,8 @@ export default function AdminDeliveredOrders() {
 
         if (typeof aValue === 'string') {
           aValue = aValue.toLowerCase();
+        }
+        if (typeof bValue === 'string') {
           bValue = bValue.toLowerCase();
         }
 
@@ -226,7 +228,7 @@ export default function AdminDeliveredOrders() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
           {/* Page Title */}
           <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Orders List</h1>
-          
+
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-xs sm:text-sm">
             <Link to="/admin" className="text-blue-600 hover:text-blue-700">

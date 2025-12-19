@@ -417,19 +417,52 @@ export const createProduct = asyncHandler(
     try {
       const productData = req.body;
 
+      // If seller is not provided, use/create default Admin Store
+      if (!productData.seller) {
+        try {
+          // Check for existing admin seller by email OR mobile to avoid duplicate key errors
+          let adminSeller = await Seller.findOne({
+            $or: [
+              { email: "admin-store@speeup.com" },
+              { mobile: "9999999999" }
+            ]
+          });
+
+          if (!adminSeller) {
+            // Create default admin seller
+            adminSeller = await Seller.create({
+              sellerName: "SpeeUp Admin",
+              storeName: "SpeeUp Admin Store",
+              email: "admin-store@speeup.com",
+              mobile: "9999999999",
+              password: "AdminStore@123", // Should be hashed by pre-save hook
+              address: "SpeeUp HQ",
+              city: "Admin City",
+              category: "Admin",
+              commission: 0,
+              status: "Approved",
+              requireProductApproval: false,
+            });
+          }
+          productData.seller = adminSeller._id;
+        } catch (sellerError: any) {
+          console.error("Error handling default admin seller:", sellerError);
+          throw new Error("Failed to assign default seller: " + sellerError.message);
+        }
+      }
+
       if (
         !productData.productName ||
         !productData.category ||
-        !productData.seller ||
         !productData.price
       ) {
         return res.status(400).json({
           success: false,
-          message: "Product name, category, seller, and price are required",
+          message: "Product name, category, and price are required",
         });
       }
 
-      // Verify seller exists
+      // Verify seller exists (if passed explicitly or set above)
       const seller = await Seller.findById(productData.seller);
       if (!seller) {
         return res.status(404).json({
@@ -832,6 +865,33 @@ export const bulkUpdateProducts = asyncHandler(
         matched: result.matchedCount,
         modified: result.modifiedCount,
       },
+    });
+  }
+);
+
+/**
+ * Update product display order (for featured lists etc)
+ */
+export const updateProductOrder = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { products } = req.body; // Array of { id, order }
+
+    if (!Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Products array is required",
+      });
+    }
+
+    const updates = products.map(({ id, order }) =>
+      Product.findByIdAndUpdate(id, { order })
+    );
+
+    await Promise.all(updates);
+
+    return res.status(200).json({
+      success: true,
+      message: "Product order updated successfully",
     });
   }
 );

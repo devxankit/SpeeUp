@@ -53,7 +53,7 @@ export default function AdminFAQ() {
         console.error("Error fetching FAQs:", err);
         setError(
           err.response?.data?.message ||
-            "Failed to load FAQs. Please try again."
+          "Failed to load FAQs. Please try again."
         );
       } finally {
         setLoading(false);
@@ -118,10 +118,10 @@ export default function AdminFAQ() {
             prev.map((faq) =>
               faq._id === editingFAQ._id
                 ? {
-                    ...faq,
-                    question: faqQuestion.trim(),
-                    answer: faqAnswer.trim(),
-                  }
+                  ...faq,
+                  question: faqQuestion.trim(),
+                  answer: faqAnswer.trim(),
+                }
                 : faq
             )
           );
@@ -158,7 +158,7 @@ export default function AdminFAQ() {
       console.error("Error saving FAQ:", err);
       alert(
         "Failed to save FAQ: " +
-          (err.response?.data?.message || "Please try again.")
+        (err.response?.data?.message || "Please try again.")
       );
     } finally {
       setSubmitting(false);
@@ -198,7 +198,7 @@ export default function AdminFAQ() {
       console.error("Error deleting FAQ:", err);
       alert(
         "Failed to delete FAQ: " +
-          (err.response?.data?.message || "Please try again.")
+        (err.response?.data?.message || "Please try again.")
       );
     } finally {
       setSubmitting(false);
@@ -209,8 +209,8 @@ export default function AdminFAQ() {
     const headers = ["ID", "FAQ Question", "FAQ Answer"];
     const csvContent = [
       headers.join(","),
-      ...filteredFAQs.map((faq) =>
-        [faq.id, `"${faq.question}"`, `"${faq.answer}"`].join(",")
+      ...displayedFAQs.map((faq) =>
+        [faq._id, `"${faq.question}"`, `"${faq.answer}"`].join(",")
       ),
     ].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -497,11 +497,10 @@ export default function AdminFAQ() {
                     setCurrentPage((prev) => Math.max(1, prev - 1))
                   }
                   disabled={currentPage === 1}
-                  className={`p-2 border border-teal-600 rounded ${
-                    currentPage === 1
+                  className={`p-2 border border-teal-600 rounded ${currentPage === 1
                       ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
                       : "text-teal-600 hover:bg-teal-50"
-                  }`}
+                    }`}
                   aria-label="Previous page">
                   <svg
                     width="16"
@@ -526,11 +525,10 @@ export default function AdminFAQ() {
                     setCurrentPage((prev) => Math.min(totalPages, prev + 1))
                   }
                   disabled={currentPage === totalPages}
-                  className={`p-2 border border-teal-600 rounded ${
-                    currentPage === totalPages
+                  className={`p-2 border border-teal-600 rounded ${currentPage === totalPages
                       ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
                       : "text-teal-600 hover:bg-teal-50"
-                  }`}
+                    }`}
                   aria-label="Next page">
                   <svg
                     width="16"

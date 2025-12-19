@@ -75,7 +75,7 @@ export default function SellerCategory() {
                                 const csvContent = [
                                     headers.join(','),
                                     ...filteredCategories.map(cat => [
-                                        cat.id,
+                                        cat._id,
                                         `"${cat.name}"`,
                                         cat.totalSubcategory
                                     ].join(','))
@@ -123,54 +123,54 @@ export default function SellerCategory() {
 
                 {/* Table */}
                 {!loading && !error && (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse border border-neutral-200">
-                        <thead>
-                            <tr className="bg-neutral-50 text-xs font-bold text-neutral-800">
-                                <th className="p-4 w-16 border border-neutral-200">
-                                    <div className="flex items-center justify-between cursor-pointer">ID <span className="text-neutral-300 text-[10px]">⇅</span></div>
-                                </th>
-                                <th className="p-4 border border-neutral-200">
-                                    <div className="flex items-center justify-between cursor-pointer">Category Name <span className="text-neutral-300 text-[10px]">⇅</span></div>
-                                </th>
-                                <th className="p-4 border border-neutral-200">
-                                    <div className="flex items-center justify-between cursor-pointer">Category Image <span className="text-neutral-300 text-[10px]">⇅</span></div>
-                                </th>
-                                <th className="p-4 border border-neutral-200">
-                                    <div className="flex items-center justify-between cursor-pointer">Total Subcategory <span className="text-neutral-300 text-[10px]">⇅</span></div>
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredCategories.map((category) => (
-                                <tr key={category._id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700">
-                                    <td className="p-4 align-middle border border-neutral-200">{category._id}</td>
-                                    <td className="p-4 align-middle border border-neutral-200">{category.name}</td>
-                                    <td className="p-4 border border-neutral-200">
-                                        <div className="w-16 h-12 bg-white border border-neutral-200 rounded p-1 flex items-center justify-center mx-auto">
-                                            <img
-                                                src={category.imageUrl || '/assets/category-placeholder.png'}
-                                                alt={category.name}
-                                                className="max-w-full max-h-full object-contain"
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = 'https://placehold.co/60x40?text=Img';
-                                                }}
-                                            />
-                                        </div>
-                                    </td>
-                                    <td className="p-4 align-middle border border-neutral-200">{category.totalSubcategory || 0}</td>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse border border-neutral-200">
+                            <thead>
+                                <tr className="bg-neutral-50 text-xs font-bold text-neutral-800">
+                                    <th className="p-4 w-16 border border-neutral-200">
+                                        <div className="flex items-center justify-between cursor-pointer">ID <span className="text-neutral-300 text-[10px]">⇅</span></div>
+                                    </th>
+                                    <th className="p-4 border border-neutral-200">
+                                        <div className="flex items-center justify-between cursor-pointer">Category Name <span className="text-neutral-300 text-[10px]">⇅</span></div>
+                                    </th>
+                                    <th className="p-4 border border-neutral-200">
+                                        <div className="flex items-center justify-between cursor-pointer">Category Image <span className="text-neutral-300 text-[10px]">⇅</span></div>
+                                    </th>
+                                    <th className="p-4 border border-neutral-200">
+                                        <div className="flex items-center justify-between cursor-pointer">Total Subcategory <span className="text-neutral-300 text-[10px]">⇅</span></div>
+                                    </th>
                                 </tr>
-                            ))}
-                            {filteredCategories.length === 0 && (
-                                <tr>
-                                    <td colSpan={4} className="p-8 text-center text-neutral-400 border border-neutral-200">
-                                        No categories found.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {filteredCategories.map((category) => (
+                                    <tr key={category._id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700">
+                                        <td className="p-4 align-middle border border-neutral-200">{category._id}</td>
+                                        <td className="p-4 align-middle border border-neutral-200">{category.name}</td>
+                                        <td className="p-4 border border-neutral-200">
+                                            <div className="w-16 h-12 bg-white border border-neutral-200 rounded p-1 flex items-center justify-center mx-auto">
+                                                <img
+                                                    src={category.imageUrl || '/assets/category-placeholder.png'}
+                                                    alt={category.name}
+                                                    className="max-w-full max-h-full object-contain"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).src = 'https://placehold.co/60x40?text=Img';
+                                                    }}
+                                                />
+                                            </div>
+                                        </td>
+                                        <td className="p-4 align-middle border border-neutral-200">{category.totalSubcategory || 0}</td>
+                                    </tr>
+                                ))}
+                                {filteredCategories.length === 0 && (
+                                    <tr>
+                                        <td colSpan={4} className="p-8 text-center text-neutral-400 border border-neutral-200">
+                                            No categories found.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
 
                 {/* Pagination (Visual only mostly for now as per image doesn't show bottom) */}

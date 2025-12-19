@@ -1,28 +1,23 @@
 import api from "../config";
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
 
-export interface PaymentMethod {
+import { ApiResponse } from "./types";
+
+export interface PaymentMethodConfig {
   _id: string;
   name: string;
   description: string;
-  apiKey?: string;
-  secretKey?: string;
   status: "Active" | "InActive";
   hasApiKeys: boolean;
-  provider: string;
-  type: "cod" | "gateway";
+  apiKey?: string;
+  secretKey?: string;
 }
 
 export interface UpdatePaymentMethodData {
   description?: string;
+  status?: "Active" | "InActive";
   apiKey?: string;
   secretKey?: string;
-  status?: "Active" | "InActive";
 }
 
 export interface GetPaymentMethodsParams {
@@ -32,10 +27,13 @@ export interface GetPaymentMethodsParams {
 /**
  * Get all payment methods
  */
-export const getPaymentMethods = async (
+/**
+ * Get all payment methods
+ */
+export const getPaymentMethodConfigs = async (
   params?: GetPaymentMethodsParams
-): Promise<ApiResponse<PaymentMethod[]>> => {
-  const response = await api.get<ApiResponse<PaymentMethod[]>>(
+): Promise<ApiResponse<PaymentMethodConfig[]>> => {
+  const response = await api.get<ApiResponse<PaymentMethodConfig[]>>(
     "/admin/payment-methods",
     { params }
   );
@@ -47,8 +45,8 @@ export const getPaymentMethods = async (
  */
 export const getPaymentMethodById = async (
   id: string
-): Promise<ApiResponse<PaymentMethod>> => {
-  const response = await api.get<ApiResponse<PaymentMethod>>(
+): Promise<ApiResponse<PaymentMethodConfig>> => {
+  const response = await api.get<ApiResponse<PaymentMethodConfig>>(
     `/admin/payment-methods/${id}`
   );
   return response.data;
@@ -60,8 +58,8 @@ export const getPaymentMethodById = async (
 export const updatePaymentMethod = async (
   id: string,
   data: UpdatePaymentMethodData
-): Promise<ApiResponse<PaymentMethod>> => {
-  const response = await api.put<ApiResponse<PaymentMethod>>(
+): Promise<ApiResponse<PaymentMethodConfig>> => {
+  const response = await api.put<ApiResponse<PaymentMethodConfig>>(
     `/admin/payment-methods/${id}`,
     data
   );
@@ -74,8 +72,8 @@ export const updatePaymentMethod = async (
 export const updatePaymentMethodStatus = async (
   id: string,
   status: "Active" | "InActive"
-): Promise<ApiResponse<PaymentMethod>> => {
-  const response = await api.patch<ApiResponse<PaymentMethod>>(
+): Promise<ApiResponse<PaymentMethodConfig>> => {
+  const response = await api.patch<ApiResponse<PaymentMethodConfig>>(
     `/admin/payment-methods/${id}/status`,
     { status }
   );

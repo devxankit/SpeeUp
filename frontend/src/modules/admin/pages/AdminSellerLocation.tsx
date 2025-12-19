@@ -32,7 +32,7 @@ export default function AdminSellerLocation() {
             sellerName: seller.sellerName || 'Unknown',
             storeName: seller.storeName || 'Unknown Store',
             email: seller.email || '',
-            phone: seller.mobile || seller.phone || '',
+            phone: seller.mobile || '',
             address: seller.address,
             city: seller.city,
             searchLocation: seller.searchLocation,
@@ -45,7 +45,7 @@ export default function AdminSellerLocation() {
           const sellersWithLocation = mappedSellers.filter(
             (seller) => seller.latitude && seller.longitude
           );
-          
+
           setSellers(sellersWithLocation.length > 0 ? sellersWithLocation : MOCK_SELLERS);
         } else {
           // Use mock data as fallback
@@ -68,9 +68,9 @@ export default function AdminSellerLocation() {
       seller.storeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       seller.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       seller.address?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesStatus = statusFilter === 'All' || seller.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -82,21 +82,13 @@ export default function AdminSellerLocation() {
     }
 
     // If we have sellers with locations, create a map with markers
-    const markers = filteredSellers
-      .map((seller, index) => {
-        if (seller.latitude && seller.longitude) {
-          return `${seller.latitude},${seller.longitude}`;
-        }
-        return null;
-      })
-      .filter(Boolean)
-      .join('|');
+
 
     // Use Google Maps Static API or embed with markers
     // For now, use embed with center point
     const centerLat = filteredSellers[0]?.latitude || '28.6139';
     const centerLng = filteredSellers[0]?.longitude || '77.2090';
-    
+
     return `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3771.5!2d${centerLng}!3d${centerLat}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjgrMzYnNDkuMSJOIDc3KzEyJzMyLjQiRQ!5e0!3m2!1sen!2sin!4v1234567890123!5m2!1sen!2sin`;
   };
 
@@ -222,11 +214,10 @@ export default function AdminSellerLocation() {
                   <div
                     key={seller._id}
                     onClick={() => handleSellerClick(seller)}
-                    className={`p-4 cursor-pointer transition-colors ${
-                      selectedSeller?._id === seller._id
-                        ? 'bg-teal-50 border-l-4 border-teal-600'
-                        : 'hover:bg-neutral-50'
-                    }`}
+                    className={`p-4 cursor-pointer transition-colors ${selectedSeller?._id === seller._id
+                      ? 'bg-teal-50 border-l-4 border-teal-600'
+                      : 'hover:bg-neutral-50'
+                      }`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">

@@ -1,10 +1,7 @@
 import api from "../config";
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
+
+import { ApiResponse } from "./types";
 
 export interface DeliveryBoy {
   _id: string;

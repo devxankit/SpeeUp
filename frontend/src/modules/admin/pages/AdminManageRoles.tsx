@@ -192,7 +192,7 @@ export default function AdminManageRoles() {
   const handleExport = () => {
     const csvContent = [
       ["#", "Role", "Type"],
-      ...roles.map((role) => [role.id.toString(), role.role, role.type]),
+      ...roles.map((role) => [role._id.toString(), role.name, role.type]),
     ]
       .map((row) => row.join(","))
       .join("\n");
@@ -430,10 +430,10 @@ export default function AdminManageRoles() {
                       </th>
                       <th
                         className="px-4 py-3 text-left text-xs font-semibold text-neutral-700 cursor-pointer hover:bg-neutral-100"
-                        onClick={() => handleSort("role")}>
+                        onClick={() => handleSort("name")}>
                         <div className="flex items-center">
                           Role
-                          <SortIcon column="role" />
+                          <SortIcon column="name" />
                         </div>
                       </th>
                       <th
@@ -489,8 +489,8 @@ export default function AdminManageRoles() {
                           <td className="px-4 py-3">
                             <span
                               className={`inline-block px-2 py-1 rounded text-xs font-medium ${role.type === "System"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
                                 }`}>
                               {role.type}
                             </span>
@@ -580,8 +580,8 @@ export default function AdminManageRoles() {
                         key={page}
                         onClick={() => setCurrentPage(page)}
                         className={`px-3 py-1.5 border rounded text-sm transition-colors ${currentPage === page
-                            ? "bg-teal-600 text-white border-teal-600"
-                            : "border-neutral-300 hover:bg-neutral-50"
+                          ? "bg-teal-600 text-white border-teal-600"
+                          : "border-neutral-300 hover:bg-neutral-50"
                           }`}>
                         {page}
                       </button>

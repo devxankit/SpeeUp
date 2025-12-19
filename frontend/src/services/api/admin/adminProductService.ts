@@ -1,16 +1,7 @@
 import api from "../config";
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
+
+import { ApiResponse } from "./types";
 
 // ==================== Category Interfaces ====================
 export interface Category {
@@ -59,6 +50,15 @@ export interface CreateSubCategoryData {
   category: string;
   image?: string;
   order?: number;
+}
+
+// ==================== Seller Interfaces ====================
+export interface Seller {
+  _id: string;
+  sellerName: string;
+  storeName: string;
+  profile?: string;
+  status: string;
 }
 
 // ==================== Brand Interfaces ====================
@@ -131,7 +131,7 @@ export interface CreateProductData {
   category: string;
   subcategory?: string;
   brand?: string;
-  seller: string;
+  seller?: string;
   mainImage?: string;
   galleryImages?: string[];
   price: number;
@@ -321,6 +321,16 @@ export const deleteSubCategory = async (
   const response = await api.delete<ApiResponse<void>>(
     `/admin/subcategories/${id}`
   );
+  return response.data;
+};
+
+// ==================== Seller API Functions ====================
+
+/**
+ * Get all sellers
+ */
+export const getSellers = async (): Promise<ApiResponse<Seller[]>> => {
+  const response = await api.get<ApiResponse<Seller[]>>("/admin/sellers");
   return response.data;
 };
 
