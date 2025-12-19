@@ -95,7 +95,7 @@ export default function SellerStockManagement() {
                                 productId: product._id,
                                 name: product.productName,
                                 seller: user?.storeName || '',
-                                image: resolveImageUrl(product.mainImageUrl),
+                                image: resolveImageUrl(product.mainImage || product.mainImageUrl),
                                 variation: variation.title || variation.value || variation.name || 'Default',
                                 stock: variation.stock === 0 ? 'Unlimited' : variation.stock,
                                 status: product.publish ? 'Published' : 'Unpublished',

@@ -201,24 +201,7 @@ export default function SellerHeader({ onMenuClick, isSidebarOpen }: SellerHeade
                     {user?.city ? `${user.city}${user.address ? `, ${user.address}` : ''}` : 'No location set'}
                   </p>
                 </div>
-                <button
-                  onClick={() => {
-                    setShowLocationDropdown(false);
-                    console.log('Change location clicked');
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                >
-                  Change Location
-                </button>
-                <button
-                  onClick={() => {
-                    setShowLocationDropdown(false);
-                    console.log('Delivery areas clicked');
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                >
-                  Manage Delivery Areas
-                </button>
+
               </div>
             )}
           </div>
