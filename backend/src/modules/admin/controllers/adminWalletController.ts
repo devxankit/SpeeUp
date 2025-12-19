@@ -16,7 +16,7 @@ export const getWalletTransactions = asyncHandler(
       limit = 10,
       type, // 'seller' | 'customer'
       userId,
-      transactionType, // 'credit' | 'debit'
+      transactionType: _transactionType, // 'credit' | 'debit'
     } = req.query;
 
     // This is a simplified version - in a real app, you'd have a Transaction model
@@ -203,9 +203,8 @@ export const getSellerTransactions = asyncHandler(
       type: "commission",
       amount: commission.commissionAmount,
       transactionType: commission.status === "Paid" ? "credit" : "pending",
-      description: `Commission for Order ${
-        (commission.order as any)?.orderNumber || "N/A"
-      }`,
+      description: `Commission for Order ${(commission.order as any)?.orderNumber || "N/A"
+        }`,
       date: commission.createdAt,
       status: commission.status,
     }));

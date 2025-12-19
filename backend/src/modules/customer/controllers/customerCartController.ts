@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import Cart from '../../../models/Cart';
 import CartItem from '../../../models/CartItem';
-import Product from '../../../models/Product';
+// import Product from '../../../models/Product';
 
 // Helper to calculate cart total
 const calculateCartTotal = async (cartId: any) => {
