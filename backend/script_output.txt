@@ -1,0 +1,48 @@
+--- Starting Reproduction Test ---
+1. Registering/Logging in Test User...
+   Registered successfully. Token obtained.
+2. Fetching Products...
+   Got Product: {
+  "_id": "694502eea737a1418d9c4e69",
+  "productName": "Assorted Dry Fruits Gift Pack",
+  "__v": 0,
+  "category": {
+    "_id": "6945027ba737a1418d9c4e08",
+    "image": "",
+    "name": "Wedding"
+  },
+  "compareAtPrice": 1200,
+  "createdAt": "2025-12-19T07:46:54.204Z",
+  "dealOfDay": false,
+  "description": "Assorted Dry Fruits Gift Pack - 1 kg",
+  "discount": 0,
+  "galleryImages": [
+    "https://res.cloudinary.com/dv1l9sb4p/image/upload/v1766130304/speeup/products/product-haldiram-sev.jpg"
+  ],
+  "isReturnable": false,
+  "mainImage": "https://res.cloudinary.com/dv1l9sb4p/image/upload/v1766130304/speeup/products/product-haldiram-sev.jpg",
+  "popular": true,
+  "price": 899,
+  "publish": true,
+  "rating": 0,
+  "requiresApproval": false,
+  "reviewsCount": 0,
+  "seller": {
+    "_id": "6945026d87fcb7e2dd8de7eb",
+    "storeName": "SpeeUp Retail Pvt Ltd"
+  },
+  "sku": "wedding-dry-fruits",
+  "smallDescription": "1 kg",
+  "status": "Active",
+  "stock": 100,
+  "tags": [
+    "bestseller"
+  ],
+  "updatedAt": "2025-12-19T07:46:54.204Z",
+  "variations": [],
+  "mrp": 1200,
+  "id": "694502eea737a1418d9c4e69"
+}
+   Got Product ID: 694502eea737a1418d9c4e69
+3. Adding to Cart...
+   SUCCESS: Added to cart.

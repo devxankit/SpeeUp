@@ -8,6 +8,7 @@ import { OrderAddress, Order } from '../../types/order';
 import Toast from '../../components/Toast';
 import PartyPopper from './components/PartyPopper';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '../../components/ui/sheet';
+import { addProductToWishlist } from '../../utils/wishlist';
 
 import { getAddresses } from '../../services/api/customerAddressService';
 
@@ -605,10 +606,10 @@ export default function Checkout() {
 
                       {/* Heart Icon - Top Right */}
                       <button
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          // Handle wishlist toggle
+                          await addProductToWishlist(product.id);
                         }}
                         className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
                         aria-label="Add to wishlist"

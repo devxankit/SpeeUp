@@ -5,6 +5,7 @@ import HomeHero from './components/HomeHero';
 import { useOrders } from '../../context/OrdersContext';
 import { useCart } from '../../context/CartContext';
 import { getProducts } from '../../services/api/customerProductService';
+import { addProductToWishlist } from '../../utils/wishlist';
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -224,10 +225,10 @@ export default function OrderAgain() {
 
                       {/* Heart Icon - Top Right */}
                       <button
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          // Handle wishlist toggle
+                          await addProductToWishlist(product.id);
                         }}
                         className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
                         aria-label="Add to wishlist"

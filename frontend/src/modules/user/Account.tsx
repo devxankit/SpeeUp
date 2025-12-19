@@ -10,6 +10,8 @@ export default function Account() {
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showGstModal, setShowGstModal] = useState(false);
+  const [gstNumber, setGstNumber] = useState('');
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -52,6 +54,12 @@ export default function Account() {
   const handleLogout = () => {
     authLogout();
     navigate('/login');
+  };
+
+  const handleGstSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // For now, just close the modal after entry; hook to API if available
+    setShowGstModal(false);
   };
 
   if (loading) {
@@ -150,6 +158,7 @@ export default function Account() {
             <div className="text-[10px] md:text-xs font-semibold text-neutral-900">Your orders</div>
           </button>
           <button
+            onClick={() => navigate('/wallet')}
             className="bg-white rounded-lg border border-neutral-200 p-3 md:p-4 hover:shadow-md transition-shadow text-center"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-auto mb-1.5 md:mb-2 text-neutral-700 md:w-6 md:h-6">
@@ -169,65 +178,16 @@ export default function Account() {
         </div>
       </div>
 
-      {/* Appearance Section */}
-      <div className="px-4 py-2.5 border-b border-neutral-200">
-        <div className="flex items-center justify-between mb-2.5">
-          <div className="flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
-              <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            <h2 className="text-xs font-semibold text-neutral-900">Appearance</h2>
-          </div>
-          <div className="relative">
-            <select className="text-[10px] text-neutral-700 bg-white border border-neutral-200 rounded px-2 py-1 pr-6 appearance-none">
-              <option>LIGHT</option>
-              <option>DARK</option>
-            </select>
-            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 text-xs pointer-events-none">▼</span>
-          </div>
-        </div>
 
-        {/* Hide sensitive Items Card */}
-        <div className="bg-neutral-50 rounded-lg p-2.5 border border-neutral-200">
-          <div className="flex items-start justify-between mb-1.5">
-            <div className="flex items-center gap-2 flex-1">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-green-600">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor" />
-              </svg>
-              <span className="text-[11px] font-medium text-neutral-900">Hide sensitive Items</span>
-            </div>
-            <button
-              onClick={() => setHideSensitiveItems(!hideSensitiveItems)}
-              className={`ml-2 w-9 h-5 rounded-full transition-colors flex-shrink-0 ${hideSensitiveItems ? 'bg-green-600' : 'bg-neutral-300'
-                }`}
-            >
-              <div
-                className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${hideSensitiveItems ? 'translate-x-4' : 'translate-x-0.5'
-                  }`}
-                style={{ marginTop: '2px' }}
-              />
-            </button>
-          </div>
-          <p className="text-[10px] text-neutral-600 mb-1 ml-5 leading-tight">
-            Sexual wellness, nicotine products and other sensitive items will be hidden
-          </p>
-          <button className="text-[10px] text-green-600 font-medium ml-5">Know more</button>
-        </div>
-      </div>
 
       {/* Your Information Section */}
       <div className="px-4 py-2.5">
         <h2 className="text-xs font-bold text-neutral-900 mb-2">Your information</h2>
         <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
-          <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors">
+          <button
+            onClick={() => navigate('/address-book')}
+            className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors"
+          >
             <div className="flex items-center gap-2.5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -239,17 +199,10 @@ export default function Account() {
             </div>
             <span className="text-neutral-400 text-base">›</span>
           </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100">
-            <div className="flex items-center gap-2.5">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
-                <path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                <circle cx="12" cy="12" r="2" fill="currentColor" />
-              </svg>
-              <span className="text-xs font-medium text-neutral-900">Bookmarked recipes</span>
-            </div>
-            <span className="text-neutral-400 text-base">›</span>
-          </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100">
+          <button
+            onClick={() => navigate('/wishlist')}
+            className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100"
+          >
             <div className="flex items-center gap-2.5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -258,7 +211,10 @@ export default function Account() {
             </div>
             <span className="text-neutral-400 text-base">›</span>
           </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100">
+          <button
+            onClick={() => setShowGstModal(true)}
+            className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100"
+          >
             <div className="flex items-center gap-2.5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -281,18 +237,6 @@ export default function Account() {
             </div>
             <span className="text-neutral-400 text-base">›</span>
           </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100">
-            <div className="flex items-center gap-2.5">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <line x1="12" y1="18" x2="12" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                <line x1="9" y1="15" x2="15" y2="15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              <span className="text-xs font-medium text-neutral-900">Your prescriptions</span>
-            </div>
-            <span className="text-neutral-400 text-base">›</span>
-          </button>
         </div>
       </div>
 
@@ -300,17 +244,10 @@ export default function Account() {
       <div className="px-4 py-2.5">
         <h2 className="text-xs font-bold text-neutral-900 mb-2">Payment and coupons</h2>
         <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
-          <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors">
-            <div className="flex items-center gap-2.5">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
-                <path d="M21 4H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <line x1="1" y1="10" x2="23" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              <span className="text-xs font-medium text-neutral-900">Wallet</span>
-            </div>
-            <span className="text-neutral-400 text-base">›</span>
-          </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100">
+          <button
+            onClick={() => navigate('/wallet')}
+            className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors"
+          >
             <div className="flex items-center gap-2.5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
                 <path d="M21 4H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -320,26 +257,8 @@ export default function Account() {
             </div>
             <span className="text-neutral-400 text-base">›</span>
           </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100">
-            <div className="flex items-center gap-2.5">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
-                <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <span className="text-xs font-medium text-neutral-900">Payment settings</span>
-            </div>
-            <span className="text-neutral-400 text-base">›</span>
-          </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100">
-            <div className="flex items-center gap-2.5">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
-                <path d="M20 7h-4V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2H4a1 1 0 0 0-1 1v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a1 1 0 0 0-1-1z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M12 12v6M9 15h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <span className="text-xs font-medium text-neutral-900">Claim Gift card</span>
-            </div>
-            <span className="text-neutral-400 text-base">›</span>
-          </button>
+          {/* Claim Gift card button removed per request */}
+
           <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100">
             <div className="flex items-center gap-2.5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
@@ -398,7 +317,10 @@ export default function Account() {
             </div>
             <span className="text-neutral-400 text-base">›</span>
           </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100">
+          <button
+            onClick={() => navigate('/about-us')}
+            className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100"
+          >
             <div className="flex items-center gap-2.5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -445,6 +367,114 @@ export default function Account() {
           </button>
         </div>
       </div>
+
+      {showGstModal && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 z-50 bg-black/50 animate-fadeIn"
+            onClick={() => setShowGstModal(false)}
+          />
+
+          {/* Bottom Sheet */}
+          <div className="fixed inset-x-0 bottom-0 z-50 animate-slideUp">
+            <div className="bg-white rounded-t-3xl shadow-2xl max-w-lg mx-auto relative">
+              {/* Close Button */}
+              <button
+                onClick={() => setShowGstModal(false)}
+                aria-label="Close"
+                className="absolute -top-12 right-4 w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center text-white hover:bg-neutral-700 transition-colors shadow-lg"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              <div className="px-6 pt-8 pb-8 text-center">
+                {/* Icon */}
+                <div className="mx-auto mb-5 w-24 h-24 rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center justify-center">
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="w-12 h-12 text-neutral-500"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <rect x="5" y="3" width="14" height="18" rx="2" ry="2" />
+                    <line x1="9" y1="7" x2="15" y2="7" />
+                    <line x1="9" y1="11" x2="15" y2="11" />
+                    <line x1="9" y1="15" x2="13" y2="15" />
+                  </svg>
+                </div>
+
+                {/* Title */}
+                <h3 className="text-xl font-bold text-neutral-900 mb-2">
+                  Add GST Details
+                </h3>
+
+                {/* Description */}
+                <p className="text-sm text-neutral-600 mb-6 leading-relaxed">
+                  If you're a business owner, add your GST details and<br />
+                  get GST invoice on your orders.
+                </p>
+
+                {/* Form */}
+                <form onSubmit={handleGstSubmit} className="space-y-4">
+                  <input
+                    type="text"
+                    value={gstNumber}
+                    onChange={(e) => setGstNumber(e.target.value)}
+                    placeholder="GST Number"
+                    className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                  />
+                  <button
+                    type="submit"
+                    className="w-full rounded-lg bg-[#9ca0b0] text-white font-semibold py-3.5 disabled:opacity-50 hover:bg-[#8a8e9e] transition-colors"
+                    disabled={!gstNumber.trim()}
+                  >
+                    Confirm
+                  </button>
+                </form>
+
+                {/* Terms */}
+                <p className="mt-5 text-xs text-neutral-500">
+                  By continuing, you agree to our{' '}
+                  <span className="underline cursor-pointer hover:text-neutral-700">Terms & Conditions</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Add custom animations */}
+          <style>{`
+            @keyframes fadeIn {
+              from {
+                opacity: 0;
+              }
+              to {
+                opacity: 1;
+              }
+            }
+
+            @keyframes slideUp {
+              from {
+                transform: translateY(100%);
+              }
+              to {
+                transform: translateY(0);
+              }
+            }
+
+            .animate-fadeIn {
+              animation: fadeIn 0.3s ease-out;
+            }
+
+            .animate-slideUp {
+              animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+          `}</style>
+        </>
+      )}
     </div>
   );
 }

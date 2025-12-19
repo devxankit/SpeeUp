@@ -117,8 +117,8 @@ export default function DeliveryLogin() {
                 onClick={handleMobileLogin}
                 disabled={mobileNumber.length !== 10 || loading}
                 className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${mobileNumber.length === 10 && !loading
-                    ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-md'
-                    : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                  ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-md'
+                  : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
                   }`}
               >
                 {loading ? 'Sending...' : 'Continue'}
@@ -164,25 +164,7 @@ export default function DeliveryLogin() {
             </div>
           )}
 
-          {/* OR Separator */}
-          <div className="flex items-center gap-2.5 my-4">
-            <div className="flex-1 h-px bg-neutral-200"></div>
-            <span className="text-xs text-neutral-500">OR</span>
-            <div className="flex-1 h-px bg-neutral-200"></div>
-          </div>
 
-          {/* Login with SpeeUp Button */}
-          <button
-            onClick={handleSpeeUpLogin}
-            className="w-full py-2.5 rounded-lg font-semibold text-sm bg-gradient-to-r from-teal-600 to-green-600 text-white hover:from-teal-700 hover:to-green-700 transition-all shadow-md flex items-center justify-center gap-2"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            <span>Login with</span>
-            <span className="font-bold">SpeeUp</span>
-          </button>
 
           {/* Sign Up Link */}
           <div className="text-center pt-4 border-t border-neutral-200">

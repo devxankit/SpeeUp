@@ -18,6 +18,8 @@ import Cart from "./modules/user/Cart";
 import Checkout from "./modules/user/Checkout";
 import CheckoutAddress from "./modules/user/CheckoutAddress";
 import ProductDetail from "./modules/user/ProductDetail";
+import AddressBook from "./modules/user/AddressBook";
+import Wishlist from "./modules/user/Wishlist";
 import SpiritualStore from "./modules/user/SpiritualStore";
 import PharmaStore from "./modules/user/PharmaStore";
 import EGiftStore from "./modules/user/EGiftStore";
@@ -28,6 +30,7 @@ import ToyStore from "./modules/user/ToyStore";
 import HobbyStore from "./modules/user/HobbyStore";
 import Login from "./modules/user/Login";
 import SignUp from "./modules/user/SignUp";
+import AboutUs from "./modules/user/AboutUs";
 import DeliveryLayout from "./modules/delivery/components/DeliveryLayout";
 import DeliveryDashboard from "./modules/delivery/pages/DeliveryDashboard";
 import DeliveryOrders from "./modules/delivery/pages/DeliveryOrders";
@@ -415,6 +418,9 @@ function App() {
                         <Route path="/orders/:id" element={<OrderDetail />} />
                         <Route path="/order-again" element={<OrderAgain />} />
                         <Route path="/account" element={<Account />} />
+                        <Route path="/about-us" element={<AboutUs />} />
+                        <Route path="/address-book" element={<AddressBook />} />
+                        <Route path="/wishlist" element={<Wishlist />} />
                         <Route path="/wallet" element={<Wallet />} />
                         <Route path="/categories" element={<Categories />} />
                         <Route path="/category/:id" element={<Category />} />
