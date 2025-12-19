@@ -47,6 +47,23 @@ export default function SellerStockManagement() {
         fetchCats();
     }, []);
 
+    // Helper to resolve image URL
+    const resolveImageUrl = (url: string | undefined) => {
+        if (!url) return '/assets/product-placeholder.jpg';
+        if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
+
+        // Handle relative paths
+        const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/v1";
+        try {
+            const urlObj = new URL(apiBase);
+            const origin = urlObj.origin;
+            const cleanUrl = url.replace(/\\/g, '/'); // Fix windows backslashes
+            return `${origin}/${cleanUrl.startsWith('/') ? cleanUrl.slice(1) : cleanUrl}`;
+        } catch (e) {
+            return url;
+        }
+    };
+
     // Fetch products and convert to stock items
     useEffect(() => {
         const fetchStockItems = async () => {
@@ -78,7 +95,7 @@ export default function SellerStockManagement() {
                                 productId: product._id,
                                 name: product.productName,
                                 seller: user?.storeName || '',
-                                image: product.mainImageUrl || '/assets/product-placeholder.jpg',
+                                image: resolveImageUrl(product.mainImage || product.mainImageUrl),
                                 variation: variation.title || variation.value || variation.name || 'Default',
                                 stock: variation.stock === 0 ? 'Unlimited' : variation.stock,
                                 status: product.publish ? 'Published' : 'Unpublished',

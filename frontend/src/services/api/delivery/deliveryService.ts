@@ -32,22 +32,33 @@ export const getDashboardStats = async (): Promise<DeliveryDashboardStats> => {
 };
 
 // --- Orders ---
+
+
+export const updateSettings = async (settings: { notifications?: boolean; location?: boolean; sound?: boolean }) => {
+    const response = await api.put('/delivery/settings', settings);
+    return response.data;
+};
+
+
+
+export const getAllOrdersHistory = async (page = 1, limit = 20) => {
+    const response = await api.get(`/delivery/orders/history?page=${page}&limit=${limit}`);
+    return response.data.data;
+};
+
 export const getTodayOrders = async () => {
-    try {
-        const response = await api.get(`${BASE_URL}/orders/today`);
-        return response.data.data;
-    } catch (error) {
-        throw handleApiError(error);
-    }
+    const response = await api.get('/delivery/orders/today');
+    return response.data.data;
+};
+
+export const getReturnOrders = async () => {
+    const response = await api.get('/delivery/orders/returns');
+    return response.data.data;
 };
 
 export const getPendingOrders = async () => {
-    try {
-        const response = await api.get(`${BASE_URL}/orders/pending`);
-        return response.data.data;
-    } catch (error) {
-        throw handleApiError(error);
-    }
+    const response = await api.get('/delivery/orders/pending');
+    return response.data.data;
 };
 
 export const getOrderDetails = async (id: string) => {
@@ -93,6 +104,42 @@ export const getHelpSupport = async () => {
     try {
         const response = await api.get(`${BASE_URL}/help`);
         return response.data.data;
+    } catch (error) {
+        throw handleApiError(error);
+    }
+};
+
+export const updateProfile = async (data: any) => {
+    try {
+        const response = await api.put(`${BASE_URL}/profile`, data);
+        return response.data.data;
+    } catch (error) {
+        throw handleApiError(error);
+    }
+};
+
+export const updateStatus = async (isOnline: boolean) => {
+    try {
+        const response = await api.put(`${BASE_URL}/status`, { isOnline });
+        return response.data;
+    } catch (error) {
+        throw handleApiError(error);
+    }
+};
+
+export const getNotifications = async () => {
+    try {
+        const response = await api.get(`${BASE_URL}/notifications`);
+        return response.data.data;
+    } catch (error) {
+        throw handleApiError(error);
+    }
+};
+
+export const markNotificationRead = async (id: string) => {
+    try {
+        const response = await api.put(`${BASE_URL}/notifications/${id}/read`);
+        return response.data;
     } catch (error) {
         throw handleApiError(error);
     }

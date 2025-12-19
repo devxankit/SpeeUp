@@ -1,7 +1,8 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import DeliveryHeader from '../components/DeliveryHeader';
 import DeliveryBottomNav from '../components/DeliveryBottomNav';
+import { updateSettings, getDeliveryProfile } from '../../../services/api/delivery/deliveryService';
 
 export default function DeliverySettings() {
   const navigate = useNavigate();
@@ -9,27 +10,57 @@ export default function DeliverySettings() {
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const profile = await getDeliveryProfile();
+        if (profile.settings) {
+          setNotificationsEnabled(profile.settings.notifications ?? true);
+          setLocationEnabled(profile.settings.location ?? true);
+          setSoundEnabled(profile.settings.sound ?? true);
+        }
+      } catch (error) {
+        console.error("Failed to fetch settings", error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSettingChange = async (key: string, value: boolean) => {
+    // Optimistic update
+    if (key === 'notifications') setNotificationsEnabled(value);
+    if (key === 'location') setLocationEnabled(value);
+    if (key === 'sound') setSoundEnabled(value);
+
+    try {
+      await updateSettings({ [key]: value });
+    } catch (error) {
+      console.error("Failed to update settings", error);
+      // Revert if needed (optional)
+    }
+  };
+
   const settingsOptions = [
     {
       id: 'notifications',
       title: 'Push Notifications',
       description: 'Receive notifications for new orders',
       value: notificationsEnabled,
-      onChange: setNotificationsEnabled,
+      onChange: (val: boolean) => handleSettingChange('notifications', val),
     },
     {
       id: 'location',
       title: 'Location Services',
       description: 'Allow app to access your location',
       value: locationEnabled,
-      onChange: setLocationEnabled,
+      onChange: (val: boolean) => handleSettingChange('location', val),
     },
     {
       id: 'sound',
       title: 'Sound Alerts',
       description: 'Play sound for new order alerts',
       value: soundEnabled,
-      onChange: setSoundEnabled,
+      onChange: (val: boolean) => handleSettingChange('sound', val),
     },
   ];
 
@@ -69,14 +100,12 @@ export default function DeliverySettings() {
                 </div>
                 <button
                   onClick={() => option.onChange(!option.value)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    option.value ? 'bg-orange-500' : 'bg-neutral-300'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${option.value ? 'bg-orange-500' : 'bg-neutral-300'
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      option.value ? 'translate-x-6' : 'translate-x-1'
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${option.value ? 'translate-x-6' : 'translate-x-1'
+                      }`}
                   />
                 </button>
               </div>

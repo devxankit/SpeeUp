@@ -24,9 +24,10 @@ export const sendCallOtp = asyncHandler(async (req: Request, res: Response) => {
   // Check if delivery partner exists with this mobile
   const delivery = await Delivery.findOne({ mobile });
   if (!delivery) {
-    return res.status(404).json({
+    console.log('Delivery partner not found for mobile:', mobile);
+    return res.status(400).json({ // Changed to 400 to distinguish from Route Not Found
       success: false,
-      message: "Delivery partner not found with this mobile number",
+      message: "Delivery partner not found with this mobile number. Please register first.",
     });
   }
 
@@ -86,7 +87,7 @@ export const verifyCallOtp = asyncHandler(async (req: Request, res: Response) =>
 
   if (!delivery) {
     console.log('Error: Delivery Partner not found in DB');
-    return res.status(404).json({
+    return res.status(401).json({ // Changed to 401
       success: false,
       message: "Delivery partner not found. Please Register first.",
     });
@@ -198,7 +199,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
  */
 export const getProfile = asyncHandler(async (req: Request, res: Response) => {
   // @ts-ignore - req.user is added by middleware
-  const userId = req.user._id || req.user.id;
+  const userId = (req.user as any).userId;
 
   const delivery = await Delivery.findById(userId).select("-password");
 

@@ -11,7 +11,7 @@ export default function DeliveryMenu() {
     { id: 'menu-3', title: 'Settings', route: '/delivery/settings' },
     { id: 'menu-4', title: 'Help & Support', route: '/delivery/help' },
     { id: 'menu-5', title: 'About', route: '/delivery/about' },
-    { id: 'menu-6', title: 'Logout', route: '/login' },
+    { id: 'menu-6', title: 'Logout', route: '/delivery/login' },
   ];
 
   const getMenuIcon = (menuId: string) => {
@@ -116,8 +116,10 @@ export default function DeliveryMenu() {
   };
 
   const handleMenuClick = (route: string) => {
-    if (route === '/login') {
+    if (route === '/delivery/login') {
       // Handle logout logic here
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
       navigate(route);
     } else {
       // Navigate to the selected route

@@ -30,7 +30,7 @@ router.post(
   uploadSingleImage.single("image"),
   handleUploadError,
   asyncHandler(async (req: Request, res: Response) => {
-    if (!req.file) {
+    if (!(req as any).file) {
       return res.status(400).json({
         success: false,
         message: "No image file provided",
@@ -38,7 +38,7 @@ router.post(
     }
 
     const folder = (req.body.folder as string) || CLOUDINARY_FOLDERS.PRODUCTS;
-    const result = await uploadImageFromBuffer(req.file.buffer, {
+    const result = await uploadImageFromBuffer((req as any).file.buffer, {
       folder,
       resourceType: "image",
     });
@@ -60,7 +60,7 @@ router.post(
   uploadMultipleImages.array("images", 10), // Max 10 images
   handleUploadError,
   asyncHandler(async (req: Request, res: Response) => {
-    if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+    if (!(req as any).files || ((req as any).files as any[]).length === 0) {
       return res.status(400).json({
         success: false,
         message: "No image files provided",
@@ -68,7 +68,7 @@ router.post(
     }
 
     const folder = (req.body.folder as string) || CLOUDINARY_FOLDERS.PRODUCTS;
-    const files = req.files as Express.Multer.File[];
+    const files = (req as any).files as any[];
 
     const uploadPromises = files.map((file) =>
       uploadImageFromBuffer(file.buffer, {
@@ -96,7 +96,7 @@ router.post(
   uploadDocument.single("document"),
   handleUploadError,
   asyncHandler(async (req: Request, res: Response) => {
-    if (!req.file) {
+    if (!(req as any).file) {
       return res.status(400).json({
         success: false,
         message: "No document file provided",
@@ -114,10 +114,10 @@ router.post(
     }
 
     // Check if it's an image or PDF
-    const isImage = req.file.mimetype.startsWith("image/");
+    const isImage = (req as any).file.mimetype.startsWith("image/");
     const resourceType = isImage ? "image" : "raw";
 
-    const result = await uploadDocumentFromBuffer(req.file.buffer, {
+    const result = await uploadDocumentFromBuffer((req as any).file.buffer, {
       folder,
       resourceType,
     });
@@ -139,7 +139,7 @@ router.post(
   uploadMultipleDocuments.array("documents", 5), // Max 5 documents
   handleUploadError,
   asyncHandler(async (req: Request, res: Response) => {
-    if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+    if (!(req as any).files || ((req as any).files as any[]).length === 0) {
       return res.status(400).json({
         success: false,
         message: "No document files provided",
@@ -156,7 +156,7 @@ router.post(
       folder = CLOUDINARY_FOLDERS.SELLER_DOCUMENTS;
     }
 
-    const files = req.files as Express.Multer.File[];
+    const files = (req as any).files as any[];
 
     const uploadPromises = files.map((file) => {
       const isImage = file.mimetype.startsWith("image/");

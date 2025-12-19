@@ -64,12 +64,8 @@ export interface RegisterResponse {
 
 // Send Call OTP
 export const sendOTP = async (mobile: string): Promise<SendOTPResponse> => {
-  try {
-    const response = await api.post('/auth/delivery/send-call-otp', { mobile });
-    return response.data;
-  } catch (error: any) {
-    throw handleApiError(error);
-  }
+  const response = await api.post('/auth/delivery/send-call-otp', { mobile });
+  return response.data;
 };
 
 // Verify Call OTP
@@ -78,22 +74,18 @@ export const verifyOTP = async (
   otp: string,
   sessionId?: string
 ): Promise<VerifyOTPResponse> => {
-  try {
-    const response = await api.post('/auth/delivery/verify-call-otp', {
-      mobile,
-      otp,
-      sessionId,
-    });
+  const response = await api.post('/auth/delivery/verify-call-otp', {
+    mobile,
+    otp,
+    sessionId,
+  });
 
-    if (response.data.success && response.data.data?.token) {
-      localStorage.setItem('authToken', response.data.data.token);
-      localStorage.setItem('userData', JSON.stringify(response.data.data.user));
-    }
-
-    return response.data;
-  } catch (error: any) {
-    throw handleApiError(error);
+  if (response.data.success && response.data.data?.token) {
+    localStorage.setItem('authToken', response.data.data.token);
+    localStorage.setItem('userData', JSON.stringify(response.data.data.user));
   }
+
+  return response.data;
 };
 
 /**

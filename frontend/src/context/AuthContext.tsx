@@ -19,60 +19,56 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Initialize state synchronously from localStorage to prevent redirect issues
-  const initializeAuth = () => {
+  // Initialize state synchronously from localStorage
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    const storedToken = getAuthToken();
+    const storedUser = localStorage.getItem("userData");
+    return !!(storedToken && storedUser);
+  });
+
+  const [user, setUser] = useState<User | null>(() => {
+    const storedUser = localStorage.getItem("userData");
+    if (storedUser) {
+      try {
+        return JSON.parse(storedUser);
+      } catch (error) {
+        return null;
+      }
+    }
+    return null;
+  });
+
+  const [token, setToken] = useState<string | null>(() => {
+    return getAuthToken();
+  });
+
+  // Effect to sync state if localStorage changes externally or on mount validation
+  useEffect(() => {
     const storedToken = getAuthToken();
     const storedUser = localStorage.getItem("userData");
 
     if (storedToken && storedUser) {
       try {
         const userData = JSON.parse(storedUser);
-        return {
-          token: storedToken,
-          user: userData,
-          isAuthenticated: true,
-        };
+        // Only update if state doesn't match to avoid loops
+        if (!isAuthenticated || token !== storedToken) {
+          setToken(storedToken);
+          setUser(userData);
+          setIsAuthenticated(true);
+        }
       } catch (error) {
-        // Invalid stored data, clear it
         removeAuthToken();
+        setToken(null);
+        setUser(null);
+        setIsAuthenticated(false);
       }
-    }
-    return {
-      token: null,
-      user: null,
-      isAuthenticated: false,
-    };
-  };
-
-  const initialAuth = initializeAuth();
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    initialAuth.isAuthenticated
-  );
-  const [user, setUser] = useState<User | null>(initialAuth.user);
-  const [token, setToken] = useState<string | null>(initialAuth.token);
-
-  // Re-check on mount to handle any edge cases
-  useEffect(() => {
-    const storedToken = getAuthToken();
-    const storedUser = localStorage.getItem("userData");
-
-    if (storedToken && storedUser && !isAuthenticated) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setToken(storedToken);
-        setUser(userData);
-        setIsAuthenticated(true);
-      } catch (error) {
-        // Invalid stored data, clear it
-        removeAuthToken();
-      }
-    } else if (!storedToken && isAuthenticated) {
-      // Token was removed, clear auth state
+    } else if (isAuthenticated) {
+      // Logged out
       setToken(null);
       setUser(null);
       setIsAuthenticated(false);
     }
-  }, [isAuthenticated]);
+  }, []);
 
   const login = (newToken: string, userData: User) => {
     setToken(newToken);

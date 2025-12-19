@@ -27,7 +27,7 @@ const storage = multer.memoryStorage();
 // File filter for images
 const imageFileFilter = (
   _req: Request,
-  file: Express.Multer.File,
+  file: any,
   cb: multer.FileFilterCallback
 ) => {
   if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
@@ -44,7 +44,7 @@ const imageFileFilter = (
 // File filter for documents (images + PDF)
 const documentFileFilter = (
   _req: Request,
-  file: Express.Multer.File,
+  file: any,
   cb: multer.FileFilterCallback
 ) => {
   if (ALLOWED_DOCUMENT_TYPES.includes(file.mimetype)) {

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import Order from "../../../models/Order";
 import Product from "../../../models/Product";
 // import Category from "../../../models/Category";
+// import Category from "../../../models/Category";
 import OrderItem from "../../../models/OrderItem";
 import { asyncHandler } from "../../../utils/asyncHandler";
 import mongoose from "mongoose";
@@ -51,6 +52,8 @@ export const getDashboardStats = asyncHandler(
 
             if (product.variations && product.variations.length > 0) {
                 product.variations.forEach(v => {
+                    if ((v.stock || 0) > 0) isSoldOut = false;
+                    if ((v.stock || 0) > 0 && (v.stock || 0) < 5) isLowStock = true;
                     if (v.stock && v.stock > 0) isSoldOut = false;
                     if (v.stock && v.stock > 0 && v.stock < 5) isLowStock = true;
                 });

@@ -122,7 +122,7 @@ export async function uploadImageFromBuffer(
 
     const uploadStream = cloudinary.uploader.upload_stream(
       uploadOptions,
-      (error, result) => {
+      (error: any, result: any) => {
         if (error) {
           reject(new Error(`Cloudinary upload failed: ${error.message}`));
         } else if (result) {
@@ -162,7 +162,7 @@ export async function uploadDocumentFromBuffer(
 
     const uploadStream = cloudinary.uploader.upload_stream(
       uploadOptions,
-      (error, result) => {
+      (error: any, result: any) => {
         if (error) {
           reject(
             new Error(`Cloudinary document upload failed: ${error.message}`)
