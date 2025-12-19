@@ -140,92 +140,102 @@ function App() {
                 <Route
                   path="/delivery/*"
                   element={
-                    <DeliveryLayout>
-                      <Routes>
-                        <Route path="" element={<DeliveryDashboard />} />
-                        <Route path="orders" element={<DeliveryOrders />} />
-                        <Route
-                          path="orders/:id"
-                          element={<DeliveryOrderDetail />}
-                        />
-                        <Route
-                          path="orders/pending"
-                          element={<DeliveryPendingOrders />}
-                        />
-                        <Route
-                          path="orders/all"
-                          element={<DeliveryAllOrders />}
-                        />
-                        <Route
-                          path="orders/return"
-                          element={<DeliveryReturnOrders />}
-                        />
-                        <Route
-                          path="notifications"
-                          element={<DeliveryNotifications />}
-                        />
-                        <Route path="menu" element={<DeliveryMenu />} />
-                        <Route path="profile" element={<DeliveryProfile />} />
-                        <Route path="earnings" element={<DeliveryEarnings />} />
-                        <Route path="settings" element={<DeliverySettings />} />
-                        <Route path="help" element={<DeliveryHelp />} />
-                        <Route path="about" element={<DeliveryAbout />} />
-                      </Routes>
-                    </DeliveryLayout>
+                    <ProtectedRoute requiredUserType="Delivery" redirectTo="/delivery/login">
+                      <DeliveryLayout>
+                        <Routes>
+                          <Route path="" element={<DeliveryDashboard />} />
+                          <Route path="orders" element={<DeliveryOrders />} />
+                          <Route
+                            path="orders/:id"
+                            element={<DeliveryOrderDetail />}
+                          />
+                          <Route
+                            path="orders/pending"
+                            element={<DeliveryPendingOrders />}
+                          />
+                          <Route
+                            path="orders/all"
+                            element={<DeliveryAllOrders />}
+                          />
+                          <Route
+                            path="orders/return"
+                            element={<DeliveryReturnOrders />}
+                          />
+                          <Route
+                            path="notifications"
+                            element={<DeliveryNotifications />}
+                          />
+                          <Route path="menu" element={<DeliveryMenu />} />
+                          <Route path="profile" element={<DeliveryProfile />} />
+                          <Route
+                            path="earnings"
+                            element={<DeliveryEarnings />}
+                          />
+                          <Route
+                            path="settings"
+                            element={<DeliverySettings />}
+                          />
+                          <Route path="help" element={<DeliveryHelp />} />
+                          <Route path="about" element={<DeliveryAbout />} />
+                        </Routes>
+                      </DeliveryLayout>
+                    </ProtectedRoute>
                   }
                 />
                 {/* Seller App Routes */}
                 <Route
                   path="/seller/*"
                   element={
-                    <SellerLayout>
-                      <Routes>
-                        <Route path="" element={<SellerDashboard />} />
-                        <Route path="orders" element={<SellerOrders />} />
-                        <Route
-                          path="orders/:id"
-                          element={<SellerOrderDetail />}
-                        />
-                        <Route path="category" element={<SellerCategory />} />
-                        <Route
-                          path="subcategory"
-                          element={<SellerSubCategory />}
-                        />
-                        <Route
-                          path="product/add"
-                          element={<SellerAddProduct />}
-                        />
-                        <Route path="product/taxes" element={<SellerTaxes />} />
-                        <Route
-                          path="product/list"
-                          element={<SellerProductList />}
-                        />
-                        <Route
-                          path="product/stock"
-                          element={<SellerStockManagement />}
-                        />
-                        <Route
-                          path="return"
-                          element={<SellerReturnRequest />}
-                        />
-                        <Route
-                          path="return-order"
-                          element={<SellerReturnRequest />}
-                        />
-                        <Route
-                          path="wallet"
-                          element={<SellerWallet />}
-                        />
-                        <Route
-                          path="reports/sales"
-                          element={<SellerSalesReport />}
-                        />
-                        <Route
-                          path="account-settings"
-                          element={<SellerAccountSettings />}
-                        />
-                      </Routes>
-                    </SellerLayout>
+                    <ProtectedRoute requiredUserType="Seller" redirectTo="/seller/login">
+                      <SellerLayout>
+                        <Routes>
+                          <Route path="" element={<SellerDashboard />} />
+                          <Route path="orders" element={<SellerOrders />} />
+                          <Route
+                            path="orders/:id"
+                            element={<SellerOrderDetail />}
+                          />
+                          <Route path="category" element={<SellerCategory />} />
+                          <Route
+                            path="subcategory"
+                            element={<SellerSubCategory />}
+                          />
+                          <Route
+                            path="product/add"
+                            element={<SellerAddProduct />}
+                          />
+                          <Route
+                            path="product/taxes"
+                            element={<SellerTaxes />}
+                          />
+                          <Route
+                            path="product/list"
+                            element={<SellerProductList />}
+                          />
+                          <Route
+                            path="product/stock"
+                            element={<SellerStockManagement />}
+                          />
+                          <Route
+                            path="return"
+                            element={<SellerReturnRequest />}
+                          />
+                          <Route
+                            path="return-order"
+                            element={<SellerReturnRequest />}
+                          />
+                          <Route path="wallet" element={<SellerWallet />} />
+                          <Route
+                            path="reports/sales"
+                            element={<SellerSalesReport />}
+                          />
+                          <Route
+                            path="account-settings"
+                            element={<SellerAccountSettings />}
+                          />
+                        </Routes>
+                      </SellerLayout>
+                    </ProtectedRoute>
                   }
                 />
                 {/* Admin App Routes */}

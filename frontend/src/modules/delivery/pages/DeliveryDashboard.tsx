@@ -211,8 +211,8 @@ export default function DeliveryDashboard() {
                     </div>
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${order.status === 'Ready for pickup'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-blue-100 text-blue-700'
+                        ? 'bg-yellow-100 text-yellow-700'
+                        : 'bg-blue-100 text-blue-700'
                         }`}
                     >
                       {order.status}

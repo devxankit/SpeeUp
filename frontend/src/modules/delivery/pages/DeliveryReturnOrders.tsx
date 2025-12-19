@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import DeliveryHeader from '../components/DeliveryHeader';
 import DeliveryBottomNav from '../components/DeliveryBottomNav';
-import { getTodayOrders } from '../../../services/api/delivery/deliveryService';
+import { getReturnOrders } from '../../../services/api/delivery/deliveryService';
 
 export default function DeliveryReturnOrders() {
   const navigate = useNavigate();
@@ -13,12 +13,8 @@ export default function DeliveryReturnOrders() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const data = await getTodayOrders();
-        // Filter for return/cancelled orders
-        const returns = data.filter((order: any) =>
-          order.status === 'Cancelled' || order.status === 'Returned'
-        );
-        setReturnOrders(returns);
+        const data = await getReturnOrders();
+        setReturnOrders(data);
       } catch (err: any) {
         setError(err.message || 'Failed to load return orders');
       } finally {

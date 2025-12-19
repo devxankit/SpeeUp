@@ -39,15 +39,16 @@ api.interceptors.response.use(
 
       if (!isAuthEndpoint) {
         // Token expired or invalid - clear token and redirect to appropriate login
-        // Determine which login page based on the API endpoint
-        const url = error.config?.url || "";
+        // Determine which login page based on the Current URL or API endpoint
+        const currentPath = window.location.pathname;
+        const apiUrl = error.config?.url || "";
         let redirectPath = "/login";
 
-        if (url.includes("/admin/")) {
+        if (currentPath.includes("/admin/") || apiUrl.includes("/admin/")) {
           redirectPath = "/admin/login";
-        } else if (url.includes("/seller/") || url.includes("/sellers")) {
+        } else if (currentPath.includes("/seller/") || apiUrl.includes("/seller/") || apiUrl.includes("/sellers")) {
           redirectPath = "/seller/login";
-        } else if (url.includes("/delivery/")) {
+        } else if (currentPath.includes("/delivery/") || apiUrl.includes("/delivery/")) {
           redirectPath = "/delivery/login";
         }
 

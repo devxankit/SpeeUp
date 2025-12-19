@@ -74,32 +74,38 @@ export const verifyOTP = async (
   otp: string,
   sessionId?: string
 ): Promise<VerifyOTPResponse> => {
-  const response = await api.post('/auth/delivery/verify-call-otp', {
-    mobile,
-    otp,
-    sessionId,
-  });
+  try {
+    const response = await api.post('/auth/delivery/verify-call-otp', {
+      mobile,
+      otp,
+      sessionId,
+    });
+    const response = await api.post('/auth/delivery/verify-call-otp', {
+      mobile,
+      otp,
+      sessionId,
+    });
 
-  if (response.data.success && response.data.data?.token) {
-    localStorage.setItem('authToken', response.data.data.token);
-    localStorage.setItem('userData', JSON.stringify(response.data.data.user));
-  }
+    if (response.data.success && response.data.data?.token) {
+      localStorage.setItem('authToken', response.data.data.token);
+      localStorage.setItem('userData', JSON.stringify(response.data.data.user));
+    }
 
-  return response.data;
-};
+    return response.data;
+  };
 
-/**
- * Register new delivery partner
- */
-export const register = async (data: RegisterData): Promise<RegisterResponse> => {
-  const response = await api.post<RegisterResponse>('/auth/delivery/register', data);
-  return response.data;
-};
+  /**
+   * Register new delivery partner
+   */
+  export const register = async (data: RegisterData): Promise<RegisterResponse> => {
+    const response = await api.post<RegisterResponse>('/auth/delivery/register', data);
+    return response.data;
+  };
 
-/**
- * Logout delivery partner
- */
-export const logout = (): void => {
-  removeAuthToken();
-};
+  /**
+   * Logout delivery partner
+   */
+  export const logout = (): void => {
+    removeAuthToken();
+  };
 

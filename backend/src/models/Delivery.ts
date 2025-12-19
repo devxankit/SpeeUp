@@ -22,11 +22,21 @@ export interface IDelivery extends Document {
   accountNumber?: string;
   ifscCode?: string;
 
+  // Vehicle Information
+  vehicleNumber?: string;
+  vehicleType?: string;
+
   // Commission & Payment
   bonusType?: string; // 'Fixed' | 'Salaried' | 'Commission Based'
   status: 'Active' | 'Inactive';
+  isOnline: boolean; // Availability status
   balance: number;
   cashCollected: number;
+  settings: {
+    notifications: boolean;
+    location: boolean;
+    sound: boolean;
+  };
 
   createdAt: Date;
   updatedAt: Date;
@@ -118,6 +128,16 @@ const DeliverySchema = new Schema<IDelivery>(
       trim: true,
     },
 
+    // Vehicle Information
+    vehicleNumber: {
+      type: String,
+      trim: true,
+    },
+    vehicleType: {
+      type: String,
+      trim: true,
+    },
+
     // Commission & Payment
     bonusType: {
       type: String,
@@ -128,6 +148,10 @@ const DeliverySchema = new Schema<IDelivery>(
       enum: ['Active', 'Inactive'],
       default: 'Inactive', // New delivery partners start as Inactive until approved
     },
+    isOnline: {
+      type: Boolean,
+      default: false,
+    },
     balance: {
       type: Number,
       default: 0,
@@ -137,6 +161,11 @@ const DeliverySchema = new Schema<IDelivery>(
       type: Number,
       default: 0,
       min: [0, 'Cash collected cannot be negative'],
+    },
+    settings: {
+      notifications: { type: Boolean, default: true },
+      location: { type: Boolean, default: true },
+      sound: { type: Boolean, default: true }
     },
   },
   {
