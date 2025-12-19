@@ -7,14 +7,23 @@ import mongoose from "mongoose";
 
 // Create a new order
 export const createOrder = async (req: Request, res: Response) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
+    let session: mongoose.ClientSession | null = null;
     try {
+        // Only start session if we are on a replica set (required for transactions)
+        // For simplicity in local dev, we check and fallback if it fails
+        try {
+            session = await mongoose.startSession();
+            session.startTransaction();
+        } catch (sessionError) {
+            console.warn("MongoDB Transactions not supported or failed to start. Proceeding without transaction.");
+            session = null;
+        }
+
         const { items, address, paymentMethod, fees } = req.body;
         const userId = req.user!.userId;
 
         if (!items || items.length === 0) {
+            if (session) await session.abortTransaction();
             return res.status(400).json({
                 success: false,
                 message: "Order must have at least one item",
@@ -22,6 +31,7 @@ export const createOrder = async (req: Request, res: Response) => {
         }
 
         if (!address) {
+            if (session) await session.abortTransaction();
             return res.status(400).json({
                 success: false,
                 message: "Delivery address is required",
@@ -31,6 +41,7 @@ export const createOrder = async (req: Request, res: Response) => {
         // Fetch customer details
         const customer = await Customer.findById(userId);
         if (!customer) {
+            if (session) await session.abortTransaction();
             return res.status(404).json({
                 success: false,
                 message: "Customer not found",
@@ -39,42 +50,49 @@ export const createOrder = async (req: Request, res: Response) => {
 
         // Initialize Order first to get an ID
         const newOrder = new Order({
-            customer: userId,
+            customer: new mongoose.Types.ObjectId(userId),
             customerName: customer.name,
             customerEmail: customer.email,
             customerPhone: customer.phone,
             deliveryAddress: {
-                address: address.address || address.street, // Fallback if format differs
-                city: address.city,
-                state: address.state,
-                pincode: address.pincode,
-                landmark: address.landmark,
+                address: address.address || address.street || 'N/A',
+                city: address.city || 'N/A',
+                state: address.state || '',
+                pincode: address.pincode || '000000',
+                landmark: address.landmark || '',
                 latitude: address.latitude,
                 longitude: address.longitude,
             },
             paymentMethod: paymentMethod || 'COD',
             paymentStatus: 'Pending',
-            status: 'Received', // Default status per model
-            subtotal: 0, // Will update
+            status: 'Received',
+            subtotal: 0,
             tax: 0,
             shipping: fees?.deliveryFee || 0,
-            total: 0, // Will update
             platformFee: fees?.platformFee || 0,
-            items: [] // Will populate
+            discount: 0,
+            total: 0,
+            items: []
         });
 
         let calculatedSubtotal = 0;
         const orderItemIds: mongoose.Types.ObjectId[] = [];
 
         for (const item of items) {
-            const product = await Product.findById(item.product.id).session(session);
+            if (!item.product || !item.product.id) {
+                throw new Error("Invalid item structure: product.id is missing");
+            }
+
+            const product = session
+                ? await Product.findById(item.product.id).session(session)
+                : await Product.findById(item.product.id);
 
             if (!product) {
-                throw new Error(`Product not found: ${item.product.name}`);
+                throw new Error(`Product not found: ${item.product.name || 'ID: ' + item.product.id}`);
             }
 
             if (product.stock < item.quantity) {
-                throw new Error(`Insufficient stock for ${product.productName}.`);
+                throw new Error(`Insufficient stock for ${product.productName}. Available: ${product.stock}, Requested: ${item.quantity}`);
             }
 
             const itemPrice = product.price;
@@ -82,7 +100,7 @@ export const createOrder = async (req: Request, res: Response) => {
             calculatedSubtotal += itemTotal;
 
             // Create OrderItem
-            const newOrderItem = new OrderItem({
+            const newOrderItemData = {
                 order: newOrder._id,
                 product: product._id,
                 seller: product.seller,
@@ -94,32 +112,47 @@ export const createOrder = async (req: Request, res: Response) => {
                 total: itemTotal,
                 variation: item.variant,
                 status: 'Pending'
-            });
+            };
 
-            await newOrderItem.save({ session });
+            const newOrderItem = new OrderItem(newOrderItemData);
+            if (session) {
+                await newOrderItem.save({ session });
+            } else {
+                await newOrderItem.save();
+            }
             orderItemIds.push(newOrderItem._id as mongoose.Types.ObjectId);
 
             // Decrease stock
+            const updateOptions = session ? { session } : {};
             await Product.findByIdAndUpdate(
                 item.product.id,
                 { $inc: { stock: -item.quantity } },
-                { session }
+                updateOptions
             );
         }
 
         // Apply fees
-        const platformFee = fees?.platformFee || 0;
-        const deliveryFee = fees?.deliveryFee || 0;
+        const platformFee = Number(fees?.platformFee) || 0;
+        const deliveryFee = Number(fees?.deliveryFee) || 0;
         const finalTotal = calculatedSubtotal + platformFee + deliveryFee;
 
         // Update Order with calculated values and items
-        newOrder.subtotal = calculatedSubtotal;
-        newOrder.total = finalTotal;
+        newOrder.subtotal = Number(calculatedSubtotal.toFixed(2));
+        newOrder.total = Number(finalTotal.toFixed(2));
         newOrder.items = orderItemIds;
 
-        await newOrder.save({ session });
-
-        await session.commitTransaction();
+        if (session) {
+            await newOrder.save({ session });
+            await session.commitTransaction();
+        } else {
+            // Validate before saving to catch errors with details
+            const validationError = newOrder.validateSync();
+            if (validationError) {
+                console.error("DEBUG: Order Validation Error:", validationError.errors);
+                throw validationError;
+            }
+            await newOrder.save();
+        }
 
         return res.status(201).json({
             success: true,
@@ -128,14 +161,42 @@ export const createOrder = async (req: Request, res: Response) => {
         });
 
     } catch (error: any) {
-        await session.abortTransaction();
+        if (session) {
+            try {
+                await session.abortTransaction();
+            } catch (abortError) {
+                console.error("Error aborting transaction:", abortError);
+            }
+        }
+
+        console.error("DEBUG: Order Creation Error Detail:", {
+            message: error.message,
+            name: error.name,
+            errors: error.errors ? Object.keys(error.errors).map(key => ({
+                field: key,
+                message: error.errors[key].message,
+                value: error.errors[key].value
+            })) : undefined,
+            stack: error.stack,
+            body: req.body
+        });
+
+        // Return a more informative error message if it's a validation error
+        let errorMessage = "Error creating order. " + error.message;
+        if (error.name === 'ValidationError') {
+            const fields = Object.keys(error.errors).join(', ');
+            errorMessage = `Validation failed for fields: ${fields}. ${error.message}`;
+        }
+
         return res.status(500).json({
             success: false,
-            message: "Error creating order",
+            message: errorMessage,
             error: error.message,
+            details: error.errors,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     } finally {
-        session.endSession();
+        if (session) session.endSession();
     }
 };
 

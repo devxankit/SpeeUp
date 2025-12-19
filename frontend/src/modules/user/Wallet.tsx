@@ -63,33 +63,33 @@ const Wallet = () => {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 p-6 text-white shadow-xl"
+                    className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-50 via-white to-teal-100 p-6 text-neutral-900 shadow-lg border border-teal-100"
                 >
                     {/* Background decoration */}
-                    <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-white/5 blur-3xl" />
-                    <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 rounded-full bg-teal-500/10 blur-3xl" />
+                    <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-teal-200/30 blur-3xl" />
+                    <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 rounded-full bg-amber-100/50 blur-3xl" />
 
                     <div className="relative">
                         <div className="flex justify-between items-start mb-8">
                             <div>
-                                <p className="text-gray-400 text-sm font-medium mb-1">Total Balance</p>
+                                <p className="text-gray-600 text-sm font-medium mb-1">Total Balance</p>
                                 {loading ? (
-                                    <div className="h-10 w-32 bg-white/10 rounded animate-pulse" />
+                                    <div className="h-10 w-32 bg-teal-100/60 rounded animate-pulse" />
                                 ) : (
                                     <h2 className="text-4xl font-bold tracking-tight">
                                         ₹{stats?.balance.toLocaleString('en-IN') || '0'}
                                     </h2>
                                 )}
                             </div>
-                            <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm">
-                                <svg className="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="p-3 bg-white rounded-xl border border-teal-100 shadow-sm">
+                                <svg className="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
                             </div>
                         </div>
 
                         <div className="flex gap-3">
-                            <button className="flex-1 bg-teal-500 hover:bg-teal-600 text-white py-3 px-4 rounded-xl font-semibold text-sm transition-all active:scale-95 shadow-lg shadow-teal-500/20 flex items-center justify-center gap-2">
+                            <button className="flex-1 bg-teal-500 hover:bg-teal-600 text-white py-3 px-4 rounded-xl font-semibold text-sm transition-all active:scale-95 shadow-lg shadow-teal-400/30 flex items-center justify-center gap-2">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                                 </svg>
@@ -97,7 +97,7 @@ const Wallet = () => {
                             </button>
                             <button
                                 onClick={() => navigate('/transactions')} // Or expand modal
-                                className="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 px-4 rounded-xl font-semibold text-sm transition-all backdrop-blur-sm flex items-center justify-center gap-2"
+                                className="flex-1 bg-white hover:bg-teal-50 text-teal-800 py-3 px-4 rounded-xl font-semibold text-sm transition-all border border-teal-100 flex items-center justify-center gap-2"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />

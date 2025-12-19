@@ -264,7 +264,7 @@ export const getRecentOrders = async (limit: number = 10) => {
     .limit(limit)
     .lean();
 
-  return orders.map((order) => ({
+  return orders.map((order: any) => ({
     id: order._id.toString(),
     orderNumber: order.orderNumber,
     customerName: order.customerName,

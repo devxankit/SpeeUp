@@ -5,6 +5,7 @@ import HomeHero from './components/HomeHero';
 import { useOrders } from '../../context/OrdersContext';
 import { useCart } from '../../context/CartContext';
 import { getProducts } from '../../services/api/customerProductService';
+import { addProductToWishlist } from '../../utils/wishlist';
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -75,7 +76,17 @@ export default function OrderAgain() {
     const fetchBestsellers = async () => {
       try {
         const response = await getProducts({ sort: 'popular', limit: 6 });
-        setBestsellerProducts(response.data);
+        if (response.success && response.data) {
+          const mapped = (response.data as any[]).map(p => ({
+            ...p,
+            id: p._id || p.id,
+            name: p.productName || p.name,
+            imageUrl: p.mainImage || p.imageUrl,
+            mrp: p.mrp || p.price,
+            pack: p.variations?.[0]?.title || p.smallDescription || 'Standard'
+          }));
+          setBestsellerProducts(mapped);
+        }
       } catch (error) {
         console.error('Failed to fetch bestsellers:', error);
       }
@@ -138,7 +149,7 @@ export default function OrderAgain() {
                               />
                             ) : (
                               <span className="text-[8px] text-neutral-400">
-                                {item.product.name.charAt(0).toUpperCase()}
+                                {(item.product.name || item.product.productName || '?').charAt(0).toUpperCase()}
                               </span>
                             )}
                           </div>
@@ -211,7 +222,7 @@ export default function OrderAgain() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-4xl">
-                          {product.name.charAt(0).toUpperCase()}
+                          {(product.name || product.productName || '?').charAt(0).toUpperCase()}
                         </div>
                       )}
 
@@ -224,10 +235,10 @@ export default function OrderAgain() {
 
                       {/* Heart Icon - Top Right */}
                       <button
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          // Handle wishlist toggle
+                          await addProductToWishlist(product.id);
                         }}
                         className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
                         aria-label="Add to wishlist"
@@ -342,7 +353,7 @@ export default function OrderAgain() {
                       className="mb-0.5 cursor-pointer"
                     >
                       <h3 className="text-[10px] font-bold text-neutral-900 line-clamp-2 leading-tight">
-                        {product.name}
+                        {product.name || product.productName}
                       </h3>
                     </div>
 
@@ -381,10 +392,10 @@ export default function OrderAgain() {
                     <div className="mb-1">
                       <div className="flex items-baseline gap-1">
                         <span className="text-[13px] font-bold text-neutral-900">
-                          ₹{product.price.toLocaleString('en-IN')}
+                          ₹{product.price?.toLocaleString('en-IN') || '0'}
                         </span>
                         <span className="text-[10px] text-neutral-400 line-through">
-                          ₹{product.mrp?.toLocaleString('en-IN')}
+                          ₹{product.mrp?.toLocaleString('en-IN') || (product.price?.toLocaleString('en-IN'))}
                         </span>
                       </div>
                     </div>

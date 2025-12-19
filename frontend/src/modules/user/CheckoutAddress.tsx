@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { OrderAddress } from '../../types/order';
 import { addAddress } from '../../services/api/customerAddressService';
+import { appConfig } from '../../services/configService';
 
 export default function CheckoutAddress() {
   const { cart } = useCart();
@@ -22,8 +23,8 @@ export default function CheckoutAddress() {
   const [orderingFor, setOrderingFor] = useState<'myself' | 'someone-else'>('myself');
   const [addressType, setAddressType] = useState<'home' | 'work' | 'hotel' | 'other'>('home');
 
-  const platformFee = 2;
-  const deliveryFee = cart.total >= 199 ? 0 : 40;
+  const platformFee = appConfig.platformFee;
+  const deliveryFee = cart.total >= appConfig.freeDeliveryThreshold ? 0 : appConfig.deliveryFee;
   const totalAmount = cart.total + platformFee + deliveryFee;
 
   const validateForm = (): boolean => {
@@ -294,7 +295,7 @@ export default function CheckoutAddress() {
             className={`w-full px-3 py-2 bg-white border rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors ${errors.pincode ? 'border-red-500' : 'border-neutral-200'
               }`}
             placeholder="Pincode"
-            maxLength={6}
+            maxLength={4}
           />
           {errors.pincode && <p className="text-[10px] text-red-500 mt-0.5">{errors.pincode}</p>}
         </div>

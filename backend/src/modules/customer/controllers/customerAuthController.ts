@@ -1,16 +1,17 @@
 import { Request, Response } from "express";
 import Customer from "../../../models/Customer";
 import {
-  sendOTP as sendOTPService,
-  verifyOTP as verifyOTPService,
+  sendCallOtp as sendCallOtpService,
+  verifyCallOtp as verifyCallOtpService,
 } from "../../../services/otpService";
 import { generateToken } from "../../../services/jwtService";
 import { asyncHandler } from "../../../utils/asyncHandler";
 
 /**
- * Send OTP to customer mobile number
+ * Send Call OTP to customer mobile number
+ * Returns session_id for verification
  */
-export const sendOTP = asyncHandler(async (req: Request, res: Response) => {
+export const sendCallOtp = asyncHandler(async (req: Request, res: Response) => {
   const { mobile } = req.body;
 
   if (!mobile || !/^[0-9]{10}$/.test(mobile)) {
@@ -20,29 +21,35 @@ export const sendOTP = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  // Check if customer exists with this mobile
+  // Check if customer exists with this mobile (Login Flow)
+  // Note: For Signup, we might need a separate flow or allow if not found?
+  // The user didn't specify distinct signup/login flows for call OTP, but existing code checks customer.
+  // Standard practice: if checking for login, user must exist.
+  // We will keep this check.
   const customer = await Customer.findOne({ phone: mobile });
   if (!customer) {
-    return res.status(400).json({
+    return res.status(404).json({
       success: false,
-      message: "Customer not found with this mobile number",
+      message: "Customer not found. Please register first.",
     });
   }
 
-  // Send OTP - for login, always use default OTP
-  const result = await sendOTPService(mobile, "Customer", true);
+  // Send Call OTP
+  const result = await sendCallOtpService(mobile, 'Customer');
 
   return res.status(200).json({
     success: true,
     message: result.message,
+    sessionId: result.sessionId, // Return session ID to frontend
   });
 });
 
 /**
- * Verify OTP and login customer
+ * Verify Call OTP and login customer
+ * Requires session_id and otp
  */
-export const verifyOTP = asyncHandler(async (req: Request, res: Response) => {
-  const { mobile, otp } = req.body;
+export const verifyCallOtp = asyncHandler(async (req: Request, res: Response) => {
+  const { mobile, otp, sessionId } = req.body;
 
   if (!mobile || !/^[0-9]{10}$/.test(mobile)) {
     return res.status(400).json({
@@ -51,15 +58,22 @@ export const verifyOTP = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  if (!otp || !/^[0-9]{6}$/.test(otp)) {
+  if (!otp || !/^[0-9]{4}$/.test(otp)) {
     return res.status(400).json({
       success: false,
-      message: "Valid 6-digit OTP is required",
+      message: "Valid 4-digit OTP is required",
     });
   }
 
-  // Verify OTP
-  const isValid = await verifyOTPService(mobile, otp, "Customer");
+  if (!sessionId) {
+    return res.status(400).json({
+      success: false,
+      message: "Session ID is required for verification",
+    });
+  }
+
+  // Verify Voice OTP
+  const isValid = await verifyCallOtpService(sessionId, otp, mobile, 'Customer');
   if (!isValid) {
     return res.status(401).json({
       success: false,
@@ -70,7 +84,7 @@ export const verifyOTP = asyncHandler(async (req: Request, res: Response) => {
   // Find customer
   const customer = await Customer.findOne({ phone: mobile });
   if (!customer) {
-    return res.status(400).json({
+    return res.status(404).json({
       success: false,
       message: "Customer not found",
     });

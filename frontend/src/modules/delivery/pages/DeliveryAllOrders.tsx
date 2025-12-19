@@ -1,34 +1,57 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import DeliveryHeader from '../components/DeliveryHeader';
 import DeliveryBottomNav from '../components/DeliveryBottomNav';
-import { mockOrders } from '../data/mockData';
+import { getTodayOrders } from '../../../services/api/delivery/deliveryService';
 
 export default function DeliveryAllOrders() {
   const navigate = useNavigate();
-  
-  // Filter today's orders
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayOrders = mockOrders.filter((order) => {
-    const orderDate = new Date(order.createdAt);
-    orderDate.setHours(0, 0, 0, 0);
-    return orderDate.getTime() === today.getTime();
-  });
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const data = await getTodayOrders();
+        setOrders(data);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Ready for pickup':
         return 'bg-yellow-100 text-yellow-700';
-      case 'Out for delivery':
+      case 'Out for Delivery':
+      case 'In Transit':
+      case 'Picked Up':
+      case 'Assigned':
         return 'bg-blue-100 text-blue-700';
       case 'Delivered':
         return 'bg-green-100 text-green-700';
       case 'Cancelled':
+      case 'Returned':
         return 'bg-red-100 text-red-700';
       default:
         return 'bg-neutral-100 text-neutral-700';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center pb-20">
+        <p className="text-neutral-500">Loading orders...</p>
+        <DeliveryBottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-100 pb-20">
@@ -51,12 +74,16 @@ export default function DeliveryAllOrders() {
           </button>
           <h2 className="text-neutral-900 text-xl font-semibold">Today's All Orders</h2>
         </div>
-        {todayOrders.length > 0 ? (
+
+        {error && <div className="p-4 mb-4 text-red-600 bg-red-50 rounded-lg">{error}</div>}
+
+        {orders.length > 0 ? (
           <div className="space-y-3">
-            {todayOrders.map((order) => (
+            {orders.map((order) => (
               <div
                 key={order.id}
-                className="bg-white rounded-xl p-4 shadow-sm border border-neutral-200"
+                className="bg-white rounded-xl p-4 shadow-sm border border-neutral-200 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => navigate(`/delivery/orders/${order.id}`)}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -74,13 +101,13 @@ export default function DeliveryAllOrders() {
                   <p className="text-neutral-600 text-xs mb-2 line-clamp-2">{order.address}</p>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-neutral-500 text-xs">
-                      {order.items.length} item{order.items.length > 1 ? 's' : ''}
+                      {order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''}
                     </p>
                     <p className="text-neutral-900 font-bold">₹ {order.totalAmount}</p>
                   </div>
                   {order.estimatedDeliveryTime && (
                     <p className="text-neutral-500 text-xs">
-                      ETA: {order.estimatedDeliveryTime} {order.distance && `• ${order.distance}`}
+                      ETA: {order.estimatedDeliveryTime} {order.distance ? `• ${order.distance}` : ''}
                     </p>
                   )}
                   <p className="text-neutral-400 text-xs mt-2">

@@ -4,13 +4,15 @@ import Address from "../../../models/Address";
 // Add a new address
 export const addAddress = async (req: Request, res: Response) => {
     try {
-        const { name, phone, flat, street, city, pincode, type, isDefault } = req.body;
+        const { name, fullName, phone, flat, street, city, state, pincode, type, isDefault } = req.body;
         const userId = req.user!.userId;
 
-        if (!name || !phone || !flat || !street || !city || !pincode) {
+        const finalName = fullName || name;
+
+        if (!finalName || !phone || !flat || !street || !city || !pincode) {
             return res.status(400).json({
                 success: false,
-                message: "All fields are required",
+                message: "All fields are required (name, phone, flat, street, city, pincode)",
             });
         }
 
@@ -27,10 +29,11 @@ export const addAddress = async (req: Request, res: Response) => {
 
         const newAddress = new Address({
             customer: userId,
-            fullName: name,
+            fullName: finalName,
             phone,
             address: fullAddress, // Mapped
             city,
+            state,
             pincode,
             type: type || 'Home',
             isDefault: isDefault || false,
@@ -74,13 +77,16 @@ export const getMyAddresses = async (req: Request, res: Response) => {
 export const updateAddress = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { name, phone, flat, street, city, pincode, type, isDefault } = req.body;
+        const { name, fullName, phone, flat, street, city, state, pincode, type, isDefault } = req.body;
         const userId = req.user!.userId;
 
+        const finalName = fullName || name;
+
         let updateData: any = {
-            fullName: name,
+            fullName: finalName,
             phone,
             city,
+            state,
             pincode,
             type,
         };

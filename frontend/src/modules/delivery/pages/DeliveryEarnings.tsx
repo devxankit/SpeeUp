@@ -1,23 +1,54 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import DeliveryHeader from '../components/DeliveryHeader';
 import DeliveryBottomNav from '../components/DeliveryBottomNav';
-import { getDashboardStats } from '../data/mockData';
+import { getDashboardStats, getEarningsHistory } from '../../../services/api/delivery/deliveryService';
 
 export default function DeliveryEarnings() {
   const navigate = useNavigate();
-  const stats = getDashboardStats();
+  const [stats, setStats] = useState<any>(null);
+  const [earningsHistory, setEarningsHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Mock earnings data
-  const earningsData = [
-    { date: 'Today', amount: stats.todayEarning, deliveries: stats.pendingOrders + 2 },
-    { date: 'Yesterday', amount: 250, deliveries: 10 },
-    { date: '2 days ago', amount: 225, deliveries: 9 },
-    { date: '3 days ago', amount: 275, deliveries: 11 },
-    { date: '4 days ago', amount: 200, deliveries: 8 },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [statsData, historyData] = await Promise.all([
+          getDashboardStats(),
+          getEarningsHistory()
+        ]);
+        setStats(statsData);
+        setEarningsHistory(historyData);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load earnings data');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const totalEarnings = earningsData.reduce((sum, day) => sum + day.amount, 0);
-  const totalDeliveries = earningsData.reduce((sum, day) => sum + day.deliveries, 0);
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center pb-20">
+        <p className="text-neutral-500">Loading earnings...</p>
+        <DeliveryBottomNav />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center pb-20">
+        <p className="text-red-500">{error}</p>
+        <DeliveryBottomNav />
+      </div>
+    );
+  }
+
+  const totalDeliveries = earningsHistory.reduce((sum, day) => sum + day.deliveries, 0);
 
   return (
     <div className="min-h-screen bg-neutral-100 pb-20">
@@ -44,8 +75,8 @@ export default function DeliveryEarnings() {
         {/* Total Earnings Card */}
         <div className="bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl p-6 text-white mb-4 shadow-sm">
           <p className="text-orange-100 text-sm mb-2">Total Earnings</p>
-          <p className="text-3xl font-bold mb-1">₹ {stats.totalEarning.toFixed(2)}</p>
-          <p className="text-orange-100 text-xs">From {totalDeliveries} deliveries</p>
+          <p className="text-3xl font-bold mb-1">₹ {stats?.totalEarning?.toFixed(2) || '0.00'}</p>
+          <p className="text-orange-100 text-xs">From {totalDeliveries} deliveries (Past 30 days)</p>
         </div>
 
         {/* Today's Earnings */}
@@ -53,11 +84,11 @@ export default function DeliveryEarnings() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-neutral-500 text-xs mb-1">Today's Earnings</p>
-              <p className="text-neutral-900 text-2xl font-bold">₹ {stats.todayEarning}</p>
+              <p className="text-neutral-900 text-2xl font-bold">₹ {stats?.todayEarning || 0}</p>
             </div>
             <div className="text-right">
-              <p className="text-neutral-500 text-xs mb-1">Deliveries</p>
-              <p className="text-neutral-900 text-2xl font-bold">{stats.pendingOrders + 2}</p>
+              <p className="text-neutral-500 text-xs mb-1">Deliveries Today</p>
+              <p className="text-neutral-900 text-2xl font-bold">{stats?.todayDeliveredCount || 0}</p>
             </div>
           </div>
         </div>
@@ -68,15 +99,19 @@ export default function DeliveryEarnings() {
             <h3 className="text-neutral-900 font-semibold">Recent Earnings</h3>
           </div>
           <div className="divide-y divide-neutral-200">
-            {earningsData.map((day, index) => (
-              <div key={index} className="p-4 flex justify-between items-center">
-                <div>
-                  <p className="text-neutral-900 text-sm font-medium">{day.date}</p>
-                  <p className="text-neutral-500 text-xs mt-1">{day.deliveries} deliveries</p>
+            {earningsHistory.length > 0 ? (
+              earningsHistory.map((day, index) => (
+                <div key={index} className="p-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-neutral-900 text-sm font-medium">{day.date}</p>
+                    <p className="text-neutral-500 text-xs mt-1">{day.deliveries} deliveries</p>
+                  </div>
+                  <p className="text-neutral-900 text-lg font-bold">₹ {day.amount}</p>
                 </div>
-                <p className="text-neutral-900 text-lg font-bold">₹ {day.amount}</p>
-              </div>
-            ))}
+              ))
+            ) : (
+              <div className="p-4 text-center text-neutral-500 text-sm">No recent earnings</div>
+            )}
           </div>
         </div>
 
@@ -84,13 +119,13 @@ export default function DeliveryEarnings() {
         <div className="bg-white rounded-xl shadow-sm border border-neutral-200 mt-4 p-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
-              <p className="text-neutral-500 text-xs mb-1">This Week</p>
-              <p className="text-neutral-900 text-xl font-bold">₹ {totalEarnings}</p>
+              <p className="text-neutral-500 text-xs mb-1">Total (Lifetime)</p>
+              <p className="text-neutral-900 text-xl font-bold">₹ {stats?.totalEarning || 0}</p>
             </div>
             <div className="text-center">
               <p className="text-neutral-500 text-xs mb-1">Avg per Delivery</p>
               <p className="text-neutral-900 text-xl font-bold">
-                ₹ {totalDeliveries > 0 ? Math.round(totalEarnings / totalDeliveries) : 0}
+                ₹ {totalDeliveries > 0 ? Math.round((stats?.totalEarning || 0) / (stats?.totalDeliveredCount || 1)) : 0}
               </p>
             </div>
           </div>

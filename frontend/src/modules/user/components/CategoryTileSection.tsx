@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+
 
 interface CategoryTile {
   id: string;
@@ -8,6 +9,7 @@ interface CategoryTile {
   image?: string; // Support single image property
   productCount?: number;
   categoryId?: string;
+  productId?: string;
   bgColor?: string;
 }
 
@@ -19,9 +21,15 @@ interface CategoryTileSectionProps {
 }
 
 export default function CategoryTileSection({ title, tiles, columns = 2, showProductCount = false }: CategoryTileSectionProps) {
+  const navigate = useNavigate();
+
   const handleTileClick = (tile: CategoryTile) => {
     if (tile.categoryId) {
-      // Navigate to category if categoryId is provided
+      navigate(`/category/${tile.categoryId}`);
+      return;
+    }
+    if (tile.productId) {
+      navigate(`/product/${tile.productId}`);
       return;
     }
     // Otherwise just log for now
@@ -51,9 +59,9 @@ export default function CategoryTileSection({ title, tiles, columns = 2, showPro
                 className="flex flex-col"
               >
                 <Link
-                  to={tile.categoryId ? `/category/${tile.categoryId}` : '#'}
+                  to={tile.productId ? `/product/${tile.productId}` : tile.categoryId ? `/category/${tile.categoryId}` : '#'}
                   onClick={(e) => {
-                    if (!tile.categoryId) {
+                    if (!tile.categoryId && !tile.productId) {
                       e.preventDefault();
                       handleTileClick(tile);
                     }

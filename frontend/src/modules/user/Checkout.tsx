@@ -3,71 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../context/CartContext';
 import { useOrders } from '../../context/OrdersContext';
-import { products } from '../../data/products';
+// import { products } from '../../data/products'; // Removed
 import { OrderAddress, Order } from '../../types/order';
 import Toast from '../../components/Toast';
 import PartyPopper from './components/PartyPopper';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '../../components/ui/sheet';
+import { addProductToWishlist } from '../../utils/wishlist';
 
+import { getCoupons, validateCoupon, Coupon as ApiCoupon } from '../../services/api/customerCouponService';
+import { appConfig } from '../../services/configService';
 import { getAddresses } from '../../services/api/customerAddressService';
+import { getProducts } from '../../services/api/customerProductService';
 
 // const STORAGE_KEY = 'saved_address'; // Removed
 
-interface Coupon {
-  id: string;
-  code: string;
-  title: string;
-  description: string;
-  discount: number; // percentage or fixed amount
-  type: 'percentage' | 'fixed';
-  minOrderValue?: number;
-}
+// Similar products helper removed - using API
 
-const AVAILABLE_COUPONS: Coupon[] = [
-  {
-    id: '1',
-    code: 'SAVE20',
-    title: 'Save 20%',
-    description: 'Get 20% off on orders above ₹100',
-    discount: 20,
-    type: 'percentage',
-    minOrderValue: 100,
-  },
-  {
-    id: '2',
-    code: 'FLAT50',
-    title: 'Flat ₹50 Off',
-    description: 'Get ₹50 off on orders above ₹200',
-    discount: 50,
-    type: 'fixed',
-    minOrderValue: 200,
-  },
-  {
-    id: '3',
-    code: 'WELCOME15',
-    title: 'Welcome 15%',
-    description: 'Get 15% off on your first order',
-    discount: 15,
-    type: 'percentage',
-  },
-];
-
-// Similar products for "You might also like" section
-const getSimilarProducts = (currentProductId: string) => {
-  const currentProduct = products.find(p => p.id === currentProductId);
-  if (!currentProduct) return products.slice(0, 6);
-
-  return products
-    .filter(p =>
-      p.id !== currentProductId &&
-      (p.categoryId === currentProduct.categoryId ||
-        p.tags?.some(tag => currentProduct.tags?.includes(tag)))
-    )
-    .slice(0, 6);
-};
 
 export default function Checkout() {
-  const { cart, updateQuantity, clearCart, addToCart } = useCart();
+  const { cart, updateQuantity, clearCart, addToCart, loading: cartLoading } = useCart();
   const { addOrder } = useOrders();
   const navigate = useNavigate();
   const [tipAmount, setTipAmount] = useState<number | null>(null);
@@ -77,136 +31,193 @@ export default function Checkout() {
   const [selectedAddress, setSelectedAddress] = useState<OrderAddress | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [showCouponSheet, setShowCouponSheet] = useState(false);
-  const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+  const [selectedCoupon, setSelectedCoupon] = useState<ApiCoupon | null>(null);
   const [showPartyPopper, setShowPartyPopper] = useState(false);
   const [hasAppliedCouponBefore, setHasAppliedCouponBefore] = useState(false);
-  const [isExiting, setIsExiting] = useState(false);
-  const [snapshotCartItems, setSnapshotCartItems] = useState(cart.items);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
+  const [availableCoupons, setAvailableCoupons] = useState<ApiCoupon[]>([]);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [validatedDiscount, setValidatedDiscount] = useState<number>(0);
+  const [similarProducts, setSimilarProducts] = useState<any[]>([]);
 
-  // Update snapshot when cart has items (so we have content to show during exit)
+  // Redirect if empty
   useEffect(() => {
-    if (cart.items.length > 0) {
-      setSnapshotCartItems([...cart.items]); // Create a copy
+    if (!cartLoading && cart.items.length === 0 && !showToast && !showOrderSuccess) {
+      navigate('/');
     }
-  }, [cart.items]);
+  }, [cart.items.length, cartLoading, showToast, navigate, showOrderSuccess]);
 
-  // Redirect to homepage if cart is empty with smooth animation
+  // Load addresses and coupons
   useEffect(() => {
-    if (cart.items.length === 0 && !showToast && !isExiting && !showOrderSuccess) {
-      // Only start exit if we have snapshot items to show
-      if (snapshotCartItems.length > 0) {
-        setIsExiting(true);
-        // Wait for animation to complete before navigating
-        setTimeout(() => {
-          navigate('/');
-        }, 400); // Match animation duration
-      } else {
-        // If no snapshot, navigate immediately
-        navigate('/');
-      }
-    }
-  }, [cart.items.length, showToast, navigate, isExiting, snapshotCartItems.length, showOrderSuccess]);
-
-  // Load saved address on mount
-  useEffect(() => {
-    const fetchAddress = async () => {
+    const fetchInitialData = async () => {
       try {
-        const response = await getAddresses();
-        if (response.success && Array.isArray(response.data) && response.data.length > 0) {
-          const defaultAddr = response.data.find((a: any) => a.isDefault) || response.data[0];
-          // Map to OrderAddress
+        const [addressResponse, couponResponse] = await Promise.all([
+          getAddresses(),
+          getCoupons()
+        ]);
+
+        if (addressResponse.success && Array.isArray(addressResponse.data) && addressResponse.data.length > 0) {
+          const defaultAddr = addressResponse.data.find((a: any) => a.isDefault) || addressResponse.data[0];
           const mappedAddress: OrderAddress = {
             name: defaultAddr.fullName,
             phone: defaultAddr.phone,
-            flat: '', // API might not split this
-            street: defaultAddr.address, // API main address field
+            flat: '',
+            street: defaultAddr.address,
             city: defaultAddr.city,
             state: defaultAddr.state,
             pincode: defaultAddr.pincode,
-            landmark: defaultAddr.landmark || '', // If available
+            landmark: defaultAddr.landmark || '',
             id: defaultAddr._id,
             _id: defaultAddr._id
           };
           setSavedAddress(mappedAddress);
           setSelectedAddress(mappedAddress);
         }
+
+        if (couponResponse.success) {
+          setAvailableCoupons(couponResponse.data);
+        }
       } catch (error) {
-        console.error('Error loading addresses:', error);
+        console.error('Error loading checkout data:', error);
       }
     };
-    fetchAddress();
+    fetchInitialData();
   }, []);
 
-  // During exit animation, use snapshot to keep content visible
-  const displayItems = isExiting && snapshotCartItems.length > 0 ? snapshotCartItems : cart.items;
+  // Fetch similar products dynamically
+  useEffect(() => {
+    const fetchSimilar = async () => {
+      const items = (cart?.items || []).filter(item => item && item.product);
+      if (items.length === 0) return;
+
+      const cartItem = items[0];
+      try {
+        let response;
+        if (cartItem && cartItem.product) {
+          // Try to fetch by category of the first item
+          let catId = '';
+          const product = cartItem.product;
+
+          if (product.categoryId) {
+            catId = typeof product.categoryId === 'string'
+              ? product.categoryId
+              : (product.categoryId as any)._id || (product.categoryId as any).id;
+          }
+
+          if (catId) {
+            response = await getProducts({ category: catId, limit: 10 });
+          } else {
+            response = await getProducts({ limit: 10, sort: 'popular' });
+          }
+        } else {
+          response = await getProducts({ limit: 10, sort: 'popular' });
+        }
+
+        if (response && response.data) {
+          // Filter out items already in cart
+          const itemsInCartIds = new Set((cart?.items || []).map(i => i.product?.id).filter(Boolean));
+          const filtered = response.data.filter((p: any) => !itemsInCartIds.has(p.id || p._id)).slice(0, 6);
+          setSimilarProducts(filtered);
+        }
+      } catch (err) {
+        console.error("Failed to fetch similar products", err);
+      }
+    };
+    fetchSimilar();
+  }, [cart?.items?.length]);
+
+  if (cartLoading || ((cart?.items?.length || 0) === 0 && !showOrderSuccess)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center">
+          <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-sm font-medium text-neutral-600">
+            {cartLoading ? 'Loading checkout...' : 'Redirecting...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const displayItems = (cart?.items || []).filter(item => item && item.product);
   const displayCart = {
     ...cart,
     items: displayItems,
-    itemCount: displayItems.reduce((sum, item) => sum + item.quantity, 0),
-    total: displayItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+    itemCount: displayItems.reduce((sum, item) => sum + (item.quantity || 0), 0),
+    total: displayItems.reduce((sum, item) => sum + (item.product?.price || 0) * (item.quantity || 0), 0)
   };
 
-  // Get first cart item for similar products
+  const amountNeededForFreeDelivery = Math.max(0, appConfig.freeDeliveryThreshold - (displayCart.total || 0));
   const cartItem = displayItems[0];
-  const similarProducts = useMemo(() => {
-    if (cartItem) {
-      return getSimilarProducts(cartItem.product.id);
-    }
-    return products.slice(0, 6);
-  }, [cartItem]);
 
-  // Don't render anything if cart is empty and not transitioning (will redirect via useEffect)
-  // But allow rendering during exit animation or order success screen
-  if (cart.items.length === 0 && !showToast && !isExiting && !showOrderSuccess) {
-    return null;
-  }
-
-  // Calculate totals for billing section
   const itemsTotal = displayItems.reduce((sum, item) => {
+    if (!item?.product) return sum;
     const itemPrice = item.product.mrp && item.product.mrp > item.product.price
       ? item.product.mrp
-      : item.product.price;
-    return sum + (itemPrice * item.quantity);
+      : item.product.price || 0;
+    return sum + (itemPrice * (item.quantity || 0));
   }, 0);
 
   const discountedTotal = displayCart.total;
   const savedAmount = itemsTotal - discountedTotal;
-  const handlingCharge = 2;
-  const deliveryCharge = displayCart.total >= 199 ? 0 : 40;
-  const amountNeededForFreeDelivery = Math.max(0, 199 - displayCart.total);
+  const handlingCharge = appConfig.platformFee;
+  const deliveryCharge = displayCart.total >= appConfig.freeDeliveryThreshold ? 0 : appConfig.deliveryFee;
 
-  // Calculate coupon discount
-  let couponDiscount = 0;
+  // Recalculate or use validated discount
+  // If we have a selected coupon, we should re-validate if cart total changes, 
+  // but for simplicity, we'll re-calculate locally if possible or trust the previous validation if acceptable (better to re-validate)
+  const subtotalBeforeCoupon = discountedTotal + handlingCharge + deliveryCharge;
+
+  // Local calculation for immediate feedback, relying on backend validation on Apply
+  let currentCouponDiscount = 0;
   if (selectedCoupon) {
-    const subtotalBeforeCoupon = discountedTotal + handlingCharge + deliveryCharge;
-    const meetsMinOrder = !selectedCoupon.minOrderValue || subtotalBeforeCoupon >= selectedCoupon.minOrderValue;
-
-    if (meetsMinOrder) {
-      if (selectedCoupon.type === 'percentage') {
-        couponDiscount = Math.round((subtotalBeforeCoupon * selectedCoupon.discount) / 100);
+    // Logic mirrors backend for UI update purposes
+    if (selectedCoupon.minOrderValue && subtotalBeforeCoupon < selectedCoupon.minOrderValue) {
+      // Invalid now
+    } else {
+      if (selectedCoupon.discountType === 'percentage') {
+        currentCouponDiscount = Math.round((subtotalBeforeCoupon * selectedCoupon.discountValue) / 100);
+        if (selectedCoupon.maxDiscountAmount && currentCouponDiscount > selectedCoupon.maxDiscountAmount) {
+          currentCouponDiscount = selectedCoupon.maxDiscountAmount;
+        }
       } else {
-        couponDiscount = selectedCoupon.discount;
+        currentCouponDiscount = selectedCoupon.discountValue;
       }
     }
   }
 
-  const grandTotal = discountedTotal + handlingCharge + deliveryCharge + (tipAmount || 0) + (showDonationInput ? donationAmount : 0) - couponDiscount;
+  const grandTotal = Math.max(0, discountedTotal + handlingCharge + deliveryCharge + (tipAmount || 0) + (showDonationInput ? donationAmount : 0) - currentCouponDiscount);
 
-  const handleApplyCoupon = (coupon: Coupon) => {
-    // Only show party popper animation if this is the very first time applying a coupon
-    const isFirstTime = !hasAppliedCouponBefore;
-    setSelectedCoupon(coupon);
-    setShowCouponSheet(false);
-    if (isFirstTime) {
-      setHasAppliedCouponBefore(true);
-      setShowPartyPopper(true);
+  const handleApplyCoupon = async (coupon: ApiCoupon) => {
+    setIsValidatingCoupon(true);
+    setCouponError(null);
+    try {
+      const result = await validateCoupon(coupon.code, subtotalBeforeCoupon);
+      if (result.success && result.data?.isValid) {
+        const isFirstTime = !hasAppliedCouponBefore;
+        setSelectedCoupon(coupon);
+        setValidatedDiscount(result.data.discountAmount);
+        setShowCouponSheet(false);
+        if (isFirstTime) {
+          setHasAppliedCouponBefore(true);
+          setShowPartyPopper(true);
+        }
+      } else {
+        setCouponError(result.message || 'Invalid coupon');
+      }
+    } catch (err: any) {
+      setCouponError(err.response?.data?.message || 'Failed to apply coupon');
+    } finally {
+      setIsValidatingCoupon(false);
     }
   };
 
   const handleRemoveCoupon = () => {
     setSelectedCoupon(null);
+    setValidatedDiscount(0);
+    setCouponError(null);
   };
 
   const handlePlaceOrder = async () => {
@@ -214,7 +225,6 @@ export default function Checkout() {
       return;
     }
 
-    // Generate unique order ID
     const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
     const order: Order = {
@@ -230,21 +240,18 @@ export default function Checkout() {
       address: selectedAddress,
       status: 'Placed',
       createdAt: new Date().toISOString(),
+      // In a real app, send coupon code to backend to re-validate and apply
     };
 
-    // Call addOrder and await result
     try {
       const placedId = await addOrder(order);
       if (placedId) {
         setPlacedOrderId(placedId);
         clearCart();
         setShowOrderSuccess(true);
-      } else {
-        // Handle failure if needed, though addOrder throws on error usually
       }
     } catch (error) {
       console.error("Order placement failed", error);
-      // Show error toast
     }
   };
 
@@ -257,15 +264,9 @@ export default function Checkout() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 1, y: 0 }}
-      animate={{
-        opacity: isExiting ? 0 : 1,
-        y: isExiting ? -20 : 0
-      }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.4, ease: 'easeInOut' }}
-      className="pb-24 bg-white min-h-screen flex flex-col"
+    <div
+      className="pb-24 bg-white min-h-screen flex flex-col opacity-100"
+      style={{ opacity: 1 }}
     >
       {/* Toast Notification */}
       <Toast
@@ -488,26 +489,26 @@ export default function Checkout() {
                 <path d="M12 6v6l4 2" stroke="white" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </div>
-            <span className="text-xs font-semibold text-neutral-900">Delivery in 8 minutes</span>
+            <span className="text-xs font-semibold text-neutral-900">Delivery in {appConfig.estimatedDeliveryTime}</span>
           </div>
 
-          <p className="text-[10px] text-neutral-600 mb-2.5">Shipment of {displayCart.itemCount} {displayCart.itemCount === 1 ? 'item' : 'items'}</p>
+          <p className="text-[10px] text-neutral-600 mb-2.5">Shipment of {displayCart.itemCount || 0} {(displayCart.itemCount || 0) === 1 ? 'item' : 'items'}</p>
 
           {/* Cart Items */}
           <div className="space-y-2.5">
-            {displayItems.map((item) => (
-              <div key={item.product.id} className="flex gap-2">
+            {displayItems.filter(item => item.product).map((item) => (
+              <div key={item.product?.id || Math.random()} className="flex gap-2">
                 {/* Product Image */}
                 <div className="w-12 h-12 bg-neutral-100 rounded-lg flex-shrink-0 overflow-hidden">
-                  {item.product.imageUrl ? (
+                  {item.product?.imageUrl ? (
                     <img
-                      src={item.product.imageUrl}
-                      alt={item.product.name}
+                      src={item.product?.imageUrl}
+                      alt={item.product?.name}
                       className="w-full h-full object-contain"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-neutral-400">
-                      {item.product.name.charAt(0)}
+                      {(item.product?.name || '').charAt(0)}
                     </div>
                   )}
                 </div>
@@ -515,16 +516,16 @@ export default function Checkout() {
                 {/* Product Info */}
                 <div className="flex-1 min-w-0">
                   <h3 className="text-xs font-semibold text-neutral-900 mb-0.5 line-clamp-2">
-                    {item.product.name}
+                    {item.product?.name}
                   </h3>
-                  <p className="text-[10px] text-neutral-600 mb-0.5">{item.quantity} × {item.product.pack}</p>
+                  <p className="text-[10px] text-neutral-600 mb-0.5">{item.quantity} × {item.product?.pack}</p>
                   <button className="text-[10px] text-green-600 font-medium mb-1.5">Move to wishlist</button>
 
                   {/* Quantity Selector */}
                   <div className="flex items-center justify-between mt-1.5">
                     <div className="flex items-center gap-1.5 bg-white border-2 border-green-600 rounded-full px-1.5 py-0.5">
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.product?.id, item.quantity - 1)}
                         className="w-5 h-5 flex items-center justify-center text-green-600 font-bold hover:bg-green-50 rounded-full transition-colors text-xs"
                       >
                         −
@@ -533,7 +534,7 @@ export default function Checkout() {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.product?.id, item.quantity + 1)}
                         className="w-5 h-5 flex items-center justify-center text-green-600 font-bold hover:bg-green-50 rounded-full transition-colors text-xs"
                       >
                         +
@@ -542,13 +543,13 @@ export default function Checkout() {
 
                     {/* Price */}
                     <div className="flex items-center gap-1.5">
-                      {item.product.mrp && item.product.mrp > item.product.price && (
+                      {item.product?.mrp && item.product?.mrp > item.product?.price && (
                         <span className="text-[10px] text-neutral-500 line-through">
-                          ₹{item.product.mrp}
+                          ₹{item.product?.mrp}
                         </span>
                       )}
                       <span className="text-sm font-bold text-neutral-900">
-                        ₹{item.product.price}
+                        ₹{item.product?.price}
                       </span>
                     </div>
                   </div>
@@ -568,8 +569,13 @@ export default function Checkout() {
             const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
 
             // Get quantity in cart
-            const cartItem = cart.items.find(item => item.product.id === product.id);
-            const inCartQty = cartItem?.quantity || 0;
+            const inCartItem = (cart?.items || []).find(item =>
+              (item.product.id && item.product.id === product.id) ||
+              (item.product._id && item.product._id === product._id) ||
+              (item.product._id && item.product._id === product.id) ||
+              (item.product.id && item.product.id === product._id)
+            );
+            const inCartQty = inCartItem?.quantity || 0;
 
             return (
               <div
@@ -592,7 +598,7 @@ export default function Checkout() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-4xl">
-                          {product.name.charAt(0).toUpperCase()}
+                          {(product.name || '').charAt(0).toUpperCase()}
                         </div>
                       )}
 
@@ -605,10 +611,10 @@ export default function Checkout() {
 
                       {/* Heart Icon - Top Right */}
                       <button
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          // Handle wishlist toggle
+                          await addProductToWishlist(product.id);
                         }}
                         className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
                         aria-label="Add to wishlist"
@@ -760,10 +766,10 @@ export default function Checkout() {
                     <div className="mb-1">
                       <div className="flex items-baseline gap-1">
                         <span className="text-[13px] font-bold text-neutral-900">
-                          ₹{product.price.toLocaleString('en-IN')}
+                          ₹{(product.price || 0).toLocaleString('en-IN')}
                         </span>
                         <span className="text-[10px] text-neutral-400 line-through">
-                          ₹{product.mrp?.toLocaleString('en-IN')}
+                          ₹{(product.mrp || 0).toLocaleString('en-IN')}
                         </span>
                       </div>
                     </div>
@@ -904,14 +910,14 @@ export default function Checkout() {
               </span>
               {deliveryCharge > 0 && (
                 <span className="text-[10px] text-orange-600 mt-0.5">
-                  Shop for ₹{amountNeededForFreeDelivery} more to get FREE delivery
+                  Shop for ₹{Math.max(0, appConfig.freeDeliveryThreshold - displayCart.total)} more to get FREE delivery
                 </span>
               )}
             </div>
           </div>
 
           {/* Coupon discount */}
-          {selectedCoupon && couponDiscount > 0 && (
+          {selectedCoupon && currentCouponDiscount > 0 && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -922,7 +928,7 @@ export default function Checkout() {
                   {selectedCoupon.code}
                 </span>
               </div>
-              <span className="text-xs font-medium text-green-600">-₹{couponDiscount}</span>
+              <span className="text-xs font-medium text-green-600">-₹{currentCouponDiscount}</span>
             </div>
           )}
 
@@ -1107,57 +1113,63 @@ export default function Checkout() {
 
           <div className="px-4 pb-4 overflow-y-auto max-h-[calc(85vh-80px)]">
             <div className="space-y-2.5 mt-2">
-              {AVAILABLE_COUPONS.map((coupon) => {
-                const subtotalBeforeCoupon = discountedTotal + handlingCharge + deliveryCharge;
-                const meetsMinOrder = !coupon.minOrderValue || subtotalBeforeCoupon >= coupon.minOrderValue;
-                const isSelected = selectedCoupon?.id === coupon.id;
+              {availableCoupons.length === 0 ? (
+                <div className="text-center py-8 text-neutral-500">
+                  <p>No coupons available at the moment.</p>
+                </div>
+              ) : (
+                availableCoupons.map((coupon) => {
+                  const subtotalBeforeCoupon = discountedTotal + handlingCharge + deliveryCharge;
+                  const meetsMinOrder = !coupon.minOrderValue || subtotalBeforeCoupon >= coupon.minOrderValue;
+                  const isSelected = selectedCoupon?._id === coupon._id;
 
-                return (
-                  <div
-                    key={coupon.id}
-                    className={`border-2 rounded-lg p-2.5 transition-all ${isSelected
-                      ? 'border-green-600 bg-green-50'
-                      : meetsMinOrder
-                        ? 'border-neutral-200 bg-white'
-                        : 'border-neutral-200 bg-neutral-50 opacity-60'
-                      }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-green-600">{coupon.code}</span>
-                          <span className="text-xs font-semibold text-neutral-900">{coupon.title}</span>
+                  return (
+                    <div
+                      key={coupon._id}
+                      className={`border-2 rounded-lg p-2.5 transition-all ${isSelected
+                        ? 'border-green-600 bg-green-50'
+                        : meetsMinOrder
+                          ? 'border-neutral-200 bg-white'
+                          : 'border-neutral-200 bg-neutral-50 opacity-60'
+                        }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold text-green-600">{coupon.code}</span>
+                            <span className="text-xs font-semibold text-neutral-900">{coupon.title}</span>
+                          </div>
+                          <p className="text-[10px] text-neutral-600 mb-1">{coupon.description}</p>
+                          {coupon.minOrderValue && (
+                            <p className="text-[10px] text-neutral-500">
+                              Min. order: ₹{coupon.minOrderValue}
+                            </p>
+                          )}
                         </div>
-                        <p className="text-[10px] text-neutral-600 mb-1">{coupon.description}</p>
-                        {coupon.minOrderValue && (
-                          <p className="text-[10px] text-neutral-500">
-                            Min. order: ₹{coupon.minOrderValue}
-                          </p>
+                        {isSelected ? (
+                          <div className="flex items-center gap-1 text-green-600">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <span className="text-xs font-medium">Applied</span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => meetsMinOrder && handleApplyCoupon(coupon)}
+                            disabled={!meetsMinOrder || isValidatingCoupon}
+                            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${meetsMinOrder
+                              ? 'bg-green-600 text-white hover:bg-green-700'
+                              : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                              }`}
+                          >
+                            {isValidatingCoupon ? '...' : 'Apply'}
+                          </button>
                         )}
                       </div>
-                      {isSelected ? (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                          <span className="text-xs font-medium">Applied</span>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => meetsMinOrder && handleApplyCoupon(coupon)}
-                          disabled={!meetsMinOrder}
-                          className={`px-3 py-1 rounded text-xs font-medium transition-colors ${meetsMinOrder
-                            ? 'bg-green-600 text-white hover:bg-green-700'
-                            : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
-                            }`}
-                        >
-                          Apply
-                        </button>
-                      )}
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         </SheetContent>
@@ -1272,6 +1284,6 @@ export default function Checkout() {
           stroke-dashoffset: 0;
         }
       `}</style>
-    </motion.div>
+    </div>
   );
 }

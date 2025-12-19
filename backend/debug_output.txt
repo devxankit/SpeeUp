@@ -1,0 +1,5 @@
+--- Debug Start ---
+CWD: C:\Users\chira\OneDrive\Desktop\speeup\backend
+MONGODB_URI is present: mongodb+srv://ram312908_db_user:****@cluster0.nkno5ai.mongodb.net/SpeeUp
+Attempting to connect with 5s timeout...
+SUCCESS: Connected to MongoDB

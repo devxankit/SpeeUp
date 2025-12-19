@@ -27,7 +27,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.get('/', (_req: Request, res: Response) => {
-  res.json({ 
+  res.json({
     message: 'SpeeUp API Server is running!',
     version: '1.0.0'
   });

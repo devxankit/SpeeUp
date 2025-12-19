@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 // import { products } from '../../data/products'; // REMOVED
-import { categories } from '../../data/categories'; // Keep categories for now if needed for UI mapping, or fetch from product details
+// import { categories } from '../../data/categories'; // REMOVED
 import { useCart } from '../../context/CartContext';
 import Button from '../../components/ui/button';
 import Badge from '../../components/ui/badge';
@@ -21,6 +21,9 @@ export default function ProductDetail() {
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) return;
@@ -28,14 +31,19 @@ export default function ProductDetail() {
       try {
         const response = await getProductById(id);
         if (response.success && response.data) {
+          const productData = response.data as any;
           setProduct({
-            ...response.data,
+            ...productData,
             // Ensure compat with UI fields
-            name: response.data.productName || response.data.name,
-            imageUrl: response.data.mainImage || response.data.imageUrl,
-            pack: response.data.description // Map description or other field to pack if unavailable? Or backend should send it.
+            name: productData.productName || productData.name,
+            imageUrl: productData.mainImage || productData.imageUrl,
+            // Map pack from variations or small description
+            pack: productData.variations?.[0]?.title || productData.smallDescription || 'Standard',
           });
           setSimilarProducts(response.data.similarProducts || []);
+
+          // Fetch reviews
+          fetchReviews(id);
         } else {
           setProduct(null);
         }
@@ -44,6 +52,21 @@ export default function ProductDetail() {
         setProduct(null);
       } finally {
         setLoading(false);
+      }
+    };
+
+    const fetchReviews = async (productId: string) => {
+      setReviewsLoading(true);
+      try {
+        const { getProductReviews } = await import('../../services/api/customerReviewService');
+        const res = await getProductReviews(productId);
+        if (res.success) {
+          setReviews(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch reviews", err);
+      } finally {
+        setReviewsLoading(false);
       }
     };
 
@@ -80,8 +103,7 @@ export default function ProductDetail() {
     : 0;
 
   // Get category info
-  // Use category name from product if populated, otherwise look up in local map for icons/meta
-  const category = categories.find((c) => c.id === product.categoryId) || (product.category ? { name: product.category.name, id: product.category._id } : null);
+  const category = product.category ? { name: product.category.name, id: product.category._id } : null;
 
   const handleAddToCart = () => {
     addToCart(product, addButtonRef.current);
@@ -282,10 +304,10 @@ export default function ProductDetail() {
                       <div className="flex items-start">
                         <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Key Features:</span>
                         <span className="text-[10px] text-neutral-600">
-                          {product.tags.map((tag, index) => (
+                          {product.tags.map((tag: string, index: number) => (
                             <span key={tag}>
-                              {tag.replace(/-/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                              {index < product.tags!.length - 1 ? ', ' : ''}
+                              {tag.replace(/-/g, ' ').split(' ').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                              {index < (product.tags?.length || 0) - 1 ? ', ' : ''}
                             </span>
                           ))}
                         </span>
@@ -293,7 +315,7 @@ export default function ProductDetail() {
                     )}
                     <div className="flex items-start">
                       <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Source:</span>
-                      <span className="text-[10px] text-neutral-600">From India</span>
+                      <span className="text-[10px] text-neutral-600">{product.madeIn || 'From India'}</span>
                     </div>
                     {category && (
                       <div className="flex items-start">
@@ -337,13 +359,15 @@ export default function ProductDetail() {
                       <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Unit:</span>
                       <span className="text-[10px] text-neutral-600">{product.pack}</span>
                     </div>
-                    <div className="flex items-start">
-                      <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">FSSAI License:</span>
-                      <span className="text-[10px] text-neutral-600">10824999000344</span>
-                    </div>
+                    {product.fssaiLicNo && (
+                      <div className="flex items-start">
+                        <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">FSSAI License:</span>
+                        <span className="text-[10px] text-neutral-600">{product.fssaiLicNo}</span>
+                      </div>
+                    )}
                     <div className="flex items-start">
                       <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Shelf Life:</span>
-                      <span className="text-[10px] text-neutral-600">4 days</span>
+                      <span className="text-[10px] text-neutral-600">Refer to package</span>
                     </div>
                     <div className="flex items-start">
                       <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Disclaimer:</span>
@@ -353,46 +377,92 @@ export default function ProductDetail() {
                     </div>
                     <div className="flex items-start">
                       <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Customer Care Details:</span>
-                      <span className="text-[10px] text-neutral-600">Email: info@blinkit.com</span>
+                      <span className="text-[10px] text-neutral-600">Email: help@speeup.com</span>
                     </div>
                     <div className="flex items-start">
                       <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Country of Origin:</span>
-                      <span className="text-[10px] text-neutral-600">India</span>
+                      <span className="text-[10px] text-neutral-600">{product.madeIn || 'India'}</span>
                     </div>
-                    <div className="flex items-start">
-                      <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Manufacturer's Name and Address:</span>
-                      <span className="text-[10px] text-neutral-600 leading-relaxed flex-1">
-                        Hands On Trades Pvt. Ltd., 301-B, Hemkunt Chambers 89, Nehru Place New Delhi South Delhi Delhi - 110019
-                      </span>
-                    </div>
-                    <div className="flex items-start">
-                      <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Marketer's Name and Address:</span>
-                      <span className="text-[10px] text-neutral-600 leading-relaxed flex-1">
-                        Hands On Trades Pvt. Ltd., 301-B, Hemkunt Chambers 89, Nehru Place New Delhi South Delhi Delhi - 110019
-                      </span>
-                    </div>
+                    {product.manufacturer && (
+                      <div className="flex items-start">
+                        <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Manufacturer:</span>
+                        <span className="text-[10px] text-neutral-600 leading-relaxed flex-1">
+                          {product.manufacturer}
+                        </span>
+                      </div>
+                    )}
+                    {/* Marketer same as manufacturer if not present, or hidden */}
+
                     <div className="flex items-start">
                       <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Return Policy:</span>
                       <span className="text-[10px] text-neutral-600 leading-relaxed flex-1">
-                        The product is non-returnable. For a damaged, rotten or incorrect item, you can request a replacement within 48 hours of delivery. In case of an incorrect item, you may raise a replacement or return request only if the item is sealed/ unopened/unused and in original condition.
+                        {product.isReturnable
+                          ? `This product is returnable within ${product.maxReturnDays || 2} days.`
+                          : 'This product is non-returnable.'}
                       </span>
                     </div>
-                    <div className="flex items-start">
-                      <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Seller:</span>
-                      <span className="text-[10px] text-neutral-600 leading-relaxed flex-1">
-                        Zomato Hyperpure Private Limited 82/11, Tolstoy Ln, Atul Grove Road, Janpath, Connaught Place, New Delhi, Delhi 110001
-                      </span>
-                    </div>
-                    <div className="flex items-start">
-                      <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Seller FSSAI:</span>
-                      <span className="text-[10px] text-neutral-600">10020064002537</span>
-                    </div>
+                    {product.sellerId && (
+                      <div className="flex items-start">
+                        <span className="text-[10px] font-semibold text-neutral-800 w-[180px] flex-shrink-0">Seller:</span>
+                        <span className="text-[10px] text-neutral-600 leading-relaxed flex-1">
+                          SpeeUp Partner ({product.sellerId.slice(-6).toUpperCase()})
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
             </div>
           </div>
         )}
+
+        {/* Reviews Section */}
+        <div className="bg-white px-4 md:px-6 lg:px-8 py-6 border-t border-neutral-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-neutral-900">Ratings & Reviews</h3>
+            {reviews.length > 0 && (
+              <div className="flex items-center gap-1">
+                <span className="text-sm font-bold text-neutral-900">{product.rating || '4.5'}</span>
+                <div className="flex text-yellow-500">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                </div>
+                <span className="text-xs text-neutral-500">({reviews.length} reviews)</span>
+              </div>
+            )}
+          </div>
+
+          {reviewsLoading ? (
+            <div className="flex justify-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+            </div>
+          ) : reviews.length > 0 ? (
+            <div className="space-y-4">
+              {reviews.map((review) => (
+                <div key={review._id} className="border-b border-neutral-50 pb-4 last:border-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold text-neutral-900">{review.customer?.name || 'Customer'}</span>
+                    <div className="flex items-center gap-1 bg-green-100 px-1.5 py-0.5 rounded">
+                      <span className="text-[10px] font-bold text-green-700">{review.rating}</span>
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" className="text-green-700">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="text-xs text-neutral-600 leading-relaxed mb-1">{review.comment}</p>
+                  <span className="text-[10px] text-neutral-400">
+                    {new Date(review.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <p className="text-sm text-neutral-500">No reviews yet. Be the first to review!</p>
+            </div>
+          )}
+        </div>
 
         {/* Top products in this category */}
         {similarProducts.length > 0 && (

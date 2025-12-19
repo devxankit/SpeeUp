@@ -1,28 +1,62 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import DeliveryHeader from '../components/DeliveryHeader';
 import DeliveryBottomNav from '../components/DeliveryBottomNav';
-import { mockOrders } from '../data/mockData';
+import { getTodayOrders } from '../../../services/api/delivery/deliveryService';
 
 export default function DeliveryReturnOrders() {
   const navigate = useNavigate();
-  
-  // Filter today's return orders (Cancelled status)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const returnOrders = mockOrders.filter((order) => {
-    const orderDate = new Date(order.createdAt);
-    orderDate.setHours(0, 0, 0, 0);
-    return orderDate.getTime() === today.getTime() && order.status === 'Cancelled';
-  });
+  const [returnOrders, setReturnOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const data = await getTodayOrders();
+        // Filter for return/cancelled orders
+        const returns = data.filter((order: any) =>
+          order.status === 'Cancelled' || order.status === 'Returned'
+        );
+        setReturnOrders(returns);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load return orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Cancelled':
         return 'bg-red-100 text-red-700';
+      case 'Returned':
+        return 'bg-red-100 text-red-700';
       default:
         return 'bg-neutral-100 text-neutral-700';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center pb-20">
+        <p className="text-neutral-500">Loading return orders...</p>
+        <DeliveryBottomNav />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center pb-20">
+        <p className="text-red-500">{error}</p>
+        <DeliveryBottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-100 pb-20">
