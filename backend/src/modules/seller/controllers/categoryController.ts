@@ -168,7 +168,7 @@ export const getSubcategories = asyncHandler(
  * Get all categories with their subcategories nested
  */
 export const getAllCategoriesWithSubcategories = asyncHandler(
-  async (req: Request, res: Response) => {
+  async (_req: Request, res: Response) => {
     // Get all parent categories
     const parentCategories = await Category.find({ parentId: null }).sort({ name: 1 });
 

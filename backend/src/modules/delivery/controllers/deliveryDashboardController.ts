@@ -10,7 +10,7 @@ import mongoose from "mongoose";
  */
 export const getDashboardStats = asyncHandler(async (req: Request, res: Response) => {
     // Assuming user ID is attached to req.user by auth middleware
-    const deliveryId = req.user?.id;
+    const deliveryId = (req.user as any)?.userId;
 
     if (!deliveryId) {
         return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -171,7 +171,7 @@ export const getDashboardStats = asyncHandler(async (req: Request, res: Response
 /**
  * Get Help & Support Data
  */
-export const getHelpSupport = asyncHandler(async (req: Request, res: Response) => {
+export const getHelpSupport = asyncHandler(async (_req: Request, res: Response) => {
     const faqItems = [
         {
             question: 'How do I accept a new order?',

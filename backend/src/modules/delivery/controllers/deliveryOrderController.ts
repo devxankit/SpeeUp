@@ -2,13 +2,13 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../../../utils/asyncHandler";
 import Order from "../../../models/Order";
 import Delivery from "../../../models/Delivery";
-import mongoose from "mongoose";
+// import mongoose from "mongoose";
 
 /**
  * Get Today's Orders
  */
 export const getTodayOrders = asyncHandler(async (req: Request, res: Response) => {
-    const deliveryId = req.user?.id;
+    const deliveryId = (req.user as any)?.userId;
 
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -50,7 +50,7 @@ export const getTodayOrders = asyncHandler(async (req: Request, res: Response) =
  * Get Pending Orders
  */
 export const getPendingOrders = asyncHandler(async (req: Request, res: Response) => {
-    const deliveryId = req.user?.id;
+    const deliveryId = (req.user as any)?.userId;
 
     // Pending statuses: Ready for pickup, Out for delivery, Picked Up, Assigned
     const orders = await Order.find({
@@ -123,7 +123,7 @@ export const getOrderDetails = asyncHandler(async (req: Request, res: Response) 
 export const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status } = req.body;
-    const deliveryId = req.user?.id;
+    const deliveryId = (req.user as any)?.userId;
 
     const order = await Order.findById(id);
     if (!order) {
@@ -135,7 +135,7 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
         return res.status(403).json({ success: false, message: "This order is not assigned to you" });
     }
 
-    const oldStatus = order.status;
+    // const oldStatus = order.status;
     order.status = status;
 
     // Basic lifecycle hooks

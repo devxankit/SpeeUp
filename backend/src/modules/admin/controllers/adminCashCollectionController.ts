@@ -15,7 +15,7 @@ export const getCashCollections = asyncHandler(
             deliveryBoyId,
             fromDate,
             toDate,
-            search = "",
+            // search = "",
             sortBy = "collectedAt",
             sortOrder = "desc",
         } = req.query;

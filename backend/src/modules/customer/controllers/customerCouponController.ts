@@ -17,7 +17,7 @@ export const getCoupons = async (_req: Request, res: Response) => {
             data: coupons,
         });
     } catch (error: any) {
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Error fetching coupons",
             error: error.message,

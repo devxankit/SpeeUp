@@ -215,7 +215,7 @@ export const deleteCoupon = asyncHandler(
  */
 export const validateCoupon = asyncHandler(
   async (req: Request, res: Response) => {
-    const { code, amount, userId } = req.body;
+    const { code, amount } = req.body;
 
     if (!code || !amount) {
       return res.status(400).json({
