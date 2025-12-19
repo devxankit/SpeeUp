@@ -209,20 +209,7 @@ export default function SellerLogin() {
 
 
 
-          {/* Admin Panel Login Option */}
-          <div className="pt-2">
-            <button
-              onClick={handleAdminLogin}
-              className="w-full py-2.5 rounded-lg font-semibold text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-all border border-neutral-300 flex items-center justify-center gap-2"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
-              </svg>
-              <span>Login to Admin Panel</span>
-            </button>
-          </div>
+
 
           {/* Sign Up Link */}
           <div className="text-center pt-4 border-t border-neutral-200">
