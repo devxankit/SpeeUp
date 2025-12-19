@@ -38,9 +38,15 @@ api.interceptors.response.use(
       const isAuthEndpoint = error.config?.url?.includes("/auth/");
 
       if (!isAuthEndpoint) {
+        const currentPath = window.location.pathname;
+
+        // Skip redirect if already on public auth pages (login/signup)
+        if (currentPath.includes('/login') || currentPath.includes('/signup')) {
+          return Promise.reject(error);
+        }
+
         // Token expired or invalid - clear token and redirect to appropriate login
         // Determine which login page based on the Current URL or API endpoint
-        const currentPath = window.location.pathname;
         const apiUrl = error.config?.url || "";
         let redirectPath = "/login";
 
