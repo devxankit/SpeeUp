@@ -18,6 +18,12 @@ import Cart from "./modules/user/Cart";
 import Checkout from "./modules/user/Checkout";
 import CheckoutAddress from "./modules/user/CheckoutAddress";
 import ProductDetail from "./modules/user/ProductDetail";
+import Login from "./modules/user/Login";
+import SignUp from "./modules/user/SignUp";
+import AboutUs from "./modules/user/AboutUs";
+import Wishlist from "./modules/user/Wishlist";
+import Addresses from "./modules/user/Addresses";
+import AddressBook from "./modules/user/AddressBook";
 import SpiritualStore from "./modules/user/SpiritualStore";
 import PharmaStore from "./modules/user/PharmaStore";
 import EGiftStore from "./modules/user/EGiftStore";
@@ -26,8 +32,7 @@ import SportsStore from "./modules/user/SportsStore";
 import FashionStore from "./modules/user/FashionStore";
 import ToyStore from "./modules/user/ToyStore";
 import HobbyStore from "./modules/user/HobbyStore";
-import Login from "./modules/user/Login";
-import SignUp from "./modules/user/SignUp";
+import StorePage from "./modules/user/StorePage";
 import DeliveryLayout from "./modules/delivery/components/DeliveryLayout";
 import DeliveryDashboard from "./modules/delivery/pages/DeliveryDashboard";
 import DeliveryOrders from "./modules/delivery/pages/DeliveryOrders";
@@ -420,33 +425,33 @@ function App() {
                         <Route path="/orders/:id" element={<OrderDetail />} />
                         <Route path="/order-again" element={<OrderAgain />} />
                         <Route path="/account" element={<Account />} />
+                        <Route path="/about-us" element={<AboutUs />} />
+                        <Route path="/wishlist" element={<Wishlist />} />
+                        <Route path="/address-book" element={<AddressBook />} />
                         <Route path="/wallet" element={<Wallet />} />
-                        <Route path="/categories" element={<Categories />} />
-                        <Route path="/category/:id" element={<Category />} />
-                        <Route
-                          path="/product/:id"
-                          element={<ProductDetail />}
-                        />
-                        <Route path="/cart" element={<Cart />} />
                         <Route path="/checkout" element={<Checkout />} />
                         <Route
                           path="/checkout/address"
                           element={<CheckoutAddress />}
                         />
                         <Route
-                          path="/store/spiritual"
-                          element={<SpiritualStore />}
+                          path="/store/:slug"
+                          element={<StorePage />}
                         />
-                        <Route path="/store/pharma" element={<PharmaStore />} />
-                        <Route path="/store/e-gifts" element={<EGiftStore />} />
-                        <Route path="/store/pet" element={<PetStore />} />
-                        <Route path="/store/sports" element={<SportsStore />} />
+                        <Route
+                          path="/store/spiritual"
+                          element={<StorePage />}
+                        />
+                        <Route path="/store/pharma" element={<StorePage />} />
+                        <Route path="/store/e-gifts" element={<StorePage />} />
+                        <Route path="/store/pet" element={<StorePage />} />
+                        <Route path="/store/sports" element={<StorePage />} />
                         <Route
                           path="/store/fashion-basics"
-                          element={<FashionStore />}
+                          element={<StorePage />}
                         />
-                        <Route path="/store/toy" element={<ToyStore />} />
-                        <Route path="/store/hobby" element={<HobbyStore />} />
+                        <Route path="/store/toy" element={<StorePage />} />
+                        <Route path="/store/hobby" element={<StorePage />} />
                       </Routes>
                     </AppLayout>
                   }

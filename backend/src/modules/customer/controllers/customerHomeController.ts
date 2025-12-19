@@ -15,25 +15,48 @@ export const getHomeContent = async (_req: Request, res: Response) => {
             .select("productName price mainImage discount rating reviews pack");
 
         // 2. Categories for Tiles (Grocery, Snacks, etc)
-        // We fetch all active categories and let frontend organize them, 
-        // OR we return them grouped if specific groups are defined in DB.
-        // For now, returning all suitable top-level categories.
-        const categories = await Category.find({ status: "Active" })
-            .select("name image icon color")
+        const categories = await Category.find({
+            status: "Active"
+        })
+            .select("name image icon color slug")
             .sort({ order: 1 });
 
         // 3. Shop By Store (Virtual categories)
-        // In a real app, 'Stores' might be a separate model or a specific tag on products.
-        // Here we define the static list that matches frontend hardcoded tiles, 
-        // but typically this should come from a "Collections" or "Campaigns" DB.
+        // Here we return categories that have a specific parent or tag, 
+        // for now we'll keep the list but try to match with real category slugs
         const shops = [
-            { id: 'spiritual-store', name: 'Spiritual Store', image: '/assets/shopbystore/spiritual.jpg' },
-            { id: 'pharma-store', name: 'Pharma Store', image: '/assets/shopbystore/pharma.jpg' },
-            { id: 'e-gifts-store', name: 'E-Gifts Store', image: '/assets/shopbystore/egift.jpg' },
-            { id: 'pet-store', name: 'Pet Store', image: '/assets/shopbystore/pet.jpg' },
-            { id: 'fashion-basics-store', name: 'Fashion Store', image: '/assets/shopbystore/fashion.jpg' },
-            { id: 'hobby-store', name: 'Hobby Store', image: '/assets/shopbystore/hobby.jpg' },
+            { id: 'spiritual-store', name: 'Spiritual Store', image: '/assets/shopbystore/spiritual.jpg', slug: 'spiritual' },
+            { id: 'pharma-store', name: 'Pharma Store', image: '/assets/shopbystore/pharma.jpg', slug: 'pharma' },
+            { id: 'e-gifts-store', name: 'E-Gifts Store', image: '/assets/shopbystore/egift.jpg', slug: 'e-gifts' },
+            { id: 'pet-store', name: 'Pet Store', image: '/assets/shopbystore/pet.jpg', slug: 'pet-supplies' },
+            { id: 'fashion-basics-store', name: 'Fashion Store', image: '/assets/shopbystore/fashion.jpg', slug: 'fashion' },
+            { id: 'hobby-store', name: 'Hobby Store', image: '/assets/shopbystore/hobby.jpg', slug: 'hobbies' },
         ];
+
+        // 4. Trending Items (Fetch some popular categories or products)
+        const trendingCategories = await Category.find({
+            status: "Active"
+        }).limit(5).select("name image slug");
+
+        const trending = trendingCategories.map(c => ({
+            id: c._id,
+            name: c.name,
+            image: c.image || `/assets/categories/${c.slug}.jpg`,
+            type: 'category'
+        }));
+
+        // 5. Cooking Ideas (Fetch some products from 'Food' or 'Grocery' categories)
+        const foodProducts = await Product.find({
+            status: "Active",
+            publish: true
+        }).limit(3).select("productName mainImage");
+
+        const cookingIdeas = foodProducts.map(p => ({
+            id: p._id,
+            title: p.productName,
+            image: p.mainImage,
+            productId: p._id
+        }));
 
         res.status(200).json({
             success: true,
@@ -42,23 +65,11 @@ export const getHomeContent = async (_req: Request, res: Response) => {
                 categories,
                 shops,
                 promoBanners: [
-                    // Mock banners could go here
-                    { id: 1, image: '/assets/banners/promo1.jpg', link: '/category/deals' }
+                    { id: 1, image: 'https://img.freepik.com/free-vector/horizontal-banner-template-grocery-sales_23-2149432421.jpg', link: '/category/grocery' },
+                    { id: 2, image: 'https://img.freepik.com/free-vector/flat-supermarket-social-media-cover-template_23-2149363385.jpg', link: '/category/snacks' }
                 ],
-                trending: [
-                    // Mock trending categories matching frontend structure
-                    { id: 'hair-spray', name: 'Hair Spray', image: '/assets/trending/hair-spray.jpg' },
-                    { id: 'maybelline', name: 'Maybelline Lipstick', image: '/assets/trending/lipstick.jpg' },
-                    { id: 'peanut-chikki', name: 'Peanut Chikki', image: '/assets/trending/chikki.jpg' },
-                    { id: 'hair-straightener', name: 'Hair Straightener', image: '/assets/trending/straightener.jpg' },
-                    { id: 'facial-kit', name: 'Facial Kit', image: '/assets/trending/facial.jpg' }
-                ],
-                cookingIdeas: [
-                    // Mock cooking ideas
-                    { id: 1, name: 'Paneer Masala', image: '/assets/cooking/paneer.jpg', link: '/recipe/paneer' },
-                    { id: 2, name: 'Chicken Curry', image: '/assets/cooking/chicken.jpg', link: '/recipe/chicken' },
-                    { id: 3, name: 'Veg Biryani', image: '/assets/cooking/biryani.jpg', link: '/recipe/biryani' }
-                ]
+                trending,
+                cookingIdeas
             },
         });
     } catch (error: any) {
@@ -116,7 +127,7 @@ export const getStoreProducts = async (req: Request, res: Response) => {
         }
 
     } catch (error: any) {
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Error fetching store products",
             error: error.message,

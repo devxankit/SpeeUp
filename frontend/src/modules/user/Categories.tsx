@@ -47,16 +47,16 @@ export default function Categories() {
               </h2>
               <div className="px-4">
                 <div className="grid grid-cols-4 gap-2">
-                  {section.children && section.children.length > 0 ? (
-                    section.children.map((category) => (
+                  {section.subcategories && section.subcategories.length > 0 ? (
+                    section.subcategories.map((category: any) => (
                       <div key={category._id} className="flex flex-col">
                         <Link
                           to={`/category/${category.id || category._id}`} // Use virtual id if available for cleaner URLs
-                          className="bg-white rounded-xl border border-neutral-200 p-2.5 hover:shadow-md transition-shadow aspect-square flex flex-col items-center justify-center p-1"
+                          className="bg-white rounded-xl border border-neutral-200 hover:shadow-md transition-shadow aspect-square flex items-center justify-center p-3 md:p-4"
                         >
-                          <div className="flex flex-col items-center justify-center text-center w-full h-full">
+                          <div className="w-full h-full flex items-center justify-center">
                             {category.image ? (
-                              <div className="w-full h-full rounded-lg overflow-hidden bg-white mb-1">
+                              <div className="w-full h-full rounded-lg overflow-hidden flex items-center justify-center">
                                 <img
                                   src={category.image}
                                   alt={category.name}
@@ -66,7 +66,7 @@ export default function Categories() {
                             ) : (
                               <div className="w-full h-full rounded-lg bg-cyan-50 flex items-center justify-center text-xl">
                                 {/* Use first letter as fallback icon if no image */}
-                                {category.name.charAt(0)}
+                                {category.name?.charAt(0) || '?'}
                               </div>
                             )}
                           </div>

@@ -1,8 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useRef, useEffect, useState } from 'react';
 import { Product } from '../../../types/domain';
 import { useCart } from '../../../context/CartContext';
+import { addToWishlist, removeFromWishlist, getWishlist } from '../../../services/api/customerWishlistService';
 import Button from '../../../components/ui/button';
 import Badge from '../../../components/ui/badge';
 
@@ -18,7 +19,7 @@ interface ProductCardProps {
   showOptionsText?: boolean;
   optionsCount?: number;
   compact?: boolean;
-  categoryStyle?: boolean; // New prop for category page style
+  categoryStyle?: boolean;
 }
 
 export default function ProductCard({
@@ -39,8 +40,40 @@ export default function ProductCard({
   const { cart, addToCart, updateQuantity } = useCart();
   const imageRef = useRef<HTMLImageElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
+  const [isWishlisted, setIsWishlisted] = useState(false);
 
-  const cartItem = cart.items.find((item) => item.product.id === product.id);
+  useEffect(() => {
+    const checkWishlist = async () => {
+      try {
+        const res = await getWishlist();
+        if (res.success && res.data) {
+          const exists = res.data.products.some(p => p._id === (product.id || product._id) || (p as any).id === (product.id || product._id));
+          setIsWishlisted(exists);
+        }
+      } catch (e) {
+        // Silently fail if not logged in
+      }
+    };
+    checkWishlist();
+  }, [product.id, product._id]);
+
+  const toggleWishlist = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      if (isWishlisted) {
+        await removeFromWishlist(((product as any).id || product._id) as string);
+        setIsWishlisted(false);
+      } else {
+        await addToWishlist(((product as any).id || product._id) as string);
+        setIsWishlisted(true);
+      }
+    } catch (e) {
+      console.error('Failed to toggle wishlist:', e);
+    }
+  };
+
+  const cartItem = cart.items.find((item) => (item.product.id === (product as any).id || item.product._id === (product as any).id || item.product.id === product._id));
   const inCartQty = cartItem?.quantity || 0;
 
   const discount = product.mrp && product.mrp > product.price
@@ -48,7 +81,7 @@ export default function ProductCard({
     : 0;
 
   const handleCardClick = () => {
-    navigate(`/product/${product.id}`);
+    navigate(`/product/${((product as any).id || product._id) as string}`);
   };
 
   const handleAdd = (e: React.MouseEvent) => {
@@ -59,14 +92,14 @@ export default function ProductCard({
   const handleDecrease = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (inCartQty > 0) {
-      updateQuantity(product.id, inCartQty - 1);
+      updateQuantity(((product as any).id || product._id) as string, inCartQty - 1);
     }
   };
 
   const handleIncrease = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (inCartQty > 0) {
-      updateQuantity(product.id, inCartQty + 1);
+      updateQuantity(((product as any).id || product._id) as string, inCartQty + 1);
     } else {
       addToCart(product, addButtonRef.current);
     }
@@ -81,34 +114,30 @@ export default function ProductCard({
       transition={{ duration: 0.2 }}
       className={`${categoryStyle ? 'bg-green-50' : 'bg-white'} rounded-lg shadow-sm overflow-hidden flex flex-col relative`}
     >
-      {/* Clickable area - Image and info */}
       <div
         onClick={handleCardClick}
         className="cursor-pointer flex-1 flex flex-col"
       >
-        {/* Image area */}
         <div className={`w-full ${compact ? 'h-32 md:h-40' : categoryStyle ? 'h-28 md:h-36' : 'h-40 md:h-48'} bg-neutral-100 flex items-center justify-center overflow-hidden relative`}>
-          {product.imageUrl ? (
+          {product.imageUrl || product.mainImage ? (
             <img
               ref={imageRef}
-              src={product.imageUrl}
+              src={product.imageUrl || product.mainImage}
               alt={product.name}
               className="w-full h-full object-cover"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-4xl">
-              {product.name.charAt(0).toUpperCase()}
+              {(product.name || '?').charAt(0).toUpperCase()}
             </div>
           )}
 
-          {/* Discount badge - top-left of card (for categoryStyle) */}
           {categoryStyle && showBadge && discount > 0 && (
             <div className="absolute top-2 left-2 z-10 bg-green-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded">
               {discount}% off
             </div>
           )}
 
-          {/* Discount badge - inside image container at top-left (only if not categoryStyle) */}
           {!categoryStyle && showBadge && (badgeText || discount > 0) && (
             <Badge
               variant="destructive"
@@ -118,7 +147,6 @@ export default function ProductCard({
             </Badge>
           )}
 
-          {/* Pack badge - inside image container at top-right */}
           {showPackBadge && (
             <Badge
               variant="outline"
@@ -128,31 +156,32 @@ export default function ProductCard({
             </Badge>
           )}
 
-          {/* Heart icon - top right corner */}
           {showHeartIcon && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                // Handle favorite toggle
-              }}
-              className="absolute top-2 right-2 z-10 w-8 h-8 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors"
-              aria-label="Add to favorites"
+              onClick={toggleWishlist}
+              className="absolute top-2 right-2 z-10 w-9 h-9 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all shadow-md group/heart"
+              aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill={isWishlisted ? "#ef4444" : "none"}
+                xmlns="http://www.w3.org/2000/svg"
+                className={`transition-colors ${isWishlisted ? "text-red-500" : "text-neutral-400 group-hover/heart:text-red-400"}`}
+              >
                 <path
                   d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-                  stroke="#ef4444"
+                  stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  fill="none"
                 />
               </svg>
             </button>
           )}
         </div>
 
-        {/* ADD button - positioned right after image for categoryStyle */}
         {categoryStyle && (
           <div className="px-2.5 pt-1.5 pb-0">
             <AnimatePresence mode="wait">
@@ -230,19 +259,15 @@ export default function ProductCard({
           </div>
         )}
 
-        {/* Product info */}
         <div className={`${compact ? 'p-3 md:p-4' : categoryStyle ? 'px-2.5 md:px-3 pt-1.5 md:pt-2 pb-2 md:pb-3' : 'p-4 md:p-5'} flex-1 flex flex-col`}>
-          {/* Pack info - shown after button for categoryStyle */}
           {!showPackBadge && (
             <p className={`${compact ? 'text-[10px] md:text-xs' : categoryStyle ? 'text-[10px] md:text-xs text-neutral-600 mb-0.5' : 'text-xs md:text-sm'} text-neutral-500 ${categoryStyle ? '' : 'mb-1'}`}>{product.pack}</p>
           )}
 
-          {/* Product name */}
           <h3 className={`${compact ? 'text-xs md:text-sm' : categoryStyle ? 'text-xs md:text-sm font-bold' : 'text-sm md:text-base'} font-semibold text-neutral-900 ${compact ? 'mb-1' : categoryStyle ? 'mb-0.5' : 'mb-2'} line-clamp-2 ${compact ? 'min-h-[2rem]' : categoryStyle ? 'min-h-[2rem]' : 'min-h-[2.5rem]'}`}>
             {product.name}
           </h3>
 
-          {/* Delivery time - shown for categoryStyle */}
           {categoryStyle && showStockInfo && (
             <p className="text-[10px] text-green-600 mb-1 font-medium flex items-center gap-0.5">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -253,7 +278,6 @@ export default function ProductCard({
             </p>
           )}
 
-          {/* Rating and Reviews */}
           {showRating && (
             <div className={`flex items-center gap-1.5 ${compact ? 'mb-1' : 'mb-2'}`}>
               <div className="flex items-center gap-0.5">
@@ -264,14 +288,12 @@ export default function ProductCard({
             </div>
           )}
 
-          {/* Stock info / Delivery time - Not shown in categoryStyle */}
           {showStockInfo && !categoryStyle && (
             <p className="text-xs text-green-600 mb-2 font-medium">
               Fast delivery
             </p>
           )}
 
-          {/* Vegetarian Icon */}
           {showVegetarianIcon && (
             <div className="flex items-center gap-1 mb-2">
               <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
@@ -281,7 +303,6 @@ export default function ProductCard({
             </div>
           )}
 
-          {/* Price section */}
           <div className={`${categoryStyle ? 'mt-0.5' : 'mt-auto mb-2'}`}>
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className={`${categoryStyle ? 'text-sm' : 'text-base'} font-bold text-neutral-900`}>
@@ -304,7 +325,6 @@ export default function ProductCard({
         </div>
       </div>
 
-      {/* ADD button or Quantity control - Not clickable for navigation (only for non-categoryStyle) */}
       {!categoryStyle && (
         <div className={`${compact ? 'px-3 pb-3' : 'px-4 pb-4'}`}>
           <motion.div
@@ -388,4 +408,3 @@ export default function ProductCard({
     </motion.div>
   );
 }
-

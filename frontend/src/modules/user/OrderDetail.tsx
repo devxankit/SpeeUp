@@ -497,15 +497,41 @@ export default function OrderDetail() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const confirmed = searchParams.get("confirmed") === "true"
-  const { getOrderById, loading } = useOrders()
-  const order = id ? getOrderById(id) : undefined
+  const { getOrderById, fetchOrderById, loading: contextLoading } = useOrders()
+  const [order, setOrder] = useState<any>(id ? getOrderById(id) : undefined)
+  const [loading, setLoading] = useState(!order)
 
   const [showConfirmation, setShowConfirmation] = useState(confirmed)
   const [orderStatus, setOrderStatus] = useState<OrderStatus>(order?.status || 'Placed')
   const [estimatedTime, setEstimatedTime] = useState(29)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  // Update orderStatus when order changes
+  // Fetch order if not in context
+  useEffect(() => {
+    const loadOrder = async () => {
+      if (!id) return;
+
+      const existingOrder = getOrderById(id);
+      if (existingOrder) {
+        setOrder(existingOrder);
+        setOrderStatus(existingOrder.status);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      const fetchedOrder = await fetchOrderById(id);
+      if (fetchedOrder) {
+        setOrder(fetchedOrder);
+        setOrderStatus(fetchedOrder.status);
+      }
+      setLoading(false);
+    };
+
+    loadOrder();
+  }, [id, getOrderById, fetchOrderById]);
+
+  // Update orderStatus when order state changes
   useEffect(() => {
     if (order) {
       setOrderStatus(order.status)
@@ -835,7 +861,7 @@ export default function OrderDetail() {
               <div className="flex-1">
                 <p className="font-medium text-gray-900">Order #{order.id.split('-').slice(-1)[0]}</p>
                 <div className="mt-2 space-y-1">
-                  {order.items?.map((item, index) => (
+                  {order.items?.map((item: any, index: number) => (
                     <div key={index} className="flex items-center gap-2 text-sm text-gray-600">
                       <span className="w-4 h-4 rounded border border-green-600 flex items-center justify-center">
                         <span className="w-2 h-2 rounded-full bg-green-600" />

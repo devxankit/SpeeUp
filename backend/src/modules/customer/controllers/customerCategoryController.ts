@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 // Get all categories (public)
 export const getCategories = async (_req: Request, res: Response) => {
     try {
-        const categories = await Category.find({ status: "Active" })
+        const categories = await Category.find()
             .sort({ order: 1 })
             .select("name image icon description color");
 
@@ -26,7 +26,7 @@ export const getCategories = async (_req: Request, res: Response) => {
 // Get all categories with their subcategories (for menu/sidebar)
 export const getCategoriesWithSubs = async (_req: Request, res: Response) => {
     try {
-        const categories = await Category.find({ status: "Active" })
+        const categories = await Category.find()
             .sort({ order: 1 })
             .lean();
 
@@ -64,12 +64,35 @@ export const getCategoryById = async (req: Request, res: Response) => {
         let category;
 
         if (mongoose.Types.ObjectId.isValid(id)) {
-            category = await Category.findById(id);
+            category = await Category.findById(id).lean();
         } else {
-            category = await Category.findOne({ slug: id });
+            category = await Category.findOne({ slug: id }).lean();
         }
 
         if (!category) {
+            // Check if it's a subcategory
+            if (mongoose.Types.ObjectId.isValid(id)) {
+                const subcategory = await SubCategory.findById(id).lean();
+                if (subcategory) {
+                    // Find the parent category
+                    category = await Category.findById(subcategory.category).lean();
+                    if (category) {
+                        // Return both for the frontend to decide
+                        const subcategories = await SubCategory.find({ category: category._id }).sort({
+                            order: 1,
+                        });
+                        return res.status(200).json({
+                            success: true,
+                            data: {
+                                category,
+                                subcategories,
+                                currentSubcategory: subcategory
+                            },
+                        });
+                    }
+                }
+            }
+
             return res.status(404).json({
                 success: false,
                 message: "Category not found",

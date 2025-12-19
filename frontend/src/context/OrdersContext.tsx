@@ -11,6 +11,7 @@ interface OrdersContextType {
   orders: Order[];
   addOrder: (order: Order) => Promise<string | undefined>;
   getOrderById: (id: string) => Order | undefined;
+  fetchOrderById: (id: string) => Promise<Order | undefined>; // Add this
   updateOrderStatus: (id: string, status: Order['status']) => void;
   loading: boolean;
 }
@@ -60,18 +61,21 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       // Construct payload
       const payload = {
         address: {
-          address: order.address.street || '',
+          address: order.address.street || order.address.address || '',
           city: order.address.city,
           state: order.address.state || '',
           pincode: order.address.pincode,
           landmark: order.address.landmark || '',
-          // lat/long if available in order address
+          latitude: order.address.latitude,
+          longitude: order.address.longitude,
         },
-        paymentMethod: 'COD', // Default or from order object if available
+        paymentMethod: order.paymentMethod || 'COD',
         items: order.items.map(item => ({
-          product: { id: item.product.id },
+          product: {
+            id: item.product.id || (item.product as any)._id
+          },
           quantity: item.quantity,
-          variant: undefined // Add logic if variants exist
+          variant: item.variant // Pass variant if available
         })),
         fees: {
           deliveryFee: order.fees?.deliveryFee || 0,
@@ -97,6 +101,28 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     return orders.find((order) => order.id === id);
   };
 
+  const fetchOrderById = async (id: string): Promise<Order | undefined> => {
+    try {
+      const { getOrderById: apiGetOrderById } = await import('../services/api/customerOrderService');
+      const response = await apiGetOrderById(id);
+      if (response && response.data) {
+        const mappedOrder = {
+          ...response.data,
+          id: response.data._id || response.data.id
+        };
+        // Optionally update the orders list
+        setOrders(prev => {
+          if (prev.find(o => o.id === mappedOrder.id)) return prev;
+          return [...prev, mappedOrder];
+        });
+        return mappedOrder;
+      }
+    } catch (error) {
+      console.error("Failed to fetch order by id", error);
+    }
+    return undefined;
+  };
+
   const updateOrderStatus = async (id: string, status: Order['status']) => {
     // This is likely for cancellation if allowed
     setOrders((prevOrders) =>
@@ -106,7 +132,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <OrdersContext.Provider value={{ orders, addOrder, getOrderById, updateOrderStatus, loading }}>
+    <OrdersContext.Provider value={{ orders, addOrder, getOrderById, fetchOrderById, updateOrderStatus, loading }}>
       {children}
     </OrdersContext.Provider>
   );

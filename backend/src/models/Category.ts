@@ -11,6 +11,8 @@ export interface ICategory extends Document {
   hasWarning: boolean;
   groupCategory?: string;
   totalSubcategories?: number;
+  status: "Active" | "Inactive";
+  parentId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,6 +57,16 @@ const CategorySchema = new Schema<ICategory>(
       default: 0,
       min: [0, "Total subcategories cannot be negative"],
     },
+    status: {
+      type: String,
+      enum: ["Active", "Inactive"],
+      default: "Active",
+    },
+    parentId: {
+      type: Schema.Types.ObjectId,
+      ref: "Category",
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -66,6 +78,9 @@ CategorySchema.index({ order: 1 });
 CategorySchema.index({ order: 1 });
 CategorySchema.index({ name: 1 });
 CategorySchema.index({ slug: 1 });
+CategorySchema.index({ parentId: 1 });
+CategorySchema.index({ status: 1 });
+
 
 const Category = mongoose.model<ICategory>("Category", CategorySchema);
 

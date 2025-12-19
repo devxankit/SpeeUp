@@ -97,7 +97,7 @@ export default function DeliveryOrderDetail() {
             return;
         }
 
-        if (window.google?.maps) {
+        if ((window as any).google?.maps) {
             setIsMapLoaded(true);
             return;
         }
@@ -111,7 +111,7 @@ export default function DeliveryOrderDetail() {
             document.head.appendChild(script);
         } else {
             const checkInterval = setInterval(() => {
-                if (window.google?.maps) {
+                if ((window as any).google?.maps) {
                     clearInterval(checkInterval);
                     setIsMapLoaded(true);
                 }
@@ -127,7 +127,7 @@ export default function DeliveryOrderDetail() {
             // Default center (Indore, based on mocks - or use order coordinates if available)
             const defaultCenter = { lat: 22.7196, lng: 75.8577 };
 
-            googleMapRef.current = new window.google.maps.Map(mapRef.current, {
+            googleMapRef.current = new (window as any).google.maps.Map(mapRef.current, {
                 center: defaultCenter,
                 zoom: 15,
                 disableDefaultUI: true, // Clean look
@@ -141,17 +141,17 @@ export default function DeliveryOrderDetail() {
             });
 
             // Geocode address to find location
-            const geocoder = new window.google.maps.Geocoder();
+            const geocoder = new (window as any).google.maps.Geocoder();
             geocoder.geocode({ address: order.address }, (results: any, status: any) => {
                 if (status === 'OK' && results && results[0]) {
                     const location = results[0].geometry.location;
                     googleMapRef.current.setCenter(location);
-                    new window.google.maps.Marker({
+                    new (window as any).google.maps.Marker({
                         map: googleMapRef.current,
                         position: location,
                         title: "Delivery Location",
                         icon: {
-                            path: window.google.maps.SymbolPath.CIRCLE,
+                            path: (window as any).google.maps.SymbolPath.CIRCLE,
                             scale: 10,
                             fillColor: "#e11d48", // Reddish
                             fillOpacity: 1,

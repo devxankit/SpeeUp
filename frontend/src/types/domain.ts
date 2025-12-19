@@ -1,23 +1,38 @@
 export interface Category {
   id: string;
+  _id?: string;
   name: string;
+  slug?: string;
   icon?: string; // emoji or small label
   imageUrl?: string; // optional imported image path
 }
 
 export interface Product {
   id: string;
+  _id?: string;
   name: string;
+  productName?: string;
   description?: string;
-  pack: string; // e.g. "1 L", "500 g"
-  price: number; // selling price
-  mrp?: number; // max retail price (optional)
-  imageUrl?: string; // imported image path if available
-  categoryId: string; // foreign key to Category
-  tags?: string[]; // e.g. ["bestseller", "under-99", "deal-of-the-day"]
+  smallDescription?: string;
+  pack: string;
+  price: number;
+  mrp?: number;
+  imageUrl?: string;
+  mainImage?: string;
+  categoryId: string;
+  category?: Category;
+  tags?: string[];
   rating?: number;
   reviews?: number;
   deliveryTime?: number;
-  power?: string;
+  stock?: number;
+  publish?: boolean;
+  status?: string;
+  madeIn?: string;
+  manufacturer?: string;
+  fssaiLicNo?: string;
+  isReturnable?: boolean;
+  maxReturnDays?: number;
+  sellerId?: string;
 }
 

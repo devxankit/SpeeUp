@@ -6,7 +6,7 @@ import {
 } from "../../../services/otpService";
 import { generateToken } from "../../../services/jwtService";
 import { asyncHandler } from "../../../utils/asyncHandler";
-import { uploadDocument } from "../../../services/uploadService"; // Assuming this exists or we need to check
+// import { uploadDocument } from "../../../services/uploadService"; // File does not exist
 
 /**
  * Send Call OTP to delivery mobile number
@@ -181,7 +181,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     status: "Inactive", // New delivery partners start as Inactive
     balance: 0,
     cashCollected: 0,
-  });
+  } as any);
 
   // Generate token (Optional: usually registration doesn't login immediately if approval needed, but for seamless UX we can)
   // However, FE Flow: Register -> OTP -> Login. So we return success, then FE calls sendCallOtp.

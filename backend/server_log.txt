@@ -1,0 +1,44 @@
+
+> speeup-backend@1.0.0 dev
+> tsx watch src/server.ts
+
+(node:27588) [MONGOOSE] Warning: Duplicate schema index on {"orderNumber":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:27588) [MONGOOSE] Warning: Duplicate schema index on {"order":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:27588) [MONGOOSE] Warning: Duplicate schema index on {"name":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:27588) [MONGOOSE] Warning: Duplicate schema index on {"slug":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:27588) [MONGOOSE] Warning: Duplicate schema index on {"name":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:27588) [MONGOOSE] Warning: Duplicate schema index on {"code":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:27588) [MONGOOSE] Warning: Duplicate schema index on {"customer":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:27588) [MONGOOSE] Warning: Duplicate schema index on {"name":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:27588) [MONGOOSE] Warning: Duplicate schema index on {"product":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:27588) [MONGOOSE] Warning: Duplicate schema index on {"order":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:27588) [MONGOOSE] Warning: Duplicate schema index on {"transactionId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+
+[32m✓[0m [1mMongoDB Connected Successfully[0m
+   [36mHost:[0m ac-tbrjocs-shard-00-00.nkno5ai.mongodb.net
+   [36mDatabase:[0m SpeeUp
+
+Default admin already exists (mobile: 9876543210)
+
+[32m✓[0m [1mSpeeUp Server Started[0m
+   [36mPort:[0m http://localhost:5000
+   [36mEnvironment:[0m development
+
+3:37:38 PM [tsx] change in ./src\server.ts Restarting...
+c(node:14096) [MONGOOSE] Warning: Duplicate schema index on {"orderNumber":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:14096) [MONGOOSE] Warning: Duplicate schema index on {"order":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:14096) [MONGOOSE] Warning: Duplicate schema index on {"name":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:14096) [MONGOOSE] Warning: Duplicate schema index on {"slug":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:14096) [MONGOOSE] Warning: Duplicate schema index on {"name":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:14096) [MONGOOSE] Warning: Duplicate schema index on {"code":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:14096) [MONGOOSE] Warning: Duplicate schema index on {"customer":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:14096) [MONGOOSE] Warning: Duplicate schema index on {"name":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:14096) [MONGOOSE] Warning: Duplicate schema index on {"product":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:14096) [MONGOOSE] Warning: Duplicate schema index on {"order":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:14096) [MONGOOSE] Warning: Duplicate schema index on {"transactionId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+
+[31m✗[0m [1mMongoDB Connection Error[0m
+   [31mquerySrv EREFUSED _mongodb._tcp.cluster0.nkno5ai.mongodb.net[0m
+

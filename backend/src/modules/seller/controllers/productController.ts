@@ -311,7 +311,7 @@ export const updateStock = asyncHandler(
       });
     }
 
-    const variation = product.variations.id(variationId);
+    const variation: any = product.variations?.find((v: any) => v._id?.toString() === variationId);
     if (!variation) {
       return res.status(404).json({
         success: false,
@@ -392,7 +392,7 @@ export const bulkUpdateStock = asyncHandler(
 
       const product = await Product.findOne({ _id: productId, seller: sellerId });
       if (product) {
-        const variation = product.variations.id(variationId);
+        const variation: any = product.variations?.find((v: any) => v._id?.toString() === variationId);
         if (variation) {
           variation.stock = stock;
           if (stock === 0) variation.status = "Sold out";

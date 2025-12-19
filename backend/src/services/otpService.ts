@@ -131,7 +131,7 @@ export async function verifyCallOtp(sessionId: string, otpInput: string, mobile?
 // SMS OTP (Seller / Admin)
 // ==========================================
 
-export async function sendOTP(mobile: string, userType: 'Seller' | 'Admin' | 'Customer' | 'Delivery', isLogin: boolean = true): Promise<OtpResponse> {
+export async function sendOTP(mobile: string, userType: 'Seller' | 'Admin' | 'Customer' | 'Delivery', _isLogin: boolean = true): Promise<OtpResponse> {
   try {
     const otp = generateOTP(4);
 

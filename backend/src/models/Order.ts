@@ -30,6 +30,7 @@ export interface IOrder extends Document {
   subtotal: number;
   tax: number;
   shipping: number;
+  platformFee: number;
   discount: number;
   couponCode?: string;
   total: number;
@@ -171,6 +172,11 @@ const OrderSchema = new Schema<IOrder>(
       default: 0,
       min: [0, "Shipping cannot be negative"],
     },
+    platformFee: {
+      type: Number,
+      default: 0,
+      min: [0, "Platform fee cannot be negative"],
+    },
     discount: {
       type: Number,
       default: 0,
@@ -271,8 +277,8 @@ const OrderSchema = new Schema<IOrder>(
   }
 );
 
-// Generate order number before saving
-OrderSchema.pre("save", async function (next) {
+// Generate order number before validation
+OrderSchema.pre("validate", async function (next) {
   if (!this.orderNumber) {
     const timestamp = Date.now().toString();
     const random = Math.floor(Math.random() * 1000)
@@ -290,6 +296,6 @@ OrderSchema.index({ orderDate: -1 });
 OrderSchema.index({ deliveryBoy: 1 });
 OrderSchema.index({ orderNumber: 1 });
 
-const Order = mongoose.model<IOrder>("Order", OrderSchema);
+const Order = mongoose.models.Order || mongoose.model<IOrder>("Order", OrderSchema);
 
 export default Order;

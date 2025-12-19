@@ -5,6 +5,7 @@ import Button from '../../components/ui/button';
 import { Product } from '../../types/domain';
 import { useEffect, useState } from 'react';
 import { getProducts } from '../../services/api/customerProductService';
+import { addProductToWishlist } from '../../utils/wishlist';
 
 export default function HobbyStore() {
   const navigate = useNavigate();
@@ -125,9 +126,10 @@ export default function HobbyStore() {
                       )}
 
                       <button
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.preventDefault();
                           e.stopPropagation();
+                          await addProductToWishlist(product.id);
                         }}
                         className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
                         aria-label="Add to wishlist"

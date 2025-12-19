@@ -11,8 +11,8 @@ import {
   uploadImageFromBuffer,
   uploadDocumentFromBuffer,
   deleteImage,
-  CLOUDINARY_FOLDERS,
 } from "../services/cloudinaryService";
+import { CLOUDINARY_FOLDERS } from "../config/cloudinary";
 import { asyncHandler } from "../utils/asyncHandler";
 
 const router = Router();
@@ -104,7 +104,7 @@ router.post(
     }
 
     // Determine folder based on user type
-    let folder = CLOUDINARY_FOLDERS.SELLER_DOCUMENTS;
+    let folder: string = CLOUDINARY_FOLDERS.SELLER_DOCUMENTS;
     const userType = (req as any).user?.userType;
 
     if (userType === "Delivery") {
@@ -147,7 +147,7 @@ router.post(
     }
 
     // Determine folder based on user type
-    let folder = CLOUDINARY_FOLDERS.SELLER_DOCUMENTS;
+    let folder: string = CLOUDINARY_FOLDERS.SELLER_DOCUMENTS;
     const userType = (req as any).user?.userType;
 
     if (userType === "Delivery") {
