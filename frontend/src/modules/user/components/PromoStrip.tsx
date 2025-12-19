@@ -61,16 +61,18 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
         let fetchedProducts: any[] = [];
 
         if (response.success && response.data) {
-          // Map categories to PromoCards
-          if (response.data.categories && response.data.categories.length > 0) {
-            // Filter categories based on activeTab if needed, or take top ones
-            // For now, we take random 4 or top 4 to fill the cards
+          // 1. Check for specific Promo Cards (curated from backend)
+          if (response.data.promoCards && response.data.promoCards.length > 0) {
+            fetchedCards = response.data.promoCards;
+          }
+          // 2. Fallback to categories if no promo cards
+          else if (response.data.categories && response.data.categories.length > 0) {
             fetchedCards = response.data.categories.slice(0, 4).map((c: any) => ({
               id: c._id || c.id,
-              badge: 'Up to 50% OFF', // Placeholder as backend doesn't send badge yet
+              badge: 'Up to 50% OFF',
               title: c.name,
               categoryId: c.slug || c._id,
-              bgColor: c.color || 'bg-yellow-50' // Use backend color or default
+              bgColor: c.color || 'bg-yellow-50'
             }));
           }
 

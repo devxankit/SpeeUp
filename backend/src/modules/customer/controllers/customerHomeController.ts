@@ -58,6 +58,40 @@ export const getHomeContent = async (_req: Request, res: Response) => {
             productId: p._id
         }));
 
+        // 6. Promo Cards (Curated collections for PromoStrip)
+        // These match the frontend "PromoCard" interface
+        // Added specifically to restore missing frontend section via API
+        const promoCards = [
+            {
+                id: 'self-care',
+                badge: 'Up to 55% OFF',
+                title: 'Self Care & Wellness',
+                categoryId: 'personal-care',
+                bgColor: 'bg-yellow-50'
+            },
+            {
+                id: 'hot-meals',
+                badge: 'Up to 55% OFF',
+                title: 'Hot Meals & Drinks',
+                categoryId: 'breakfast-instant',
+                bgColor: 'bg-yellow-50'
+            },
+            {
+                id: 'kitchen-essentials',
+                badge: 'Up to 55% OFF',
+                title: 'Kitchen Essentials',
+                categoryId: 'atta-rice',
+                bgColor: 'bg-yellow-50'
+            },
+            {
+                id: 'cleaning-home',
+                badge: 'Up to 75% OFF',
+                title: 'Cleaning & Home Needs',
+                categoryId: 'household',
+                bgColor: 'bg-yellow-50'
+            }
+        ];
+
         res.status(200).json({
             success: true,
             data: {
@@ -69,7 +103,8 @@ export const getHomeContent = async (_req: Request, res: Response) => {
                     { id: 2, image: 'https://img.freepik.com/free-vector/flat-supermarket-social-media-cover-template_23-2149363385.jpg', link: '/category/snacks' }
                 ],
                 trending,
-                cookingIdeas
+                cookingIdeas,
+                promoCards // Return the curated cards
             },
         });
     } catch (error: any) {
