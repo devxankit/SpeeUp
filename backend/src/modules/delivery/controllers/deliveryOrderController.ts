@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../../../utils/asyncHandler";
 import Order from "../../../models/Order";
 import Delivery from "../../../models/Delivery";
-// import mongoose from "mongoose";
 
 /**
  * Helper to map order items for response
@@ -16,7 +15,6 @@ const mapOrderItems = (items: any[]) => {
         image: item.productImage
     }));
 };
-// import mongoose from "mongoose";
 
 /**
  * Get All Orders History
@@ -66,7 +64,6 @@ export const getAllOrdersHistory = asyncHandler(async (req: Request, res: Respon
  */
 export const getTodayOrders = asyncHandler(async (req: Request, res: Response) => {
     const deliveryId = (req.user as any)?.userId;
-    const deliveryId = req.user?.userId;
 
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -110,7 +107,6 @@ export const getTodayOrders = asyncHandler(async (req: Request, res: Response) =
  */
 export const getPendingOrders = asyncHandler(async (req: Request, res: Response) => {
     const deliveryId = (req.user as any)?.userId;
-    const deliveryId = req.user?.userId;
 
     // Pending statuses: Ready for pickup, Out for delivery, Picked Up, Assigned, In Transit
     const orders = await Order.find({
@@ -178,7 +174,6 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
     const { id } = req.params;
     const { status } = req.body;
     const deliveryId = (req.user as any)?.userId;
-    const deliveryId = req.user?.userId;
 
     const order = await Order.findById(id);
     if (!order) {
@@ -189,8 +184,8 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
         return res.status(403).json({ success: false, message: "This order is not assigned to you" });
     }
 
-    // const oldStatus = order.status;
     order.status = status;
+
     // Status transition logic
     if (status) order.status = status;
 
