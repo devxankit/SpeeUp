@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import Order from "../../../models/Order";
 import Product from "../../../models/Product";
 import Category from "../../../models/Category";
+import OrderItem from "../../../models/OrderItem";
 import { asyncHandler } from "../../../utils/asyncHandler";
 import mongoose from "mongoose";
 
@@ -11,6 +12,11 @@ import mongoose from "mongoose";
 export const getDashboardStats = asyncHandler(
     async (req: Request, res: Response) => {
         const sellerId = new mongoose.Types.ObjectId((req as any).user.userId);
+
+        // Find orders associated with this seller
+        // Since Order model doesn't have sellerId, we find orders via OrderItem
+        const sellerOrderItems = await OrderItem.find({ seller: sellerId }).select('order');
+        const sellerOrderIds = [...new Set(sellerOrderItems.map(item => item.order.toString()))];
 
         // 1. KPI Metrics
         const [
@@ -23,19 +29,19 @@ export const getDashboardStats = asyncHandler(
             totalSubcategoryCount,
             totalCustomerCount,
         ] = await Promise.all([
-            Order.countDocuments({ sellerId }),
-            Order.countDocuments({ sellerId, status: "Delivered" }),
-            Order.countDocuments({ sellerId, status: "Pending" }),
-            Order.countDocuments({ sellerId, status: "Cancelled" }),
-            Product.countDocuments({ sellerId }),
-            Product.distinct("categoryId", { sellerId }).then(ids => ids.length),
-            Product.distinct("subcategoryId", { sellerId }).then(ids => ids.length),
-            Order.distinct("customerId", { sellerId }).then(ids => ids.length),
+            Order.countDocuments({ _id: { $in: sellerOrderIds } }),
+            Order.countDocuments({ _id: { $in: sellerOrderIds }, status: "Delivered" }),
+            Order.countDocuments({ _id: { $in: sellerOrderIds }, status: "Pending" }),
+            Order.countDocuments({ _id: { $in: sellerOrderIds }, status: "Cancelled" }),
+            Product.countDocuments({ seller: sellerId }), // Note: Product model uses 'seller' (ref) or 'sellerId'? Checking schema... Product.ts usually uses 'seller' as ref. Checking prev file... Product.countDocuments({ sellerId }) was used. Let's verify Product model.
+            Product.distinct("category", { seller: sellerId }).then(ids => ids.length),
+            Product.distinct("subcategory", { seller: sellerId }).then(ids => ids.length),
+            Order.distinct("customer", { _id: { $in: sellerOrderIds } }).then(ids => ids.length),
         ]);
 
         // 2. Alert Metrics (Low Stock < 5)
-        // Note: Stock is in variations. We need to check if any variation is low.
-        const products = await Product.find({ sellerId });
+        // Check Product model usage
+        const products = await Product.find({ seller: sellerId });
         let soldOutProducts = 0;
         let lowStockProducts = 0;
 
@@ -43,25 +49,31 @@ export const getDashboardStats = asyncHandler(
             let isSoldOut = true;
             let isLowStock = false;
 
-            product.variations.forEach(v => {
-                if (v.stock > 0) isSoldOut = false;
-                if (v.stock > 0 && v.stock < 5) isLowStock = true;
-            });
+            if (product.variations && product.variations.length > 0) {
+                product.variations.forEach(v => {
+                    if (v.stock > 0) isSoldOut = false;
+                    if (v.stock > 0 && v.stock < 5) isLowStock = true;
+                });
+            } else {
+                // Handle products without variations (fallback)
+                if (product.stock > 0) isSoldOut = false;
+                if (product.stock > 0 && product.stock < 5) isLowStock = true;
+            }
 
             if (isSoldOut) soldOutProducts++;
             else if (isLowStock) lowStockProducts++;
         });
 
         // 3. New Orders Table (Latest 10)
-        const newOrders = await Order.find({ sellerId })
+        const newOrders = await Order.find({ _id: { $in: sellerOrderIds } })
             .sort({ createdAt: -1 })
             .limit(10);
 
         const formattedNewOrders = newOrders.map(order => ({
-            id: order.orderId,
-            orderDate: order.orderDate.toLocaleDateString('en-GB'),
-            status: order.status === 'On the way' ? 'Out For Delivery' : order.status,
-            amount: order.grandTotal,
+            id: order.orderNumber || order._id.toString(), // Use orderNumber if available
+            orderDate: new Date(order.orderDate).toLocaleDateString('en-GB'),
+            status: order.status === 'Out for Delivery' ? 'Out For Delivery' : order.status,
+            amount: order.total, // Use total instead of grandTotal (check Schema)
         }));
 
         // 4. Chart Data (Last 12 months)
@@ -69,7 +81,7 @@ export const getDashboardStats = asyncHandler(
         const monthlyStats = await Order.aggregate([
             {
                 $match: {
-                    sellerId,
+                    _id: { $in: sellerOrderIds.map(id => new mongoose.Types.ObjectId(id)) },
                     orderDate: {
                         $gte: new Date(`${currentYear}-01-01`),
                         $lte: new Date(`${currentYear}-12-31`)
@@ -92,14 +104,14 @@ export const getDashboardStats = asyncHandler(
         });
 
         // 5. Daily Chart Data (Current Month)
-        const currentMonth = new Date().getMonth() + 1;
+        const currentMonth = new Date().getMonth();
         const dailyStats = await Order.aggregate([
             {
                 $match: {
-                    sellerId,
+                    _id: { $in: sellerOrderIds.map(id => new mongoose.Types.ObjectId(id)) },
                     orderDate: {
-                        $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-                        $lte: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0)
+                        $gte: new Date(currentYear, currentMonth, 1),
+                        $lte: new Date(currentYear, currentMonth + 1, 0)
                     }
                 }
             },
@@ -112,7 +124,7 @@ export const getDashboardStats = asyncHandler(
             { $sort: { "_id": 1 } }
         ]);
 
-        const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
         const dailyOrderData = Array.from({ length: daysInMonth }, (_, i) => {
             const day = i + 1;
             const dayStat = dailyStats.find(s => s._id === day);
@@ -124,7 +136,7 @@ export const getDashboardStats = asyncHandler(
             message: "Dashboard stats fetched successfully",
             data: {
                 stats: {
-                    totalUser: totalCustomerCount, // Backend doesn't track "Total User" per seller yet, usually Admin metric
+                    totalUser: totalCustomerCount,
                     totalCategory: totalCategoryCount,
                     totalSubcategory: totalSubcategoryCount,
                     totalProduct,

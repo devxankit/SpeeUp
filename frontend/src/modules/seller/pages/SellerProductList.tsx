@@ -106,13 +106,13 @@ export default function SellerProductList() {
             variationId: variation._id || `${product._id}-${index}`,
             productName: product.productName,
             sellerName: user?.storeName || '',
-            productImage: product.mainImageUrl || '/assets/product-placeholder.jpg',
-            brandName: (product.brandId as any)?.name || '-',
-            category: (product.categoryId as any)?.name || '-',
-            subCategory: (product.subcategoryId as any)?.name || '-',
+            productImage: product.mainImage || product.mainImageUrl || '/assets/product-placeholder.jpg',
+            brandName: (product.brand as any)?.name || '-',
+            category: (product.category as any)?.name || '-',
+            subCategory: (product.subcategory as any)?.name || '-',
             price: variation.price,
             discPrice: variation.discPrice,
-            variation: variation.title,
+            variation: variation.title || variation.value || variation.name || 'Default',
             isPopular: product.popular,
             productId: product._id,
         }))
@@ -426,16 +426,6 @@ export default function SellerProductList() {
                                         <td className="p-4 align-middle border border-neutral-200">
                                             <div className="flex flex-col gap-1">
                                                 <span>{variation.productName}</span>
-                                                <div className="flex items-center gap-2">
-                                                    {variation.isPopular && (
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                                            popular
-                                                        </span>
-                                                    )}
-                                                    <button className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors">
-                                                        QR
-                                                    </button>
-                                                </div>
                                             </div>
                                         </td>
                                         <td className="p-4 align-middle border border-neutral-200">{variation.sellerName}</td>

@@ -8,21 +8,23 @@ export interface ApiResponse<T> {
 
 export interface ProductVariation {
   _id?: string;
-  title: string;
+  name?: string; // Mapped from title if needed, or direct
+  value?: string;
+  title?: string; // Frontend uses title
   price: number;
   discPrice: number;
   stock: number;
-  status: 'Available' | 'Sold out';
+  status: 'Available' | 'Sold out' | 'In stock'; // Added In stock
   sku?: string;
 }
 
 export interface Product {
   _id: string;
   productName: string;
-  sellerId: string;
-  categoryId?: string;
-  subcategoryId?: string;
-  brandId?: string;
+  seller: string | any; // Updated to allow populated object
+  category?: string | any; // Updated to allow populated object
+  subcategory?: string | any; // Updated
+  brand?: string | any; // Updated
   publish: boolean;
   popular: boolean;
   dealOfDay: boolean;
@@ -34,17 +36,24 @@ export interface Product {
   tags: string[];
   manufacturer?: string;
   madeIn?: string;
-  taxId?: string;
+  tax?: string | any; // Updated
   isReturnable: boolean;
   maxReturnDays?: number;
   totalAllowedQuantity: number;
   fssaiLicNo?: string;
   mainImageUrl?: string;
+  mainImage?: string; // Mapped directly from Product model
   galleryImageUrls: string[];
   variations: ProductVariation[];
   variationType?: string;
   createdAt?: string;
   updatedAt?: string;
+  // Fallback for old fields if any legacy code uses them
+  sellerId?: string;
+  categoryId?: string;
+  subcategoryId?: string;
+  brandId?: string;
+  taxId?: string;
 }
 
 export interface CreateProductData {
