@@ -84,8 +84,8 @@ export default function SellerTaxes() {
                                     ...filteredTaxes.map(tax => [
                                         tax._id,
                                         `"${tax.name}"`,
-                                        tax.rate,
-                                        tax.isActive ? 'Active' : 'Inactive'
+                                        tax.percentage,
+                                        tax.status
                                     ].join(','))
                                 ].join('\n');
                                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -146,10 +146,10 @@ export default function SellerTaxes() {
                                 </th>
                                 <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                    onClick={() => handleSort('rate')}
+                                    onClick={() => handleSort('percentage')}
                                 >
                                     <div className="flex items-center justify-between">
-                                        Tax Rate (%) <SortIcon column="rate" />
+                                        Tax Rate (%) <SortIcon column="percentage" />
                                     </div>
                                 </th>
                                 <th
@@ -176,13 +176,13 @@ export default function SellerTaxes() {
                                 <tr key={tax._id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700">
                                     <td className="p-4 align-middle border border-neutral-200">{startIndex + index + 1}</td>
                                     <td className="p-4 align-middle border border-neutral-200 font-medium">{tax.name}</td>
-                                    <td className="p-4 align-middle border border-neutral-200">{tax.rate}%</td>
+                                    <td className="p-4 align-middle border border-neutral-200">{tax.percentage}%</td>
                                     <td className="p-4 align-middle border border-neutral-200">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tax.isActive
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tax.status === 'Active'
                                             ? 'bg-emerald-100 text-emerald-800'
                                             : 'bg-rose-100 text-rose-800'
                                             }`}>
-                                            {tax.isActive ? 'Active' : 'Inactive'}
+                                            {tax.status}
                                         </span>
                                     </td>
                                 </tr>

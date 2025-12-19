@@ -9,7 +9,7 @@ export interface ApiResponse<T> {
 export interface Category {
   _id: string;
   name: string;
-  imageUrl?: string;
+  image?: string;
   parentId?: string;
   isBestseller: boolean;
   hasWarning: boolean;

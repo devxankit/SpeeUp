@@ -149,7 +149,7 @@ export default function SellerCategory() {
                                         <td className="p-4 border border-neutral-200">
                                             <div className="w-16 h-12 bg-white border border-neutral-200 rounded p-1 flex items-center justify-center mx-auto">
                                                 <img
-                                                    src={category.imageUrl || '/assets/category-placeholder.png'}
+                                                    src={category.image || '/assets/category-placeholder.png'}
                                                     alt={category.name}
                                                     className="max-w-full max-h-full object-contain"
                                                     onError={(e) => {

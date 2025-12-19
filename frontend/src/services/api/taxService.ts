@@ -3,10 +3,10 @@ import api from './config';
 export interface Tax {
     _id: string;
     name: string;
-    rate: number;
+    percentage: number;
     type: string;
     description?: string;
-    isActive: boolean;
+    status: string;
 }
 
 export const getTaxes = async (): Promise<any> => {

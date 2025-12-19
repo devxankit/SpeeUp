@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 interface CategoryTile {
   id: string;
   name: string;
-  productImages: (string | undefined)[];
+  productImages?: (string | undefined)[];
+  image?: string; // Support single image property
   productCount?: number;
   categoryId?: string;
   bgColor?: string;
@@ -36,7 +37,8 @@ export default function CategoryTileSection({ title, tiles, columns = 2, showPro
       <div className="px-4 md:px-6 lg:px-8 overflow-visible">
         <div className={`grid ${gridCols} ${gapClass} overflow-visible`}>
           {tiles.map((tile) => {
-            const hasImages = tile.productImages.filter(Boolean).length > 0;
+            const images = tile.productImages || (tile.image ? [tile.image] : []);
+            const hasImages = images.filter(Boolean).length > 0;
 
             return (
               <motion.div
@@ -56,72 +58,69 @@ export default function CategoryTileSection({ title, tiles, columns = 2, showPro
                       handleTileClick(tile);
                     }
                   }}
-                  className={`block bg-white rounded-xl shadow-sm border border-neutral-200 hover:shadow-md transition-shadow ${
-                    showProductCount ? 'p-2.5' : 'p-2'
-                  }`}
+                  className={`block bg-white rounded-xl shadow-sm border border-neutral-200 hover:shadow-md transition-shadow ${showProductCount ? 'p-2.5' : 'p-2'
+                    }`}
                 >
-                {/* Image - Single image for non-bestsellers, 2x2 grid for bestsellers */}
-                <div
-                  className={`w-full rounded-lg overflow-hidden ${
-                    showProductCount ? 'h-20 mb-2' : 'h-16 mb-1.5'
-                  } ${
-                    tile.bgColor || 'bg-cyan-50'
-                  }`}
-                >
-                  {hasImages ? (
-                    showProductCount ? (
-                      // Bestsellers: 2x2 grid
-                      <div className="w-full h-full grid grid-cols-2 gap-0.5 p-0.5">
-                        {tile.productImages.slice(0, 4).map((img, idx) =>
-                          img ? (
-                            <img
-                              key={idx}
-                              src={img}
-                              alt=""
-                              className="w-full h-full object-contain bg-white rounded-sm"
-                            />
-                          ) : (
-                            <div
-                              key={idx}
-                              className="w-full h-full bg-neutral-200 rounded-sm flex items-center justify-center text-xs text-neutral-400"
-                            >
-                              {idx + 1}
-                            </div>
-                          )
-                        )}
-                      </div>
+                  {/* Image - Single image for non-bestsellers, 2x2 grid for bestsellers */}
+                  <div
+                    className={`w-full rounded-lg overflow-hidden ${showProductCount ? 'h-20 mb-2' : 'h-16 mb-1.5'
+                      } ${tile.bgColor || 'bg-cyan-50'
+                      }`}
+                  >
+                    {hasImages ? (
+                      showProductCount ? (
+                        // Bestsellers: 2x2 grid
+                        <div className="w-full h-full grid grid-cols-2 gap-0.5 p-0.5">
+                          {images.slice(0, 4).map((img, idx) =>
+                            img ? (
+                              <img
+                                key={idx}
+                                src={img}
+                                alt=""
+                                className="w-full h-full object-contain bg-white rounded-sm"
+                              />
+                            ) : (
+                              <div
+                                key={idx}
+                                className="w-full h-full bg-neutral-200 rounded-sm flex items-center justify-center text-xs text-neutral-400"
+                              >
+                                {idx + 1}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      ) : (
+                        // Other sections: Single image
+                        <img
+                          src={images[0]}
+                          alt={tile.name}
+                          className="w-full h-full object-contain bg-white rounded-lg"
+                        />
+                      )
                     ) : (
-                      // Other sections: Single image
-                      <img
-                        src={tile.productImages[0]}
-                        alt={tile.name}
-                        className="w-full h-full object-contain bg-white rounded-lg"
-                      />
-                    )
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-3xl text-neutral-300">
-                      {tile.name.charAt(0)}
+                      <div className="w-full h-full flex items-center justify-center text-3xl text-neutral-300">
+                        {tile.name.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Product count - shown first (only for bestsellers) */}
+                  {showProductCount && tile.productCount && (
+                    <div className="mb-1.5 flex justify-center">
+                      <span className="inline-block bg-neutral-100 text-neutral-600 text-[10px] font-medium px-2 py-0.5 rounded-full leading-tight">
+                        +{tile.productCount} more
+                      </span>
                     </div>
                   )}
-                </div>
 
-                {/* Product count - shown first (only for bestsellers) */}
-                {showProductCount && tile.productCount && (
-                  <div className="mb-1.5 flex justify-center">
-                    <span className="inline-block bg-neutral-100 text-neutral-600 text-[10px] font-medium px-2 py-0.5 rounded-full leading-tight">
-                      +{tile.productCount} more
-                    </span>
-                  </div>
-                )}
-
-                {/* Tile name - inside card only for bestsellers */}
-                {showProductCount && (
-                  <div className="text-[11px] font-semibold text-neutral-900 line-clamp-2 leading-tight text-center w-full block">
-                    {tile.name}
-                  </div>
-                )}
+                  {/* Tile name - inside card only for bestsellers */}
+                  {showProductCount && (
+                    <div className="text-[11px] font-semibold text-neutral-900 line-clamp-2 leading-tight text-center w-full block">
+                      {tile.name}
+                    </div>
+                  )}
                 </Link>
-                
+
                 {/* Tile name - outside card for all other sections */}
                 {!showProductCount && (
                   <div className="mt-1.5 text-center">

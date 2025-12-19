@@ -1,11 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { products } from '../../data/products';
-import { categories } from '../../data/categories';
+// import { products } from '../../data/products'; // REMOVED
+import { categories } from '../../data/categories'; // Keep categories for now if needed for UI mapping, or fetch from product details
 import { useCart } from '../../context/CartContext';
 import Button from '../../components/ui/button';
 import Badge from '../../components/ui/badge';
+import { getProductById } from '../../services/api/customerProductService';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -16,11 +17,50 @@ export default function ProductDetail() {
   const [isHighlightsExpanded, setIsHighlightsExpanded] = useState(false);
   const [isInfoExpanded, setIsInfoExpanded] = useState(false);
 
-  const product = products.find((p) => p.id === id);
+  const [product, setProduct] = useState<any>(null);
+  const [similarProducts, setSimilarProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!id) return;
+      setLoading(true);
+      try {
+        const response = await getProductById(id);
+        if (response.success && response.data) {
+          setProduct({
+            ...response.data,
+            // Ensure compat with UI fields
+            name: response.data.productName || response.data.name,
+            imageUrl: response.data.mainImage || response.data.imageUrl,
+            pack: response.data.description // Map description or other field to pack if unavailable? Or backend should send it.
+          });
+          setSimilarProducts(response.data.similarProducts || []);
+        } else {
+          setProduct(null);
+        }
+      } catch (error) {
+        console.error("Failed to fetch product", error);
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
 
   // Get quantity in cart
-  const cartItem = product ? cart.items.find(item => item.product.id === product.id) : null;
+  const cartItem = product ? cart.items.find(item => item.product.id === product.id || item.product.id === product._id) : null;
   const inCartQty = cartItem?.quantity || 0;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -40,12 +80,8 @@ export default function ProductDetail() {
     : 0;
 
   // Get category info
-  const category = categories.find((c) => c.id === product.categoryId);
-
-  // Get similar products from same category
-  const similarProducts = products.filter((p) =>
-    p.categoryId === product.categoryId && p.id !== product.id
-  ).slice(0, 3);
+  // Use category name from product if populated, otherwise look up in local map for icons/meta
+  const category = categories.find((c) => c.id === product.categoryId) || (product.category ? { name: product.category.name, id: product.category._id } : null);
 
   const handleAddToCart = () => {
     addToCart(product, addButtonRef.current);
@@ -365,7 +401,7 @@ export default function ProductDetail() {
               <h3 className="text-lg font-semibold text-neutral-900 mb-4 px-1">Top products in this category</h3>
               <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2 px-1">
                 {similarProducts.map((similarProduct) => {
-                  const similarCartItem = cart.items.find((item) => item.product.id === similarProduct.id);
+                  const similarCartItem = cart.items.find((item) => item.product.id === similarProduct.id || item.product.id === similarProduct._id);
                   const similarInCartQty = similarCartItem?.quantity || 0;
 
                   return (
@@ -392,18 +428,18 @@ export default function ProductDetail() {
 
                       {/* Image */}
                       <div
-                        onClick={() => navigate(`/product/${similarProduct.id}`)}
+                        onClick={() => navigate(`/product/${similarProduct.id || similarProduct._id}`)}
                         className="w-full h-32 bg-neutral-100 flex items-center justify-center overflow-hidden cursor-pointer"
                       >
-                        {similarProduct.imageUrl ? (
+                        {similarProduct.imageUrl || similarProduct.mainImage ? (
                           <img
-                            src={similarProduct.imageUrl}
-                            alt={similarProduct.name}
+                            src={similarProduct.imageUrl || similarProduct.mainImage}
+                            alt={similarProduct.name || similarProduct.productName}
                             className="w-full h-full object-cover"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-2xl">
-                            {similarProduct.name.charAt(0).toUpperCase()}
+                            {(similarProduct.name || similarProduct.productName || 'P').charAt(0).toUpperCase()}
                           </div>
                         )}
                       </div>
@@ -411,7 +447,7 @@ export default function ProductDetail() {
                       {/* Info */}
                       <div className="p-3">
                         <h4 className="text-sm font-semibold text-neutral-900 mb-2 line-clamp-2 min-h-[2.5rem]">
-                          {similarProduct.name}
+                          {similarProduct.name || similarProduct.productName}
                         </h4>
 
                         {/* ADD button or Quantity stepper */}

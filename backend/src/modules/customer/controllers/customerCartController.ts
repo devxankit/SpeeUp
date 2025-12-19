@@ -22,7 +22,7 @@ export const getCart = async (req: Request, res: Response) => {
         const userId = req.user?.userId;
         let cart = await Cart.findOne({ customer: userId }).populate({
             path: 'items',
-            populate: { path: 'product', select: 'productName price mainImage stock pack' }
+            populate: { path: 'product', select: 'productName price mainImage stock pack mrp category' }
         });
 
         if (!cart) {
@@ -87,7 +87,7 @@ export const addToCart = async (req: Request, res: Response) => {
         // Return updated cart
         const updatedCart = await Cart.findById(cart._id).populate({
             path: 'items',
-            populate: { path: 'product', select: 'productName price mainImage stock pack' }
+            populate: { path: 'product', select: 'productName price mainImage stock pack mrp category' }
         });
 
         return res.status(200).json({
@@ -134,7 +134,7 @@ export const updateCartItem = async (req: Request, res: Response) => {
 
         const updatedCart = await Cart.findById(cart._id).populate({
             path: 'items',
-            populate: { path: 'product', select: 'productName price mainImage stock pack' }
+            populate: { path: 'product', select: 'productName price mainImage stock pack mrp category' }
         });
 
         return res.status(200).json({
@@ -172,7 +172,7 @@ export const removeFromCart = async (req: Request, res: Response) => {
 
         const updatedCart = await Cart.findById(cart._id).populate({
             path: 'items',
-            populate: { path: 'product', select: 'productName price mainImage stock pack' }
+            populate: { path: 'product', select: 'productName price mainImage stock pack mrp category' }
         });
 
         return res.status(200).json({

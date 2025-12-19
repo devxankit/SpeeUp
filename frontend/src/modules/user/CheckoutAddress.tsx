@@ -2,34 +2,21 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { OrderAddress } from '../../types/order';
-
-const STORAGE_KEY = 'saved_address';
+import { addAddress } from '../../services/api/customerAddressService';
 
 export default function CheckoutAddress() {
   const { cart } = useCart();
   const navigate = useNavigate();
 
-  // Load saved address from localStorage on mount
-  const loadSavedAddress = (): OrderAddress => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (error) {
-      console.error('Error loading saved address:', error);
-    }
-    return {
-      name: '',
-      phone: '',
-      flat: '',
-      street: '',
-      city: 'Indore',
-      pincode: '',
-    };
-  };
-
-  const [address, setAddress] = useState<OrderAddress>(loadSavedAddress);
+  const [address, setAddress] = useState<OrderAddress>({
+    name: '',
+    phone: '',
+    flat: '',
+    street: '',
+    city: 'Indore',
+    pincode: '',
+    state: 'Madhya Pradesh', // Default
+  });
   const [errors, setErrors] = useState<Partial<Record<keyof OrderAddress, string>>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [orderingFor, setOrderingFor] = useState<'myself' | 'someone-else'>('myself');
@@ -76,26 +63,38 @@ export default function CheckoutAddress() {
     }
   };
 
-  const handleSaveAddress = () => {
+  const handleSaveAddress = async () => {
     if (!validateForm()) {
       return;
     }
 
     setIsSaving(true);
 
-    // Save to localStorage
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(address));
+      const payload = {
+        fullName: address.name,
+        phone: address.phone,
+        flat: address.flat,
+        street: address.street,
+        city: address.city,
+        state: address.state,
+        pincode: address.pincode,
+        type: addressType.charAt(0).toUpperCase() + addressType.slice(1) as 'Home' | 'Work' | 'Other', // Capitalize
+        isDefault: true, // Auto set as default for now
+        address: `${address.flat}, ${address.street}` // Fallback combined string
+      };
 
-      // Show success feedback
+      await addAddress(payload);
+
+      // Show success feedback logic if needed or just navigate
       setTimeout(() => {
         setIsSaving(false);
-        // Navigate back to checkout - this will trigger a reload of saved address
         navigate('/checkout', { replace: true });
       }, 500);
     } catch (error) {
       console.error('Error saving address:', error);
       setIsSaving(false);
+      // Show error toast
     }
   };
 
@@ -194,8 +193,8 @@ export default function CheckoutAddress() {
                 key={type.id}
                 onClick={() => setAddressType(type.id as typeof addressType)}
                 className={`px-3 py-1.5 rounded-lg border-2 text-xs font-medium transition-colors flex items-center gap-1.5 ${addressType === type.id
-                    ? 'border-green-600 bg-green-50 text-green-700'
-                    : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300'
+                  ? 'border-green-600 bg-green-50 text-green-700'
+                  : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300'
                   }`}
               >
                 <span className="text-sm">{type.icon}</span>
@@ -353,8 +352,8 @@ export default function CheckoutAddress() {
           onClick={handleSaveAddress}
           disabled={!isFormValid || isSaving}
           className={`w-full py-3 px-4 font-semibold text-sm transition-colors ${isFormValid && !isSaving
-              ? 'bg-green-600 text-white hover:bg-green-700'
-              : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+            ? 'bg-green-600 text-white hover:bg-green-700'
+            : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
             }`}
         >
           {isSaving ? 'Saving...' : 'Save Address'}

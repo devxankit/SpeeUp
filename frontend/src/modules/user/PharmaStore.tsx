@@ -3,86 +3,30 @@ import { useCart } from '../../context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../../components/ui/button';
 import { Product } from '../../types/domain';
-
-// Extended product type with rating and reviews for display
-interface PharmaProduct extends Product {
-  rating: number;
-  reviews: number;
-}
-
-// Pharma products
-const pharmaProducts: PharmaProduct[] = [
-  {
-    id: 'paracetamol',
-    name: 'Paracetamol 500mg',
-    pack: '10 tablets',
-    price: 25,
-    mrp: 30,
-    rating: 4.5,
-    reviews: 3245,
-    imageUrl: '/assets/shopbystore/pharma.jpg',
-    categoryId: 'health-pharma',
-  },
-  {
-    id: 'crocin',
-    name: 'Crocin Advance',
-    pack: '10 tablets',
-    price: 45,
-    mrp: 50,
-    rating: 4.5,
-    reviews: 1892,
-    imageUrl: '/assets/shopbystore/pharma.jpg',
-    categoryId: 'health-pharma',
-  },
-  {
-    id: 'vitamin-d',
-    name: 'Vitamin D3',
-    pack: '60 capsules',
-    price: 350,
-    mrp: 400,
-    rating: 4.5,
-    reviews: 2156,
-    imageUrl: '/assets/shopbystore/pharma.jpg',
-    categoryId: 'health-pharma',
-  },
-  {
-    id: 'calcium-tablets',
-    name: 'Calcium Tablets',
-    pack: '60 tablets',
-    price: 280,
-    mrp: 320,
-    rating: 4.0,
-    reviews: 1456,
-    imageUrl: '/assets/shopbystore/pharma.jpg',
-    categoryId: 'health-pharma',
-  },
-  {
-    id: 'protein-powder',
-    name: 'Protein Powder',
-    pack: '500 g',
-    price: 1200,
-    mrp: 1400,
-    rating: 4.5,
-    reviews: 892,
-    imageUrl: '/assets/shopbystore/pharma.jpg',
-    categoryId: 'health-pharma',
-  },
-  {
-    id: 'multivitamin',
-    name: 'Multivitamin Tablets',
-    pack: '30 tablets',
-    price: 199,
-    mrp: 250,
-    rating: 4.5,
-    reviews: 1234,
-    imageUrl: '/assets/shopbystore/pharma.jpg',
-    categoryId: 'health-pharma',
-  },
-];
+import { useEffect, useState } from 'react';
+import { getProducts } from '../../services/api/customerProductService';
 
 export default function PharmaStore() {
   const navigate = useNavigate();
   const { cart, addToCart, updateQuantity } = useCart();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await getProducts({ category: 'health-pharma' });
+        setProducts(response.data as unknown as Product[]);
+      } catch (error) {
+        console.error('Failed to fetch pharma products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   return (
     <div className="min-h-screen bg-white">
@@ -153,199 +97,205 @@ export default function PharmaStore() {
       <div className="px-4 py-4">
         <h3 className="text-lg font-semibold text-neutral-900 mb-4">Top buys</h3>
 
-        <div className="grid grid-cols-3 gap-2">
-          {pharmaProducts.map((product) => {
-            const cartItem = cart.items.find((item) => item.product.id === product.id);
-            const inCartQty = cartItem?.quantity || 0;
-            const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
+        {loading ? (
+          <div className="flex justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            {products.map((product) => {
+              const cartItem = cart.items.find((item) => item.product.id === product.id);
+              const inCartQty = cartItem?.quantity || 0;
+              const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
 
-            return (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className="bg-white rounded-lg overflow-hidden flex flex-col relative"
-                style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)' }}
-              >
-                {/* Product Image */}
-                <Link to={`/product/${product.id}`} className="relative block">
-                  <div className="w-full h-20 bg-neutral-100 flex items-center justify-center overflow-hidden relative">
-                    {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-full h-full object-contain"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-2xl">
-                        {product.name.charAt(0).toUpperCase()}
+              return (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="bg-white rounded-lg overflow-hidden flex flex-col relative"
+                  style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)' }}
+                >
+                  {/* Product Image */}
+                  <Link to={`/product/${product.id}`} className="relative block">
+                    <div className="w-full h-20 bg-neutral-100 flex items-center justify-center overflow-hidden relative">
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-2xl">
+                          {product.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+
+                      {/* Heart Icon */}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
+                        aria-label="Add to wishlist"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
+                          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    </div>
+                  </Link>
+
+                  {/* Product Details */}
+                  <div className="p-1.5 flex-1 flex flex-col" style={{ background: '#fef9e7' }}>
+                    {/* Pack/Tags */}
+                    <div className="text-[8px] text-neutral-600 mb-0.5 line-clamp-1">
+                      {product.pack}
+                    </div>
+
+                    {/* Product Name */}
+                    <Link to={`/product/${product.id}`} className="mb-0.5">
+                      <h3 className="text-[10px] font-bold text-neutral-900 line-clamp-2 leading-tight">
+                        {product.name}
+                      </h3>
+                    </Link>
+
+                    {/* Rating */}
+                    <div className="flex items-center gap-0.5 mb-0.5">
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, i) => (
+                          <svg
+                            key={i}
+                            width="8"
+                            height="8"
+                            viewBox="0 0 24 24"
+                            fill={i < Math.floor(product.rating || 0) ? '#fbbf24' : '#e5e7eb'}
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                        ))}
+                      </div>
+                      <span className="text-[8px] text-neutral-500">({(product.reviews || 0).toLocaleString()})</span>
+                    </div>
+
+                    {/* Delivery Time */}
+                    <div className="text-[9px] text-neutral-600 mb-0.5">
+                      15 MINS
+                    </div>
+
+                    {/* Discount */}
+                    {discount > 0 && (
+                      <div className="text-[9px] text-blue-600 font-semibold mb-0.5">
+                        {discount}% OFF
                       </div>
                     )}
 
-                    {/* Heart Icon */}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
-                      aria-label="Add to wishlist"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
-                  </div>
-                </Link>
-
-                {/* Product Details */}
-                <div className="p-1.5 flex-1 flex flex-col" style={{ background: '#fef9e7' }}>
-                  {/* Pack/Tags */}
-                  <div className="text-[8px] text-neutral-600 mb-0.5 line-clamp-1">
-                    {product.pack}
-                  </div>
-
-                  {/* Product Name */}
-                  <Link to={`/product/${product.id}`} className="mb-0.5">
-                    <h3 className="text-[10px] font-bold text-neutral-900 line-clamp-2 leading-tight">
-                      {product.name}
-                    </h3>
-                  </Link>
-
-                  {/* Rating */}
-                  <div className="flex items-center gap-0.5 mb-0.5">
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <svg
-                          key={i}
-                          width="8"
-                          height="8"
-                          viewBox="0 0 24 24"
-                          fill={i < Math.floor(product.rating) ? '#fbbf24' : '#e5e7eb'}
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                        </svg>
-                      ))}
-                    </div>
-                    <span className="text-[8px] text-neutral-500">({product.reviews.toLocaleString()})</span>
-                  </div>
-
-                  {/* Delivery Time */}
-                  <div className="text-[9px] text-neutral-600 mb-0.5">
-                    15 MINS
-                  </div>
-
-                  {/* Discount */}
-                  {discount > 0 && (
-                    <div className="text-[9px] text-blue-600 font-semibold mb-0.5">
-                      {discount}% OFF
-                    </div>
-                  )}
-
-                  {/* Price */}
-                  <div className="mb-1">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-[13px] font-bold text-neutral-900">
-                        ₹{product.price.toLocaleString('en-IN')}
-                      </span>
-                      {product.mrp && (
-                        <span className="text-[10px] text-neutral-400 line-through">
-                          ₹{product.mrp.toLocaleString('en-IN')}
+                    {/* Price */}
+                    <div className="mb-1">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-[13px] font-bold text-neutral-900">
+                          ₹{product.price.toLocaleString('en-IN')}
                         </span>
-                      )}
+                        {product.mrp && product.mrp !== product.price && (
+                          <span className="text-[10px] text-neutral-400 line-through">
+                            ₹{product.mrp.toLocaleString('en-IN')}
+                          </span>
+                        )}
+                      </div>
                     </div>
+
+                    {/* ADD button or Quantity stepper */}
+                    <AnimatePresence mode="wait">
+                      {inCartQty === 0 ? (
+                        <motion.div
+                          key="add-button"
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex justify-center w-full"
+                        >
+                          <Button
+                            variant="outline"
+                            size="default"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(product);
+                            }}
+                            className="w-full border-2 border-green-600 text-green-600 bg-transparent hover:bg-green-50 rounded-full font-semibold text-[10px] h-7 px-2"
+                          >
+                            ADD
+                          </Button>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="stepper"
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex items-center justify-center gap-1.5 bg-white border-2 border-green-600 rounded-full px-1.5 py-1 w-full"
+                        >
+                          <motion.div whileTap={{ scale: 0.9 }}>
+                            <Button
+                              variant="default"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateQuantity(product.id, inCartQty - 1);
+                              }}
+                              className="w-6 h-6 p-0 text-xs"
+                              aria-label="Decrease quantity"
+                            >
+                              −
+                            </Button>
+                          </motion.div>
+                          <motion.span
+                            key={inCartQty}
+                            initial={{ scale: 1.2, y: -4 }}
+                            animate={{ scale: 1, y: 0 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+                            className="text-xs font-bold text-green-600 min-w-[1rem] text-center"
+                          >
+                            {inCartQty}
+                          </motion.span>
+                          <motion.div whileTap={{ scale: 0.9 }}>
+                            <Button
+                              variant="default"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateQuantity(product.id, inCartQty + 1);
+                              }}
+                              className="w-6 h-6 p-0 text-xs"
+                              aria-label="Increase quantity"
+                            >
+                              +
+                            </Button>
+                          </motion.div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Bottom Link */}
+                    <Link
+                      to={`/category/health-pharma`}
+                      className="w-full bg-green-100 text-green-700 text-[8px] font-medium py-0.5 rounded-lg flex items-center justify-between px-1 hover:bg-green-200 transition-colors mt-1"
+                    >
+                      <span>See more like this</span>
+                      <svg width="6" height="6" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M0 0L8 4L0 8Z" fill="#16a34a" />
+                      </svg>
+                    </Link>
                   </div>
-
-                  {/* ADD button or Quantity stepper */}
-                  <AnimatePresence mode="wait">
-                    {inCartQty === 0 ? (
-                      <motion.div
-                        key="add-button"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        transition={{ duration: 0.2 }}
-                        className="flex justify-center w-full"
-                      >
-                        <Button
-                          variant="outline"
-                          size="default"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToCart(product);
-                          }}
-                          className="w-full border-2 border-green-600 text-green-600 bg-transparent hover:bg-green-50 rounded-full font-semibold text-[10px] h-7 px-2"
-                        >
-                          ADD
-                        </Button>
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="stepper"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        transition={{ duration: 0.2 }}
-                        className="flex items-center justify-center gap-1.5 bg-white border-2 border-green-600 rounded-full px-1.5 py-1 w-full"
-                      >
-                        <motion.div whileTap={{ scale: 0.9 }}>
-                          <Button
-                            variant="default"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateQuantity(product.id, inCartQty - 1);
-                            }}
-                            className="w-6 h-6 p-0 text-xs"
-                            aria-label="Decrease quantity"
-                          >
-                            −
-                          </Button>
-                        </motion.div>
-                        <motion.span
-                          key={inCartQty}
-                          initial={{ scale: 1.2, y: -4 }}
-                          animate={{ scale: 1, y: 0 }}
-                          transition={{ type: 'spring', stiffness: 500, damping: 15 }}
-                          className="text-xs font-bold text-green-600 min-w-[1rem] text-center"
-                        >
-                          {inCartQty}
-                        </motion.span>
-                        <motion.div whileTap={{ scale: 0.9 }}>
-                          <Button
-                            variant="default"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateQuantity(product.id, inCartQty + 1);
-                            }}
-                            className="w-6 h-6 p-0 text-xs"
-                            aria-label="Increase quantity"
-                          >
-                            +
-                          </Button>
-                        </motion.div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Bottom Link */}
-                  <Link
-                    to={`/category/health-pharma`}
-                    className="w-full bg-green-100 text-green-700 text-[8px] font-medium py-0.5 rounded-lg flex items-center justify-between px-1 hover:bg-green-200 transition-colors mt-1"
-                  >
-                    <span>See more like this</span>
-                    <svg width="6" height="6" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M0 0L8 4L0 8Z" fill="#16a34a" />
-                    </svg>
-                  </Link>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
