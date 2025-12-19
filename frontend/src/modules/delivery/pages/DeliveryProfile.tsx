@@ -3,50 +3,74 @@ import { useNavigate } from 'react-router-dom';
 import DeliveryHeader from '../components/DeliveryHeader';
 import DeliveryBottomNav from '../components/DeliveryBottomNav';
 import { useDeliveryUser } from '../context/DeliveryUserContext';
+import { getDeliveryProfile, updateProfile } from '../../../services/api/delivery/deliveryService';
 
 export default function DeliveryProfile() {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const { userName, setUserName } = useDeliveryUser();
 
-  // Mock profile data
-  const initialProfileData = {
-    name: userName || 'Rajesh Kumar',
-    phone: '+91 98765 43210',
-    email: 'rajesh.kumar@example.com',
-    address: '123, Silicon City, Indore, MP 452001',
-    vehicleNumber: 'MP-09-AB-1234',
+  const [profileData, setProfileData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    address: '',
+    vehicleNumber: '',
     vehicleType: 'Bike',
-    joinDate: '15 Jan 2024',
-    totalDeliveries: 1250,
-    rating: 4.8,
-  };
+    joinDate: '',
+    totalDeliveries: 0,
+    rating: 0,
+  });
 
-  const [profileData, setProfileData] = useState(initialProfileData);
-
-  // Update profile data when userName changes
+  // Fetch profile data on mount
   useEffect(() => {
-    setProfileData((prev) => ({
-      ...prev,
-      name: userName || prev.name,
-    }));
-  }, [userName]);
+    const fetchProfile = async () => {
+      try {
+        const data = await getDeliveryProfile();
+        setProfileData({
+          name: data.name,
+          phone: data.mobile,
+          email: data.email,
+          address: data.address,
+          vehicleNumber: data.vehicleNumber || '',
+          vehicleType: data.vehicleType || 'Bike',
+          joinDate: new Date(data.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+          totalDeliveries: data.totalDeliveredCount || 0, // Assuming backend sends this or we need to fetch dashboard stats
+          rating: 4.8, // Mock for now
+        });
+        setUserName(data.name);
+      } catch (error) {
+        console.error("Failed to fetch profile", error);
+      }
+    };
+    fetchProfile();
+  }, [setUserName]);
 
   const handleEdit = () => {
     setIsEditing(true);
   };
 
   const handleCancel = () => {
-    setProfileData(initialProfileData);
     setIsEditing(false);
+    // Re-fetch or reset to previous state
   };
 
-  const handleSave = () => {
-    // Update the user name in context
-    setUserName(profileData.name);
-    setIsEditing(false);
-    // Here you would typically save to backend
-    // You could add a success message here
+  const handleSave = async () => {
+    try {
+      await updateProfile({
+        name: profileData.name,
+        email: profileData.email,
+        address: profileData.address,
+        vehicleNumber: profileData.vehicleNumber,
+        vehicleType: profileData.vehicleType
+      });
+      setUserName(profileData.name);
+      setIsEditing(false);
+      // You could add a toast notification here
+    } catch (error) {
+      console.error("Failed to update profile", error);
+      alert("Failed to update profile");
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {

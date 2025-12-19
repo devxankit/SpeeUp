@@ -1,10 +1,39 @@
+import { useEffect, useState } from 'react';
 import DeliveryHeader from '../components/DeliveryHeader';
+import { getNotifications, markNotificationRead } from '../../../services/api/delivery/deliveryService';
 
 export default function DeliveryNotifications() {
-  const notifications: any[] = []; // Placeholder for future notification implementation
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const data = await getNotifications();
+      setNotifications(data);
+    } catch (error) {
+      console.error("Failed to fetch notifications", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await markNotificationRead(id);
+      // Update local state to show as read
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
+    } catch (error) {
+      console.error("Failed to mark as read", error);
+    }
+  };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
+      case 'Order':
       case 'order':
         return (
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -27,9 +56,12 @@ export default function DeliveryNotifications() {
             <circle cx="15" cy="13" r="1" fill="#16a34a" />
           </svg>
         );
-      // ... (other cases if needed, but for empty list not strictly necessary to keep all SVG code if unused, but I'll keep it for future use)
       default:
-        return null;
+        return (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.9 22 12 22ZM18 16V11C18 7.93 16.36 5.36 13.5 4.68V4C13.5 3.17 12.83 2 12 2C11.17 2 10.5 3.17 10.5 4V4.68C7.63 5.36 6 7.92 6 11V16L4 18V19H20V18L18 16Z" fill="#F97316" />
+          </svg>
+        );
     }
   };
 
@@ -49,9 +81,29 @@ export default function DeliveryNotifications() {
       <DeliveryHeader />
       <div className="px-4 py-4">
         <h2 className="text-neutral-900 text-xl font-semibold mb-4">Notifications</h2>
-        {notifications.length > 0 ? (
+        {loading ? (
+          <p className="text-center text-neutral-500">Loading...</p>
+        ) : notifications.length > 0 ? (
           <div className="space-y-3">
-            {/* Map over notifications if added later */}
+            {notifications.map((notification) => (
+              <div key={notification._id}
+                onClick={() => !notification.isRead && handleMarkAsRead(notification._id)}
+                className={`bg-white rounded-xl p-4 shadow-sm border ${notification.isRead ? 'border-neutral-200' : 'border-orange-200 bg-orange-50'}`}>
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0 mt-1">
+                    {getNotificationIcon(notification.type)}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className={`text-sm font-semibold ${notification.isRead ? 'text-neutral-900' : 'text-neutral-900'}`}>{notification.title}</h3>
+                    <p className="text-neutral-600 text-xs mt-1 line-clamp-2">{notification.message}</p>
+                    <p className="text-neutral-400 text-[10px] mt-2">{formatTime(notification.createdAt)}</p>
+                  </div>
+                  {!notification.isRead && (
+                    <div className="w-2 h-2 rounded-full bg-orange-500 mt-2"></div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="bg-white rounded-xl p-8 min-h-[400px] flex items-center justify-center shadow-sm border border-neutral-200">

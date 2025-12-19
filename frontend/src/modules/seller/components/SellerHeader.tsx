@@ -165,24 +165,7 @@ export default function SellerHeader({ onMenuClick, isSidebarOpen }: SellerHeade
                 >
                   Account Settings
                 </button>
-                <button
-                  onClick={() => {
-                    setShowSettingsDropdown(false);
-                    console.log('Preferences clicked');
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                >
-                  Preferences
-                </button>
-                <button
-                  onClick={() => {
-                    setShowSettingsDropdown(false);
-                    console.log('Notifications clicked');
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                >
-                  Notification Settings
-                </button>
+
               </div>
             )}
           </div>
