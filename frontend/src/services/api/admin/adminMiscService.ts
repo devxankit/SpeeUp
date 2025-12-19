@@ -1,10 +1,7 @@
 import api from "../config";
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
+
+import { ApiResponse } from "./types";
 
 export interface User {
   _id: string;
@@ -22,7 +19,7 @@ export interface User {
   updatedAt?: string;
 }
 
-export interface ReturnRequest {
+export interface MiscReturnRequest {
   _id: string;
   orderId: string;
   orderItemId: string;
@@ -56,7 +53,7 @@ export interface HeaderCategory {
   updatedAt?: string;
 }
 
-export interface HomeSection {
+export interface MiscHomeSection {
   _id: string;
   title: string;
   type: "banner" | "featured_products" | "categories" | "deals";
@@ -178,8 +175,8 @@ export const updateUser = async (
  */
 export const getReturnRequests = async (
   params?: GetMiscParams
-): Promise<ApiResponse<ReturnRequest[]>> => {
-  const response = await api.get<ApiResponse<ReturnRequest[]>>(
+): Promise<ApiResponse<MiscReturnRequest[]>> => {
+  const response = await api.get<ApiResponse<MiscReturnRequest[]>>(
     "/admin/return-requests",
     { params }
   );
@@ -188,8 +185,8 @@ export const getReturnRequests = async (
 
 export const getReturnRequestById = async (
   id: string
-): Promise<ApiResponse<ReturnRequest>> => {
-  const response = await api.get<ApiResponse<ReturnRequest>>(
+): Promise<ApiResponse<MiscReturnRequest>> => {
+  const response = await api.get<ApiResponse<MiscReturnRequest>>(
     `/admin/return-requests/${id}`
   );
   return response.data;
@@ -198,8 +195,8 @@ export const getReturnRequestById = async (
 export const updateReturnRequest = async (
   id: string,
   data: UpdateReturnRequestData
-): Promise<ApiResponse<ReturnRequest>> => {
-  const response = await api.put<ApiResponse<ReturnRequest>>(
+): Promise<ApiResponse<MiscReturnRequest>> => {
+  const response = await api.put<ApiResponse<MiscReturnRequest>>(
     `/admin/return-requests/${id}`,
     data
   );
@@ -262,31 +259,21 @@ export const updateHeaderCategoryOrder = async (
 /**
  * Home Section APIs
  */
-export const getHomeSections = async (
-  params?: GetMiscParams
-): Promise<ApiResponse<HomeSection[]>> => {
-  const response = await api.get<ApiResponse<HomeSection[]>>(
-    "/admin/home-sections",
-    { params }
-  );
+export const getHomeSections = async (): Promise<ApiResponse<MiscHomeSection[]>> => {
+  const response = await api.get('/admin/cms/home-sections');
   return response.data;
 };
 
-export const createHomeSection = async (
-  data: CreateHomeSectionData
-): Promise<ApiResponse<HomeSection>> => {
-  const response = await api.post<ApiResponse<HomeSection>>(
-    "/admin/home-sections",
-    data
-  );
+export const updateHomeSections = async (sections: MiscHomeSection[]): Promise<ApiResponse<MiscHomeSection[]>> => {
+  const response = await api.put('/admin/cms/home-sections', { sections });
   return response.data;
 };
 
 export const updateHomeSection = async (
   id: string,
   data: UpdateHomeSectionData
-): Promise<ApiResponse<HomeSection>> => {
-  const response = await api.put<ApiResponse<HomeSection>>(
+): Promise<ApiResponse<MiscHomeSection>> => {
+  const response = await api.put<ApiResponse<MiscHomeSection>>(
     `/admin/home-sections/${id}`,
     data
   );

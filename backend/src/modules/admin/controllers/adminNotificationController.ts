@@ -160,6 +160,66 @@ export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
+ * Update notification
+ */
+export const updateNotification = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const notification = await Notification.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification updated successfully",
+      data: notification,
+    });
+  }
+);
+
+/**
+ * Send notification (Push to users)
+ * This is a placeholder for actual push notification logic (Firebase/Socket.io)
+ * For now, just mark it as sent.
+ */
+export const sendNotification = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    const notification = await Notification.findById(id);
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found",
+      });
+    }
+
+    // Logic to send push notification would go here
+    // e.g. await pushNotificationService.send(notification);
+
+    notification.sentAt = new Date();
+    await notification.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification sent successfully",
+      data: notification,
+    });
+  }
+);
+
+/**
  * Mark multiple notifications as read
  */
 export const markMultipleAsRead = asyncHandler(

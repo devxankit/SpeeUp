@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import {
-  getPaymentMethods,
+  getPaymentMethodConfigs as getPaymentMethods,
   updatePaymentMethod,
   updatePaymentMethodStatus,
-  type PaymentMethod,
+  type PaymentMethodConfig as PaymentMethod,
 } from "../../../services/api/admin/adminPaymentService";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -36,7 +36,7 @@ export default function AdminPaymentList() {
         console.error("Error fetching payment methods:", err);
         setError(
           err.response?.data?.message ||
-            "Failed to load payment methods. Please try again."
+          "Failed to load payment methods. Please try again."
         );
       } finally {
         setLoading(false);
@@ -77,7 +77,7 @@ export default function AdminPaymentList() {
       console.error("Error updating payment method status:", err);
       alert(
         "Failed to update status: " +
-          (err.response?.data?.message || "Please try again.")
+        (err.response?.data?.message || "Please try again.")
       );
     }
   };
@@ -106,14 +106,14 @@ export default function AdminPaymentList() {
       } else {
         alert(
           "Failed to update payment method: " +
-            (response.message || "Unknown error")
+          (response.message || "Unknown error")
         );
       }
     } catch (err: any) {
       console.error("Error updating payment method:", err);
       alert(
         "Failed to update payment method: " +
-          (err.response?.data?.message || "Please try again.")
+        (err.response?.data?.message || "Please try again.")
       );
     } finally {
       setUpdating(null);

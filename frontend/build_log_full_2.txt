@@ -1,0 +1,30 @@
+src/modules/admin/pages/AdminAddDeliveryBoy.tsx(1,20): error TS6133: 'useEffect' is declared but its value is never read.
+src/modules/admin/pages/AdminAddDeliveryBoy.tsx(37,9): error TS6198: All destructured elements are unused.
+src/modules/admin/pages/AdminAddSeller.tsx(1,20): error TS6133: 'useEffect' is declared but its value is never read.
+src/modules/admin/pages/AdminAddSeller.tsx(18,9): error TS6198: All destructured elements are unused.
+src/modules/admin/pages/AdminCashCollection.tsx(4,3): error TS6133: 'createCashCollection' is declared but its value is never read.
+src/modules/admin/pages/AdminCashCollection.tsx(6,8): error TS6133: 'CreateCashCollectionData' is declared but its value is never read.
+src/modules/admin/pages/AdminCashCollection.tsx(24,10): error TS6133: 'loading' is declared but its value is never read.
+src/modules/admin/pages/AdminCashCollection.tsx(25,10): error TS6133: 'error' is declared but its value is never read.
+src/modules/admin/pages/AdminCashCollection.tsx(26,10): error TS6133: 'submitting' is declared but its value is never read.
+src/modules/admin/pages/AdminCashCollection.tsx(26,22): error TS6133: 'setSubmitting' is declared but its value is never read.
+src/modules/admin/pages/AdminCashCollection.tsx(118,9): error TS6133: 'handleAddCollection' is declared but its value is never read.
+src/modules/admin/pages/AdminCategory.tsx(66,9): error TS6133: 'mockCategories' is declared but its value is never read.
+src/modules/admin/pages/AdminTaxes.tsx(7,3): error TS6133: 'updateTaxStatus' is declared but its value is never read.
+src/modules/admin/pages/AdminUsers.tsx(2,51): error TS6133: 'UserType' is declared but its value is never read.
+src/modules/admin/pages/AdminUsers.tsx(23,24): error TS6133: 'setSearchTerm' is declared but its value is never read.
+src/modules/admin/pages/AdminUsers.tsx(24,26): error TS6133: 'setStatusFilter' is declared but its value is never read.
+src/modules/admin/pages/AdminUsers.tsx(82,11): error TS6133: 'handleExport' is declared but its value is never read.
+src/modules/admin/pages/AdminWallet.tsx(11,11): error TS6196: 'Transaction' is declared but never used.
+src/modules/admin/pages/AdminWallet.tsx(52,11): error TS6196: 'AdminEarning' is declared but never used.
+src/modules/admin/pages/AdminWallet.tsx(76,10): error TS6133: 'sellers' is declared but its value is never read.
+src/modules/admin/pages/AdminWallet.tsx(79,10): error TS6133: 'processing' is declared but its value is never read.
+src/modules/admin/pages/AdminWallet.tsx(79,22): error TS6133: 'setProcessing' is declared but its value is never read.
+src/modules/seller/pages/SellerProductList.tsx(18,11): error TS6196: 'ProductDisplay' is declared but never used.
+src/modules/seller/pages/SellerProductList.tsx(25,12): error TS6133: 'loading' is declared but its value is never read.
+src/modules/seller/pages/SellerProductList.tsx(26,12): error TS6133: 'error' is declared but its value is never read.
+src/modules/seller/pages/SellerSignUp.tsx(330,75): error TS6133: 'placeName' is declared but its value is never read.
+src/modules/seller/pages/SellerStockManagement.tsx(20,12): error TS6133: 'loading' is declared but its value is never read.
+src/modules/seller/pages/SellerStockManagement.tsx(21,12): error TS6133: 'error' is declared but its value is never read.
+src/modules/seller/pages/SellerWallet.tsx(46,26): error TS6133: 'setEntriesPerPage' is declared but its value is never read.
+src/modules/seller/pages/SellerWallet.tsx(62,10): error TS6133: 'error' is declared but its value is never read.

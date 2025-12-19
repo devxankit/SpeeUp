@@ -41,10 +41,10 @@ export default function SellerOrderDetail() {
     if (!orderDetail) return;
 
     try {
-      const response = await updateOrderStatus(orderDetail.id, { status: newStatus });
+      const response = await updateOrderStatus(orderDetail.id, { status: newStatus as any });
       if (response.success) {
         setOrderStatus(newStatus);
-        setOrderDetail({ ...orderDetail, status: newStatus });
+        setOrderDetail({ ...orderDetail, status: newStatus as any });
       } else {
         alert('Failed to update order status');
       }
@@ -132,12 +132,12 @@ export default function SellerOrderDetail() {
     // Header - Company Info
     doc.setFillColor(22, 163, 74); // Green color
     doc.rect(margin, yPos, contentWidth, 15, 'F');
-    
+
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.text('SpeeUp - 10 Minute App', margin + 5, yPos + 10);
-    
+
     yPos += 20;
 
     // Company Details
@@ -171,7 +171,7 @@ export default function SellerOrderDetail() {
     doc.text(`Order ID: ${orderDetail.id}`, rightX, yPos - 14, { align: 'right' });
     doc.text(`Delivery Date: ${formatDate(orderDetail.deliveryDate)}`, rightX, yPos - 8, { align: 'right' });
     doc.text(`Time Slot: ${orderDetail.timeSlot}`, rightX, yPos - 2, { align: 'right' });
-    
+
     // Status badge
     const statusWidth = doc.getTextWidth(orderStatus) + 8;
     doc.setFillColor(59, 130, 246); // Blue for status
@@ -179,7 +179,7 @@ export default function SellerOrderDetail() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(9);
     doc.text(orderStatus, rightX - statusWidth / 2, yPos + 5.5, { align: 'center' });
-    
+
     yPos += 15;
     doc.setTextColor(0, 0, 0);
 
@@ -192,7 +192,7 @@ export default function SellerOrderDetail() {
     checkPageBreak(20);
     doc.setFillColor(245, 245, 245);
     doc.rect(margin, yPos, contentWidth, 10, 'F');
-    
+
     const colWidths = [
       contentWidth * 0.08,  // Sr. No.
       contentWidth * 0.25,  // Product
@@ -206,11 +206,11 @@ export default function SellerOrderDetail() {
 
     let xPos = margin;
     const headers = ['Sr. No.', 'Product', 'Sold By', 'Unit', 'Price', 'Tax ₹ (%)', 'Qty', 'Subtotal'];
-    
+
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(0, 0, 0);
-    
+
     headers.forEach((header, index) => {
       doc.text(header, xPos + 2, yPos + 7);
       xPos += colWidths[index];
@@ -221,11 +221,11 @@ export default function SellerOrderDetail() {
     // Table Rows
     orderDetail.items.forEach((item) => {
       checkPageBreak(15);
-      
+
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(0, 0, 0);
-      
+
       xPos = margin;
       const rowData = [
         item.srNo.toString(),
@@ -256,7 +256,7 @@ export default function SellerOrderDetail() {
       // Draw row separator
       doc.setDrawColor(220, 220, 220);
       doc.line(margin, yPos + 8, pageWidth - margin, yPos + 8);
-      
+
       yPos += 10;
     });
 

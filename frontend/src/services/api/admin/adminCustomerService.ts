@@ -1,16 +1,7 @@
 import api from "../config";
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
+
+import { ApiResponse } from "./types";
 
 export interface Customer {
   _id: string;

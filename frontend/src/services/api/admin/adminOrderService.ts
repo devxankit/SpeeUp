@@ -1,16 +1,7 @@
 import api from "../config";
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
+
+import { ApiResponse } from "./types";
 
 export interface OrderItem {
   _id: string;
@@ -57,21 +48,21 @@ export interface Order {
   paymentStatus: "Pending" | "Paid" | "Failed" | "Refunded";
   paymentId?: string;
   status:
-    | "Received"
-    | "Pending"
-    | "Processed"
-    | "Shipped"
-    | "Out for Delivery"
-    | "Delivered"
-    | "Cancelled"
-    | "Returned";
+  | "Received"
+  | "Pending"
+  | "Processed"
+  | "Shipped"
+  | "Out for Delivery"
+  | "Delivered"
+  | "Cancelled"
+  | "Returned";
   deliveryBoy?: string | { name: string; mobile: string; email?: string };
   deliveryBoyStatus?:
-    | "Assigned"
-    | "Picked Up"
-    | "In Transit"
-    | "Delivered"
-    | "Failed";
+  | "Assigned"
+  | "Picked Up"
+  | "In Transit"
+  | "Delivered"
+  | "Failed";
   assignedAt?: string;
   trackingNumber?: string;
   estimatedDeliveryDate?: string;

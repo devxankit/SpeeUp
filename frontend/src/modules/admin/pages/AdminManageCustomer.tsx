@@ -21,7 +21,9 @@ export default function AdminManageCustomer() {
   const { isAuthenticated, token } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [dateRange, setDateRange] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState<"Active" | "Inactive" | undefined>(
+    undefined
+  );
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,7 +54,7 @@ export default function AdminManageCustomer() {
           limit: parseInt(entriesPerPage),
         };
 
-        if (statusFilter !== "All") {
+        if (statusFilter) {
           params.status = statusFilter;
         }
 
@@ -72,7 +74,7 @@ export default function AdminManageCustomer() {
           };
           setError(
             axiosError.response?.data?.message ||
-              "Failed to load customers. Please try again."
+            "Failed to load customers. Please try again."
           );
         } else {
           setError("Failed to load customers. Please try again.");
@@ -150,8 +152,10 @@ export default function AdminManageCustomer() {
             return 0;
         }
 
-        if (typeof aValue === "string") {
+        if (typeof aValue === 'string') {
           aValue = aValue.toLowerCase();
+        }
+        if (typeof bValue === 'string') {
           bValue = bValue.toLowerCase();
         }
 
@@ -269,9 +273,10 @@ export default function AdminManageCustomer() {
                   Status
                 </label>
                 <select
-                  value={statusFilter}
+                  value={statusFilter || "All"}
                   onChange={(e) => {
-                    setStatusFilter(e.target.value);
+                    const val = e.target.value;
+                    setStatusFilter(val === "All" ? undefined : (val as "Active" | "Inactive"));
                     setCurrentPage(1);
                   }}
                   className="w-full px-3 py-2 text-sm border border-neutral-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
@@ -456,11 +461,10 @@ export default function AdminManageCustomer() {
                       </td>
                       <td className="p-4 border border-neutral-200">
                         <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            customer.status === "Active"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}>
+                          className={`px-2 py-1 rounded text-xs font-medium ${customer.status === "Active"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                            }`}>
                           {customer.status}
                         </span>
                       </td>
@@ -526,11 +530,10 @@ export default function AdminManageCustomer() {
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className={`p-2 border border-teal-600 rounded ${
-                  currentPage === 1
-                    ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
-                    : "text-teal-600 hover:bg-teal-50"
-                }`}>
+                className={`p-2 border border-teal-600 rounded ${currentPage === 1
+                  ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
+                  : "text-teal-600 hover:bg-teal-50"
+                  }`}>
                 <svg
                   width="16"
                   height="16"
@@ -549,11 +552,10 @@ export default function AdminManageCustomer() {
                   setCurrentPage((prev) => Math.min(totalPages, prev + 1))
                 }
                 disabled={currentPage === totalPages}
-                className={`p-2 border border-teal-600 rounded ${
-                  currentPage === totalPages
-                    ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
-                    : "text-teal-600 hover:bg-teal-50"
-                }`}>
+                className={`p-2 border border-teal-600 rounded ${currentPage === totalPages
+                  ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
+                  : "text-teal-600 hover:bg-teal-50"
+                  }`}>
                 <svg
                   width="16"
                   height="16"

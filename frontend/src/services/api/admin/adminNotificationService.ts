@@ -1,16 +1,7 @@
 import api from "../config";
 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
+
+import { ApiResponse } from "./types";
 
 export interface Notification {
   _id: string;
@@ -19,13 +10,13 @@ export interface Notification {
   title: string;
   message: string;
   type:
-    | "Info"
-    | "Success"
-    | "Warning"
-    | "Error"
-    | "Order"
-    | "Payment"
-    | "System";
+  | "Info"
+  | "Success"
+  | "Warning"
+  | "Error"
+  | "Order"
+  | "Payment"
+  | "System";
   link?: string;
   actionLabel?: string;
   isRead: boolean;
@@ -43,13 +34,13 @@ export interface CreateNotificationData {
   title: string;
   message: string;
   type?:
-    | "Info"
-    | "Success"
-    | "Warning"
-    | "Error"
-    | "Order"
-    | "Payment"
-    | "System";
+  | "Info"
+  | "Success"
+  | "Warning"
+  | "Error"
+  | "Order"
+  | "Payment"
+  | "System";
   link?: string;
   actionLabel?: string;
   priority?: "Low" | "Medium" | "High" | "Urgent";
@@ -63,13 +54,13 @@ export interface GetNotificationsParams {
   recipientId?: string;
   isRead?: boolean;
   type?:
-    | "Info"
-    | "Success"
-    | "Warning"
-    | "Error"
-    | "Order"
-    | "Payment"
-    | "System";
+  | "Info"
+  | "Success"
+  | "Warning"
+  | "Error"
+  | "Order"
+  | "Payment"
+  | "System";
   priority?: "Low" | "Medium" | "High" | "Urgent";
 }
 

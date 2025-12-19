@@ -45,7 +45,6 @@ export default function AdminAddProduct() {
     // Required fields for product creation
     price: "",
     stock: "",
-    seller: "", // This would typically be set from context or selected
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -205,6 +204,7 @@ export default function AdminAddProduct() {
       setSubmitError("Please enter a valid price.");
       return;
     }
+
     if (!formData.stock || parseInt(formData.stock) < 0) {
       setSubmitError("Please enter a valid stock quantity.");
       return;
@@ -267,8 +267,8 @@ export default function AdminAddProduct() {
         maxReturnDays: formData.maxReturnDays
           ? parseInt(formData.maxReturnDays)
           : undefined,
-        // For now, we'll use a placeholder seller ID - this should be handled by the backend or context
-        seller: formData.seller || "default-seller-id",
+        // Seller is now selected from the dropdown
+        // seller: formData.seller, - Auto-assigned by backend
       };
 
       // Create product via API
@@ -304,7 +304,6 @@ export default function AdminAddProduct() {
           galleryImageUrls: [],
           price: "",
           stock: "",
-          seller: "",
         });
         setMainImageFile(null);
         setMainImagePreview("");
@@ -317,8 +316,8 @@ export default function AdminAddProduct() {
       console.error("Error creating product:", error);
       setSubmitError(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to create product. Please try again."
+        error.message ||
+        "Failed to create product. Please try again."
       );
     } finally {
       setUploading(false);
@@ -857,18 +856,17 @@ export default function AdminAddProduct() {
             <button
               type="submit"
               disabled={uploading || submitting || loading}
-              className={`px-8 py-3 rounded-lg font-medium text-lg transition-colors shadow-sm ${
-                uploading || submitting || loading
-                  ? "bg-neutral-400 cursor-not-allowed text-white"
-                  : "bg-teal-600 hover:bg-teal-700 text-white"
-              }`}>
+              className={`px-8 py-3 rounded-lg font-medium text-lg transition-colors shadow-sm ${uploading || submitting || loading
+                ? "bg-neutral-400 cursor-not-allowed text-white"
+                : "bg-teal-600 hover:bg-teal-700 text-white"
+                }`}>
               {uploading
                 ? "Uploading Images..."
                 : submitting
-                ? "Creating Product..."
-                : loading
-                ? "Loading..."
-                : "Add Product"}
+                  ? "Creating Product..."
+                  : loading
+                    ? "Loading..."
+                    : "Add Product"}
             </button>
           </div>
         </form>
