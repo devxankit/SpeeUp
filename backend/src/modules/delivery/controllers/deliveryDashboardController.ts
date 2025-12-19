@@ -10,7 +10,7 @@ import mongoose from "mongoose";
  */
 export const getDashboardStats = asyncHandler(async (req: Request, res: Response) => {
     // Assuming user ID is attached to req.user by auth middleware
-    const deliveryId = (req.user as any)?.userId;
+    const deliveryId = req.user?.userId;
 
     if (!deliveryId) {
         return res.status(401).json({ success: false, message: "Unauthorized" });

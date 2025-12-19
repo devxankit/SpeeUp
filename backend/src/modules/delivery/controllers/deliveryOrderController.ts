@@ -63,7 +63,7 @@ export const getAllOrdersHistory = asyncHandler(async (req: Request, res: Respon
  * Get Today's Assigned Orders
  */
 export const getTodayOrders = asyncHandler(async (req: Request, res: Response) => {
-    const deliveryId = (req.user as any)?.userId;
+    const deliveryId = req.user?.userId;
 
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -106,7 +106,7 @@ export const getTodayOrders = asyncHandler(async (req: Request, res: Response) =
  * Get Pending Orders
  */
 export const getPendingOrders = asyncHandler(async (req: Request, res: Response) => {
-    const deliveryId = (req.user as any)?.userId;
+    const deliveryId = req.user?.userId;
 
     // Pending statuses: Ready for pickup, Out for delivery, Picked Up, Assigned, In Transit
     const orders = await Order.find({
@@ -173,7 +173,7 @@ export const getOrderDetails = asyncHandler(async (req: Request, res: Response) 
 export const updateOrderStatus = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status } = req.body;
-    const deliveryId = (req.user as any)?.userId;
+    const deliveryId = req.user?.userId;
 
     const order = await Order.findById(id);
     if (!order) {

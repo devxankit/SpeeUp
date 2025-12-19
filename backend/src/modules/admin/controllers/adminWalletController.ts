@@ -206,8 +206,6 @@ export const getSellerTransactions = asyncHandler(
       transactionType: commission.status === "Paid" ? "credit" : "pending",
       description: `Commission for Order ${(commission.order as any)?.orderNumber || "N/A"
         }`,
-      description: `Commission for Order ${(commission.order as any)?.orderNumber || "N/A"
-        }`,
       date: commission.createdAt,
       status: commission.status,
     }));
