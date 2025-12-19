@@ -7,7 +7,7 @@ import Delivery from "../../../models/Delivery";
  * Updates personal and vehicle information
  */
 export const updateProfile = asyncHandler(async (req: Request, res: Response) => {
-    const deliveryId = (req.user as any)?.userId;
+    const deliveryId = (req.user as any)?.userId || (req.user as any)?.id;
     const {
         name,
         email,
@@ -56,7 +56,7 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
  * Toggles isOnline status
  */
 export const updateStatus = asyncHandler(async (req: Request, res: Response) => {
-    const deliveryId = (req.user as any)?.userId;
+    const deliveryId = (req.user as any)?.userId || (req.user as any)?.id;
     const { isOnline } = req.body;
 
     if (typeof isOnline !== 'boolean') {
@@ -93,7 +93,7 @@ export const updateStatus = asyncHandler(async (req: Request, res: Response) => 
  * Updates notification, location, sound preferences
  */
 export const updateSettings = asyncHandler(async (req: Request, res: Response) => {
-    const deliveryId = (req.user as any)?.userId;
+    const deliveryId = (req.user as any)?.userId || (req.user as any)?.id;
     const { notifications, location, sound } = req.body;
 
     const delivery = await Delivery.findById(deliveryId);
