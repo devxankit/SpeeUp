@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as sellerAuthController from "../modules/seller/controllers/sellerAuthController";
 import { otpRateLimiter, loginRateLimiter } from "../middleware/rateLimiter";
+import { authenticate } from "../middleware/auth";
 
 const router = Router();
 
@@ -14,7 +15,6 @@ router.post("/verify-otp", loginRateLimiter, sellerAuthController.verifyOTP);
 router.post("/register", sellerAuthController.register);
 
 // Profile routes (protected)
-import { authenticate } from "../middleware/auth";
 router.get("/profile", authenticate, sellerAuthController.getProfile);
 router.put("/profile", authenticate, sellerAuthController.updateProfile);
 

@@ -7,7 +7,7 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get('/', getWalletStats);
+router.get('/stats', getWalletStats);
 router.get('/transactions', getTransactions);
 
 export default router;

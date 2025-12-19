@@ -11,6 +11,7 @@ import Orders from "./modules/user/Orders";
 import OrderDetail from "./modules/user/OrderDetail";
 import OrderAgain from "./modules/user/OrderAgain";
 import Account from "./modules/user/Account";
+import Wallet from "./modules/user/Wallet"; // Customer Wallet
 import Categories from "./modules/user/Categories";
 import Category from "./modules/user/Category";
 import Cart from "./modules/user/Cart";
@@ -414,6 +415,7 @@ function App() {
                         <Route path="/orders/:id" element={<OrderDetail />} />
                         <Route path="/order-again" element={<OrderAgain />} />
                         <Route path="/account" element={<Account />} />
+                        <Route path="/wallet" element={<Wallet />} />
                         <Route path="/categories" element={<Categories />} />
                         <Route path="/category/:id" element={<Category />} />
                         <Route
