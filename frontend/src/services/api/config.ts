@@ -32,7 +32,7 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 || error.response?.status === 403) {
       // Check if this is an authentication endpoint (OTP verification, etc.)
       // Don't redirect for auth endpoints - let the component handle the error
       const isAuthEndpoint = error.config?.url?.includes("/auth/");

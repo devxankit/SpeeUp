@@ -1,12 +1,29 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import DeliveryHeader from '../components/DeliveryHeader';
 import DeliveryBottomNav from '../components/DeliveryBottomNav';
-import { getDashboardStats } from '../data/mockData';
+import { getPendingOrders } from '../../../services/api/delivery/deliveryService';
 
 export default function DeliveryPendingOrders() {
   const navigate = useNavigate();
-  const stats = getDashboardStats();
-  const pendingOrders = stats.pendingOrdersList;
+  const [pendingOrders, setPendingOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const data = await getPendingOrders();
+        setPendingOrders(data);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load pending orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -14,14 +31,38 @@ export default function DeliveryPendingOrders() {
         return 'bg-yellow-100 text-yellow-700';
       case 'Out for delivery':
         return 'bg-blue-100 text-blue-700';
+      case 'Pending':
+        return 'bg-orange-100 text-orange-700';
+      case 'Picked up':
+        return 'bg-indigo-100 text-indigo-700';
       default:
         return 'bg-neutral-100 text-neutral-700';
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center pb-20">
+        <p className="text-neutral-500">Loading pending orders...</p>
+        <DeliveryBottomNav />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center pb-20">
+        <p className="text-red-500">{error}</p>
+        <DeliveryBottomNav />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-neutral-100 pb-20">
+      {/* Header */}
       <DeliveryHeader />
+
       <div className="px-4 py-4">
         <div className="flex items-center mb-4">
           <button
@@ -40,12 +81,14 @@ export default function DeliveryPendingOrders() {
           </button>
           <h2 className="text-neutral-900 text-xl font-semibold">Today's Pending Orders</h2>
         </div>
+
         {pendingOrders.length > 0 ? (
           <div className="space-y-3">
             {pendingOrders.map((order) => (
               <div
                 key={order.id}
-                className="bg-white rounded-xl p-4 shadow-sm border border-neutral-200"
+                className="bg-white rounded-xl p-4 shadow-sm border border-neutral-200 cursor-pointer"
+                onClick={() => navigate(`/delivery/orders/${order.id}`)}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">

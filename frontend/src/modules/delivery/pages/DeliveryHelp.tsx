@@ -1,38 +1,47 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DeliveryHeader from '../components/DeliveryHeader';
 import DeliveryBottomNav from '../components/DeliveryBottomNav';
+import { getHelpSupport } from '../../../services/api/delivery/deliveryService';
+
+// Icon mapping helper
+const getIcon = (iconName: string) => {
+  // You can use the same SVG logic or import shared icons
+  if (iconName === 'phone') return '📞'; // Simplified for brevity in this example, or use SVG
+  if (iconName === 'email') return '✉️';
+  if (iconName === 'chat') return '💬';
+  return 'ℹ️';
+};
 
 export default function DeliveryHelp() {
   const navigate = useNavigate();
+  const [faqs, setFaqs] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const faqItems = [
-    {
-      question: 'How do I accept a new order?',
-      answer: 'When you receive a new order notification, tap on it to view order details. Click "Accept Order" to confirm.',
-    },
-    {
-      question: 'What should I do if I cannot deliver an order?',
-      answer: 'Contact the customer first. If unable to reach them, mark the order as "Unable to Deliver" and contact support.',
-    },
-    {
-      question: 'How are my earnings calculated?',
-      answer: 'You earn ₹25 per successful delivery. Additional bonuses may apply for special orders or peak hours.',
-    },
-    {
-      question: 'How do I update my profile information?',
-      answer: 'Go to Menu > Profile and tap "Edit Profile" to update your personal details, vehicle information, etc.',
-    },
-    {
-      question: 'What if I have a complaint or issue?',
-      answer: 'You can contact our support team through the Help & Support section or call our helpline at +91-1800-XXX-XXXX.',
-    },
-  ];
+  useEffect(() => {
+    const fetchHelp = async () => {
+      try {
+        const data = await getHelpSupport();
+        setFaqs(data.faqs || []);
+        setContacts(data.contact || []);
+      } catch (error) {
+        console.error("Failed to load help data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHelp();
+  }, []);
 
-  const contactOptions = [
-    { label: 'Call Support', value: '+91-1800-XXX-XXXX', icon: 'phone' },
-    { label: 'Email Support', value: 'support@speeup.com', icon: 'email' },
-    { label: 'Live Chat', value: 'Available 24/7', icon: 'chat' },
-  ];
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center pb-20">
+        <p className="text-neutral-500">Loading help content...</p>
+        <DeliveryBottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-100 pb-20">
@@ -62,10 +71,13 @@ export default function DeliveryHelp() {
             <h3 className="text-neutral-900 font-semibold">Contact Us</h3>
           </div>
           <div className="divide-y divide-neutral-200">
-            {contactOptions.map((option, index) => (
-              <div key={index} className="p-4">
-                <p className="text-neutral-900 text-sm font-medium mb-1">{option.label}</p>
-                <p className="text-neutral-500 text-xs">{option.value}</p>
+            {contacts.map((option, index) => (
+              <div key={index} className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-neutral-900 text-sm font-medium mb-1">{option.label}</p>
+                  <p className="text-neutral-500 text-xs">{option.value}</p>
+                </div>
+                <div className="text-2xl">{getIcon(option.icon)}</div>
               </div>
             ))}
           </div>
@@ -77,7 +89,7 @@ export default function DeliveryHelp() {
             <h3 className="text-neutral-900 font-semibold">Frequently Asked Questions</h3>
           </div>
           <div className="divide-y divide-neutral-200">
-            {faqItems.map((item, index) => (
+            {faqs.map((item, index) => (
               <div key={index} className="p-4">
                 <p className="text-neutral-900 text-sm font-medium mb-2">{item.question}</p>
                 <p className="text-neutral-500 text-xs leading-relaxed">{item.answer}</p>
@@ -87,7 +99,7 @@ export default function DeliveryHelp() {
         </div>
 
         {/* Support Button */}
-        <button className="w-full mt-4 bg-orange-500 text-white rounded-xl py-3 font-semibold hover:bg-orange-600 transition-colors">
+        <button className="w-full mt-4 bg-orange-500 text-white rounded-xl py-3 font-semibold hover:bg-orange-600 transition-colors shadow-md active:scale-[0.98]">
           Contact Support
         </button>
       </div>

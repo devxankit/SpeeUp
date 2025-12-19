@@ -11,7 +11,7 @@ export function DeliveryUserProvider({ children }: { children: ReactNode }) {
   // Initialize with 'Pratik' as default, or get from localStorage if available
   const [userName, setUserName] = useState(() => {
     const savedName = localStorage.getItem('delivery_user_name');
-    return savedName || 'Pratik';
+    return savedName || '';
   });
 
   const updateUserName = (name: string) => {

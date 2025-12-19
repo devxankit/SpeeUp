@@ -6,7 +6,7 @@ interface OTPInputProps {
   disabled?: boolean;
 }
 
-export default function OTPInput({ length = 6, onComplete, disabled = false }: OTPInputProps) {
+export default function OTPInput({ length = 4, onComplete, disabled = false }: OTPInputProps) {
   const [otp, setOtp] = useState<string[]>(Array(length).fill(''));
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -46,18 +46,18 @@ export default function OTPInput({ length = 6, onComplete, disabled = false }: O
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').slice(0, length);
-    
+
     if (/^\d+$/.test(pastedData)) {
       const newOtp = [...otp];
       for (let i = 0; i < pastedData.length && i < length; i++) {
         newOtp[i] = pastedData[i];
       }
       setOtp(newOtp);
-      
+
       // Focus the next empty input or the last one
       const nextIndex = Math.min(pastedData.length, length - 1);
       inputRefs.current[nextIndex]?.focus();
-      
+
       // Check if all inputs are filled
       if (newOtp.every((digit) => digit !== '') && newOtp.join('').length === length) {
         onComplete(newOtp.join(''));

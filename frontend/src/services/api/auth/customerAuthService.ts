@@ -3,6 +3,7 @@ import api, { setAuthToken, removeAuthToken } from '../config';
 export interface SendOTPResponse {
   success: boolean;
   message: string;
+  sessionId?: string;
 }
 
 export interface VerifyOTPResponse {
@@ -47,24 +48,26 @@ export interface RegisterResponse {
 }
 
 /**
- * Send OTP to customer mobile number
+ * Send Call OTP to customer mobile number
  */
 export const sendOTP = async (mobile: string): Promise<SendOTPResponse> => {
-  const response = await api.post<SendOTPResponse>('/auth/customer/send-otp', { mobile });
+  // Use new endpoint for Call OTP
+  const response = await api.post<SendOTPResponse>('/auth/customer/send-call-otp', { mobile });
   return response.data;
 };
 
 /**
- * Verify OTP and login customer
+ * Verify Call OTP and login customer
  */
-export const verifyOTP = async (mobile: string, otp: string): Promise<VerifyOTPResponse> => {
-  const response = await api.post<VerifyOTPResponse>('/auth/customer/verify-otp', { mobile, otp });
-  
+export const verifyOTP = async (mobile: string, otp: string, sessionId?: string): Promise<VerifyOTPResponse> => {
+  // Use new endpoint and pass sessionId
+  const response = await api.post<VerifyOTPResponse>('/auth/customer/verify-call-otp', { mobile, otp, sessionId });
+
   if (response.data.success && response.data.data.token) {
     setAuthToken(response.data.data.token);
     localStorage.setItem('userData', JSON.stringify(response.data.data.user));
   }
-  
+
   return response.data;
 };
 
@@ -73,12 +76,17 @@ export const verifyOTP = async (mobile: string, otp: string): Promise<VerifyOTPR
  */
 export const register = async (data: RegisterData): Promise<RegisterResponse> => {
   const response = await api.post<RegisterResponse>('/auth/customer/register', data);
-  
+
+  // Note: Registration typically logs user in automatically in original implementation, 
+  // but SignUp.tsx flow suggests OTP is required AFTER register?
+  // Actually original SignUp.tsx: calls register(), then sendOTP(), then verifyOTP(). 
+  // If register returns token, we might set it, but then verifyOTP overwrites it?
+
   if (response.data.success && response.data.data.token) {
     setAuthToken(response.data.data.token);
     localStorage.setItem('userData', JSON.stringify(response.data.data.user));
   }
-  
+
   return response.data;
 };
 
@@ -88,4 +96,3 @@ export const register = async (data: RegisterData): Promise<RegisterResponse> =>
 export const logout = (): void => {
   removeAuthToken();
 };
-

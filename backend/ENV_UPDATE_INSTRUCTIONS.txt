@@ -1,0 +1,9 @@
+Please add the following keys to your backend .env file:
+
+TWOFACTOR_API_KEY=your_2factor_api_key
+OTP_EXPIRY_MINUTES=5
+OTP_PROVIDER=2FACTOR_VOICE
+
+Note: Replace 'your_2factor_api_key' with your actual API key from 2Factor.in.
+
+The previous FAST2SMS configuration is no longer used and can be removed.

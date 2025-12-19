@@ -13,6 +13,7 @@ export default function SignUp() {
     email: '',
     dateOfBirth: '',
   });
+  const [sessionId, setSessionId] = useState('');
   const [showOTP, setShowOTP] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -63,10 +64,11 @@ export default function SignUp() {
       if (response.success) {
         // Registration successful, now send OTP for verification
         try {
-          await sendOTP(formData.mobile);
+          const otpRes = await sendOTP(formData.mobile);
+          if (otpRes.sessionId) setSessionId(otpRes.sessionId);
           setShowOTP(true);
         } catch (otpErr: any) {
-          setError(otpErr.response?.data?.message || 'Registration successful but failed to send OTP.');
+          setError(otpErr.response?.data?.message || 'Registration successful but failed to setup call.');
         }
       }
     } catch (err: any) {
@@ -81,7 +83,7 @@ export default function SignUp() {
     setError('');
 
     try {
-      const response = await verifyOTP(formData.mobile, otp);
+      const response = await verifyOTP(formData.mobile, otp, sessionId);
       if (response.success && response.data) {
         // Update auth context with user data
         login(response.data.token, {
@@ -334,7 +336,7 @@ export default function SignUp() {
             {/* OTP Verification */}
             <div className="w-full mb-2 px-4 relative z-10 text-center">
               <p className="text-xs text-neutral-600 mb-2">
-                Enter the 6-digit OTP sent to
+                Enter the 6-digit OTP sent via call to
               </p>
               <p className="text-xs font-semibold text-neutral-800">+91 {formData.mobile}</p>
             </div>

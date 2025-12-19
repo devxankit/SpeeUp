@@ -3,7 +3,11 @@ import adminAuthRoutes from "./adminAuthRoutes";
 import sellerAuthRoutes from "./sellerAuthRoutes";
 import dashboardRoutes from "./dashboardRoutes";
 import customerAuthRoutes from "./customerAuthRoutes";
+import deliveryRoutes from "./deliveryRoutes";
 import deliveryAuthRoutes from "./deliveryAuthRoutes";
+
+// ... (other imports)
+import { authenticate, requireUserType } from "../middleware/auth";
 import customerRoutes from "./customerRoutes";
 import sellerRoutes from "./sellerRoutes";
 import uploadRoutes from "./uploadRoutes";
@@ -42,6 +46,9 @@ router.use("/auth/admin", adminAuthRoutes);
 router.use("/auth/seller", sellerAuthRoutes);
 router.use("/auth/customer", customerAuthRoutes);
 router.use("/auth/delivery", deliveryAuthRoutes);
+
+// Delivery routes (protected)
+router.use("/delivery", authenticate, requireUserType("Delivery"), deliveryRoutes);
 
 // Customer routes (protected)
 router.use("/customer", customerRoutes);

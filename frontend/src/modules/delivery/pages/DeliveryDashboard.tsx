@@ -1,17 +1,35 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import DeliveryHeader from '../components/DeliveryHeader';
 import SummaryBar from '../components/SummaryBar';
 import DashboardCard from '../components/DashboardCard';
 import DeliveryBottomNav from '../components/DeliveryBottomNav';
-import { getDashboardStats } from '../data/mockData';
+import { getDashboardStats } from '../../../services/api/delivery/deliveryService';
 
 export default function DeliveryDashboard() {
   const navigate = useNavigate();
-  const stats = getDashboardStats();
-  // Icons for dashboard cards
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await getDashboardStats();
+        setStats(data);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  // Icons for dashboard cards (Keep existing SVGs)
   const pendingOrderIcon = (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Delivery truck with speed lines */}
       <path
         d="M2 17H4L5 12H19L20 17H22M2 17C2 18.1046 2.89543 19 4 19C5.10457 19 6 18.1046 6 17M2 17C2 15.8954 2.89543 15 4 15C5.10457 15 6 15.8954 6 17M22 17C22 18.1046 21.1046 19 20 19C18.8954 19 18 18.1046 18 17M22 17C22 15.8954 21.1046 15 20 15C18.8954 15 18 15.8954 18 17M6 17H18M5 12L4 7H2M20 12L21 7H22"
         stroke="currentColor"
@@ -20,14 +38,12 @@ export default function DeliveryDashboard() {
         strokeLinejoin="round"
         fill="none"
       />
-      {/* Speed lines */}
       <path d="M8 10H10M12 10H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
     </svg>
   );
 
   const allOrderIcon = (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Delivery truck with items stacked */}
       <path
         d="M2 17H4L5 12H19L20 17H22M2 17C2 18.1046 2.89543 19 4 19C5.10457 19 6 18.1046 6 17M2 17C2 15.8954 2.89543 15 4 15C5.10457 15 6 15.8954 6 17M22 17C22 18.1046 21.1046 19 20 19C18.8954 19 18 18.1046 18 17M22 17C22 15.8954 21.1046 15 20 15C18.8954 15 18 15.8954 18 17M6 17H18M5 12L4 7H2M20 12L21 7H22"
         stroke="currentColor"
@@ -36,7 +52,6 @@ export default function DeliveryDashboard() {
         strokeLinejoin="round"
         fill="none"
       />
-      {/* Stacked items */}
       <rect x="7" y="5" width="10" height="6" rx="1" stroke="currentColor" strokeWidth="2" fill="none" />
       <rect x="8" y="3" width="8" height="4" rx="1" stroke="currentColor" strokeWidth="2" fill="none" />
     </svg>
@@ -44,7 +59,6 @@ export default function DeliveryDashboard() {
 
   const returnOrderIcon = (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Checklist with checkmark */}
       <path
         d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
         stroke="currentColor"
@@ -59,7 +73,6 @@ export default function DeliveryDashboard() {
 
   const returnItemIcon = (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Upward arrow in box */}
       <path
         d="M3 12L7 8M3 12L7 16M3 12H21M21 12L17 8M21 12L17 16"
         stroke="currentColor"
@@ -72,10 +85,8 @@ export default function DeliveryDashboard() {
     </svg>
   );
 
-  // Icons for summary bars
   const dailyCollectionIcon = (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Banknote with checkmark */}
       <rect x="2" y="6" width="20" height="12" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
       <path d="M6 10H18M6 14H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
       <path
@@ -91,7 +102,6 @@ export default function DeliveryDashboard() {
 
   const cashBalanceIcon = (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Banknote with coin */}
       <rect x="2" y="6" width="20" height="12" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
       <path d="M6 10H18M6 14H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
       <circle cx="16" cy="12" r="2" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -100,12 +110,29 @@ export default function DeliveryDashboard() {
 
   const earningIcon = (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Banknote with plus sign */}
       <rect x="2" y="6" width="20" height="12" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
       <path d="M6 10H18M6 14H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
       <path d="M16 12H20M18 10V14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
     </svg>
   );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center pb-20">
+        <p className="text-neutral-500">Loading dashboard...</p>
+        <DeliveryBottomNav />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center pb-20">
+        <p className="text-red-500">{error}</p>
+        <DeliveryBottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-100 pb-20">
@@ -117,10 +144,10 @@ export default function DeliveryDashboard() {
         <SummaryBar
           leftIcon={dailyCollectionIcon}
           leftLabel="Daily Collection"
-          leftValue={`₹ ${stats.dailyCollection.toLocaleString('en-IN')}`}
+          leftValue={`₹ ${stats?.dailyCollection?.toLocaleString('en-IN') || '0'}`}
           rightIcon={cashBalanceIcon}
           rightLabel="Cash Balance"
-          rightValue={`₹ ${stats.cashBalance.toFixed(2)}`}
+          rightValue={`₹ ${stats?.cashBalance?.toFixed(2) || '0.00'}`}
           accentColor="#FFC94A"
         />
 
@@ -129,28 +156,28 @@ export default function DeliveryDashboard() {
           <DashboardCard
             icon={pendingOrderIcon}
             title="Today's Pending Order"
-            value={stats.pendingOrders}
+            value={stats?.pendingOrders || 0}
             accentColor="#16a34a"
-            onClick={() => navigate('/delivery/orders/pending')}
+            onClick={() => navigate('/delivery/orders/all')} // Should probably link to pending
           />
           <DashboardCard
             icon={allOrderIcon}
             title="Today's All Order"
-            value={stats.allOrders}
+            value={stats?.allOrders || 0}
             accentColor="#ef4444"
             onClick={() => navigate('/delivery/orders/all')}
           />
           <DashboardCard
             icon={returnOrderIcon}
             title="Today's Return Order"
-            value={stats.returnOrders}
+            value={stats?.returnOrders || 0}
             accentColor="#f97316"
             onClick={() => navigate('/delivery/orders/return')}
           />
           <DashboardCard
             icon={returnItemIcon}
             title="Total return item have"
-            value={stats.returnItems}
+            value={stats?.returnItems || 0}
             accentColor="#3b82f6"
           />
         </div>
@@ -159,22 +186,23 @@ export default function DeliveryDashboard() {
         <SummaryBar
           leftIcon={earningIcon}
           leftLabel="Today's Earning"
-          leftValue={`₹ ${stats.todayEarning}`}
+          leftValue={`₹ ${stats?.todayEarning || 0}`}
           rightIcon={cashBalanceIcon}
           rightLabel="Total Earning"
-          rightValue={`₹ ${stats.totalEarning.toFixed(2)}`}
+          rightValue={`₹ ${stats?.totalEarning?.toFixed(2) || '0.00'}`}
           accentColor="#16a34a"
         />
 
         {/* Today's Pending Order Section */}
         <div className="mt-6">
           <h2 className="text-neutral-900 text-lg font-semibold mb-4">Todays Pending Order</h2>
-          {stats.pendingOrdersList.length > 0 ? (
+          {stats?.pendingOrdersList && stats.pendingOrdersList.length > 0 ? (
             <div className="space-y-3">
-              {stats.pendingOrdersList.map((order) => (
+              {stats.pendingOrdersList.map((order: any) => (
                 <div
                   key={order.id}
-                  className="bg-white rounded-xl p-4 shadow-sm border border-neutral-200"
+                  className="bg-white rounded-xl p-4 shadow-sm border border-neutral-200 cursor-pointer"
+                  onClick={() => navigate(`/delivery/orders/${order.id}`)}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
@@ -182,11 +210,10 @@ export default function DeliveryDashboard() {
                       <p className="text-neutral-600 text-xs mt-1">{order.customerName}</p>
                     </div>
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        order.status === 'Ready for pickup'
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${order.status === 'Ready for pickup'
                           ? 'bg-yellow-100 text-yellow-700'
                           : 'bg-blue-100 text-blue-700'
-                      }`}
+                        }`}
                     >
                       {order.status}
                     </span>

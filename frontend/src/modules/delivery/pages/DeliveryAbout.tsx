@@ -1,9 +1,28 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import DeliveryHeader from '../components/DeliveryHeader';
 import DeliveryBottomNav from '../components/DeliveryBottomNav';
+import { getDeliveryProfile } from '../../../services/api/delivery/deliveryService';
 
 export default function DeliveryAbout() {
   const navigate = useNavigate();
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await getDeliveryProfile();
+        setProfile(data);
+      } catch (err) {
+        console.error("Failed to load profile", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   return (
     <div className="min-h-screen bg-neutral-100 pb-20">
@@ -24,7 +43,42 @@ export default function DeliveryAbout() {
               />
             </svg>
           </button>
-          <h2 className="text-neutral-900 text-xl font-semibold">About</h2>
+          <h2 className="text-neutral-900 text-xl font-semibold">Profile & About</h2>
+        </div>
+
+        {/* Profile Card */}
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-neutral-200 mb-4">
+          {loading ? (
+            <div className="text-center text-neutral-500 text-sm">Loading profile...</div>
+          ) : profile ? (
+            <div className="flex flex-col items-center">
+              <div className="w-20 h-20 rounded-full bg-teal-100 flex items-center justify-center mb-3 text-teal-600 font-bold text-2xl">
+                {profile.name?.charAt(0).toUpperCase()}
+              </div>
+              <h3 className="text-neutral-900 text-lg font-bold">{profile.name}</h3>
+              <p className="text-neutral-500 text-sm mb-1">+91 {profile.mobile}</p>
+              <p className="text-neutral-400 text-xs mb-3">{profile.email}</p>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${profile.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                }`}>
+                {profile.status}
+              </span>
+
+              <div className="w-full mt-4 pt-4 border-t border-neutral-100 grid grid-cols-2 gap-4 text-center">
+                <div>
+                  <p className="text-neutral-500 text-xs">City</p>
+                  <p className="text-neutral-800 text-sm font-medium">{profile.city}</p>
+                </div>
+                <div>
+                  <p className="text-neutral-500 text-xs">Joining Date</p>
+                  <p className="text-neutral-800 text-sm font-medium">
+                    {new Date(profile.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-red-500 text-sm">Failed to load profile</div>
+          )}
         </div>
 
         {/* App Info Card */}
@@ -54,11 +108,11 @@ export default function DeliveryAbout() {
           </div>
           <div className="p-4">
             <p className="text-neutral-600 text-sm leading-relaxed mb-4">
-              Delivery App is a comprehensive platform designed to help delivery partners manage their orders efficiently, 
+              Delivery App is a comprehensive platform designed to help delivery partners manage their orders efficiently,
               track earnings, and provide excellent service to customers.
             </p>
             <p className="text-neutral-600 text-sm leading-relaxed">
-              Our mission is to empower delivery partners with the tools they need to succeed in the fast-growing 
+              Our mission is to empower delivery partners with the tools they need to succeed in the fast-growing
               delivery industry.
             </p>
           </div>
