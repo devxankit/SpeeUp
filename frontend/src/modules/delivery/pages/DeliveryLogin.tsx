@@ -13,6 +13,7 @@ export default function DeliveryLogin() {
   const [showOTP, setShowOTP] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isNotRegistered, setIsNotRegistered] = useState(false);
 
   // Clear any existing token on mount to prevent role conflicts
   useEffect(() => {
@@ -24,6 +25,7 @@ export default function DeliveryLogin() {
 
     setLoading(true);
     setError('');
+    setIsNotRegistered(false);
 
     try {
       const response = await sendOTP(mobileNumber);
@@ -34,7 +36,15 @@ export default function DeliveryLogin() {
         setError(response.message || 'Failed to initiate OTP');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
+      const status = err.response?.status;
+      const message = err.response?.data?.message || 'Failed to send OTP. Please try again.';
+
+      setError(message);
+
+      // Check for 400 Bad Request specific to user not found (or based on message content)
+      if (status === 400 && (message.toLowerCase().includes('not found') || message.toLowerCase().includes('register'))) {
+        setIsNotRegistered(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -55,12 +65,13 @@ export default function DeliveryLogin() {
         navigate('/delivery');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
+      // Also handle 401 Unauthorized for verify step
+      const message = err.response?.data?.message || 'Invalid OTP. Please try again.';
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
-
 
 
   return (
@@ -117,8 +128,16 @@ export default function DeliveryLogin() {
               </div>
 
               {error && (
-                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                  {error}
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded border border-red-100 flex flex-col gap-2">
+                  <span>{error}</span>
+                  {isNotRegistered && (
+                    <button
+                      onClick={() => navigate('/delivery/signup')}
+                      className="text-xs font-bold text-white bg-red-500 hover:bg-red-600 py-1.5 px-3 rounded self-start transition-colors"
+                    >
+                      Register Now
+                    </button>
+                  )}
                 </div>
               )}
 
