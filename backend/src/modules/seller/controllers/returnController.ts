@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../../../utils/asyncHandler";
 import Return from "../../../models/Return";
-import Order from "../../../models/Order";
+// import Order from "../../../models/Order";
 import OrderItem from "../../../models/OrderItem";
 
 export const getReturnRequests = asyncHandler(
   async (req: Request, res: Response) => {
-    const sellerId = req.user?.id;
+    const sellerId = (req.user as any)?.userId || (req.user as any)?.id;
     const { status, page = 1, limit = 10 } = req.query;
 
     const query: any = {};

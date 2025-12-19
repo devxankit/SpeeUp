@@ -1,14 +1,14 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../../../utils/asyncHandler";
 import Notification from "../../../models/Notification";
-import mongoose from "mongoose";
+// import mongoose from "mongoose";
 
 /**
  * Get Notifications
  * Fetches notifications for the logged-in delivery partner
  */
 export const getNotifications = asyncHandler(async (req: Request, res: Response) => {
-    const deliveryId = req.user?.id;
+    const deliveryId = (req.user as any)?.userId || (req.user as any)?.id;
 
     const notifications = await Notification.find({
         recipientType: "Delivery",
@@ -31,7 +31,7 @@ export const getNotifications = asyncHandler(async (req: Request, res: Response)
  */
 export const markNotificationRead = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const deliveryId = req.user?.id;
+    const deliveryId = (req.user as any)?.userId || (req.user as any)?.id;
 
     const notification = await Notification.findOneAndUpdate(
         { _id: id, recipientType: "Delivery", recipientId: deliveryId },

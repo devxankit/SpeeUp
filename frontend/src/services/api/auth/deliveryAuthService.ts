@@ -85,11 +85,6 @@ export const verifyOTP = async (
       sessionId,
     });
 
-    if (response.data.success && response.data.data?.token) {
-      localStorage.setItem('authToken', response.data.data.token);
-      localStorage.setItem('userData', JSON.stringify(response.data.data.user));
-    }
-
     return response.data;
   } catch (error: any) {
     throw handleApiError(error);

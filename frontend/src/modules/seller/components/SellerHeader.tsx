@@ -13,7 +13,7 @@ export default function SellerHeader({ onMenuClick, isSidebarOpen }: SellerHeade
   const location = useLocation();
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const settingsRef = useRef<HTMLDivElement>(null);
   const locationRef = useRef<HTMLDivElement>(null);
 
@@ -37,8 +37,7 @@ export default function SellerHeader({ onMenuClick, isSidebarOpen }: SellerHeade
   }, []);
 
   const handleLogout = () => {
-    // Clear any stored data if needed
-    // localStorage.clear();
+    logout();
     navigate('/seller/login');
   };
 

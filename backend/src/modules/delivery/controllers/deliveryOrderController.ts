@@ -22,7 +22,7 @@ const mapOrderItems = (items: any[]) => {
  * Returns all past orders with pagination
  */
 export const getAllOrdersHistory = asyncHandler(async (req: Request, res: Response) => {
-    const deliveryId = req.user?.id;
+    const deliveryId = (req.user as any)?.userId || (req.user as any)?.id;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
@@ -224,7 +224,7 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
  * Get Return Orders
  */
 export const getReturnOrders = asyncHandler(async (req: Request, res: Response) => {
-    const deliveryId = req.user?.id;
+    const deliveryId = (req.user as any)?.userId || (req.user as any)?.id;
 
     const orders = await Order.find({
         deliveryBoy: deliveryId,
