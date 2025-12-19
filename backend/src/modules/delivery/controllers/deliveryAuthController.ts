@@ -1,16 +1,17 @@
 import { Request, Response } from "express";
 import Delivery from "../../../models/Delivery";
 import {
-  sendOTP as sendOTPService,
-  verifyOTP as verifyOTPService,
+  sendCallOtp as sendCallOtpService,
+  verifyCallOtp as verifyCallOtpService,
 } from "../../../services/otpService";
 import { generateToken } from "../../../services/jwtService";
 import { asyncHandler } from "../../../utils/asyncHandler";
+// import { uploadDocument } from "../../../services/uploadService"; // File does not exist
 
 /**
- * Send OTP to delivery mobile number
+ * Send Call OTP to delivery mobile number
  */
-export const sendOTP = asyncHandler(async (req: Request, res: Response) => {
+export const sendCallOtp = asyncHandler(async (req: Request, res: Response) => {
   const { mobile } = req.body;
 
   if (!mobile || !/^[0-9]{10}$/.test(mobile)) {
@@ -29,20 +30,21 @@ export const sendOTP = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  // Send OTP - for login, always use default OTP
-  const result = await sendOTPService(mobile, "Delivery", true);
+  // Send Call OTP
+  const result = await sendCallOtpService(mobile, 'Delivery');
 
   return res.status(200).json({
     success: true,
     message: result.message,
+    sessionId: result.sessionId,
   });
 });
 
 /**
- * Verify OTP and login delivery partner
+ * Verify Call OTP and login delivery partner
  */
-export const verifyOTP = asyncHandler(async (req: Request, res: Response) => {
-  const { mobile, otp } = req.body;
+export const verifyCallOtp = asyncHandler(async (req: Request, res: Response) => {
+  const { mobile, otp, sessionId } = req.body;
 
   if (!mobile || !/^[0-9]{10}$/.test(mobile)) {
     return res.status(400).json({
@@ -51,15 +53,25 @@ export const verifyOTP = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  if (!otp || !/^[0-9]{6}$/.test(otp)) {
+  if (!otp || !/^[0-9]{4}$/.test(otp)) {
     return res.status(400).json({
       success: false,
-      message: "Valid 6-digit OTP is required",
+      message: "Valid 4-digit OTP is required",
+    });
+  }
+
+  if (!sessionId) {
+    return res.status(400).json({
+      success: false,
+      message: "Session ID is required"
     });
   }
 
   // Verify OTP
-  const isValid = await verifyOTPService(mobile, otp, "Delivery");
+  console.log('Verifying OTP:', { mobile, otp, sessionId });
+  const isValid = await verifyCallOtpService(sessionId, otp, mobile, 'Delivery');
+  console.log('OTP Verification Result:', isValid);
+
   if (!isValid) {
     return res.status(401).json({
       success: false,
@@ -68,11 +80,15 @@ export const verifyOTP = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Find delivery partner
+  console.log('Looking for Delivery Partner with mobile:', mobile);
   const delivery = await Delivery.findOne({ mobile }).select("-password");
+  console.log('Delivery Partner Found:', delivery ? 'Yes' : 'No', delivery?._id);
+
   if (!delivery) {
+    console.log('Error: Delivery Partner not found in DB');
     return res.status(404).json({
       success: false,
-      message: "Delivery partner not found",
+      message: "Delivery partner not found. Please Register first.",
     });
   }
 
@@ -146,7 +162,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Create new delivery partner
-  const delivery = await Delivery.create({
+  await Delivery.create({
     name,
     mobile,
     email,
@@ -165,25 +181,36 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     status: "Inactive", // New delivery partners start as Inactive
     balance: 0,
     cashCollected: 0,
-  });
+  } as any);
 
-  // Generate token
-  const token = generateToken(delivery._id.toString(), "Delivery");
+  // Generate token (Optional: usually registration doesn't login immediately if approval needed, but for seamless UX we can)
+  // However, FE Flow: Register -> OTP -> Login. So we return success, then FE calls sendCallOtp.
 
   return res.status(201).json({
     success: true,
-    message:
-      "Delivery partner registered successfully. Awaiting admin approval.",
-    data: {
-      token,
-      user: {
-        id: delivery._id,
-        name: delivery.name,
-        mobile: delivery.mobile,
-        email: delivery.email,
-        city: delivery.city,
-        status: delivery.status,
-      },
-    },
+    message: "Delivery partner registered successfully.",
+    // No token returned here, flow continues to OTP
+  });
+});
+
+/**
+ * Get current delivery partner profile
+ */
+export const getProfile = asyncHandler(async (req: Request, res: Response) => {
+  // @ts-ignore - req.user is added by middleware
+  const userId = req.user._id || req.user.id;
+
+  const delivery = await Delivery.findById(userId).select("-password");
+
+  if (!delivery) {
+    return res.status(404).json({
+      success: false,
+      message: "Delivery partner not found",
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: delivery,
   });
 });

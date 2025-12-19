@@ -4,11 +4,11 @@ import { otpRateLimiter, loginRateLimiter } from "../middleware/rateLimiter";
 
 const router = Router();
 
-// Send OTP route
-router.post("/send-otp", otpRateLimiter, deliveryAuthController.sendOTP);
+// Send Call OTP route
+router.post("/send-call-otp", otpRateLimiter, deliveryAuthController.sendCallOtp);
 
-// Verify OTP and login route
-router.post("/verify-otp", loginRateLimiter, deliveryAuthController.verifyOTP);
+// Verify Call OTP and login route
+router.post("/verify-call-otp", loginRateLimiter, deliveryAuthController.verifyCallOtp);
 
 // Register route
 router.post("/register", deliveryAuthController.register);

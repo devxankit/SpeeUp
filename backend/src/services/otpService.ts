@@ -1,174 +1,175 @@
-import Otp, { UserType } from '../models/Otp';
 import axios from 'axios';
+import Otp from '../models/Otp';
 
+const TWOFACTOR_API_KEY = process.env.TWOFACTOR_API_KEY;
 
-const OTP_EXPIRY_MINUTES = parseInt(process.env.OTP_EXPIRES_IN?.replace('m', '') || '5', 10);
-const DEFAULT_OTP = process.env.DEFAULT_OTP || '999999';
-
-/**
- * Generate a random 6-digit OTP
- * @param isLogin - If true, always returns default OTP for login flows
- */
-export function generateOTP(isLogin: boolean = false): string {
-  // If USE_MOCK_OTP is explicitly true, always use default
-  if (process.env.USE_MOCK_OTP === 'true') {
-    return DEFAULT_OTP;
-  }
-
-  // For login flows, use default OTP if isLogin is true
-  if (isLogin) {
-    return DEFAULT_OTP;
-  }
-
-  return Math.floor(100000 + Math.random() * 900000).toString();
+if (!TWOFACTOR_API_KEY && process.env.NODE_ENV === 'production') {
+  console.warn('TWOFACTOR_API_KEY is not set in environment variables');
 }
 
+/**
+ * Interface for Call/SMS OTP Response
+ */
+interface OtpResponse {
+  success: boolean;
+  sessionId?: string;
+  message: string;
+}
 
 /**
- * Send OTP to mobile number
- * For login flows (Customer, Seller, Delivery), always uses default OTP
- * In production, integrates with SMSIndiaHub for signup flows
+ * Helper to generate numeric OTP
  */
-export async function sendOTP(mobile: string, userType: UserType, isLogin: boolean = false): Promise<{ success: boolean; message: string }> {
-  try {
-    // Delete any existing OTPs for this mobile and userType
-    await Otp.deleteMany({ mobile, userType });
+function generateOTP(length: number = 4): string {
+  const digits = '0123456789';
+  let otp = '';
+  for (let i = 0; i < length; i++) {
+    otp += digits[Math.floor(Math.random() * 10)];
+  }
+  return otp;
+}
 
-    // Generate OTP - for login flows, always use default OTP
-    const otp = generateOTP(isLogin);
+/**
+ * Save OTP to Database
+ */
+async function saveOtpToDb(mobile: string, otp: string, userType: 'Customer' | 'Delivery' | 'Seller' | 'Admin') {
+  // Delete any existing OTP for this user/mobile
+  await Otp.deleteMany({ mobile, userType });
 
-    // Calculate expiry time (5 minutes from now)
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + OTP_EXPIRY_MINUTES);
+  // Create new OTP record
+  await Otp.create({
+    mobile,
+    otp,
+    userType,
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes expiry
+  });
+}
 
-    // Store OTP in database
-    await Otp.create({
-      mobile,
-      otp,
-      userType,
-      expiresAt,
-      isVerified: false,
-    });
+/**
+ * Verify OTP from Database
+ */
+async function verifyOtpFromDb(mobile: string, otp: string, userType: 'Customer' | 'Delivery' | 'Seller' | 'Admin'): Promise<boolean> {
+  const record = await Otp.findOne({ mobile, userType, otp });
 
-    // Check if we should use mock OTP (dev mode or forced via env)
-    const useMock = process.env.USE_MOCK_OTP === 'true';
-
-    if (!useMock && process.env.FAST2SMS_API_KEY) {
-      // Send real SMS via Fast2SMS
-      const smsSent = await sendViaFast2SMS(mobile, otp);
-      if (!smsSent) {
-        // Fallback to error or maybe allow if it's critical?
-        // For now, let's treat SMS failure as critical unless in dev
-        if (process.env.NODE_ENV === 'production') {
-          throw new Error('Failed to send OTP via SMS Gateway');
-        }
-      }
+  if (record) {
+    if (record.expiresAt < new Date()) {
+      await Otp.deleteOne({ _id: record._id });
+      return false; // Expired
     }
+    // Valid OTP
+    await Otp.deleteOne({ _id: record._id }); // Consume OTP
+    return true;
+  }
+  return false;
+}
 
-    // Return success message
-    // In production/real-mode, don't return the OTP in the response body!
-    if (!useMock && process.env.NODE_ENV === 'production') {
+// ==========================================
+// VOICE OTP (Customer / Delivery)
+// ==========================================
+
+export async function sendCallOtp(mobile: string, userType: 'Customer' | 'Delivery' = 'Delivery'): Promise<OtpResponse> {
+  try {
+    const otp = generateOTP(4);
+
+    // Mock Mode Check
+    if (process.env.USE_MOCK_OTP === 'true' || !TWOFACTOR_API_KEY || TWOFACTOR_API_KEY === 'your_2factor_api_key') {
+      console.log(`[MOCK MODE] Generated OTP ${otp} for ${mobile} (${userType})`);
+      await saveOtpToDb(mobile, otp, userType);
+
       return {
         success: true,
-        message: 'OTP sent successfully to your mobile number',
+        sessionId: 'MOCK_SESSION_' + mobile,
+        message: 'Voice OTP initiated (Mock Mode) - OTP: ' + otp,
       };
     }
 
-    // specific debug mode message
+    console.log(`[REAL MODE] Sending 4-digit Voice OTP to ${mobile} (${userType})`);
+    await saveOtpToDb(mobile, otp, userType);
+
+    // Endpoint for Custom Voice OTP: /VOICE/{mobile}/{otp}
+    const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/VOICE/${mobile}/${otp}`;
+    await axios.get(url);
+
     return {
       success: true,
-      message: `OTP sent (Debug: ${otp})`,
+      sessionId: 'DB_VERIFIED_' + mobile,
+      message: 'Voice call initiated successfully',
     };
 
   } catch (error: any) {
-    throw new Error(`Failed to send OTP: ${error.message}`);
+    console.error('2Factor Service Error:', error.message);
+    throw new Error(error.message || 'Failed to send Call OTP');
   }
 }
 
-/**
- * Send SMS using Fast2SMS API
- */
-async function sendViaFast2SMS(mobile: string, otp: string): Promise<boolean> {
-  try {
-    const apiKey = process.env.FAST2SMS_API_KEY;
-    const route = process.env.FAST2SMS_ROUTE || 'otp';
+// Updated Signature: Requires Mobile for DB lookup
+export async function verifyCallOtp(sessionId: string, otpInput: string, mobile?: string, userType: 'Customer' | 'Delivery' = 'Delivery'): Promise<boolean> {
 
-    // Construct payload based on route type if needed, but 'otp' route is simplest
-    // https://www.fast2sms.com/dev/bulkV2
-    const url = 'https://www.fast2sms.com/dev/bulkV2';
+  // Developer Bypass
+  if ((process.env.NODE_ENV !== 'production' || process.env.USE_MOCK_OTP === 'true') && otpInput === '999999') {
+    return true;
+  }
 
-    const response = await axios.post(url, {
-      route: route,
-      variables_values: otp,
-      numbers: mobile,
-    }, {
-      headers: {
-        'authorization': apiKey,
-        'Content-Type': 'application/json'
-      }
-    });
+  // Fallback if mobile not provided (try to parse sessionId)
+  let targetMobile = mobile;
+  if (!targetMobile && sessionId && sessionId.startsWith('DB_VERIFIED_')) {
+    targetMobile = sessionId.replace('DB_VERIFIED_', '');
+  }
+  if (!targetMobile && sessionId && sessionId.startsWith('MOCK_SESSION_')) {
+    targetMobile = sessionId.replace('MOCK_SESSION_', '');
+  }
 
-    if (response.data && response.data.return === true) {
-      console.log(`Fast2SMS Success: ${mobile}`);
-      return true;
-    } else {
-      console.error('Fast2SMS Failed:', response.data);
-      return false;
-    }
-  } catch (error: any) {
-    console.error('Fast2SMS Error:', error.response?.data || error.message);
+  if (!targetMobile) {
+    console.error("verifyCallOtp: Cannot verify without mobile number");
     return false;
   }
+
+  return verifyOtpFromDb(targetMobile, otpInput, userType);
 }
 
 
-/**
- * Verify OTP against stored value
- */
-export async function verifyOTP(mobile: string, otp: string, userType: UserType): Promise<boolean> {
+// ==========================================
+// SMS OTP (Seller / Admin)
+// ==========================================
+
+export async function sendOTP(mobile: string, userType: 'Seller' | 'Admin' | 'Customer' | 'Delivery', _isLogin: boolean = true): Promise<OtpResponse> {
   try {
-    const otpRecord = await Otp.findOne({
-      mobile,
-      userType,
-      isVerified: false,
-    }).sort({ createdAt: -1 }); // Get the most recent OTP
+    const otp = generateOTP(4);
 
-    if (!otpRecord) {
-      return false;
+    // Mock Mode Check
+    if (process.env.USE_MOCK_OTP === 'true' || !TWOFACTOR_API_KEY || TWOFACTOR_API_KEY === 'your_2factor_api_key') {
+      console.log(`[MOCK MODE] Generated SMS OTP ${otp} for ${mobile} (${userType})`);
+      await saveOtpToDb(mobile, otp, userType);
+      return {
+        success: true,
+        message: 'OTP sent successfully (Mock) - OTP: ' + otp,
+      };
     }
 
-    // Check if OTP is expired
-    if (new Date() > otpRecord.expiresAt) {
-      await Otp.deleteOne({ _id: otpRecord._id });
-      return false;
-    }
+    // Real Mode
+    console.log(`[REAL MODE] Sending 4-digit SMS OTP to ${mobile}`);
+    await saveOtpToDb(mobile, otp, userType);
 
-    // Verify OTP
-    if (otpRecord.otp !== otp) {
-      return false;
-    }
+    // Template Name - usually required for SMS. Assuming "OTP_VERIFICATION" or similar if configured.
+    // If using open template: /SMS/{mobile}/{otp}
+    const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/${mobile}/${otp}/OTP_VERIFICATION`;
+    await axios.get(url);
 
-    // Mark as verified
-    otpRecord.isVerified = true;
-    await otpRecord.save();
+    return {
+      success: true,
+      message: 'OTP sent successfully',
+    };
 
+  } catch (error: any) {
+    console.error('2Factor SMS Error:', error.message);
+    throw new Error(error.message || 'Failed to send SMS OTP');
+  }
+}
+
+export async function verifyOTP(mobile: string, otpInput: string, userType: 'Seller' | 'Admin' | 'Customer' | 'Delivery'): Promise<boolean> {
+  // Developer Bypass
+  if ((process.env.NODE_ENV !== 'production' || process.env.USE_MOCK_OTP === 'true') && otpInput === '999999') {
     return true;
-  } catch (error: any) {
-    throw new Error(`Failed to verify OTP: ${error.message}`);
   }
-}
 
-/**
- * Cleanup expired OTPs (can be called periodically)
- */
-export async function cleanupExpiredOTPs(): Promise<number> {
-  try {
-    const result = await Otp.deleteMany({
-      expiresAt: { $lt: new Date() },
-    });
-    return result.deletedCount || 0;
-  } catch (error: any) {
-    throw new Error(`Failed to cleanup expired OTPs: ${error.message}`);
-  }
+  return verifyOtpFromDb(mobile, otpInput, userType);
 }
-

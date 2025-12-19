@@ -1,16 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendOTP, verifyOTP } from '../../../services/api/auth/deliveryAuthService';
 import OTPInput from '../../../components/OTPInput';
 import { useAuth } from '../../../context/AuthContext';
+import { removeAuthToken } from '../../../services/api/config';
 
 export default function DeliveryLogin() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [mobileNumber, setMobileNumber] = useState('');
+  const [sessionId, setSessionId] = useState('');
   const [showOTP, setShowOTP] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Clear any existing token on mount to prevent role conflicts
+  useEffect(() => {
+    removeAuthToken();
+  }, []);
 
   const handleMobileLogin = async () => {
     if (mobileNumber.length !== 10) return;
@@ -19,8 +26,13 @@ export default function DeliveryLogin() {
     setError('');
 
     try {
-      await sendOTP(mobileNumber);
-      setShowOTP(true);
+      const response = await sendOTP(mobileNumber);
+      if (response.success && response.sessionId) {
+        setSessionId(response.sessionId);
+        setShowOTP(true);
+      } else {
+        setError(response.message || 'Failed to initiate OTP');
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
     } finally {
@@ -33,7 +45,7 @@ export default function DeliveryLogin() {
     setError('');
 
     try {
-      const response = await verifyOTP(mobileNumber, otp);
+      const response = await verifyOTP(mobileNumber, otp, sessionId);
       if (response.success && response.data) {
         // Update auth context
         login(response.data.token, {
@@ -49,10 +61,7 @@ export default function DeliveryLogin() {
     }
   };
 
-  const handleSpeeUpLogin = () => {
-    // Handle SpeeUp login logic here
-    navigate('/delivery');
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 flex flex-col items-center justify-center px-4 py-8">

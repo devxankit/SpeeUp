@@ -3,7 +3,11 @@ import adminAuthRoutes from "./adminAuthRoutes";
 import sellerAuthRoutes from "./sellerAuthRoutes";
 import dashboardRoutes from "./dashboardRoutes";
 import customerAuthRoutes from "./customerAuthRoutes";
+import deliveryRoutes from "./deliveryRoutes";
 import deliveryAuthRoutes from "./deliveryAuthRoutes";
+
+// ... (other imports)
+import { authenticate, requireUserType } from "../middleware/auth";
 import customerRoutes from "./customerRoutes";
 import sellerRoutes from "./sellerRoutes";
 import uploadRoutes from "./uploadRoutes";
@@ -25,6 +29,7 @@ import customerCartRoutes from "./customerCartRoutes";
 import wishlistRoutes from "./wishlistRoutes";
 import productReviewRoutes from "./productReviewRoutes";
 import adminRoutes from "./adminRoutes";
+import { createOrder, getMyOrders, getOrderById } from "../modules/customer/controllers/customerOrderController";
 
 const router = Router();
 
@@ -43,11 +48,23 @@ router.use("/auth/seller", sellerAuthRoutes);
 router.use("/auth/customer", customerAuthRoutes);
 router.use("/auth/delivery", deliveryAuthRoutes);
 
-// Customer routes (protected)
-router.use("/customer", customerRoutes);
+// Delivery routes (protected)
+router.use("/delivery", authenticate, requireUserType("Delivery"), deliveryRoutes);
+
+// Customer routes - Specific routes MUST be registered before general /customer route
+// to prevent Express from matching the broader route first
 router.use("/customer/products", customerProductRoutes);
 router.use("/customer/categories", customerCategoryRoutes);
-router.use("/customer/orders", customerOrderRoutes);
+
+// Customer orders route - direct registration to avoid module loading issue
+console.log('🔥 REGISTERING CUSTOMER ORDER ROUTES');
+router.post("/customer/orders", (req, res, next) => {
+  console.log('✅ POST /customer/orders ROUTE MATCHED!');
+  next();
+}, authenticate, createOrder);
+router.get("/customer/orders", authenticate, getMyOrders);
+router.get("/customer/orders/:id", authenticate, getOrderById);
+
 router.use("/customer/coupons", customerCouponRoutes);
 router.use("/customer/addresses", customerAddressRoutes);
 router.use("/customer/home", customerHomeRoutes);
@@ -55,6 +72,8 @@ router.use("/customer/cart", customerCartRoutes);
 router.use("/customer/wallet", customerWalletRoutes);
 router.use("/customer/wishlist", wishlistRoutes);
 router.use("/customer/reviews", productReviewRoutes);
+// General customer route (must be last to avoid intercepting specific routes)
+router.use("/customer", customerRoutes);
 
 // Seller dashboard routes
 router.use("/seller/dashboard", dashboardRoutes);

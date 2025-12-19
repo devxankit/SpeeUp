@@ -1,11 +1,38 @@
+import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import DeliveryHeader from '../components/DeliveryHeader';
-import { mockOrders } from '../data/mockData';
+import DeliveryBottomNav from '../components/DeliveryBottomNav';
+import { getTodayOrders } from '../../../services/api/delivery/deliveryService';
 
 export default function DeliveryOrders() {
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const data = await getTodayOrders();
+        setOrders(data);
+      } catch (err: any) {
+        setError(err.message || 'Failed to load orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
   const getStatusColor = (status: string) => {
     switch (status) {
+      case 'Pending':
+        return 'bg-orange-100 text-orange-700';
       case 'Ready for pickup':
         return 'bg-yellow-100 text-yellow-700';
+      case 'Picked up':
+        return 'bg-indigo-100 text-indigo-700';
       case 'Out for delivery':
         return 'bg-blue-100 text-blue-700';
       case 'Delivered':
@@ -17,17 +44,36 @@ export default function DeliveryOrders() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center pb-20">
+        <p className="text-neutral-500">Loading orders...</p>
+        <DeliveryBottomNav />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-neutral-100 flex items-center justify-center pb-20">
+        <p className="text-red-500">{error}</p>
+        <DeliveryBottomNav />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-neutral-100 pb-20">
       <DeliveryHeader />
       <div className="px-4 py-4">
         <h2 className="text-neutral-900 text-xl font-semibold mb-4">Orders</h2>
-        {mockOrders.length > 0 ? (
+        {orders.length > 0 ? (
           <div className="space-y-3">
-            {mockOrders.map((order) => (
+            {orders.map((order) => (
               <div
                 key={order.id}
-                className="bg-white rounded-xl p-4 shadow-sm border border-neutral-200"
+                onClick={() => navigate(`/delivery/orders/${order.id}`)}
+                className="bg-white rounded-xl p-4 shadow-sm border border-neutral-200 cursor-pointer active:scale-[0.99] transition-all hover:shadow-md"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -51,7 +97,7 @@ export default function DeliveryOrders() {
                   </div>
                   {order.estimatedDeliveryTime && (
                     <p className="text-neutral-500 text-xs">
-                      ETA: {order.estimatedDeliveryTime} • {order.distance}
+                      ETA: {order.estimatedDeliveryTime} {order.distance && `• ${order.distance}`}
                     </p>
                   )}
                   <p className="text-neutral-400 text-xs mt-2">
@@ -72,6 +118,7 @@ export default function DeliveryOrders() {
           </div>
         )}
       </div>
+      <DeliveryBottomNav />
     </div>
   );
 }

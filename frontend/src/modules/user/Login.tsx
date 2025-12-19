@@ -9,6 +9,7 @@ export default function Login() {
   const { login } = useAuth();
   const [mobileNumber, setMobileNumber] = useState('');
   const [showOTP, setShowOTP] = useState(false);
+  const [sessionId, setSessionId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const videoSectionRef = useRef<HTMLDivElement>(null);
@@ -23,10 +24,13 @@ export default function Login() {
     setError('');
 
     try {
-      await sendOTP(mobileNumber);
+      const response = await sendOTP(mobileNumber);
+      if (response.sessionId) {
+        setSessionId(response.sessionId);
+      }
       setShowOTP(true);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
+      setError(err.response?.data?.message || 'Failed to initiate call. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -37,7 +41,7 @@ export default function Login() {
     setError('');
 
     try {
-      const response = await verifyOTP(mobileNumber, otp);
+      const response = await verifyOTP(mobileNumber, otp, sessionId);
       if (response.success && response.data) {
         // Update auth context with user data
         login(response.data.token, {
@@ -234,7 +238,7 @@ export default function Login() {
                   : 'bg-neutral-300 text-neutral-500 cursor-not-allowed border-neutral-300'
                   }`}
               >
-                {loading ? 'Sending...' : 'Continue'}
+                {loading ? 'Calling...' : 'Continue'}
               </button>
             </div>
 
@@ -245,7 +249,7 @@ export default function Login() {
             {/* OTP Verification */}
             <div className="w-full mb-2 px-4 relative z-10 text-center">
               <p className="text-xs text-neutral-600 mb-2">
-                Enter the 6-digit OTP sent to
+                Enter the 6-digit OTP sent via voice call to
               </p>
               <p className="text-xs font-semibold text-neutral-800">+91 {mobileNumber}</p>
             </div>

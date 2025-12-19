@@ -33,6 +33,12 @@ app.get('/', (_req: Request, res: Response) => {
   });
 });
 
+// Debug middleware - log all incoming requests
+app.use((req: Request, res: Response, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
 // API Routes
 app.use('/api/v1', routes);
 

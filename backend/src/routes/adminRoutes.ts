@@ -44,11 +44,18 @@ import * as paymentController from "../modules/admin/controllers/adminPaymentCon
 import * as policyController from "../modules/admin/controllers/adminPolicyController";
 import * as sellerController from "../modules/admin/controllers/adminSellerController";
 
+// Profile Controllers
+import * as profileController from "../modules/admin/controllers/adminProfileController";
+
 const router = Router();
 
 // All routes require admin authentication
 router.use(authenticate);
 router.use(requireUserType("Admin"));
+
+// ==================== Profile Routes ====================
+router.get("/profile", profileController.getProfile);
+router.put("/profile", profileController.updateProfile);
 
 // ==================== Dashboard Routes ====================
 router.get("/dashboard/stats", dashboardController.getDashboardStatsController);

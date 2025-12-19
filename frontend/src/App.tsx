@@ -36,6 +36,7 @@ import StorePage from "./modules/user/StorePage";
 import DeliveryLayout from "./modules/delivery/components/DeliveryLayout";
 import DeliveryDashboard from "./modules/delivery/pages/DeliveryDashboard";
 import DeliveryOrders from "./modules/delivery/pages/DeliveryOrders";
+import DeliveryOrderDetail from "./modules/delivery/pages/DeliveryOrderDetail";
 import DeliveryNotifications from "./modules/delivery/pages/DeliveryNotifications";
 import DeliveryMenu from "./modules/delivery/pages/DeliveryMenu";
 import DeliveryPendingOrders from "./modules/delivery/pages/DeliveryPendingOrders";
@@ -143,6 +144,10 @@ function App() {
                       <Routes>
                         <Route path="" element={<DeliveryDashboard />} />
                         <Route path="orders" element={<DeliveryOrders />} />
+                        <Route
+                          path="orders/:id"
+                          element={<DeliveryOrderDetail />}
+                        />
                         <Route
                           path="orders/pending"
                           element={<DeliveryPendingOrders />}

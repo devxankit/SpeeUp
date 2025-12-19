@@ -37,6 +37,7 @@ export default function DeliverySignUp() {
     useState<File | null>(null);
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
+  const [sessionId, setSessionId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -174,20 +175,21 @@ export default function DeliverySignUp() {
         // Clear token from registration (we'll get it after OTP verification)
         localStorage.removeItem("authToken");
         localStorage.removeItem("userData");
-        // Registration successful, now send OTP for verification
+        // Registration successful, now send Call OTP for verification
         try {
-          await sendOTP(formData.mobile);
+          const otpRes = await sendOTP(formData.mobile);
+          if (otpRes.sessionId) setSessionId(otpRes.sessionId);
           setShowOTP(true);
         } catch (otpErr: any) {
           setError(
-            otpErr.response?.data?.message ||
-              "Registration successful but failed to send OTP."
+            otpErr.message ||
+            "Registration successful but failed to send OTP."
           );
         }
       }
     } catch (err: any) {
       setError(
-        err.response?.data?.message || "Registration failed. Please try again."
+        err.message || "Registration failed. Please try again."
       );
     } finally {
       setLoading(false);
@@ -199,12 +201,12 @@ export default function DeliverySignUp() {
     setError("");
 
     try {
-      const response = await verifyOTP(formData.mobile, otp);
+      const response = await verifyOTP(formData.mobile, otp, sessionId);
       if (response.success) {
         navigate("/delivery");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Invalid OTP. Please try again.");
+      setError(err.message || "Invalid OTP. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -229,6 +231,7 @@ export default function DeliverySignUp() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
+            style={{ color: "black" }}
           />
         </svg>
       </button>
@@ -357,7 +360,7 @@ export default function DeliverySignUp() {
                     onChange={handleInputChange}
                     placeholder="Enter password (min 6 characters)"
                     required
-                    minLength={6}
+                    minLength={4}
                     className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                     disabled={loading}
                   />
@@ -561,16 +564,15 @@ export default function DeliverySignUp() {
               <button
                 type="submit"
                 disabled={loading || uploadingDocs}
-                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-                  !loading && !uploadingDocs
-                    ? "bg-teal-600 text-white hover:bg-teal-700 shadow-md"
-                    : "bg-neutral-300 text-neutral-500 cursor-not-allowed"
-                }`}>
+                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${!loading && !uploadingDocs
+                  ? "bg-teal-600 text-white hover:bg-teal-700 shadow-md"
+                  : "bg-neutral-300 text-neutral-500 cursor-not-allowed"
+                  }`}>
                 {uploadingDocs
                   ? "Uploading Documents..."
                   : loading
-                  ? "Creating Account..."
-                  : "Sign Up"}
+                    ? "Creating Account..."
+                    : "Sign Up"}
               </button>
 
               {/* Login Link */}
@@ -591,7 +593,7 @@ export default function DeliverySignUp() {
             <div className="space-y-4">
               <div className="text-center">
                 <p className="text-sm text-neutral-600 mb-2">
-                  Enter the 6-digit OTP sent to
+                  Enter the 6-digit OTP sent via voice call to
                 </p>
                 <p className="text-sm font-semibold text-neutral-800">
                   +91 {formData.mobile}
@@ -621,10 +623,11 @@ export default function DeliverySignUp() {
                     setLoading(true);
                     setError("");
                     try {
-                      await sendOTP(formData.mobile);
+                      const res = await sendOTP(formData.mobile);
+                      if (res.sessionId) setSessionId(res.sessionId);
                     } catch (err: any) {
                       setError(
-                        err.response?.data?.message || "Failed to resend OTP."
+                        err.message || "Failed to resend OTP."
                       );
                     } finally {
                       setLoading(false);
@@ -632,7 +635,7 @@ export default function DeliverySignUp() {
                   }}
                   disabled={loading}
                   className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-teal-600 text-white hover:bg-teal-700 transition-colors">
-                  {loading ? "Sending..." : "Resend OTP"}
+                  {loading ? "Calling..." : "Resend OTP"}
                 </button>
               </div>
             </div>

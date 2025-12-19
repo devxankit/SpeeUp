@@ -22,8 +22,11 @@ export const getOrders = asyncHandler(
       sortOrder = "desc",
     } = req.query;
 
-    // Build query - filter by authenticated seller
-    const query: any = { sellerId };
+    // Find all order IDs that contain items from this seller
+    const orderItems = await OrderItem.find({ seller: sellerId }).distinct("order");
+
+    // Build query - filter by orders containing this seller's items
+    const query: any = { _id: { $in: orderItems } };
 
     // Date range filter
     if (dateFrom || dateTo) {
@@ -70,8 +73,8 @@ export const getOrders = asyncHandler(
 
     // Get orders with populated customer and delivery info
     const orders = await Order.find(query)
-      .populate("customerId", "name email phone")
-      .populate("deliveryId", "name mobile")
+      .populate("customer", "name email phone")
+      .populate("deliveryBoy", "name mobile")
       .sort(sort)
       .skip(skip)
       .limit(limitNum);
@@ -82,14 +85,14 @@ export const getOrders = asyncHandler(
     // Format response for frontend
     const formattedOrders = orders.map(order => ({
       id: order._id,
-      orderId: order.orderId,
-      deliveryDate: order.deliveryDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
+      orderId: order.orderNumber,
+      deliveryDate: order.estimatedDeliveryDate ? order.estimatedDeliveryDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'N/A',
       orderDate: order.orderDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
-      status: order.status === 'On the way' ? 'On the way' : order.status, // Keep frontend status format
-      amount: order.grandTotal,
-      customerName: (order.customerId as any)?.name || '',
-      customerPhone: (order.customerId as any)?.phone || '',
-      deliveryBoyName: (order.deliveryId as any)?.name || '',
+      status: order.status === 'On the way' ? 'On the way' : order.status,
+      amount: order.total,
+      customerName: (order.customer as any)?.name || order.customerName || '',
+      customerPhone: (order.customer as any)?.phone || order.customerPhone || '',
+      deliveryBoyName: (order.deliveryBoy as any)?.name || '',
     }));
 
     return res.status(200).json({
@@ -114,10 +117,20 @@ export const getOrderById = asyncHandler(
     const sellerId = (req as any).user.userId;
     const { id } = req.params;
 
+    // First check if this seller has items in this order
+    const sellerItems = await OrderItem.find({ order: id, seller: sellerId });
+
+    if (!sellerItems || sellerItems.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
     // Get order with populated data
-    const order = await Order.findOne({ _id: id, sellerId })
-      .populate("customerId", "name email phone")
-      .populate("deliveryId", "name mobile email");
+    const order = await Order.findById(id)
+      .populate("customer", "name email phone")
+      .populate("deliveryBoy", "name mobile email");
 
     if (!order) {
       return res.status(404).json({
@@ -126,44 +139,42 @@ export const getOrderById = asyncHandler(
       });
     }
 
-    // Get order items
-    const orderItems = await OrderItem.find({ orderId: id, sellerId })
-      .populate("productId", "mainImageUrl")
-      .sort({ createdAt: 1 });
+    // Get only this seller's order items
+    const orderItems = sellerItems;
 
     // Format order items for frontend
     const formattedItems = orderItems.map(item => ({
       srNo: item._id.toString().slice(-4), // Use last 4 chars of ID as srNo
-      product: item.productName,
-      soldBy: item.soldBy,
-      unit: item.unit,
-      price: item.unitPrice,
-      tax: item.tax,
-      taxPercent: item.taxPercent,
-      qty: item.quantity,
-      subtotal: item.subtotal,
+      product: item.productName || 'Unknown Product',
+      soldBy: item.soldBy || 'N/A',
+      unit: item.unit || 'N/A',
+      price: item.unitPrice || 0,
+      tax: item.tax || 0,
+      taxPercent: item.taxPercent || 0,
+      qty: item.quantity || 0,
+      subtotal: item.subtotal || 0,
     }));
 
     // Format order data for frontend
     const orderDetail = {
       id: order._id,
-      invoiceNumber: order.invoiceNumber,
-      orderDate: order.orderDate.toISOString().split('T')[0], // YYYY-MM-DD format
-      deliveryDate: order.deliveryDate.toISOString().split('T')[0],
-      timeSlot: order.timeSlot,
-      status: order.status === 'On the way' ? 'Out For Delivery' : order.status, // Map to frontend status
-      customerName: (order.customerId as any)?.name || '',
-      customerEmail: (order.customerId as any)?.email || '',
-      customerPhone: (order.customerId as any)?.phone || '',
-      deliveryBoyName: (order.deliveryId as any)?.name || '',
-      deliveryBoyPhone: (order.deliveryId as any)?.mobile || '',
+      invoiceNumber: order.invoiceNumber || order.orderNumber || 'N/A',
+      orderDate: order.orderDate ? order.orderDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      deliveryDate: order.estimatedDeliveryDate ? order.estimatedDeliveryDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      timeSlot: order.timeSlot || 'N/A',
+      status: order.status === 'On the way' ? 'Out For Delivery' : order.status,
+      customerName: (order.customer as any)?.name || order.customerName || '',
+      customerEmail: (order.customer as any)?.email || order.customerEmail || '',
+      customerPhone: (order.customer as any)?.phone || order.customerPhone || '',
+      deliveryBoyName: (order.deliveryBoy as any)?.name || '',
+      deliveryBoyPhone: (order.deliveryBoy as any)?.mobile || '',
       items: formattedItems,
-      subtotal: order.subtotal,
-      tax: order.tax,
-      grandTotal: order.grandTotal,
-      paymentMethod: order.paymentMethod,
-      paymentStatus: order.paymentStatus,
-      deliveryAddress: order.deliveryAddress,
+      subtotal: order.subtotal || 0,
+      tax: order.tax || 0,
+      grandTotal: order.total || 0,
+      paymentMethod: order.paymentMethod || 'N/A',
+      paymentStatus: order.paymentStatus || 'Pending',
+      deliveryAddress: order.deliveryAddress || {},
     };
 
     return res.status(200).json({

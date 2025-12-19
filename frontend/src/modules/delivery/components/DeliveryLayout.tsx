@@ -1,7 +1,8 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import DeliveryBottomNav from './DeliveryBottomNav';
 import { DeliveryStatusProvider, useDeliveryStatus } from '../context/DeliveryStatusContext';
-import { DeliveryUserProvider } from '../context/DeliveryUserContext';
+import { DeliveryUserProvider, useDeliveryUser } from '../context/DeliveryUserContext';
+import { getDeliveryProfile } from '../../../services/api/delivery/deliveryService';
 
 interface DeliveryLayoutContentProps {
   children: ReactNode;
@@ -9,6 +10,22 @@ interface DeliveryLayoutContentProps {
 
 function DeliveryLayoutContent({ children }: DeliveryLayoutContentProps) {
   const { isOnline } = useDeliveryStatus();
+  const { setUserName } = useDeliveryUser();
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const profile = await getDeliveryProfile();
+        if (profile?.name) {
+          setUserName(profile.name);
+        }
+      } catch (error) {
+        console.error('Failed to fetch profile in layout:', error);
+      }
+    };
+
+    fetchProfile();
+  }, [setUserName]);
 
   return (
     <div className={`flex flex-col min-h-screen bg-neutral-100 transition-all duration-300 ${!isOnline ? 'grayscale' : ''}`}>

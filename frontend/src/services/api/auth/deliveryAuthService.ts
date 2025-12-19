@@ -1,8 +1,15 @@
 import api, { setAuthToken, removeAuthToken } from '../config';
+const handleApiError = (error: any) => {
+  if (error.response && error.response.data && error.response.data.message) {
+    throw new Error(error.response.data.message);
+  }
+  throw new Error(error.message || 'An unexpected error occurred');
+};
 
 export interface SendOTPResponse {
   success: boolean;
   message: string;
+  sessionId?: string;
 }
 
 export interface VerifyOTPResponse {
@@ -42,9 +49,9 @@ export interface RegisterData {
 export interface RegisterResponse {
   success: boolean;
   message: string;
-  data: {
-    token: string;
-    user: {
+  data?: {
+    token?: string;
+    user?: {
       id: string;
       name: string;
       mobile: string;
@@ -55,26 +62,38 @@ export interface RegisterResponse {
   };
 }
 
-/**
- * Send OTP to delivery mobile number
- */
+// Send Call OTP
 export const sendOTP = async (mobile: string): Promise<SendOTPResponse> => {
-  const response = await api.post<SendOTPResponse>('/auth/delivery/send-otp', { mobile });
-  return response.data;
+  try {
+    const response = await api.post('/auth/delivery/send-call-otp', { mobile });
+    return response.data;
+  } catch (error: any) {
+    throw handleApiError(error);
+  }
 };
 
-/**
- * Verify OTP and login delivery partner
- */
-export const verifyOTP = async (mobile: string, otp: string): Promise<VerifyOTPResponse> => {
-  const response = await api.post<VerifyOTPResponse>('/auth/delivery/verify-otp', { mobile, otp });
-  
-  if (response.data.success && response.data.data.token) {
-    setAuthToken(response.data.data.token);
-    localStorage.setItem('userData', JSON.stringify(response.data.data.user));
+// Verify Call OTP
+export const verifyOTP = async (
+  mobile: string,
+  otp: string,
+  sessionId?: string
+): Promise<VerifyOTPResponse> => {
+  try {
+    const response = await api.post('/auth/delivery/verify-call-otp', {
+      mobile,
+      otp,
+      sessionId,
+    });
+
+    if (response.data.success && response.data.data?.token) {
+      localStorage.setItem('authToken', response.data.data.token);
+      localStorage.setItem('userData', JSON.stringify(response.data.data.user));
+    }
+
+    return response.data;
+  } catch (error: any) {
+    throw handleApiError(error);
   }
-  
-  return response.data;
 };
 
 /**
@@ -82,12 +101,6 @@ export const verifyOTP = async (mobile: string, otp: string): Promise<VerifyOTPR
  */
 export const register = async (data: RegisterData): Promise<RegisterResponse> => {
   const response = await api.post<RegisterResponse>('/auth/delivery/register', data);
-  
-  if (response.data.success && response.data.data.token) {
-    setAuthToken(response.data.data.token);
-    localStorage.setItem('userData', JSON.stringify(response.data.data.user));
-  }
-  
   return response.data;
 };
 
