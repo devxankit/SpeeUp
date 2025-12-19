@@ -115,6 +115,7 @@ import AdminDeliveryAppPolicy from "./modules/admin/pages/AdminDeliveryAppPolicy
 import AdminOrders from "./modules/admin/pages/AdminOrders";
 import AdminSettings from "./modules/admin/pages/AdminSettings";
 import AdminManageCustomer from "./modules/admin/pages/AdminManageCustomer";
+import AdminProfile from "./modules/admin/pages/AdminProfile";
 
 function App() {
   return (
@@ -238,6 +239,7 @@ function App() {
                       <AdminLayout>
                         <Routes>
                           <Route path="" element={<AdminDashboard />} />
+                          <Route path="profile" element={<AdminProfile />} />
 
                           <Route path="category" element={<AdminCategory />} />
                           <Route
@@ -427,6 +429,8 @@ function App() {
                         <Route path="/account" element={<Account />} />
                         <Route path="/about-us" element={<AboutUs />} />
                         <Route path="/wishlist" element={<Wishlist />} />
+                        <Route path="/categories" element={<Categories />} />
+                        <Route path="/category/:id" element={<Category />} />
                         <Route path="/address-book" element={<AddressBook />} />
                         <Route path="/wallet" element={<Wallet />} />
                         <Route path="/checkout" element={<Checkout />} />
