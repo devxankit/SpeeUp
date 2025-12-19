@@ -12,7 +12,7 @@ import {
  * Get dashboard statistics
  */
 export const getDashboardStatsController = asyncHandler(
-  async (req: Request, res: Response) => {
+  async (_req: Request, res: Response) => {
     const stats = await getDashboardStats();
 
     return res.status(200).json({
@@ -80,7 +80,7 @@ export const getRecentOrdersController = asyncHandler(
  * Get sales by location
  */
 export const getSalesByLocationController = asyncHandler(
-  async (req: Request, res: Response) => {
+  async (_req: Request, res: Response) => {
     const salesByLocation = await getSalesByLocation();
 
     return res.status(200).json({

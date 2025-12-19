@@ -47,7 +47,7 @@ export default function ProductCard({
       try {
         const res = await getWishlist();
         if (res.success && res.data) {
-          const exists = res.data.products.some(p => p._id === (product.id || product._id) || p.id === (product.id || product._id));
+          const exists = res.data.products.some(p => p._id === (product.id || product._id) || (p as any).id === (product.id || product._id));
           setIsWishlisted(exists);
         }
       } catch (e) {
@@ -62,10 +62,10 @@ export default function ProductCard({
     e.stopPropagation();
     try {
       if (isWishlisted) {
-        await removeFromWishlist((product.id || product._id) as string);
+        await removeFromWishlist(((product as any).id || product._id) as string);
         setIsWishlisted(false);
       } else {
-        await addToWishlist((product.id || product._id) as string);
+        await addToWishlist(((product as any).id || product._id) as string);
         setIsWishlisted(true);
       }
     } catch (e) {
@@ -73,7 +73,7 @@ export default function ProductCard({
     }
   };
 
-  const cartItem = cart.items.find((item) => (item.product.id === product.id || item.product._id === product.id));
+  const cartItem = cart.items.find((item) => (item.product.id === (product as any).id || item.product._id === (product as any).id || item.product.id === product._id));
   const inCartQty = cartItem?.quantity || 0;
 
   const discount = product.mrp && product.mrp > product.price
@@ -81,7 +81,7 @@ export default function ProductCard({
     : 0;
 
   const handleCardClick = () => {
-    navigate(`/product/${(product.id || product._id) as string}`);
+    navigate(`/product/${((product as any).id || product._id) as string}`);
   };
 
   const handleAdd = (e: React.MouseEvent) => {
@@ -92,14 +92,14 @@ export default function ProductCard({
   const handleDecrease = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (inCartQty > 0) {
-      updateQuantity((product.id || product._id) as string, inCartQty - 1);
+      updateQuantity(((product as any).id || product._id) as string, inCartQty - 1);
     }
   };
 
   const handleIncrease = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (inCartQty > 0) {
-      updateQuantity((product.id || product._id) as string, inCartQty + 1);
+      updateQuantity(((product as any).id || product._id) as string, inCartQty + 1);
     } else {
       addToCart(product, addButtonRef.current);
     }

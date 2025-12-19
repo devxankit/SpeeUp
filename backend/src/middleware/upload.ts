@@ -26,7 +26,7 @@ const storage = multer.memoryStorage();
 
 // File filter for images
 const imageFileFilter = (
-  req: Request,
+  _req: Request,
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ) => {
@@ -43,7 +43,7 @@ const imageFileFilter = (
 
 // File filter for documents (images + PDF)
 const documentFileFilter = (
-  req: Request,
+  _req: Request,
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ) => {
@@ -97,9 +97,9 @@ export const uploadMultipleDocuments = multer({
 // Error handler middleware for multer errors
 export const handleUploadError = (
   err: any,
-  req: Request,
+  _req: Request,
   res: any,
-  next: any
+  _next: any
 ) => {
   if (err instanceof multer.MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
@@ -129,5 +129,5 @@ export const handleUploadError = (
     });
   }
 
-  next(err);
+  _next(err);
 };

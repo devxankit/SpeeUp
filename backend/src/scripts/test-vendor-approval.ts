@@ -81,7 +81,7 @@ async function getAdminToken(): Promise<string | null> {
     // Use default admin or create test admin
     const adminMobile = '9000000001';
     let admin = await Admin.findOne({ mobile: adminMobile });
-    
+
     if (!admin) {
       admin = await Admin.create({
         firstName: 'Test',
@@ -134,7 +134,7 @@ async function testVendorApproval() {
     // Step 1: Get admin token
     console.log('  → Step 1: Getting admin authentication token...');
     adminToken = await getAdminToken();
-    
+
     if (!adminToken) {
       addResult('Admin Authentication', 'FAIL', 'Failed to get admin token');
       return;
@@ -145,7 +145,7 @@ async function testVendorApproval() {
     console.log('  → Step 2: Creating test seller with Pending status...');
     const testMobile = `8${Math.floor(Math.random() * 1000000000).toString().padStart(9, '0')}`;
     const testEmail = `testseller${Date.now()}@test.com`;
-    
+
     const testSeller = await Seller.create({
       sellerName: 'Test Vendor',
       mobile: testMobile,
@@ -173,11 +173,11 @@ async function testVendorApproval() {
     // Step 3: Get all sellers (should include our test seller)
     console.log('  → Step 3: Fetching all sellers...');
     const getAllResult = await apiRequest('GET', '/sellers', undefined, adminToken);
-    
+
     if (getAllResult.success && getAllResult.data.success) {
       const sellers = getAllResult.data.data;
       const foundSeller = sellers.find((s: any) => s._id === testSellerId);
-      
+
       if (foundSeller) {
         addResult('Get All Sellers', 'PASS', 'Successfully fetched sellers list', {
           totalSellers: sellers.length,
@@ -193,17 +193,17 @@ async function testVendorApproval() {
     // Step 4: Get sellers with Pending status filter
     console.log('  → Step 4: Fetching pending sellers...');
     const getPendingResult = await apiRequest('GET', '/sellers?status=Pending', undefined, adminToken);
-    
+
     if (getPendingResult.success && getPendingResult.data.success) {
       const pendingSellers = getPendingResult.data.data;
       const foundPending = pendingSellers.find((s: any) => s._id === testSellerId);
-      
+
       if (foundPending) {
         addResult('Get Pending Sellers', 'PASS', 'Successfully filtered pending sellers', {
           pendingCount: pendingSellers.length,
         });
       } else {
-        addResult('Get Pending Sellers', 'WARN', 'Test seller not in pending list (may have been approved)');
+        addResult('Get Pending Sellers', 'SKIP', 'Test seller not in pending list (may have been approved)');
       }
     } else {
       addResult('Get Pending Sellers', 'FAIL', 'Failed to fetch pending sellers', getPendingResult.data);

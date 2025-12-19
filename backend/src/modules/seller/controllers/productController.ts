@@ -18,20 +18,65 @@ export const createProduct = asyncHandler(
       });
     }
 
-    // Set sellerId from authenticated user
-    productData.sellerId = sellerId;
+    // 2. Map fields to match Product model
+    const newProductData: any = {
+      ...productData,
+      seller: sellerId, // Map sellerId to seller
+      category: productData.categoryId, // Map categoryId to category
+      subcategory: productData.subcategoryId,
+      brand: productData.brandId,
+      mainImage: productData.mainImageUrl, // Map mainImageUrl to mainImage
+      galleryImages: productData.galleryImageUrls,
+    };
 
-    // Validate variations
-    if (!productData.variations || productData.variations.length === 0) {
+    // Map variations: Ensure 'title' from frontend is mapped to 'value' (or name) expected by Schema
+    if (newProductData.variations) {
+      newProductData.variations = newProductData.variations.map((v: any) => ({
+        ...v,
+        value: v.value || v.title, // Map title to value
+        name: v.name || "Variation", // Default name
+        discPrice: v.discPrice || 0,
+        status: v.status || "Available",
+      }));
+    }
+
+    // 3. Set Price and Stock from Variations
+    // The Product model requires a top-level price and stock
+    if (newProductData.variations && newProductData.variations.length > 0) {
+      // Use the price of the first variation as the base price
+      newProductData.price = newProductData.variations[0].price;
+
+      // Calculate total stock (sum of all variations)
+      // Note: If any variation has stock 0 (unlimited), how should we handle top level? 
+      // For now, let's sum them up. If purely unlimited, logic might differ.
+      newProductData.stock = newProductData.variations.reduce(
+        (acc: number, curr: any) => acc + (parseInt(curr.stock) || 0), 0
+      );
+    }
+
+    // 4. Validate Price (Model requirement)
+    if (newProductData.price === undefined || newProductData.price === null) {
       return res.status(400).json({
         success: false,
-        message: "Product must have at least one variation",
+        message: "Product price is required (add at least one variation)",
       });
+    }
+
+    // 5. Clean up undefined fields
+    if (!newProductData.subcategory) delete newProductData.subcategory;
+    if (!newProductData.brand) delete newProductData.brand;
+
+    // Handle Tax: Frontend sends taxId, Model expects 'tax' (string) or something else? 
+    // Checking SellerAddProduct.tsx sending taxId -> formData.tax
+    // Model Product.ts -> tax: { type: String }
+    // Ideally we should store the Tax ID or Name. Since frontend sends ID, let's map it.
+    if (productData.taxId) {
+      newProductData.tax = productData.taxId;
     }
 
     // Validate variation prices
     for (const variation of productData.variations) {
-      if (variation.discPrice > variation.price) {
+      if (Number(variation.discPrice) > Number(variation.price)) {
         return res.status(400).json({
           success: false,
           message: `Discounted price (${variation.discPrice}) cannot be greater than price (${variation.price}) for variation ${variation.title}`,
@@ -39,7 +84,7 @@ export const createProduct = asyncHandler(
       }
     }
 
-    const product = await Product.create(productData);
+    const product = await Product.create(newProductData);
 
     return res.status(201).json({
       success: true,
@@ -67,7 +112,7 @@ export const getProducts = asyncHandler(
     } = req.query;
 
     // Build query
-    const query: any = { sellerId };
+    const query: any = { seller: sellerId };
 
     // Search filter
     if (search) {
@@ -80,7 +125,7 @@ export const getProducts = asyncHandler(
 
     // Category filter
     if (category) {
-      query.categoryId = category;
+      query.category = category;
     }
 
     // Status filter (publish, popular, dealOfDay)
@@ -114,10 +159,10 @@ export const getProducts = asyncHandler(
     sort[sortBy as string] = sortOrder === "asc" ? 1 : -1;
 
     const products = await Product.find(query)
-      .populate("categoryId", "name")
-      .populate("subcategoryId", "name")
-      .populate("brandId", "name")
-      .populate("taxId", "name rate")
+      .populate("category", "name")
+      .populate("subcategory", "name")
+      .populate("brand", "name")
+      .populate("tax", "name rate")
       .sort(sort)
       .skip(skip)
       .limit(limitNum);
@@ -146,11 +191,11 @@ export const getProductById = asyncHandler(
     const sellerId = (req as any).user.userId;
     const { id } = req.params;
 
-    const product = await Product.findOne({ _id: id, sellerId })
-      .populate("categoryId", "name")
-      .populate("subcategoryId", "name")
-      .populate("brandId", "name")
-      .populate("taxId", "name rate");
+    const product = await Product.findOne({ _id: id, seller: sellerId })
+      .populate("category", "name")
+      .populate("subcategory", "subcategoryName")
+      .populate("brand", "name")
+      .populate("tax", "name rate");
 
     if (!product) {
       return res.status(404).json({
@@ -200,14 +245,14 @@ export const updateProduct = asyncHandler(
     }
 
     const product = await Product.findOneAndUpdate(
-      { _id: id, sellerId },
+      { _id: id, seller: sellerId },
       updateData,
       { new: true, runValidators: true }
     )
-      .populate("categoryId", "name")
-      .populate("subcategoryId", "name")
-      .populate("brandId", "name")
-      .populate("taxId", "name rate");
+      .populate("category", "name")
+      .populate("subcategory", "subcategoryName")
+      .populate("brand", "name")
+      .populate("tax", "name rate");
 
     if (!product) {
       return res.status(404).json({
@@ -232,7 +277,7 @@ export const deleteProduct = asyncHandler(
     const sellerId = (req as any).user.userId;
     const { id } = req.params;
 
-    const product = await Product.findOneAndDelete({ _id: id, sellerId });
+    const product = await Product.findOneAndDelete({ _id: id, seller: sellerId });
 
     if (!product) {
       return res.status(404).json({
@@ -257,7 +302,7 @@ export const updateStock = asyncHandler(
     const { id, variationId } = req.params;
     const { stock, status } = req.body;
 
-    const product = await Product.findOne({ _id: id, sellerId });
+    const product = await Product.findOne({ _id: id, seller: sellerId });
 
     if (!product) {
       return res.status(404).json({
@@ -266,7 +311,7 @@ export const updateStock = asyncHandler(
       });
     }
 
-    const variation = product.variations.id(variationId);
+    const variation: any = product.variations?.find((v: any) => v._id?.toString() === variationId);
     if (!variation) {
       return res.status(404).json({
         success: false,
@@ -306,7 +351,7 @@ export const updateProductStatus = asyncHandler(
     if (dealOfDay !== undefined) updateData.dealOfDay = dealOfDay;
 
     const product = await Product.findOneAndUpdate(
-      { _id: id, sellerId },
+      { _id: id, seller: sellerId },
       updateData,
       { new: true, runValidators: true }
     );
@@ -345,9 +390,9 @@ export const bulkUpdateStock = asyncHandler(
     for (const update of updates) {
       const { productId, variationId, stock } = update;
 
-      const product = await Product.findOne({ _id: productId, sellerId });
+      const product = await Product.findOne({ _id: productId, seller: sellerId });
       if (product) {
-        const variation = product.variations.id(variationId);
+        const variation: any = product.variations?.find((v: any) => v._id?.toString() === variationId);
         if (variation) {
           variation.stock = stock;
           if (stock === 0) variation.status = "Sold out";

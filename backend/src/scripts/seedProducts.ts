@@ -225,7 +225,7 @@ async function seed() {
                 isVerified: true
             });
         }
-        console.log(`Using seller: ${seller.name}`);
+        console.log(`Using seller: ${seller.sellerName}`);
 
         // 2. Seed Categories
         console.log('Seeding Categories...');

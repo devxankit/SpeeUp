@@ -1,0 +1,24 @@
+﻿src/modules/admin/controllers/adminCashCollectionController.ts(18,13): error TS6133: 'search' is declared but its value is never read.
+src/modules/admin/controllers/adminCouponController.ts(218,27): error TS6133: 'userId' is declared but its value is never read.
+src/modules/admin/controllers/adminSellerController.ts(8,50): error TS6133: 'req' is declared but its value is never read.
+src/modules/admin/controllers/adminSettingsController.ts(10,10): error TS6133: 'req' is declared but its value is never read.
+src/modules/admin/controllers/adminSettingsController.ts(61,10): error TS6133: 'req' is declared but its value is never read.
+src/modules/admin/controllers/adminSettingsController.ts(111,10): error TS6133: 'req' is declared but its value is never read.
+src/modules/admin/controllers/adminSettingsController.ts(140,7): error TS2322: Type 'string | undefined' is not assignable to type 'ObjectId | undefined'.
+  Type 'string' is not assignable to type 'ObjectId'.
+src/modules/admin/controllers/adminWalletController.ts(19,7): error TS6133: 'transactionType' is declared but its value is never read.
+src/modules/customer/controllers/customerCartController.ts(5,1): error TS6133: 'Product' is declared but its value is never read.
+src/modules/customer/controllers/customerCouponController.ts(5,27): error TS7030: Not all code paths return a value.
+src/modules/seller/controllers/categoryController.ts(171,10): error TS6133: 'req' is declared but its value is never read.
+src/modules/seller/controllers/dashboardController.ts(4,1): error TS6133: 'Category' is declared but its value is never read.
+src/modules/seller/controllers/dashboardController.ts(54,25): error TS18048: 'v.stock' is possibly 'undefined'.
+src/modules/seller/controllers/dashboardController.ts(55,25): error TS18048: 'v.stock' is possibly 'undefined'.
+src/modules/seller/controllers/dashboardController.ts(55,40): error TS18048: 'v.stock' is possibly 'undefined'.
+src/modules/seller/controllers/productController.ts(314,23): error TS18048: 'product.variations' is possibly 'undefined'.
+src/modules/seller/controllers/productController.ts(314,54): error TS2339: Property '_id' does not exist on type '{ name: string; value: string; price?: number | undefined; stock?: number | undefined; sku?: string | undefined; }'.
+src/modules/seller/controllers/productController.ts(326,17): error TS2339: Property 'status' does not exist on type '{ name: string; value: string; price?: number | undefined; stock?: number | undefined; sku?: string | undefined; }'.
+src/modules/seller/controllers/productController.ts(395,27): error TS18048: 'product.variations' is possibly 'undefined'.
+src/modules/seller/controllers/productController.ts(395,58): error TS2339: Property '_id' does not exist on type '{ name: string; value: string; price?: number | undefined; stock?: number | undefined; sku?: string | undefined; }'.
+src/modules/seller/controllers/productController.ts(398,38): error TS2339: Property 'status' does not exist on type '{ name: string; value: string; price?: number | undefined; stock?: number | undefined; sku?: string | undefined; }'.
+src/modules/seller/controllers/productController.ts(399,43): error TS2339: Property 'status' does not exist on type '{ name: string; value: string; price?: number | undefined; stock?: number | undefined; sku?: string | undefined; }'.
+src/modules/seller/controllers/productController.ts(399,76): error TS2339: Property 'status' does not exist on type '{ name: string; value: string; price?: number | undefined; stock?: number | undefined; sku?: string | undefined; }'.

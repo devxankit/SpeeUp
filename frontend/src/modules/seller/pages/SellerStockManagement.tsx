@@ -79,10 +79,10 @@ export default function SellerStockManagement() {
                                 name: product.productName,
                                 seller: user?.storeName || '',
                                 image: product.mainImageUrl || '/assets/product-placeholder.jpg',
-                                variation: variation.title,
+                                variation: variation.title || variation.value || variation.name || 'Default',
                                 stock: variation.stock === 0 ? 'Unlimited' : variation.stock,
                                 status: product.publish ? 'Published' : 'Unpublished',
-                                category: (product.categoryId as any)?.name || 'Uncategorized',
+                                category: (product.category as any)?.name || 'Uncategorized',
                             });
                         });
                     });
@@ -382,10 +382,10 @@ export default function SellerStockManagement() {
                                     <td className="p-4 align-middle border border-neutral-200">
                                         <div className="flex items-center gap-2">
                                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.stock === 'Unlimited'
-                                                    ? 'bg-blue-50 text-blue-600'
-                                                    : item.stock === 0
-                                                        ? 'bg-red-50 text-red-600'
-                                                        : 'bg-green-50 text-green-600'
+                                                ? 'bg-blue-50 text-blue-600'
+                                                : item.stock === 0
+                                                    ? 'bg-red-50 text-red-600'
+                                                    : 'bg-green-50 text-green-600'
                                                 }`}>
                                                 {item.stock}
                                             </span>
@@ -454,8 +454,8 @@ export default function SellerStockManagement() {
                             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                             disabled={currentPage === 1}
                             className={`p-2 border border-teal-600 rounded ${currentPage === 1
-                                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                    : 'text-teal-600 hover:bg-teal-50'
+                                ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                : 'text-teal-600 hover:bg-teal-50'
                                 }`}
                             aria-label="Previous page"
                         >
@@ -468,8 +468,8 @@ export default function SellerStockManagement() {
                                 key={page}
                                 onClick={() => setCurrentPage(page)}
                                 className={`px-3 py-1.5 border border-teal-600 rounded font-medium text-sm ${currentPage === page
-                                        ? 'bg-teal-600 text-white'
-                                        : 'text-teal-600 hover:bg-teal-50'
+                                    ? 'bg-teal-600 text-white'
+                                    : 'text-teal-600 hover:bg-teal-50'
                                     }`}
                             >
                                 {page}
@@ -479,8 +479,8 @@ export default function SellerStockManagement() {
                             onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                             disabled={currentPage === totalPages}
                             className={`p-2 border border-teal-600 rounded ${currentPage === totalPages
-                                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                    : 'text-teal-600 hover:bg-teal-50'
+                                ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                : 'text-teal-600 hover:bg-teal-50'
                                 }`}
                             aria-label="Next page"
                         >

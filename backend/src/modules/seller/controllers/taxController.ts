@@ -5,7 +5,7 @@ import { asyncHandler } from '../../../utils/asyncHandler';
 /**
  * Get all active tax rates
  */
-export const getActiveTaxes = asyncHandler(async (req: Request, res: Response) => {
+export const getActiveTaxes = asyncHandler(async (_req: Request, res: Response) => {
     const taxes = await Tax.find({ isActive: true }).sort({ name: 1 });
 
     return res.status(200).json({
@@ -17,7 +17,7 @@ export const getActiveTaxes = asyncHandler(async (req: Request, res: Response) =
 /**
  * Get all taxes (for management)
  */
-export const getAllTaxes = asyncHandler(async (req: Request, res: Response) => {
+export const getAllTaxes = asyncHandler(async (_req: Request, res: Response) => {
     const taxes = await Tax.find().sort({ createdAt: -1 });
 
     return res.status(200).json({

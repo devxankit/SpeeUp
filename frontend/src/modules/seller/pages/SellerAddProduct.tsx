@@ -212,15 +212,20 @@ export default function SellerAddProduct() {
     setUploading(true);
 
     try {
+      // Keep local copies so we don't rely on async state updates before submit
+      let mainImageUrl = formData.mainImageUrl;
+      let galleryImageUrls = [...formData.galleryImageUrls];
+
       // Upload main image if provided
       if (mainImageFile) {
         const mainImageResult = await uploadImage(
           mainImageFile,
           "speeup/products"
         );
+        mainImageUrl = mainImageResult.secureUrl;
         setFormData((prev) => ({
           ...prev,
-          mainImageUrl: mainImageResult.secureUrl,
+          mainImageUrl,
         }));
       }
 
@@ -230,8 +235,8 @@ export default function SellerAddProduct() {
           galleryImageFiles,
           "speeup/products/gallery"
         );
-        const galleryUrls = galleryResults.map((result) => result.secureUrl);
-        setFormData((prev) => ({ ...prev, galleryImageUrls: galleryUrls }));
+        galleryImageUrls = galleryResults.map((result) => result.secureUrl);
+        setFormData((prev) => ({ ...prev, galleryImageUrls }));
       }
 
       // Validate variations
@@ -267,8 +272,8 @@ export default function SellerAddProduct() {
         maxReturnDays: formData.maxReturnDays ? parseInt(formData.maxReturnDays) : undefined,
         totalAllowedQuantity: parseInt(formData.totalAllowedQuantity || "10"),
         fssaiLicNo: formData.fssaiLicNo || undefined,
-        mainImageUrl: formData.mainImageUrl || undefined,
-        galleryImageUrls: formData.galleryImageUrls,
+        mainImageUrl: mainImageUrl || undefined,
+        galleryImageUrls,
         variations: variations,
         variationType: formData.variationType || undefined,
       };
