@@ -417,8 +417,8 @@ const TipSection = () => {
               setCustomTip('')
             }}
             className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${selectedTip === tip
-                ? 'border-green-600 bg-green-50 text-green-700'
-                : 'border-gray-200 text-gray-700 hover:border-gray-300'
+              ? 'border-green-600 bg-green-50 text-green-700'
+              : 'border-gray-200 text-gray-700 hover:border-gray-300'
               }`}
             whileTap={{ scale: 0.95 }}
           >
@@ -430,8 +430,8 @@ const TipSection = () => {
             setSelectedTip('other')
           }}
           className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${selectedTip === 'other'
-              ? 'border-green-600 bg-green-50 text-green-700'
-              : 'border-gray-200 text-gray-700 hover:border-gray-300'
+            ? 'border-green-600 bg-green-50 text-green-700'
+            : 'border-gray-200 text-gray-700 hover:border-gray-300'
             }`}
           whileTap={{ scale: 0.95 }}
         >
@@ -497,7 +497,7 @@ export default function OrderDetail() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const confirmed = searchParams.get("confirmed") === "true"
-  const { getOrderById } = useOrders()
+  const { getOrderById, loading } = useOrders()
   const order = id ? getOrderById(id) : undefined
 
   const [showConfirmation, setShowConfirmation] = useState(confirmed)
@@ -536,6 +536,17 @@ export default function OrderDetail() {
   const handleRefresh = () => {
     setIsRefreshing(true)
     setTimeout(() => setIsRefreshing(false), 1000)
+  }
+
+  if (loading && !order) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+          <p className="text-sm text-neutral-500">Loading order details...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!order) {

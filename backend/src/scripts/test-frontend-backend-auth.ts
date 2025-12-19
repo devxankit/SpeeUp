@@ -6,8 +6,7 @@ import path from 'path';
 import connectDB from '../config/db';
 import Customer from '../models/Customer';
 import Admin from '../models/Admin';
-import Seller from '../models/Seller';
-import Delivery from '../models/Delivery';
+
 import Otp from '../models/Otp';
 
 // Load environment variables
@@ -47,11 +46,11 @@ function addResult(
 ) {
   const result: TestResult = { name, status, message, details, endpoint, method };
   testResults.push(result);
-  
+
   const icon = status === 'PASS' ? '✓' : status === 'FAIL' ? '✗' : status === 'WARN' ? '⚠' : '⊘';
   const color = status === 'PASS' ? '\x1b[32m' : status === 'FAIL' ? '\x1b[31m' : status === 'WARN' ? '\x1b[33m' : '\x1b[90m';
   const reset = '\x1b[0m';
-  
+
   console.log(`${color}${icon}${reset} ${name}: ${message}`);
   if (details && (status === 'FAIL' || status === 'WARN')) {
     console.log(`   ${JSON.stringify(details, null, 2).split('\n').join('\n   ')}`);
@@ -151,7 +150,7 @@ async function testCORS() {
 
     // Test actual request with Origin header
     const actualRequest = await apiRequest('POST', '/auth/customer/send-otp', { mobile: '9999999999' }, undefined, FRONTEND_URL);
-    
+
     if (actualRequest.headers['access-control-allow-origin']) {
       addResult(
         'CORS - Actual Request',
@@ -228,7 +227,7 @@ async function testCustomerAuthFlow() {
     // Step 2: Send OTP (as frontend would after registration)
     console.log('  → Step 2: Sending OTP...');
     await new Promise(resolve => setTimeout(resolve, 500)); // Small delay to ensure customer exists
-    
+
     const sendOTPResult = await apiRequest('POST', '/auth/customer/send-otp', {
       mobile: testMobile,
     });
@@ -536,7 +535,7 @@ async function testAPIHealth() {
 
   try {
     const healthResult = await apiRequest('GET', '/health');
-    
+
     if (healthResult.success && healthResult.status === 200) {
       addResult(
         'API Health Check',
@@ -625,7 +624,7 @@ function generateReport() {
 
   fs.writeFileSync(reportPath, report);
   console.log(`\n📄 Test report generated: ${reportPath}`);
-  
+
   return reportPath;
 }
 

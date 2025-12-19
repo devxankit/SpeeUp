@@ -1,135 +1,103 @@
-import { Link } from 'react-router-dom';
-import { categories } from '../../data/categories';
-import { getProductsByCategory, householdEssentialsTiles, shopByStoreTiles } from '../../data/homeTiles';
-import { productImages } from '../../utils/imagePaths';
-
-// Organize categories into sections
-const categorySections = [
-  {
-    title: 'Grocery & Kitchen',
-    categories: [
-      { id: 'fruits-veg', name: 'Vegetables & Fruits', icon: '🥬', categoryId: 'fruits-veg' },
-      { id: 'atta-rice', name: 'Atta, Rice & Dal', icon: '🌾', categoryId: 'atta-rice' },
-      { id: 'masala-oil', name: 'Oil, Ghee & Masala', icon: '🧂', categoryId: 'masala-oil' },
-      { id: 'dairy-breakfast', name: 'Dairy, Bread & Eggs', icon: '🥛', categoryId: 'dairy-breakfast' },
-      { id: 'biscuits-bakery', name: 'Bakery & Biscuits', icon: '🍪', categoryId: 'biscuits-bakery' },
-      { id: 'dry-fruits', name: 'Dry Fruits & Cereals', icon: '🥜', categoryId: 'dry-fruits', productImages: [productImages['rajdhani-besan'], productImages['tata-besan'], productImages['daawat-rice'], productImages['india-gate-rice']] },
-      { id: 'chicken-meat', name: 'Chicken, Meat & Fish', icon: '🍗', categoryId: 'chicken-meat', productImages: [productImages['amul-butter'], productImages['britannia-bread'], productImages['amul-curd'], productImages['mother-dairy-curd']] },
-      { id: 'kitchenware', name: 'Kitchenware & Appliances', icon: '🍳', categoryId: 'kitchenware', productImages: [productImages['aashirvaad-atta'], productImages['fortune-atta'], productImages['tata-moong'], productImages['fortune-poha']] },
-    ],
-  },
-  {
-    title: 'Snacks & Drinks',
-    categories: [
-      { id: 'snacks', name: 'Chips & Namkeen', icon: '🍿', categoryId: 'snacks' },
-      { id: 'sweets-chocolates', name: 'Sweets & Chocolates', icon: '🍬', categoryId: 'snacks', productImages: [productImages['parle-rusk'], productImages['act2-popcorn'], productImages['haldiram-sev'], productImages['balaji-sev']] },
-      { id: 'cold-drinks', name: 'Drinks & Juices', icon: '🥤', categoryId: 'cold-drinks' },
-      { id: 'tea-coffee', name: 'Tea, Coffee & Milk Drinks', icon: '☕', categoryId: 'tea-coffee', productImages: [productImages['amul-butter'], productImages['britannia-bread'], productImages['amul-curd'], productImages['mother-dairy-curd']] },
-      { id: 'breakfast-instant', name: 'Instant Food', icon: '🍜', categoryId: 'breakfast-instant' },
-      { id: 'sauces-spreads', name: 'Sauces & Spreads', icon: '🍯', categoryId: 'sauces-spreads', productImages: [productImages['lays-magic-masala'], productImages['kurkure-masti'], productImages['doritos-cheese'], productImages['parle-rusk']] },
-      { id: 'paan-corner', name: 'Paan Corner', icon: '🌿', categoryId: 'paan-corner', productImages: [productImages['haldiram-sev'], productImages['balaji-sev'], productImages['act2-popcorn'], productImages['parle-rusk']] },
-      { id: 'ice-cream', name: 'Ice Creams & More', icon: '🍦', categoryId: 'ice-cream', productImages: [productImages['amul-butter'], productImages['britannia-bread'], productImages['amul-curd'], productImages['mother-dairy-curd']] },
-    ],
-  },
-  {
-    title: 'Beauty & Personal Care',
-    categories: [
-      { id: 'personal-care', name: 'Personal Care', icon: '🧴', categoryId: 'personal-care' },
-      { id: 'beauty', name: 'Beauty', icon: '💄', categoryId: 'beauty' },
-      { id: 'health-pharma', name: 'Health & Pharma', icon: '💊', categoryId: 'health-pharma', productImages: [productImages['amul-butter'], productImages['britannia-bread'], productImages['amul-curd'], productImages['mother-dairy-curd']] },
-      { id: 'baby-care', name: 'Baby Care', icon: '👶', categoryId: 'baby-care', productImages: [productImages['lays-magic-masala'], productImages['kurkure-masti'], productImages['haldiram-sev'], productImages['balaji-sev']] },
-      { id: 'fashion', name: 'Fashion', icon: '👕', categoryId: 'fashion' },
-      { id: 'electronics', name: 'Electronics', icon: '📱', categoryId: 'electronics' },
-      { id: 'sports', name: 'Sports', icon: '⚽', categoryId: 'sports' },
-      { id: 'oral-care', name: 'Oral Care', icon: '🦷', categoryId: 'oral-care', productImages: [productImages['amul-butter'], productImages['britannia-bread'], productImages['amul-curd'], productImages['mother-dairy-curd']] },
-    ],
-  },
-  {
-    title: 'Household Essentials',
-    categories: householdEssentialsTiles.map((tile) => ({
-      id: tile.id,
-      name: tile.name,
-      icon: '🧹',
-      categoryId: tile.categoryId || null,
-      productImages: tile.productImages,
-    })),
-  },
-  {
-    title: 'Shop by Store',
-    categories: shopByStoreTiles.map((tile) => ({
-      id: tile.id,
-      name: tile.name,
-      icon: '🏪',
-      categoryId: null,
-      productImages: tile.productImages,
-    })),
-  },
-];
+import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { getCategories, Category } from '../../services/api/customerProductService';
 
 export default function Categories() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        // Fetch category tree (top level categories with children)
+        const response = await getCategories(true);
+        setCategories(response.data);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   return (
-    <div className="pb-4 bg-white">
-      <div className="px-4 py-4 bg-white border-b border-neutral-200 mb-4 sticky top-0 z-10">
+    <div className="pb-4 bg-white min-h-screen">
+      <div className="px-4 py-4 bg-white border-b border-neutral-200 mb-4 sticky top-0 z-10 shadow-sm">
         <h1 className="text-xl font-bold text-neutral-900">Categories</h1>
       </div>
 
-      <div className="space-y-6">
-        {categorySections.map((section) => (
-          <div key={section.title} className="mb-6">
-            <h2 className="text-lg font-semibold text-neutral-900 mb-3 px-4 tracking-tight">
-              {section.title}
-            </h2>
-            <div className="px-4">
-              <div className="grid grid-cols-4 gap-2">
-                {section.categories.map((category) => {
-                  const categoryData = categories.find((c) => c.id === category.categoryId);
-                  const productImages = category.productImages || (category.categoryId ? getProductsByCategory(category.categoryId, 1) : []);
+      {loading ? (
+        <div className="flex justify-center pt-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {categories.map((section) => (
+            <div key={section._id} className="mb-6">
+              <h2 className="text-lg font-semibold text-neutral-900 mb-3 px-4 tracking-tight flex items-center gap-2">
+                {section.image && (
+                  <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
+                    <img src={section.image} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                {section.name}
+              </h2>
+              <div className="px-4">
+                <div className="grid grid-cols-4 gap-2">
+                  {section.children && section.children.length > 0 ? (
+                    section.children.map((category) => (
+                      <div key={category._id} className="flex flex-col">
+                        <Link
+                          to={`/category/${category.id || category._id}`} // Use virtual id if available for cleaner URLs
+                          className="bg-white rounded-xl border border-neutral-200 p-2.5 hover:shadow-md transition-shadow aspect-square flex flex-col items-center justify-center p-1"
+                        >
+                          <div className="flex flex-col items-center justify-center text-center w-full h-full">
+                            {category.image ? (
+                              <div className="w-full h-full rounded-lg overflow-hidden bg-white mb-1">
+                                <img
+                                  src={category.image}
+                                  alt={category.name}
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-full h-full rounded-lg bg-cyan-50 flex items-center justify-center text-xl">
+                                {/* Use first letter as fallback icon if no image */}
+                                {category.name.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                        </Link>
 
-                  return (
-                    <div key={category.id} className="flex flex-col">
-                      <Link
-                        to={category.categoryId ? `/category/${category.categoryId}` : '#'}
-                        className="bg-white rounded-xl border border-neutral-200 p-2.5 hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex flex-col items-center justify-center text-center w-full">
-                          {productImages.length > 0 ? (
-                            <div className="w-full h-20 rounded-lg mb-2 overflow-hidden bg-cyan-50">
-                              <img
-                                src={productImages[0]}
-                                alt={category.name}
-                                className="w-full h-full object-contain bg-white rounded-lg"
-                              />
-                            </div>
-                          ) : categoryData?.imageUrl ? (
-                            <div className="w-full h-20 rounded-lg mb-2 overflow-hidden bg-cyan-50">
-                              <img
-                                src={categoryData.imageUrl}
-                                alt={category.name}
-                                className="w-full h-full rounded-lg object-contain"
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-full h-20 rounded-lg bg-cyan-50 flex items-center justify-center text-3xl">
-                              {category.icon}
-                            </div>
-                          )}
+                        {/* Category name - outside the card */}
+                        <div className="mt-1.5 text-center">
+                          <span className="text-[10px] font-semibold text-neutral-900 line-clamp-2 leading-tight">
+                            {category.name}
+                          </span>
                         </div>
-                      </Link>
-
-                      {/* Category name - outside the card */}
-                      <div className="mt-1.5 text-center">
-                        <span className="text-[11px] font-semibold text-neutral-900 line-clamp-2 leading-tight">
-                          {category.name}
-                        </span>
                       </div>
+                    ))
+                  ) : (
+                    // If no children, show the section itself as a clickable item (fallback)
+                    <div className="col-span-4 text-sm text-gray-500 italic pl-1">
+                      No subcategories found.
                     </div>
-                  );
-                })}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+
+          {categories.length === 0 && !loading && (
+            <div className="text-center py-10 text-gray-500">
+              No categories found.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

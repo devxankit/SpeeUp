@@ -1,23 +1,33 @@
-import { useState } from 'react';
-
-// Mock Data
-const TAXES = [
-    {
-        id: 1,
-        name: 'GST',
-        rate: 18,
-        status: 'Active'
-    }
-];
+import { useState, useEffect } from 'react';
+import * as taxService from '../../../services/api/taxService';
 
 export default function SellerTaxes() {
+    const [taxes, setTaxes] = useState<taxService.Tax[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-    const filteredTaxes = TAXES.filter(tax =>
+    useEffect(() => {
+        const fetchTaxes = async () => {
+            setLoading(true);
+            try {
+                const response = await taxService.getTaxes();
+                if (response.success) {
+                    setTaxes(response.data);
+                }
+            } catch (err) {
+                console.error('Error fetching taxes:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTaxes();
+    }, []);
+
+    const filteredTaxes = taxes.filter(tax =>
         tax.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
@@ -72,9 +82,9 @@ export default function SellerTaxes() {
                                 const csvContent = [
                                     headers.join(','),
                                     ...filteredTaxes.map(tax => [
-                                        tax.id,
+                                        tax._id,
                                         `"${tax.name}"`,
-                                        tax.rate,
+                                        tax.percentage,
                                         tax.status
                                     ].join(','))
                                 ].join('\n');
@@ -118,7 +128,7 @@ export default function SellerTaxes() {
                     <table className="w-full text-left border-collapse border border-neutral-200">
                         <thead>
                             <tr className="bg-neutral-50 text-xs font-bold text-neutral-800">
-                                <th 
+                                <th
                                     className="p-4 w-16 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('id')}
                                 >
@@ -126,7 +136,7 @@ export default function SellerTaxes() {
                                         ID <SortIcon column="id" />
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('name')}
                                 >
@@ -134,15 +144,15 @@ export default function SellerTaxes() {
                                         Tax Name <SortIcon column="name" />
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                    onClick={() => handleSort('rate')}
+                                    onClick={() => handleSort('percentage')}
                                 >
                                     <div className="flex items-center justify-between">
-                                        Tax Rate (%) <SortIcon column="rate" />
+                                        Tax Rate (%) <SortIcon column="percentage" />
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('status')}
                                 >
@@ -153,23 +163,31 @@ export default function SellerTaxes() {
                             </tr>
                         </thead>
                         <tbody>
-                            {displayedTaxes.map((tax) => (
-                                <tr key={tax.id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700">
-                                    <td className="p-4 align-middle border border-neutral-200">{tax.id}</td>
-                                    <td className="p-4 align-middle border border-neutral-200">{tax.name}</td>
-                                    <td className="p-4 align-middle border border-neutral-200">{tax.rate}%</td>
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={4} className="p-8 text-center text-neutral-400 border border-neutral-200">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
+                                            <span>Loading tax data...</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : displayedTaxes.map((tax, index) => (
+                                <tr key={tax._id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700">
+                                    <td className="p-4 align-middle border border-neutral-200">{startIndex + index + 1}</td>
+                                    <td className="p-4 align-middle border border-neutral-200 font-medium">{tax.name}</td>
+                                    <td className="p-4 align-middle border border-neutral-200">{tax.percentage}%</td>
                                     <td className="p-4 align-middle border border-neutral-200">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                            tax.status === 'Active' 
-                                                ? 'bg-green-100 text-green-800' 
-                                                : 'bg-red-100 text-red-800'
-                                        }`}>
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tax.status === 'Active'
+                                            ? 'bg-emerald-100 text-emerald-800'
+                                            : 'bg-rose-100 text-rose-800'
+                                            }`}>
                                             {tax.status}
                                         </span>
                                     </td>
                                 </tr>
                             ))}
-                            {displayedTaxes.length === 0 && (
+                            {!loading && displayedTaxes.length === 0 && (
                                 <tr>
                                     <td colSpan={4} className="p-8 text-center text-neutral-400 border border-neutral-200">
                                         No taxes found.
@@ -189,11 +207,10 @@ export default function SellerTaxes() {
                         <button
                             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                             disabled={currentPage === 1}
-                            className={`p-2 border border-teal-600 rounded ${
-                                currentPage === 1
-                                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                    : 'text-teal-600 hover:bg-teal-50'
-                            }`}
+                            className={`p-2 border border-teal-600 rounded ${currentPage === 1
+                                ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                : 'text-teal-600 hover:bg-teal-50'
+                                }`}
                             aria-label="Previous page"
                         >
                             <svg
@@ -220,11 +237,10 @@ export default function SellerTaxes() {
                         <button
                             onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                             disabled={currentPage === totalPages}
-                            className={`p-2 border border-teal-600 rounded ${
-                                currentPage === totalPages
-                                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                    : 'text-teal-600 hover:bg-teal-50'
-                            }`}
+                            className={`p-2 border border-teal-600 rounded ${currentPage === totalPages
+                                ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                : 'text-teal-600 hover:bg-teal-50'
+                                }`}
                             aria-label="Next page"
                         >
                             <svg

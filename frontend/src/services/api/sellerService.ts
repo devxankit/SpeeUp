@@ -1,4 +1,4 @@
-import api from './config';
+import api from "./config";
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -16,7 +16,7 @@ export interface Seller {
   balance: number;
   commission: number;
   categories: string[];
-  status: 'Approved' | 'Pending' | 'Rejected';
+  status: "Approved" | "Pending" | "Rejected";
   category?: string;
   address?: string;
   city?: string;
@@ -42,22 +42,65 @@ export interface Seller {
 }
 
 export interface GetAllSellersParams {
-  status?: 'Approved' | 'Pending' | 'Rejected';
+  status?: "Approved" | "Pending" | "Rejected";
   search?: string;
 }
+
+export interface CreateSellerData {
+  sellerName: string;
+  storeName: string;
+  email: string;
+  mobile: string;
+  password: string;
+  category: string;
+  address?: string;
+  city: string;
+  serviceableArea: string;
+  searchLocation?: string;
+  latitude?: string;
+  longitude?: string;
+  panCard?: string;
+  taxName?: string;
+  taxNumber?: string;
+  accountName?: string;
+  bankName?: string;
+  branch?: string;
+  accountNumber?: string;
+  ifsc?: string;
+  profile?: string;
+  idProof?: string;
+  addressProof?: string;
+  requireProductApproval: boolean;
+  viewCustomerDetails: boolean;
+  commission: number;
+}
+
+/**
+ * Create a new seller
+ */
+export const createSeller = async (
+  data: CreateSellerData
+): Promise<ApiResponse<Seller>> => {
+  const response = await api.post<ApiResponse<Seller>>("/sellers", data);
+  return response.data;
+};
 
 /**
  * Get all sellers
  */
-export const getAllSellers = async (params?: GetAllSellersParams): Promise<ApiResponse<Seller[]>> => {
-  const response = await api.get<ApiResponse<Seller[]>>('/sellers', { params });
+export const getAllSellers = async (
+  params?: GetAllSellersParams
+): Promise<ApiResponse<Seller[]>> => {
+  const response = await api.get<ApiResponse<Seller[]>>("/sellers", { params });
   return response.data;
 };
 
 /**
  * Get seller by ID
  */
-export const getSellerById = async (id: string): Promise<ApiResponse<Seller>> => {
+export const getSellerById = async (
+  id: string
+): Promise<ApiResponse<Seller>> => {
   const response = await api.get<ApiResponse<Seller>>(`/sellers/${id}`);
   return response.data;
 };
@@ -67,16 +110,22 @@ export const getSellerById = async (id: string): Promise<ApiResponse<Seller>> =>
  */
 export const updateSellerStatus = async (
   id: string,
-  status: 'Approved' | 'Pending' | 'Rejected'
+  status: "Approved" | "Pending" | "Rejected"
 ): Promise<ApiResponse<Seller>> => {
-  const response = await api.patch<ApiResponse<Seller>>(`/sellers/${id}/status`, { status });
+  const response = await api.patch<ApiResponse<Seller>>(
+    `/sellers/${id}/status`,
+    { status }
+  );
   return response.data;
 };
 
 /**
  * Update seller details
  */
-export const updateSeller = async (id: string, data: Partial<Seller>): Promise<ApiResponse<Seller>> => {
+export const updateSeller = async (
+  id: string,
+  data: Partial<Seller>
+): Promise<ApiResponse<Seller>> => {
   const response = await api.put<ApiResponse<Seller>>(`/sellers/${id}`, data);
   return response.data;
 };
@@ -88,4 +137,3 @@ export const deleteSeller = async (id: string): Promise<ApiResponse<void>> => {
   const response = await api.delete<ApiResponse<void>>(`/sellers/${id}`);
   return response.data;
 };
-

@@ -8,7 +8,11 @@ export interface OrderAddress {
   flat: string;
   street: string;
   city: string;
+  state?: string;
   pincode: string;
+  landmark?: string;
+  id?: string; // Add id for backend ID mapping
+  _id?: string; // Add _id for backend ID mapping
 }
 
 export interface OrderFees {

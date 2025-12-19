@@ -1,46 +1,71 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { getOrders, Order, GetOrdersParams } from '../../../services/api/orderService';
 
-interface Order {
-  id: number;
-  orderId: string;
-  deliveryDate: string;
-  orderDate: string;
-  status: string;
-  amount: number;
-}
-
-// Mock orders data
-const mockOrders: Order[] = [
-  { id: 1, orderId: 'ORD-001', deliveryDate: '01/16/2025', orderDate: '01/15/2025', status: 'On the way', amount: 340.00 },
-  { id: 2, orderId: 'ORD-002', deliveryDate: '01/15/2025', orderDate: '01/14/2025', status: 'Delivered', amount: 141.70 },
-  { id: 3, orderId: 'ORD-003', deliveryDate: '01/14/2025', orderDate: '01/13/2025', status: 'Pending', amount: 250.50 },
-  { id: 4, orderId: 'ORD-004', deliveryDate: '01/13/2025', orderDate: '01/12/2025', status: 'On the way', amount: 180.00 },
-  { id: 5, orderId: 'ORD-005', deliveryDate: '01/12/2025', orderDate: '01/11/2025', status: 'Delivered', amount: 420.75 },
-  { id: 6, orderId: 'ORD-006', deliveryDate: '01/11/2025', orderDate: '01/10/2025', status: 'Cancelled', amount: 150.00 },
-  { id: 7, orderId: 'ORD-007', deliveryDate: '01/10/2025', orderDate: '01/09/2025', status: 'Accepted', amount: 275.30 },
-  { id: 8, orderId: 'ORD-008', deliveryDate: '01/09/2025', orderDate: '01/08/2025', status: 'Pending', amount: 195.50 },
-  { id: 9, orderId: 'ORD-009', deliveryDate: '01/08/2025', orderDate: '01/07/2025', status: 'Delivered', amount: 320.00 },
-  { id: 10, orderId: 'ORD-010', deliveryDate: '01/07/2025', orderDate: '01/06/2025', status: 'On the way', amount: 210.25 },
-  { id: 11, orderId: 'ORD-011', deliveryDate: '01/06/2025', orderDate: '01/05/2025', status: 'Delivered', amount: 380.00 },
-  { id: 12, orderId: 'ORD-012', deliveryDate: '01/05/2025', orderDate: '01/04/2025', status: 'Accepted', amount: 165.75 },
-  { id: 13, orderId: 'ORD-013', deliveryDate: '12/05/2025', orderDate: '12/04/2025', status: 'Pending', amount: 290.00 },
-  { id: 14, orderId: 'ORD-014', deliveryDate: '12/05/2025', orderDate: '12/05/2025', status: 'On the way', amount: 450.50 },
-  { id: 15, orderId: 'ORD-015', deliveryDate: '12/05/2025', orderDate: '12/05/2025', status: 'Delivered', amount: 175.25 },
-];
 
 type SortField = 'orderId' | 'deliveryDate' | 'orderDate' | 'status' | 'amount';
 type SortDirection = 'asc' | 'desc';
 
 export default function SellerOrders() {
   const navigate = useNavigate();
-  const [dateRange, setDateRange] = useState('12/05/2025 - 12/05/2025');
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+  const [dateRange, setDateRange] = useState('');
   const [status, setStatus] = useState('All Status');
   const [entriesPerPage, setEntriesPerPage] = useState('10');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  // Fetch orders from API
+  useEffect(() => {
+    const fetchOrders = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const params: GetOrdersParams = {
+          page: currentPage,
+          limit: parseInt(entriesPerPage),
+          sortBy: sortField || 'orderDate',
+          sortOrder: sortDirection,
+        };
+
+        // Parse date range
+        if (dateRange) {
+          const [startDate, endDate] = dateRange.split(' - ');
+          if (startDate && endDate) {
+            params.dateFrom = startDate;
+            params.dateTo = endDate;
+          }
+        }
+
+        // Add status filter
+        if (status !== 'All Status') {
+          params.status = status;
+        }
+
+        // Add search
+        if (searchQuery) {
+          params.search = searchQuery;
+        }
+
+        const response = await getOrders(params);
+        if (response.success && response.data) {
+          setOrders(response.data);
+        } else {
+          setError(response.message || 'Failed to fetch orders');
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.message || err.message || 'Failed to fetch orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [dateRange, status, entriesPerPage, searchQuery, currentPage, sortField, sortDirection]);
 
   const handleClearDate = () => {
     setDateRange('');
@@ -61,7 +86,7 @@ export default function SellerOrders() {
     const headers = ['Order ID', 'Delivery Date', 'Order Date', 'Status', 'Amount'];
     const csvContent = [
       headers.join(','),
-      ...filteredAndSortedOrders.map(order => 
+      ...orders.map(order =>
         [order.orderId, order.deliveryDate, order.orderDate, order.status, order.amount].join(',')
       )
     ].join('\n');
@@ -78,65 +103,12 @@ export default function SellerOrders() {
     document.body.removeChild(link);
   };
 
-  // Filter and sort orders
-  const filteredAndSortedOrders = useMemo(() => {
-    let filtered = [...mockOrders];
-
-    // Filter by date range
-    if (dateRange) {
-      const [startDate, endDate] = dateRange.split(' - ').map(d => d.trim());
-      if (startDate && endDate) {
-        filtered = filtered.filter(order => {
-          const orderDate = order.orderDate;
-          return orderDate >= startDate && orderDate <= endDate;
-        });
-      }
-    }
-
-    // Filter by status
-    if (status !== 'All Status') {
-      filtered = filtered.filter(order => order.status === status);
-    }
-
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(order =>
-        order.orderId.toLowerCase().includes(query) ||
-        order.status.toLowerCase().includes(query) ||
-        order.amount.toString().includes(query)
-      );
-    }
-
-    // Sort orders
-    if (sortField) {
-      filtered.sort((a, b) => {
-        let aValue: string | number = a[sortField];
-        let bValue: string | number = b[sortField];
-
-        if (sortField === 'amount') {
-          aValue = a.amount;
-          bValue = b.amount;
-        } else {
-          aValue = String(aValue).toLowerCase();
-          bValue = String(bValue).toLowerCase();
-        }
-
-        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return filtered;
-  }, [dateRange, status, searchQuery, sortField, sortDirection]);
-
-  // Pagination
+  // Pagination (client-side for now, can be moved to backend later)
   const entriesPerPageNum = parseInt(entriesPerPage);
-  const totalPages = Math.ceil(filteredAndSortedOrders.length / entriesPerPageNum);
+  const totalPages = Math.ceil(orders.length / entriesPerPageNum);
   const startIndex = (currentPage - 1) * entriesPerPageNum;
   const endIndex = startIndex + entriesPerPageNum;
-  const paginatedOrders = filteredAndSortedOrders.slice(startIndex, endIndex);
+  const paginatedOrders = orders.slice(startIndex, endIndex);
 
   const handlePreviousPage = () => {
     setCurrentPage(prev => Math.max(1, prev - 1));
@@ -170,7 +142,7 @@ export default function SellerOrders() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
           {/* Page Title */}
           <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">Orders List</h1>
-          
+
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-xs sm:text-sm">
             <Link to="/seller" className="text-blue-600 hover:text-blue-700">
@@ -337,222 +309,230 @@ export default function SellerOrders() {
             </div>
           </div>
 
+          {/* Loading and Error States */}
+          {loading && (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-neutral-500">Loading orders...</div>
+            </div>
+          )}
+          {error && !loading && (
+            <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg m-4">
+              {error}
+            </div>
+          )}
+
           {/* Table */}
-          <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6">
-            <table className="w-full min-w-[600px]">
-              <thead className="bg-neutral-50 border-b border-neutral-200">
-                <tr>
-                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    <button
-                      onClick={() => handleSort('orderId')}
-                      className="flex items-center gap-2 hover:text-neutral-900 transition-colors"
-                    >
-                      O. Id
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className={`cursor-pointer ${
-                          sortField === 'orderId' ? 'text-green-600' : 'text-neutral-400'
-                        }`}
-                      >
-                        <path
-                          d={sortField === 'orderId' && sortDirection === 'asc' 
-                            ? "M7 14L12 9L17 14" 
-                            : sortField === 'orderId' && sortDirection === 'desc'
-                            ? "M7 10L12 15L17 10"
-                            : "M7 10L12 5L17 10M7 14L12 19L17 14"}
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                  </th>
-                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    <button
-                      onClick={() => handleSort('deliveryDate')}
-                      className="flex items-center gap-2 hover:text-neutral-900 transition-colors"
-                    >
-                      D. Date
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className={`cursor-pointer ${
-                          sortField === 'deliveryDate' ? 'text-green-600' : 'text-neutral-400'
-                        }`}
-                      >
-                        <path
-                          d={sortField === 'deliveryDate' && sortDirection === 'asc' 
-                            ? "M7 14L12 9L17 14" 
-                            : sortField === 'deliveryDate' && sortDirection === 'desc'
-                            ? "M7 10L12 15L17 10"
-                            : "M7 10L12 5L17 10M7 14L12 19L17 14"}
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                  </th>
-                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    <button
-                      onClick={() => handleSort('orderDate')}
-                      className="flex items-center gap-2 hover:text-neutral-900 transition-colors"
-                    >
-                      O. Date
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className={`cursor-pointer ${
-                          sortField === 'orderDate' ? 'text-green-600' : 'text-neutral-400'
-                        }`}
-                      >
-                        <path
-                          d={sortField === 'orderDate' && sortDirection === 'asc' 
-                            ? "M7 14L12 9L17 14" 
-                            : sortField === 'orderDate' && sortDirection === 'desc'
-                            ? "M7 10L12 15L17 10"
-                            : "M7 10L12 5L17 10M7 14L12 19L17 14"}
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                  </th>
-                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    <button
-                      onClick={() => handleSort('status')}
-                      className="flex items-center gap-2 hover:text-neutral-900 transition-colors"
-                    >
-                      Status
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className={`cursor-pointer ${
-                          sortField === 'status' ? 'text-green-600' : 'text-neutral-400'
-                        }`}
-                      >
-                        <path
-                          d={sortField === 'status' && sortDirection === 'asc' 
-                            ? "M7 14L12 9L17 14" 
-                            : sortField === 'status' && sortDirection === 'desc'
-                            ? "M7 10L12 15L17 10"
-                            : "M7 10L12 5L17 10M7 14L12 19L17 14"}
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                  </th>
-                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    <button
-                      onClick={() => handleSort('amount')}
-                      className="flex items-center gap-2 hover:text-neutral-900 transition-colors"
-                    >
-                      Amount
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className={`cursor-pointer ${
-                          sortField === 'amount' ? 'text-green-600' : 'text-neutral-400'
-                        }`}
-                      >
-                        <path
-                          d={sortField === 'amount' && sortDirection === 'asc' 
-                            ? "M7 14L12 9L17 14" 
-                            : sortField === 'amount' && sortDirection === 'desc'
-                            ? "M7 10L12 15L17 10"
-                            : "M7 10L12 5L17 10M7 14L12 19L17 14"}
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                  </th>
-                  <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-neutral-200">
-                {paginatedOrders.length === 0 ? (
+          {!loading && !error && (
+            <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6">
+              <table className="w-full min-w-[600px]">
+                <thead className="bg-neutral-50 border-b border-neutral-200">
                   <tr>
-                    <td colSpan={6} className="px-3 sm:px-4 md:px-6 py-8 sm:py-12 text-center text-xs sm:text-sm text-neutral-500">
-                      No data available in table
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedOrders.map((order) => (
-                    <tr key={order.id} className="hover:bg-neutral-50 transition-colors">
-                      <td className="px-3 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-neutral-900">
-                        {order.orderId}
-                      </td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-neutral-700">
-                        {order.deliveryDate}
-                      </td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-neutral-700">
-                        {order.orderDate}
-                      </td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(order.status)}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-neutral-900 font-medium">
-                        ₹{order.amount.toFixed(2)}
-                      </td>
-                      <td className="px-3 sm:px-4 md:px-6 py-3">
-                        <button
-                          onClick={() => navigate(`/seller/orders/${order.id}`)}
-                          className="text-green-600 hover:text-green-700 text-xs sm:text-sm font-medium transition-colors"
+                    <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                      <button
+                        onClick={() => handleSort('orderId')}
+                        className="flex items-center gap-2 hover:text-neutral-900 transition-colors"
+                      >
+                        O. Id
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          className={`cursor-pointer ${sortField === 'orderId' ? 'text-green-600' : 'text-neutral-400'
+                            }`}
                         >
-                          View
-                        </button>
+                          <path
+                            d={sortField === 'orderId' && sortDirection === 'asc'
+                              ? "M7 14L12 9L17 14"
+                              : sortField === 'orderId' && sortDirection === 'desc'
+                                ? "M7 10L12 15L17 10"
+                                : "M7 10L12 5L17 10M7 14L12 19L17 14"}
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </th>
+                    <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                      <button
+                        onClick={() => handleSort('deliveryDate')}
+                        className="flex items-center gap-2 hover:text-neutral-900 transition-colors"
+                      >
+                        D. Date
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          className={`cursor-pointer ${sortField === 'deliveryDate' ? 'text-green-600' : 'text-neutral-400'
+                            }`}
+                        >
+                          <path
+                            d={sortField === 'deliveryDate' && sortDirection === 'asc'
+                              ? "M7 14L12 9L17 14"
+                              : sortField === 'deliveryDate' && sortDirection === 'desc'
+                                ? "M7 10L12 15L17 10"
+                                : "M7 10L12 5L17 10M7 14L12 19L17 14"}
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </th>
+                    <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                      <button
+                        onClick={() => handleSort('orderDate')}
+                        className="flex items-center gap-2 hover:text-neutral-900 transition-colors"
+                      >
+                        O. Date
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          className={`cursor-pointer ${sortField === 'orderDate' ? 'text-green-600' : 'text-neutral-400'
+                            }`}
+                        >
+                          <path
+                            d={sortField === 'orderDate' && sortDirection === 'asc'
+                              ? "M7 14L12 9L17 14"
+                              : sortField === 'orderDate' && sortDirection === 'desc'
+                                ? "M7 10L12 15L17 10"
+                                : "M7 10L12 5L17 10M7 14L12 19L17 14"}
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </th>
+                    <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                      <button
+                        onClick={() => handleSort('status')}
+                        className="flex items-center gap-2 hover:text-neutral-900 transition-colors"
+                      >
+                        Status
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          className={`cursor-pointer ${sortField === 'status' ? 'text-green-600' : 'text-neutral-400'
+                            }`}
+                        >
+                          <path
+                            d={sortField === 'status' && sortDirection === 'asc'
+                              ? "M7 14L12 9L17 14"
+                              : sortField === 'status' && sortDirection === 'desc'
+                                ? "M7 10L12 15L17 10"
+                                : "M7 10L12 5L17 10M7 14L12 19L17 14"}
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </th>
+                    <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                      <button
+                        onClick={() => handleSort('amount')}
+                        className="flex items-center gap-2 hover:text-neutral-900 transition-colors"
+                      >
+                        Amount
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          className={`cursor-pointer ${sortField === 'amount' ? 'text-green-600' : 'text-neutral-400'
+                            }`}
+                        >
+                          <path
+                            d={sortField === 'amount' && sortDirection === 'asc'
+                              ? "M7 14L12 9L17 14"
+                              : sortField === 'amount' && sortDirection === 'desc'
+                                ? "M7 10L12 15L17 10"
+                                : "M7 10L12 5L17 10M7 14L12 19L17 14"}
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                    </th>
+                    <th className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-neutral-200">
+                  {paginatedOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-3 sm:px-4 md:px-6 py-8 sm:py-12 text-center text-xs sm:text-sm text-neutral-500">
+                        No data available in table
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    paginatedOrders.map((order) => (
+                      <tr key={order.id} className="hover:bg-neutral-50 transition-colors">
+                        <td className="px-3 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-neutral-900">
+                          {order.orderId}
+                        </td>
+                        <td className="px-3 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-neutral-700">
+                          {order.deliveryDate}
+                        </td>
+                        <td className="px-3 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-neutral-700">
+                          {order.orderDate}
+                        </td>
+                        <td className="px-3 sm:px-4 md:px-6 py-3">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(order.status)}`}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="px-3 sm:px-4 md:px-6 py-3 text-xs sm:text-sm text-neutral-900 font-medium">
+                          ₹{order.amount.toFixed(2)}
+                        </td>
+                        <td className="px-3 sm:px-4 md:px-6 py-3">
+                          <button
+                            onClick={() => navigate(`/seller/orders/${order.id}`)}
+                            className="text-green-600 hover:text-green-700 text-xs sm:text-sm font-medium transition-colors"
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {/* Pagination */}
           <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
             <div className="text-xs sm:text-sm text-neutral-700">
-              Showing {filteredAndSortedOrders.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredAndSortedOrders.length)} of {filteredAndSortedOrders.length} entries
+              Showing {orders.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, orders.length)} of {orders.length} entries
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePreviousPage}
                 disabled={currentPage === 1}
-                className={`p-2 border border-neutral-300 rounded transition-colors ${
-                  currentPage === 1
-                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                    : 'text-neutral-700 hover:bg-neutral-50'
-                }`}
+                className={`p-2 border border-neutral-300 rounded transition-colors ${currentPage === 1
+                  ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                  : 'text-neutral-700 hover:bg-neutral-50'
+                  }`}
                 aria-label="Previous page"
               >
                 <svg
@@ -574,11 +554,10 @@ export default function SellerOrders() {
               <button
                 onClick={handleNextPage}
                 disabled={currentPage >= totalPages}
-                className={`p-2 border border-neutral-300 rounded transition-colors ${
-                  currentPage >= totalPages
-                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                    : 'text-neutral-700 hover:bg-neutral-50'
-                }`}
+                className={`p-2 border border-neutral-300 rounded transition-colors ${currentPage >= totalPages
+                  ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                  : 'text-neutral-700 hover:bg-neutral-50'
+                  }`}
                 aria-label="Next page"
               >
                 <svg

@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { categories } from '../../data/categories';
-import { products } from '../../data/products';
 import ProductCard from './components/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getProducts } from '../../services/api/customerProductService';
 
 // Subcategories for each category
 const getSubcategories = (categoryId: string) => {
@@ -220,6 +220,34 @@ export default function Category() {
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [filterSearchQuery, setFilterSearchQuery] = useState('');
   const [selectedFilterCategory, setSelectedFilterCategory] = useState('Type');
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const response = await getProducts({ category: id });
+        if (response.success) {
+          // Ensure products have default tags/name array for filtering logic if missing
+          const safeProducts = response.data.map((p: any) => ({
+            ...p,
+            tags: p.tags || [],
+            name: p.productName || p.name // Map backend productName to frontend name expected by filter logic
+          }));
+          setProducts(safeProducts);
+        }
+      } catch (error) {
+        console.error("Error fetching category products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchProducts();
+    }
+  }, [id]);
 
   // Function to filter products by subcategory
   const filterProductsBySubcategory = (productsList: typeof products, subcategoryId: string, mainCategoryId: string) => {

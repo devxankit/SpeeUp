@@ -9,7 +9,9 @@ import Toast from '../../components/Toast';
 import PartyPopper from './components/PartyPopper';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '../../components/ui/sheet';
 
-const STORAGE_KEY = 'saved_address';
+import { getAddresses } from '../../services/api/customerAddressService';
+
+// const STORAGE_KEY = 'saved_address'; // Removed
 
 interface Coupon {
   id: string;
@@ -109,16 +111,32 @@ export default function Checkout() {
 
   // Load saved address on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const address = JSON.parse(saved);
-        setSavedAddress(address);
-        setSelectedAddress(address); // Auto-select saved address
+    const fetchAddress = async () => {
+      try {
+        const response = await getAddresses();
+        if (response.success && Array.isArray(response.data) && response.data.length > 0) {
+          const defaultAddr = response.data.find((a: any) => a.isDefault) || response.data[0];
+          // Map to OrderAddress
+          const mappedAddress: OrderAddress = {
+            name: defaultAddr.fullName,
+            phone: defaultAddr.phone,
+            flat: '', // API might not split this
+            street: defaultAddr.address, // API main address field
+            city: defaultAddr.city,
+            state: defaultAddr.state,
+            pincode: defaultAddr.pincode,
+            landmark: defaultAddr.landmark || '', // If available
+            id: defaultAddr._id,
+            _id: defaultAddr._id
+          };
+          setSavedAddress(mappedAddress);
+          setSelectedAddress(mappedAddress);
+        }
+      } catch (error) {
+        console.error('Error loading addresses:', error);
       }
-    } catch (error) {
-      console.error('Error loading saved address:', error);
-    }
+    };
+    fetchAddress();
   }, []);
 
   // During exit animation, use snapshot to keep content visible
@@ -191,7 +209,7 @@ export default function Checkout() {
     setSelectedCoupon(null);
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!selectedAddress || cart.items.length === 0) {
       return;
     }
@@ -214,14 +232,20 @@ export default function Checkout() {
       createdAt: new Date().toISOString(),
     };
 
-    addOrder(order);
-    setPlacedOrderId(orderId);
-
-    // Clear cart immediately
-    clearCart();
-
-    // Show order success celebration animation
-    setShowOrderSuccess(true);
+    // Call addOrder and await result
+    try {
+      const placedId = await addOrder(order);
+      if (placedId) {
+        setPlacedOrderId(placedId);
+        clearCart();
+        setShowOrderSuccess(true);
+      } else {
+        // Handle failure if needed, though addOrder throws on error usually
+      }
+    } catch (error) {
+      console.error("Order placement failed", error);
+      // Show error toast
+    }
   };
 
   const handleGoToOrders = () => {

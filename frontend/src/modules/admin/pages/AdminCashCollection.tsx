@@ -1,79 +1,187 @@
-import { useState } from 'react';
-
-interface CashCollection {
-  id: number;
-  name: string;
-  orderId: string;
-  total: number;
-  amount: number;
-  remark: string;
-  dateTime: string;
-}
+import { useState, useEffect } from "react";
+import {
+  getCashCollections,
+  createCashCollection,
+  type CashCollection,
+  type CreateCashCollectionData,
+} from "../../../services/api/admin/adminDeliveryService";
+import { getDeliveryBoys } from "../../../services/api/admin/adminDeliveryService";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function AdminCashCollection() {
-  const [fromDate, setFromDate] = useState('12/09/2025');
-  const [toDate, setToDate] = useState('12/09/2025');
-  const [selectedDeliveryBoy, setSelectedDeliveryBoy] = useState('all');
-  const [selectedMethod, setSelectedMethod] = useState('all');
+  const { isAuthenticated, token } = useAuth();
+  const [cashCollections, setCashCollections] = useState<CashCollection[]>([]);
+  const [deliveryBoys, setDeliveryBoys] = useState<any[]>([]);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [selectedDeliveryBoy, setSelectedDeliveryBoy] = useState("all");
+  const [selectedMethod, setSelectedMethod] = useState("all");
   const [entriesPerPage, setEntriesPerPage] = useState(10);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Mock data - empty for now as shown in image
-  const cashCollections: CashCollection[] = [];
+  // Fetch delivery boys and cash collections on component mount
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch delivery boys for the dropdown
+        const deliveryBoysResponse = await getDeliveryBoys({
+          status: "Active",
+          limit: 100,
+        });
+        if (deliveryBoysResponse.success) {
+          setDeliveryBoys(deliveryBoysResponse.data);
+        }
+
+        // Fetch cash collections
+        const params: any = {
+          page: currentPage,
+          limit: entriesPerPage,
+        };
+
+        if (selectedDeliveryBoy !== "all") {
+          params.deliveryBoyId = selectedDeliveryBoy;
+        }
+
+        if (fromDate) {
+          params.fromDate = fromDate;
+        }
+
+        if (toDate) {
+          params.toDate = toDate;
+        }
+
+        if (searchTerm) {
+          params.search = searchTerm;
+        }
+
+        const cashResponse = await getCashCollections(params);
+
+        if (cashResponse.success) {
+          setCashCollections(cashResponse.data);
+        } else {
+          setError("Failed to load cash collections");
+        }
+      } catch (err: any) {
+        console.error("Error fetching data:", err);
+        setError(
+          err.response?.data?.message ||
+          "Failed to load data. Please try again."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [
+    isAuthenticated,
+    token,
+    currentPage,
+    entriesPerPage,
+    selectedDeliveryBoy,
+    fromDate,
+    toDate,
+    searchTerm,
+  ]);
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortColumn(column);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
-  const filteredCollections = cashCollections.filter(collection =>
-    collection.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    collection.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    collection.id.toString().includes(searchTerm)
-  );
+  // Note: Filtering is done server-side, so we just use the cashCollections as is
+  const displayedCollections = cashCollections;
 
-  const totalPages = Math.ceil(filteredCollections.length / entriesPerPage);
+  // For pagination display (simplified - in real app, this would come from API)
+  const totalPages = Math.ceil(displayedCollections.length / entriesPerPage);
   const startIndex = (currentPage - 1) * entriesPerPage;
   const endIndex = startIndex + entriesPerPage;
-  const displayedCollections = filteredCollections.slice(startIndex, endIndex);
+
+  const handleAddCollection = async () => {
+    // For now, just show an alert. In a real app, this would open a modal to add a cash collection
+    alert("Add cash collection functionality would be implemented here");
+  };
 
   const handleExport = () => {
-    alert('Export functionality will be implemented here');
+    const headers = [
+      "ID",
+      "Delivery Boy",
+      "Order ID",
+      "Total",
+      "Amount Collected",
+      "Remark",
+      "Date",
+    ];
+    const csvContent = [
+      headers.join(","),
+      ...cashCollections.map((collection) =>
+        [
+          collection._id.slice(-6),
+          `"${collection.deliveryBoyName}"`,
+          collection.orderId,
+          collection.total.toFixed(2),
+          collection.amount.toFixed(2),
+          `"${collection.remark || ""}"`,
+          new Date(collection.collectedAt).toLocaleDateString(),
+        ].join(",")
+      ),
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `cash_collections_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleClearDate = () => {
-    setFromDate('');
-    setToDate('');
+    setFromDate("");
+    setToDate("");
   };
 
-  const deliveryBoys = [
-    'All Delivery Boy',
-    'Delivery Boy 1',
-    'Delivery Boy 2',
-    'Delivery Boy 3',
-  ];
-
-  const methods = [
-    'All',
-    'Cash',
-    'Card',
-    'Online',
-  ];
+  const methods = ["All", "Cash", "Card", "Online"];
 
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="bg-teal-600 px-4 sm:px-6 py-4 rounded-t-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-        <h1 className="text-white text-xl sm:text-2xl font-semibold">Delivery Boy Cash Collection List</h1>
+        <h1 className="text-white text-xl sm:text-2xl font-semibold">
+          Delivery Boy Cash Collection List
+        </h1>
         <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm font-medium flex items-center gap-2 transition-colors">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
@@ -90,11 +198,28 @@ export default function AdminCashCollection() {
             <div className="flex flex-col sm:flex-row gap-3 flex-1 flex-wrap">
               {/* From - To Date */}
               <div className="flex items-center gap-2">
-                <label className="text-sm text-neutral-700 whitespace-nowrap">From - To Date:</label>
+                <label className="text-sm text-neutral-700 whitespace-nowrap">
+                  From - To Date:
+                </label>
                 <div className="flex items-center gap-2">
                   <div className="relative">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400">
+                      <rect
+                        x="3"
+                        y="4"
+                        width="18"
+                        height="18"
+                        rx="2"
+                        ry="2"></rect>
                       <line x1="16" y1="2" x2="16" y2="6"></line>
                       <line x1="8" y1="2" x2="8" y2="6"></line>
                       <line x1="3" y1="10" x2="21" y2="10"></line>
@@ -109,8 +234,23 @@ export default function AdminCashCollection() {
                   </div>
                   <span className="text-neutral-500">-</span>
                   <div className="relative">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400">
+                      <rect
+                        x="3"
+                        y="4"
+                        width="18"
+                        height="18"
+                        rx="2"
+                        ry="2"></rect>
                       <line x1="16" y1="2" x2="16" y2="6"></line>
                       <line x1="8" y1="2" x2="8" y2="6"></line>
                       <line x1="3" y1="10" x2="21" y2="10"></line>
@@ -125,8 +265,7 @@ export default function AdminCashCollection() {
                   </div>
                   <button
                     onClick={handleClearDate}
-                    className="px-3 py-2 bg-neutral-700 hover:bg-neutral-800 text-white rounded text-sm transition-colors"
-                  >
+                    className="px-3 py-2 bg-neutral-700 hover:bg-neutral-800 text-white rounded text-sm transition-colors">
                     Clear
                   </button>
                 </div>
@@ -134,18 +273,20 @@ export default function AdminCashCollection() {
 
               {/* Filter by Delivery Boy */}
               <div className="flex items-center gap-2">
-                <label className="text-sm text-neutral-700 whitespace-nowrap">Filter by Delivery Boy:</label>
+                <label className="text-sm text-neutral-700 whitespace-nowrap">
+                  Filter by Delivery Boy:
+                </label>
                 <select
                   value={selectedDeliveryBoy}
                   onChange={(e) => {
                     setSelectedDeliveryBoy(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="px-3 py-2 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 min-w-[150px]"
-                >
+                  className="px-3 py-2 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 min-w-[150px]">
+                  <option value="all">All Delivery Boys</option>
                   {deliveryBoys.map((boy) => (
-                    <option key={boy} value={boy === 'All Delivery Boy' ? 'all' : boy}>
-                      {boy}
+                    <option key={boy._id} value={boy._id}>
+                      {boy.name}
                     </option>
                   ))}
                 </select>
@@ -153,17 +294,20 @@ export default function AdminCashCollection() {
 
               {/* Filter by Method */}
               <div className="flex items-center gap-2">
-                <label className="text-sm text-neutral-700 whitespace-nowrap">Filter by Method:</label>
+                <label className="text-sm text-neutral-700 whitespace-nowrap">
+                  Filter by Method:
+                </label>
                 <select
                   value={selectedMethod}
                   onChange={(e) => {
                     setSelectedMethod(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="px-3 py-2 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 min-w-[100px]"
-                >
+                  className="px-3 py-2 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 min-w-[100px]">
                   {methods.map((method) => (
-                    <option key={method} value={method === 'All' ? 'all' : method}>
+                    <option
+                      key={method}
+                      value={method === "All" ? "all" : method}>
                       {method}
                     </option>
                   ))}
@@ -182,8 +326,7 @@ export default function AdminCashCollection() {
                     setEntriesPerPage(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="px-2 py-1 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
-                >
+                  className="px-2 py-1 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
                   <option value={10}>10</option>
                   <option value={25}>25</option>
                   <option value={50}>50</option>
@@ -194,15 +337,30 @@ export default function AdminCashCollection() {
               {/* Export Button */}
               <button
                 onClick={handleExport}
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm font-medium flex items-center gap-2 transition-colors">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7 10 12 15 17 10"></polyline>
                   <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
                 Export
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </button>
@@ -232,78 +390,148 @@ export default function AdminCashCollection() {
               <tr>
                 <th
                   className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider cursor-pointer hover:bg-neutral-100"
-                  onClick={() => handleSort('id')}
-                >
+                  onClick={() => handleSort("id")}>
                   <div className="flex items-center gap-2">
                     Id
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-neutral-400">
-                      <path d="M7 10L12 5L17 10M7 14L12 19L17 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="text-neutral-400">
+                      <path
+                        d="M7 10L12 5L17 10M7 14L12 19L17 14"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </div>
                 </th>
                 <th
                   className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider cursor-pointer hover:bg-neutral-100"
-                  onClick={() => handleSort('name')}
-                >
+                  onClick={() => handleSort("name")}>
                   <div className="flex items-center gap-2">
                     Name
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-neutral-400">
-                      <path d="M7 10L12 5L17 10M7 14L12 19L17 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="text-neutral-400">
+                      <path
+                        d="M7 10L12 5L17 10M7 14L12 19L17 14"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </div>
                 </th>
                 <th
                   className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider cursor-pointer hover:bg-neutral-100"
-                  onClick={() => handleSort('orderId')}
-                >
+                  onClick={() => handleSort("orderId")}>
                   <div className="flex items-center gap-2">
                     O. Id
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-neutral-400">
-                      <path d="M7 10L12 5L17 10M7 14L12 19L17 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="text-neutral-400">
+                      <path
+                        d="M7 10L12 5L17 10M7 14L12 19L17 14"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </div>
                 </th>
                 <th
                   className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider cursor-pointer hover:bg-neutral-100"
-                  onClick={() => handleSort('total')}
-                >
+                  onClick={() => handleSort("total")}>
                   <div className="flex items-center gap-2">
                     Total
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-neutral-400">
-                      <path d="M7 10L12 5L17 10M7 14L12 19L17 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="text-neutral-400">
+                      <path
+                        d="M7 10L12 5L17 10M7 14L12 19L17 14"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </div>
                 </th>
                 <th
                   className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider cursor-pointer hover:bg-neutral-100"
-                  onClick={() => handleSort('amount')}
-                >
+                  onClick={() => handleSort("amount")}>
                   <div className="flex items-center gap-2">
                     Amount
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-neutral-400">
-                      <path d="M7 10L12 5L17 10M7 14L12 19L17 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="text-neutral-400">
+                      <path
+                        d="M7 10L12 5L17 10M7 14L12 19L17 14"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </div>
                 </th>
                 <th
                   className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider cursor-pointer hover:bg-neutral-100"
-                  onClick={() => handleSort('remark')}
-                >
+                  onClick={() => handleSort("remark")}>
                   <div className="flex items-center gap-2">
                     Remark
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-neutral-400">
-                      <path d="M7 10L12 5L17 10M7 14L12 19L17 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="text-neutral-400">
+                      <path
+                        d="M7 10L12 5L17 10M7 14L12 19L17 14"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </div>
                 </th>
                 <th
                   className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider cursor-pointer hover:bg-neutral-100"
-                  onClick={() => handleSort('dateTime')}
-                >
+                  onClick={() => handleSort("dateTime")}>
                   <div className="flex items-center gap-2">
                     Date Time
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="text-neutral-400">
-                      <path d="M7 10L12 5L17 10M7 14L12 19L17 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      className="text-neutral-400">
+                      <path
+                        d="M7 10L12 5L17 10M7 14L12 19L17 14"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </div>
                 </th>
@@ -312,20 +540,36 @@ export default function AdminCashCollection() {
             <tbody className="bg-white divide-y divide-neutral-200">
               {displayedCollections.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 sm:px-6 py-8 text-center text-sm text-neutral-500">
+                  <td
+                    colSpan={7}
+                    className="px-4 sm:px-6 py-8 text-center text-sm text-neutral-500">
                     No data available in table
                   </td>
                 </tr>
               ) : (
                 displayedCollections.map((collection) => (
-                  <tr key={collection.id} className="hover:bg-neutral-50">
-                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900">{collection.id}</td>
-                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900 font-medium">{collection.name}</td>
-                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">{collection.orderId}</td>
-                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900">₹{collection.total.toFixed(2)}</td>
-                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900 font-medium">₹{collection.amount.toFixed(2)}</td>
-                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">{collection.remark}</td>
-                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">{collection.dateTime}</td>
+                  <tr key={collection._id} className="hover:bg-neutral-50">
+                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900">
+                      {collection._id.slice(-6)}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900 font-medium">
+                      {collection.deliveryBoyName}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">
+                      {collection.orderId}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900">
+                      ₹{collection.total.toFixed(2)}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900 font-medium">
+                      ₹{collection.amount.toFixed(2)}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">
+                      {collection.remark || '-'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">
+                      {new Date(collection.collectedAt).toLocaleString()}
+                    </td>
                   </tr>
                 ))
               )}
@@ -336,35 +580,57 @@ export default function AdminCashCollection() {
         {/* Pagination Footer */}
         <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
           <div className="text-xs sm:text-sm text-neutral-700">
-            Showing {startIndex + 1} to {Math.min(endIndex, filteredCollections.length)} of {filteredCollections.length} entries
+            Showing {startIndex + 1} to{" "}
+            {Math.min(endIndex, cashCollections.length)} of{" "}
+            {cashCollections.length} entries
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1 || totalPages === 0}
-              className={`p-2 border border-neutral-300 rounded ${
-                currentPage === 1 || totalPages === 0
-                  ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                  : 'text-neutral-700 hover:bg-neutral-50'
-              }`}
-              aria-label="Previous page"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              className={`p-2 border border-neutral-300 rounded ${currentPage === 1 || totalPages === 0
+                ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
+                : "text-neutral-700 hover:bg-neutral-50"
+                }`}
+              aria-label="Previous page">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M15 18L9 12L15 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
             <button
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+              }
               disabled={currentPage === totalPages || totalPages === 0}
-              className={`p-2 border border-neutral-300 rounded ${
-                currentPage === totalPages || totalPages === 0
-                  ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                  : 'text-neutral-700 hover:bg-neutral-50'
-              }`}
-              aria-label="Next page"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              className={`p-2 border border-neutral-300 rounded ${currentPage === totalPages || totalPages === 0
+                ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
+                : "text-neutral-700 hover:bg-neutral-50"
+                }`}
+              aria-label="Next page">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M9 18L15 12L9 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </button>
           </div>
@@ -373,7 +639,7 @@ export default function AdminCashCollection() {
 
       {/* Footer */}
       <div className="bg-neutral-800 text-white text-center text-sm py-4">
-        Copyright © 2025. Developed By{' '}
+        Copyright © 2025. Developed By{" "}
         <a href="#" className="text-blue-400 hover:text-blue-300">
           SpeeUp - 10 Minute App
         </a>
@@ -381,4 +647,3 @@ export default function AdminCashCollection() {
     </div>
   );
 }
-

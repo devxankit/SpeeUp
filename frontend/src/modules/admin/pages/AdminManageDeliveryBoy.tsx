@@ -1,160 +1,72 @@
-import { useState } from 'react';
-
-interface DeliveryBoy {
-    id: number;
-    name: string;
-    mobile: string;
-    address: string;
-    city: string;
-    commissionType: 'Percentage' | 'Fixed';
-    commission?: number;
-    minAmount?: number;
-    maxAmount?: number;
-    balance: number;
-    cashCollected: number;
-    status: 'Active' | 'Inactive';
-    available: 'Available' | 'Not Available';
-}
-
-// Mock data matching the image
-const DELIVERY_BOYS: DeliveryBoy[] = [
-    {
-        id: 1,
-        name: 'Chirag',
-        mobile: '9999999999',
-        address: 'Santaji ward, Bhandara',
-        city: 'Bhandara',
-        commissionType: 'Percentage',
-        commission: 4,
-        minAmount: 5,
-        maxAmount: 25,
-        balance: 0.64,
-        cashCollected: 0.00,
-        status: 'Active',
-        available: 'Available',
-    },
-    {
-        id: 2,
-        name: 'Vaishnavi',
-        mobile: '7777777777',
-        address: 'Santaji ward, Bhandara',
-        city: 'Bhandara',
-        commissionType: 'Percentage',
-        commission: 5,
-        minAmount: 10,
-        maxAmount: 25,
-        balance: 115.00,
-        cashCollected: 0.00,
-        status: 'Active',
-        available: 'Available',
-    },
-    {
-        id: 3,
-        name: 'Pratik',
-        mobile: '8888888888',
-        address: 'Santaji ward, Bhandara',
-        city: 'Bhandara',
-        commissionType: 'Percentage',
-        commission: 10,
-        minAmount: 5,
-        maxAmount: 30,
-        balance: 208.70,
-        cashCollected: 0.00,
-        status: 'Active',
-        available: 'Available',
-    },
-    {
-        id: 4,
-        name: 'Abdullah',
-        mobile: '3408886444',
-        address: 'Bandara',
-        city: 'Bhandara',
-        commissionType: 'Fixed',
-        balance: 0.00,
-        cashCollected: 0.00,
-        status: 'Inactive',
-        available: 'Not Available',
-    },
-    {
-        id: 5,
-        name: 'Xikdkdkdk',
-        mobile: '6565646535',
-        address: 'Jcisoaaakalla',
-        city: 'Bhandara',
-        commissionType: 'Fixed',
-        balance: 0.00,
-        cashCollected: 0.00,
-        status: 'Inactive',
-        available: 'Not Available',
-    },
-    {
-        id: 6,
-        name: 'Nikhil',
-        mobile: '7061973879',
-        address: 'Pune Maharashtra India',
-        city: 'Bhandara',
-        commissionType: 'Fixed',
-        balance: 0.00,
-        cashCollected: 0.00,
-        status: 'Inactive',
-        available: 'Not Available',
-    },
-    {
-        id: 7,
-        name: 'Ankit',
-        mobile: '8791136048',
-        address: 'Vijaynagar',
-        city: 'Bhandara',
-        commissionType: 'Fixed',
-        balance: 0.00,
-        cashCollected: 0.00,
-        status: 'Inactive',
-        available: 'Not Available',
-    },
-    {
-        id: 8,
-        name: 'Singh',
-        mobile: '8888888881',
-        address: 'Diaper',
-        city: 'Bhandara',
-        commissionType: 'Fixed',
-        balance: 0.00,
-        cashCollected: 0.00,
-        status: 'Inactive',
-        available: 'Not Available',
-    },
-    {
-        id: 9,
-        name: 'Vansh Girhepunje',
-        mobile: '8080430337',
-        address: 'Sant kabir ward',
-        city: 'Bhandara',
-        commissionType: 'Fixed',
-        balance: 0.00,
-        cashCollected: 0.00,
-        status: 'Inactive',
-        available: 'Not Available',
-    },
-    {
-        id: 10,
-        name: 'Rohit Kumbhalkar',
-        mobile: '8379002195',
-        address: 'Shukrawari rajendra ward bhandara',
-        city: 'Bhandara',
-        commissionType: 'Fixed',
-        balance: 0.00,
-        cashCollected: 0.00,
-        status: 'Inactive',
-        available: 'Not Available',
-    },
-];
+import { useState, useEffect } from 'react';
+import {
+    getDeliveryBoys,
+    updateDeliveryBoyStatus,
+    updateDeliveryBoyAvailability,
+    deleteDeliveryBoy,
+    type DeliveryBoy,
+} from '../../../services/api/admin/adminDeliveryService';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function AdminManageDeliveryBoy() {
+    const { isAuthenticated, token } = useAuth();
+    const [deliveryBoys, setDeliveryBoys] = useState<DeliveryBoy[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [processing, setProcessing] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('All');
+    const [availabilityFilter, setAvailabilityFilter] = useState('All');
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+    // Fetch delivery boys on component mount and when filters change
+    useEffect(() => {
+        if (!isAuthenticated || !token) {
+            setLoading(false);
+            return;
+        }
+
+        const fetchDeliveryBoys = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                const params: any = {
+                    page: currentPage,
+                    limit: rowsPerPage,
+                    search: searchTerm,
+                    sortBy: sortColumn || undefined,
+                    sortOrder: sortDirection,
+                };
+
+                if (statusFilter !== 'All') {
+                    params.status = statusFilter;
+                }
+
+                if (availabilityFilter !== 'All') {
+                    params.available = availabilityFilter;
+                }
+
+                const response = await getDeliveryBoys(params);
+
+                if (response.success) {
+                    setDeliveryBoys(response.data);
+                } else {
+                    setError('Failed to load delivery boys');
+                }
+            } catch (err: any) {
+                console.error('Error fetching delivery boys:', err);
+                setError(err.response?.data?.message || 'Failed to load delivery boys. Please try again.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDeliveryBoys();
+    }, [isAuthenticated, token, currentPage, rowsPerPage, searchTerm, statusFilter, availabilityFilter, sortColumn, sortDirection]);
 
     const handleSort = (column: string) => {
         if (sortColumn === column) {
@@ -165,86 +77,86 @@ export default function AdminManageDeliveryBoy() {
         }
     };
 
-    const SortIcon = ({ column }: { column: string }) => (
-        <span className="text-neutral-400 text-xs ml-1">
-            {sortColumn === column ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}
-        </span>
-    );
+    const handleStatusChange = async (deliveryBoyId: string, newStatus: 'Active' | 'Inactive') => {
+        try {
+            setProcessing(deliveryBoyId);
+            const response = await updateDeliveryBoyStatus(deliveryBoyId, newStatus);
 
-    // Filter delivery boys
-    let filteredDeliveryBoys = DELIVERY_BOYS.filter(deliveryBoy =>
-        deliveryBoy.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        deliveryBoy.mobile.includes(searchTerm) ||
-        deliveryBoy.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        deliveryBoy.city.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    // Sort delivery boys
-    if (sortColumn) {
-        filteredDeliveryBoys = [...filteredDeliveryBoys].sort((a, b) => {
-            let aValue: any;
-            let bValue: any;
-
-            switch (sortColumn) {
-                case 'id':
-                    aValue = a.id;
-                    bValue = b.id;
-                    break;
-                case 'name':
-                    aValue = a.name;
-                    bValue = b.name;
-                    break;
-                case 'mobile':
-                    aValue = a.mobile;
-                    bValue = b.mobile;
-                    break;
-                case 'city':
-                    aValue = a.city;
-                    bValue = b.city;
-                    break;
-                case 'balance':
-                    aValue = a.balance;
-                    bValue = b.balance;
-                    break;
-                case 'cashCollected':
-                    aValue = a.cashCollected;
-                    bValue = b.cashCollected;
-                    break;
-                case 'status':
-                    aValue = a.status;
-                    bValue = b.status;
-                    break;
-                case 'available':
-                    aValue = a.available;
-                    bValue = b.available;
-                    break;
-                default:
-                    return 0;
+            if (response.success) {
+                // Update local state
+                setDeliveryBoys(deliveryBoys.map(deliveryBoy =>
+                    deliveryBoy._id === deliveryBoyId ? { ...deliveryBoy, status: newStatus } : deliveryBoy
+                ));
+                alert(`Delivery boy status updated to ${newStatus} successfully!`);
+            } else {
+                alert('Failed to update delivery boy status: ' + (response.message || 'Unknown error'));
             }
+        } catch (err: any) {
+            console.error('Error updating delivery boy status:', err);
+            alert('Failed to update delivery boy status: ' + (err.response?.data?.message || 'Please try again.'));
+        } finally {
+            setProcessing(null);
+        }
+    };
 
-            if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-            if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-            return 0;
-        });
-    }
+    const handleAvailabilityChange = async (deliveryBoyId: string, newAvailability: 'Available' | 'Not Available') => {
+        try {
+            setProcessing(deliveryBoyId);
+            const response = await updateDeliveryBoyAvailability(deliveryBoyId, newAvailability);
 
-    const totalPages = Math.ceil(filteredDeliveryBoys.length / rowsPerPage);
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const displayedDeliveryBoys = filteredDeliveryBoys.slice(startIndex, endIndex);
+            if (response.success) {
+                // Update local state
+                setDeliveryBoys(deliveryBoys.map(deliveryBoy =>
+                    deliveryBoy._id === deliveryBoyId ? { ...deliveryBoy, available: newAvailability } : deliveryBoy
+                ));
+                alert(`Delivery boy availability updated to ${newAvailability} successfully!`);
+            } else {
+                alert('Failed to update delivery boy availability: ' + (response.message || 'Unknown error'));
+            }
+        } catch (err: any) {
+            console.error('Error updating delivery boy availability:', err);
+            alert('Failed to update delivery boy availability: ' + (err.response?.data?.message || 'Please try again.'));
+        } finally {
+            setProcessing(null);
+        }
+    };
+
+    const handleDelete = async (deliveryBoyId: string) => {
+        if (!window.confirm('Are you sure you want to delete this delivery boy? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            setProcessing(deliveryBoyId);
+            const response = await deleteDeliveryBoy(deliveryBoyId);
+
+            if (response.success) {
+                // Remove from local state
+                setDeliveryBoys(deliveryBoys.filter(deliveryBoy => deliveryBoy._id !== deliveryBoyId));
+                alert('Delivery boy deleted successfully!');
+            } else {
+                alert('Failed to delete delivery boy: ' + (response.message || 'Unknown error'));
+            }
+        } catch (err: any) {
+            console.error('Error deleting delivery boy:', err);
+            alert('Failed to delete delivery boy: ' + (err.response?.data?.message || 'Please try again.'));
+        } finally {
+            setProcessing(null);
+        }
+    };
 
     const handleExport = () => {
         const headers = ['Id', 'Name', 'Mobile', 'Address', 'City', 'Commission', 'Balance', 'Cash Collected', 'Status', 'Available'];
         const csvContent = [
             headers.join(','),
-            ...filteredDeliveryBoys.map(deliveryBoy => [
-                deliveryBoy.id,
+            ...deliveryBoys.map(deliveryBoy => [
+                deliveryBoy._id.slice(-6),
                 `"${deliveryBoy.name}"`,
                 deliveryBoy.mobile,
                 `"${deliveryBoy.address}"`,
                 `"${deliveryBoy.city}"`,
-                deliveryBoy.commissionType === 'Percentage' 
-                    ? `"Commission ${deliveryBoy.commission}%"` 
+                deliveryBoy.commissionType === 'Percentage'
+                    ? `"Commission ${deliveryBoy.commission}%"`
                     : 'Fixed',
                 deliveryBoy.balance,
                 deliveryBoy.cashCollected,
@@ -263,18 +175,19 @@ export default function AdminManageDeliveryBoy() {
         document.body.removeChild(link);
     };
 
-    const handleEdit = (id: number) => {
-        console.log('Edit delivery boy:', id);
-        // Navigate to edit page or open edit modal
-        alert(`Edit delivery boy ${id}`);
-    };
+    const SortIcon = ({ column }: { column: string }) => (
+        <span className="text-neutral-400 text-xs ml-1">
+            {sortColumn === column ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}
+        </span>
+    );
 
-    const handleDelete = (id: number) => {
-        if (window.confirm('Are you sure you want to delete this delivery boy?')) {
-            console.log('Delete delivery boy:', id);
-            alert(`Delete delivery boy ${id}`);
-        }
-    };
+    // Note: Filtering and sorting is done server-side, so we just use the deliveryBoys as is
+    const displayedDeliveryBoys = deliveryBoys;
+
+    // For pagination display (simplified - in real app, this would come from API)
+    const totalPages = Math.ceil(displayedDeliveryBoys.length / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
 
     return (
         <div className="flex flex-col h-full bg-gray-50">
@@ -288,24 +201,79 @@ export default function AdminManageDeliveryBoy() {
                     </div>
 
                     {/* Controls */}
-                    <div className="p-4 border-b border-neutral-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm text-neutral-600">Show</span>
-                            <select
-                                value={rowsPerPage}
-                                onChange={(e) => {
-                                    setRowsPerPage(Number(e.target.value));
-                                    setCurrentPage(1);
-                                }}
-                                className="bg-white border border-neutral-300 rounded py-1.5 px-3 text-sm focus:ring-1 focus:ring-teal-500 focus:outline-none cursor-pointer"
-                            >
-                                <option value={10}>10</option>
-                                <option value={20}>20</option>
-                                <option value={50}>50</option>
-                                <option value={100}>100</option>
-                            </select>
+                    <div className="p-4 border-b border-neutral-200 flex flex-col gap-4">
+                        {/* Filters Row */}
+                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                            {/* Status Filter */}
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm text-neutral-700 whitespace-nowrap">Status:</label>
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => {
+                                        setStatusFilter(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                    className="px-3 py-2 border border-neutral-300 rounded text-sm bg-white focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                                >
+                                    <option value="All">All Status</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                </select>
+                            </div>
+
+                            {/* Availability Filter */}
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm text-neutral-700 whitespace-nowrap">Availability:</label>
+                                <select
+                                    value={availabilityFilter}
+                                    onChange={(e) => {
+                                        setAvailabilityFilter(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                    className="px-3 py-2 border border-neutral-300 rounded text-sm bg-white focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                                >
+                                    <option value="All">All Availability</option>
+                                    <option value="Available">Available</option>
+                                    <option value="Not Available">Not Available</option>
+                                </select>
+                            </div>
+
+                            {/* Search */}
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm text-neutral-700 whitespace-nowrap">Search:</label>
+                                <input
+                                    type="text"
+                                    className="px-3 py-2 border border-neutral-300 rounded text-sm focus:ring-1 focus:ring-teal-500 focus:outline-none min-w-[200px]"
+                                    value={searchTerm}
+                                    onChange={(e) => {
+                                        setSearchTerm(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                    placeholder="Search by name, mobile, address..."
+                                />
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
+
+                        {/* Controls Row */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-neutral-600">Show</span>
+                                <select
+                                    value={rowsPerPage}
+                                    onChange={(e) => {
+                                        setRowsPerPage(Number(e.target.value));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="bg-white border border-neutral-300 rounded py-1.5 px-3 text-sm focus:ring-1 focus:ring-teal-500 focus:outline-none cursor-pointer"
+                                >
+                                    <option value={10}>10</option>
+                                    <option value={20}>20</option>
+                                    <option value={50}>50</option>
+                                    <option value={100}>100</option>
+                                </select>
+                                <span className="text-sm text-neutral-600">entries</span>
+                            </div>
+
                             <button
                                 onClick={handleExport}
                                 className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded text-sm font-medium flex items-center gap-1 transition-colors"
@@ -315,19 +283,6 @@ export default function AdminManageDeliveryBoy() {
                                     <polyline points="6 9 12 15 18 9"></polyline>
                                 </svg>
                             </button>
-                            <div className="relative">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400 text-xs">Search:</span>
-                                <input
-                                    type="text"
-                                    className="pl-14 pr-3 py-1.5 bg-neutral-100 border-none rounded text-sm focus:ring-1 focus:ring-teal-500 w-48"
-                                    value={searchTerm}
-                                    onChange={(e) => {
-                                        setSearchTerm(e.target.value);
-                                        setCurrentPage(1);
-                                    }}
-                                    placeholder=""
-                                />
-                            </div>
                         </div>
                     </div>
 
@@ -336,7 +291,7 @@ export default function AdminManageDeliveryBoy() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-neutral-50 text-xs font-bold text-neutral-800 border-b border-neutral-200">
-                                    <th 
+                                    <th
                                         className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
                                         onClick={() => handleSort('id')}
                                     >
@@ -344,7 +299,7 @@ export default function AdminManageDeliveryBoy() {
                                             Id <SortIcon column="id" />
                                         </div>
                                     </th>
-                                    <th 
+                                    <th
                                         className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
                                         onClick={() => handleSort('name')}
                                     >
@@ -352,7 +307,7 @@ export default function AdminManageDeliveryBoy() {
                                             Name <SortIcon column="name" />
                                         </div>
                                     </th>
-                                    <th 
+                                    <th
                                         className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
                                         onClick={() => handleSort('mobile')}
                                     >
@@ -363,7 +318,7 @@ export default function AdminManageDeliveryBoy() {
                                     <th className="p-4">
                                         Address
                                     </th>
-                                    <th 
+                                    <th
                                         className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
                                         onClick={() => handleSort('city')}
                                     >
@@ -374,7 +329,7 @@ export default function AdminManageDeliveryBoy() {
                                     <th className="p-4">
                                         Commission
                                     </th>
-                                    <th 
+                                    <th
                                         className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
                                         onClick={() => handleSort('balance')}
                                     >
@@ -382,7 +337,7 @@ export default function AdminManageDeliveryBoy() {
                                             Balance <SortIcon column="balance" />
                                         </div>
                                     </th>
-                                    <th 
+                                    <th
                                         className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
                                         onClick={() => handleSort('cashCollected')}
                                     >
@@ -390,7 +345,7 @@ export default function AdminManageDeliveryBoy() {
                                             Cash Collected <SortIcon column="cashCollected" />
                                         </div>
                                     </th>
-                                    <th 
+                                    <th
                                         className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
                                         onClick={() => handleSort('status')}
                                     >
@@ -398,7 +353,7 @@ export default function AdminManageDeliveryBoy() {
                                             Status <SortIcon column="status" />
                                         </div>
                                     </th>
-                                    <th 
+                                    <th
                                         className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
                                         onClick={() => handleSort('available')}
                                     >
@@ -412,80 +367,119 @@ export default function AdminManageDeliveryBoy() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {displayedDeliveryBoys.map((deliveryBoy) => (
-                                    <tr key={deliveryBoy.id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200">
-                                        <td className="p-4 align-middle">{deliveryBoy.id}</td>
-                                        <td className="p-4 align-middle">{deliveryBoy.name}</td>
-                                        <td className="p-4 align-middle">{deliveryBoy.mobile}</td>
-                                        <td className="p-4 align-middle">{deliveryBoy.address}</td>
-                                        <td className="p-4 align-middle">{deliveryBoy.city}</td>
-                                        <td className="p-4 align-middle">
-                                            {deliveryBoy.commissionType === 'Percentage' ? (
-                                                <div className="text-xs">
-                                                    <div className="font-medium">Commission {deliveryBoy.commission}%</div>
-                                                    <div className="text-neutral-500 mt-1">
-                                                        Min Amt: {deliveryBoy.minAmount}
-                                                    </div>
-                                                    <div className="text-neutral-500">
-                                                        Max Amt: {deliveryBoy.maxAmount}
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <span className="text-xs">Fixed</span>
-                                            )}
-                                        </td>
-                                        <td className="p-4 align-middle">{deliveryBoy.balance.toFixed(2)}</td>
-                                        <td className="p-4 align-middle">{deliveryBoy.cashCollected.toFixed(2)}</td>
-                                        <td className="p-4 align-middle">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                deliveryBoy.status === 'Active' 
-                                                    ? 'bg-green-100 text-green-800' 
-                                                    : 'bg-red-100 text-red-800'
-                                            }`}>
-                                                {deliveryBoy.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 align-middle">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                deliveryBoy.available === 'Available' 
-                                                    ? 'bg-green-100 text-green-800' 
-                                                    : 'bg-red-100 text-red-800'
-                                            }`}>
-                                                {deliveryBoy.available}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 align-middle">
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => handleEdit(deliveryBoy.id)}
-                                                    className="p-1.5 text-teal-600 hover:bg-teal-50 rounded transition-colors"
-                                                    title="Edit"
-                                                >
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(deliveryBoy.id)}
-                                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                    title="Delete"
-                                                >
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                    </svg>
-                                                </button>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={11} className="p-8 text-center">
+                                            <div className="flex items-center justify-center">
+                                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-teal-600 mr-2"></div>
+                                                Loading delivery boys...
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
-                                {displayedDeliveryBoys.length === 0 && (
+                                ) : error ? (
+                                    <tr>
+                                        <td colSpan={11} className="p-8 text-center text-red-600">
+                                            {error}
+                                        </td>
+                                    </tr>
+                                ) : displayedDeliveryBoys.length === 0 ? (
                                     <tr>
                                         <td colSpan={11} className="p-8 text-center text-neutral-400">
                                             No delivery boys found.
                                         </td>
                                     </tr>
+                                ) : (
+                                    displayedDeliveryBoys.map((deliveryBoy) => (
+                                        <tr key={deliveryBoy._id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200">
+                                            <td className="p-4 align-middle">{deliveryBoy._id.slice(-6)}</td>
+                                            <td className="p-4 align-middle">{deliveryBoy.name}</td>
+                                            <td className="p-4 align-middle">{deliveryBoy.mobile}</td>
+                                            <td className="p-4 align-middle">{deliveryBoy.address}</td>
+                                            <td className="p-4 align-middle">{deliveryBoy.city}</td>
+                                            <td className="p-4 align-middle">
+                                                {deliveryBoy.commissionType === 'Percentage' ? (
+                                                    <div className="text-xs">
+                                                        <div className="font-medium">Commission {deliveryBoy.commission}%</div>
+                                                        <div className="text-neutral-500 mt-1">
+                                                            Min Amt: {deliveryBoy.minAmount}
+                                                        </div>
+                                                        <div className="text-neutral-500">
+                                                            Max Amt: {deliveryBoy.maxAmount}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-xs">Fixed</span>
+                                                )}
+                                            </td>
+                                            <td className="p-4 align-middle">₹{deliveryBoy.balance.toFixed(2)}</td>
+                                            <td className="p-4 align-middle">₹{deliveryBoy.cashCollected.toFixed(2)}</td>
+                                            <td className="p-4 align-middle">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${deliveryBoy.status === 'Active'
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : 'bg-red-100 text-red-800'
+                                                    }`}>
+                                                    {deliveryBoy.status}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 align-middle">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${deliveryBoy.available === 'Available'
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : 'bg-red-100 text-red-800'
+                                                    }`}>
+                                                    {deliveryBoy.available}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 align-middle">
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => handleStatusChange(deliveryBoy._id, deliveryBoy.status === 'Active' ? 'Inactive' : 'Active')}
+                                                        disabled={processing === deliveryBoy._id}
+                                                        className={`p-1.5 rounded transition-colors ${deliveryBoy.status === 'Active'
+                                                            ? 'text-red-600 hover:bg-red-50'
+                                                            : 'text-green-600 hover:bg-green-50'
+                                                            }`}
+                                                        title={deliveryBoy.status === 'Active' ? 'Deactivate' : 'Activate'}
+                                                    >
+                                                        {deliveryBoy.status === 'Active' ? (
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <circle cx="12" cy="12" r="10"></circle>
+                                                                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                                            </svg>
+                                                        ) : (
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleAvailabilityChange(deliveryBoy._id, deliveryBoy.available === 'Available' ? 'Not Available' : 'Available')}
+                                                        disabled={processing === deliveryBoy._id}
+                                                        className={`p-1.5 rounded transition-colors ${deliveryBoy.available === 'Available'
+                                                            ? 'text-yellow-600 hover:bg-yellow-50'
+                                                            : 'text-green-600 hover:bg-green-50'
+                                                            }`}
+                                                        title={deliveryBoy.available === 'Available' ? 'Mark as Not Available' : 'Mark as Available'}
+                                                    >
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <circle cx="12" cy="12" r="10"></circle>
+                                                            <path d="M9 12l2 2 4-4"></path>
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(deliveryBoy._id)}
+                                                        disabled={processing === deliveryBoy._id}
+                                                        className="p-1.5 text-red-600 hover:bg-red-50 disabled:text-neutral-400 disabled:cursor-not-allowed rounded transition-colors"
+                                                        title="Delete"
+                                                    >
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
                                 )}
                             </tbody>
                         </table>
@@ -494,17 +488,16 @@ export default function AdminManageDeliveryBoy() {
                     {/* Pagination Footer */}
                     <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
                         <div className="text-xs sm:text-sm text-neutral-700">
-                            Showing {startIndex + 1} to {Math.min(endIndex, filteredDeliveryBoys.length)} of {filteredDeliveryBoys.length} entries
+                            Showing {startIndex + 1} to {Math.min(endIndex, deliveryBoys.length)} of {deliveryBoys.length} entries
                         </div>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                                 disabled={currentPage === 1}
-                                className={`p-2 border border-teal-600 rounded ${
-                                    currentPage === 1
-                                        ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                        : 'text-teal-600 hover:bg-teal-50'
-                                }`}
+                                className={`p-2 border border-teal-600 rounded ${currentPage === 1
+                                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                    : 'text-teal-600 hover:bg-teal-50'
+                                    }`}
                                 aria-label="Previous page"
                             >
                                 <svg
@@ -529,11 +522,10 @@ export default function AdminManageDeliveryBoy() {
                                     <button
                                         key={pageNum}
                                         onClick={() => setCurrentPage(pageNum)}
-                                        className={`px-3 py-1.5 border border-teal-600 rounded font-medium text-sm ${
-                                            currentPage === pageNum
-                                                ? 'bg-teal-600 text-white'
-                                                : 'text-teal-600 hover:bg-teal-50'
-                                        }`}
+                                        className={`px-3 py-1.5 border border-teal-600 rounded font-medium text-sm ${currentPage === pageNum
+                                            ? 'bg-teal-600 text-white'
+                                            : 'text-teal-600 hover:bg-teal-50'
+                                            }`}
                                     >
                                         {pageNum}
                                     </button>
@@ -545,11 +537,10 @@ export default function AdminManageDeliveryBoy() {
                             <button
                                 onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                                 disabled={currentPage === totalPages}
-                                className={`p-2 border border-teal-600 rounded ${
-                                    currentPage === totalPages
-                                        ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                        : 'text-teal-600 hover:bg-teal-50'
-                                }`}
+                                className={`p-2 border border-teal-600 rounded ${currentPage === totalPages
+                                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                    : 'text-teal-600 hover:bg-teal-50'
+                                    }`}
                                 aria-label="Next page"
                             >
                                 <svg

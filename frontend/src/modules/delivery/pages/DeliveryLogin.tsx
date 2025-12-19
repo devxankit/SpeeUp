@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendOTP, verifyOTP } from '../../../services/api/auth/deliveryAuthService';
 import OTPInput from '../../../components/OTPInput';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function DeliveryLogin() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [mobileNumber, setMobileNumber] = useState('');
   const [showOTP, setShowOTP] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,7 +34,12 @@ export default function DeliveryLogin() {
 
     try {
       const response = await verifyOTP(mobileNumber, otp);
-      if (response.success) {
+      if (response.success && response.data) {
+        // Update auth context
+        login(response.data.token, {
+          ...response.data.user,
+          userType: 'Delivery'
+        });
         navigate('/delivery');
       }
     } catch (err: any) {
@@ -56,7 +63,7 @@ export default function DeliveryLogin() {
         aria-label="Back"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
@@ -109,11 +116,10 @@ export default function DeliveryLogin() {
               <button
                 onClick={handleMobileLogin}
                 disabled={mobileNumber.length !== 10 || loading}
-                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-                  mobileNumber.length === 10 && !loading
+                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${mobileNumber.length === 10 && !loading
                     ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-md'
                     : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 {loading ? 'Sending...' : 'Continue'}
               </button>
@@ -171,8 +177,8 @@ export default function DeliveryLogin() {
             className="w-full py-2.5 rounded-lg font-semibold text-sm bg-gradient-to-r from-teal-600 to-green-600 text-white hover:from-teal-700 hover:to-green-700 transition-all shadow-md flex items-center justify-center gap-2"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
             </svg>
             <span>Login with</span>
             <span className="font-bold">SpeeUp</span>

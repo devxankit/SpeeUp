@@ -1,16 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardCard from '../components/DashboardCard';
 import OrderChart from '../components/OrderChart';
 import AlertCard from '../components/AlertCard';
-import { getSellerDashboardStats, getNewOrders, NewOrder } from '../data/mockData';
+import { getSellerDashboardStats, DashboardStats, NewOrder } from '../../../services/api/dashboardService';
 
 export default function SellerDashboard() {
   const navigate = useNavigate();
-  const stats = getSellerDashboardStats();
-  const newOrders = getNewOrders();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [newOrders, setNewOrders] = useState<NewOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const response = await getSellerDashboardStats();
+        if (response.success) {
+          setStats(response.data.stats);
+          setNewOrders(response.data.newOrders);
+        } else {
+          setError(response.message || 'Failed to fetch dashboard data');
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Error loading dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
 
   const getStatusBadgeClass = (status: NewOrder['status']) => {
     switch (status) {
@@ -168,6 +192,22 @@ export default function SellerDashboard() {
     </svg>
   );
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="p-8 text-center text-red-500 bg-white rounded-lg shadow-sm border border-neutral-200">
+        {error || 'Stats not available'}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* KPI Cards Grid */}
@@ -184,8 +224,8 @@ export default function SellerDashboard() {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <OrderChart title="Order - Dec 2025" data={stats.orderDataDec2025} maxValue={1} height={400} />
-        <OrderChart title="Order - 2025" data={stats.orderData2025} maxValue={20} height={400} />
+        <OrderChart title={`Order - ${new Date().toLocaleString('default', { month: 'short' })} ${new Date().getFullYear()}`} data={stats.dailyOrderData} maxValue={Math.max(...stats.dailyOrderData.map(d => d.value), 5)} height={400} />
+        <OrderChart title={`Order - ${new Date().getFullYear()}`} data={stats.yearlyOrderData} maxValue={Math.max(...stats.yearlyOrderData.map(d => d.value), 20)} height={400} />
       </div>
 
       {/* Alerts and Button Row */}
@@ -194,7 +234,7 @@ export default function SellerDashboard() {
         <AlertCard icon={soldOutIcon} title="Product Sold Out" value={stats.soldOutProducts} accentColor="#ec4899" />
         <AlertCard icon={lowStockIcon} title="Product low on Stock" value={stats.lowStockProducts} accentColor="#eab308" />
       </div>
-      
+
       {/* View New Orders Table Section */}
       <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
         {/* Teal Header Bar */}
@@ -374,11 +414,10 @@ export default function SellerDashboard() {
             <button
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className={`p-2 border border-neutral-300 rounded ${
-                currentPage === 1
-                  ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                  : 'text-neutral-700 hover:bg-neutral-50'
-              }`}
+              className={`p-2 border border-neutral-300 rounded ${currentPage === 1
+                ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                : 'text-neutral-700 hover:bg-neutral-50'
+                }`}
               aria-label="Previous page"
             >
               <svg
@@ -400,11 +439,10 @@ export default function SellerDashboard() {
             <button
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
-              className={`p-2 border border-neutral-300 rounded ${
-                currentPage === totalPages
-                  ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                  : 'text-neutral-700 hover:bg-neutral-50'
-              }`}
+              className={`p-2 border border-neutral-300 rounded ${currentPage === totalPages
+                ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                : 'text-neutral-700 hover:bg-neutral-50'
+                }`}
               aria-label="Next page"
             >
               <svg

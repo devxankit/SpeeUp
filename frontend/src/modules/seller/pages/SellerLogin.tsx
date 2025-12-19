@@ -52,6 +52,8 @@ export default function SellerLogin() {
           userType: 'Seller',
           storeName: response.data.user.storeName,
           status: response.data.user.status,
+          address: response.data.user.address,
+          city: response.data.user.city,
         });
         // Navigate to seller dashboard only on success
         navigate('/seller', { replace: true });
@@ -86,7 +88,7 @@ export default function SellerLogin() {
         aria-label="Back"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
@@ -139,11 +141,10 @@ export default function SellerLogin() {
               <button
                 onClick={handleMobileLogin}
                 disabled={mobileNumber.length !== 10 || loading}
-                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-                  mobileNumber.length === 10 && !loading
+                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${mobileNumber.length === 10 && !loading
                     ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-md'
                     : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 {loading ? 'Sending...' : 'Continue'}
               </button>
@@ -219,8 +220,8 @@ export default function SellerLogin() {
             className="w-full py-2.5 rounded-lg font-semibold text-sm bg-gradient-to-r from-teal-600 to-green-600 text-white hover:from-teal-700 hover:to-green-700 transition-all shadow-md flex items-center justify-center gap-2"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
             </svg>
             <span>Login with</span>
             <span className="font-bold">SpeeUp</span>
@@ -233,9 +234,9 @@ export default function SellerLogin() {
               className="w-full py-2.5 rounded-lg font-semibold text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-all border border-neutral-300 flex items-center justify-center gap-2"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                <path d="M2 17l10 5 10-5"/>
-                <path d="M2 12l10 5 10-5"/>
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
               </svg>
               <span>Login to Admin Panel</span>
             </button>

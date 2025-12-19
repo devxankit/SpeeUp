@@ -1,34 +1,57 @@
-import { useState } from 'react';
+import { useState, useEffect } from "react";
+import { uploadDocument } from "../../../services/api/uploadService";
+import { validateDocumentFile } from "../../../utils/imageUpload";
+import {
+  createDeliveryBoy,
+  type CreateDeliveryBoyData,
+} from "../../../services/api/admin/adminDeliveryService";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function AdminAddDeliveryBoy() {
   const [formData, setFormData] = useState({
     // Personal & Contact Information
-    name: '',
-    mobile: '',
-    dateOfBirth: '',
-    password: '',
-    address: '',
-    
-    // Document Uploads
-    drivingLicense: null as File | null,
-    nationalIdentityCard: null as File | null,
-    
+    name: "",
+    mobile: "",
+    dateOfBirth: "",
+    password: "",
+    address: "",
+
+    // Document URLs (from Cloudinary)
+    drivingLicenseUrl: "",
+    nationalIdentityCardUrl: "",
+
     // Bank Account Information
-    bankAccountNumber: '',
-    bankName: '',
-    accountName: '',
-    ifscCode: '',
-    city: '',
-    pincode: '',
-    
+    bankAccountNumber: "",
+    bankName: "",
+    accountName: "",
+    ifscCode: "",
+    city: "",
+    pincode: "",
+
     // Other Information
-    otherPaymentInformation: '',
-    bonusType: '',
+    otherPaymentInformation: "",
+    bonusType: "",
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  // File state for UI
+  const { isAuthenticated, token } = useAuth();
+  const [drivingLicenseFile, setDrivingLicenseFile] = useState<File | null>(
+    null
+  );
+  const [nationalIdentityCardFile, setNationalIdentityCardFile] =
+    useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [uploadError, setUploadError] = useState<string>("");
+  const [submitError, setSubmitError] = useState<string>("");
+
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -36,46 +59,165 @@ export default function AdminAddDeliveryBoy() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
-    if (files && files[0]) {
-      setFormData(prev => ({
-        ...prev,
-        [name]: files[0],
-      }));
+    if (!files || !files[0]) return;
+
+    const file = files[0];
+    setUploadError("");
+
+    const validation = validateDocumentFile(file);
+    if (!validation.valid) {
+      setUploadError(validation.error || "Invalid document file");
+      return;
+    }
+
+    if (name === "drivingLicense") {
+      setDrivingLicenseFile(file);
+    } else if (name === "nationalIdentityCard") {
+      setNationalIdentityCardFile(file);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    alert('Delivery boy added successfully!');
+    setUploadError("");
+    setSubmitError("");
+
+    // Basic validation
+    if (
+      !formData.name ||
+      !formData.mobile ||
+      !formData.password ||
+      !formData.address ||
+      !formData.city ||
+      !formData.bankAccountNumber ||
+      !formData.bankName ||
+      !formData.accountName ||
+      !formData.ifscCode
+    ) {
+      setSubmitError("Please fill all required fields");
+      return;
+    }
+
+    if (!drivingLicenseFile || !nationalIdentityCardFile) {
+      setSubmitError(
+        "Both driving license and national identity card are required"
+      );
+      return;
+    }
+
+    setUploading(true);
+    setSubmitting(true);
+
+    try {
+      // Upload driving license
+      const drivingLicenseResult = await uploadDocument(
+        drivingLicenseFile,
+        "speeup/delivery/documents"
+      );
+      const drivingLicenseUrl = drivingLicenseResult.secureUrl;
+
+      // Upload national identity card
+      const nationalIdResult = await uploadDocument(
+        nationalIdentityCardFile,
+        "speeup/delivery/documents"
+      );
+      const nationalIdentityCardUrl = nationalIdResult.secureUrl;
+
+      // Prepare delivery boy data for API
+      const deliveryBoyData: CreateDeliveryBoyData = {
+        name: formData.name,
+        mobile: formData.mobile,
+        password: formData.password,
+        dateOfBirth: formData.dateOfBirth || undefined,
+        address: formData.address,
+        city: formData.city,
+        pincode: formData.pincode || undefined,
+        drivingLicense: drivingLicenseUrl,
+        nationalIdentityCard: nationalIdentityCardUrl,
+        bankAccountNumber: formData.bankAccountNumber,
+        bankName: formData.bankName,
+        accountName: formData.accountName,
+        ifscCode: formData.ifscCode,
+        otherPaymentInformation: formData.otherPaymentInformation || undefined,
+        bonusType: formData.bonusType || undefined,
+        commissionType: "Percentage" as const,
+        commission: 5, // Default commission
+        minAmount: 5,
+        maxAmount: 25,
+      };
+
+      // Create delivery boy via API
+      const response = await createDeliveryBoy(deliveryBoyData);
+
+      if (response.success) {
+        alert("Delivery boy added successfully!");
+
+        // Reset form
+        setFormData({
+          name: "",
+          mobile: "",
+          dateOfBirth: "",
+          password: "",
+          address: "",
+          drivingLicenseUrl: "",
+          nationalIdentityCardUrl: "",
+          bankAccountNumber: "",
+          bankName: "",
+          accountName: "",
+          ifscCode: "",
+          city: "",
+          pincode: "",
+          otherPaymentInformation: "",
+          bonusType: "",
+        });
+        setDrivingLicenseFile(null);
+        setNationalIdentityCardFile(null);
+      } else {
+        setSubmitError(response.message || "Failed to create delivery boy.");
+      }
+    } catch (error: any) {
+      console.error("Error creating delivery boy:", error);
+      setSubmitError(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to create delivery boy. Please try again."
+      );
+    } finally {
+      setUploading(false);
+      setSubmitting(false);
+    }
   };
 
   const cities = [
-    'Select City',
-    'Mumbai',
-    'Delhi',
-    'Bangalore',
-    'Hyderabad',
-    'Chennai',
-    'Kolkata',
-    'Pune',
+    "Select City",
+    "Mumbai",
+    "Delhi",
+    "Bangalore",
+    "Hyderabad",
+    "Chennai",
+    "Kolkata",
+    "Pune",
   ];
 
   const bonusTypes = [
-    'Fixed or Salaried',
-    'Fixed',
-    'Salaried',
-    'Commission Based',
+    "Fixed or Salaried",
+    "Fixed",
+    "Salaried",
+    "Commission Based",
   ];
 
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="bg-teal-600 px-4 sm:px-6 py-4 rounded-t-lg">
-        <h1 className="text-white text-xl sm:text-2xl font-semibold">Add Delivery Boy</h1>
+        <h1 className="text-white text-xl sm:text-2xl font-semibold">
+          Add Delivery Boy
+        </h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
         <div className="p-4 sm:p-6 space-y-6">
           {/* Personal & Contact Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
@@ -129,8 +271,7 @@ export default function AdminAddDeliveryBoy() {
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-neutral-400 pointer-events-none"
-                >
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-neutral-400 pointer-events-none">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                   <line x1="16" y1="2" x2="16" y2="6"></line>
                   <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -168,6 +309,11 @@ export default function AdminAddDeliveryBoy() {
           </div>
 
           {/* Document Upload Section */}
+          {(uploadError || submitError) && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {uploadError || submitError}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-bold text-neutral-800 mb-2">
@@ -184,17 +330,35 @@ export default function AdminAddDeliveryBoy() {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="text-neutral-400 mb-2"
-                  >
+                    className="text-neutral-400 mb-2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="17 8 12 3 7 8"></polyline>
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                   </svg>
                   <p className="mb-2 text-sm text-neutral-500">
-                    <span className="font-semibold">Upload Driving License</span>
+                    <span className="font-semibold">
+                      Upload Driving License
+                    </span>
                   </p>
-                  {formData.drivingLicense && (
-                    <p className="text-xs text-neutral-500">{formData.drivingLicense.name}</p>
+                  {drivingLicenseFile ? (
+                    <div className="space-y-1">
+                      <p className="text-xs text-neutral-600">
+                        {drivingLicenseFile.name}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setDrivingLicenseFile(null);
+                        }}
+                        className="text-xs text-red-600 hover:text-red-700">
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-neutral-400">
+                      Image/PDF, Max 10MB
+                    </p>
                   )}
                 </div>
                 <input
@@ -204,6 +368,7 @@ export default function AdminAddDeliveryBoy() {
                   required
                   className="hidden"
                   accept="image/*,.pdf"
+                  disabled={uploading}
                 />
               </label>
             </div>
@@ -222,17 +387,35 @@ export default function AdminAddDeliveryBoy() {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="text-neutral-400 mb-2"
-                  >
+                    className="text-neutral-400 mb-2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="17 8 12 3 7 8"></polyline>
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                   </svg>
                   <p className="mb-2 text-sm text-neutral-500">
-                    <span className="font-semibold">Upload National Identity Card</span>
+                    <span className="font-semibold">
+                      Upload National Identity Card
+                    </span>
                   </p>
-                  {formData.nationalIdentityCard && (
-                    <p className="text-xs text-neutral-500">{formData.nationalIdentityCard.name}</p>
+                  {nationalIdentityCardFile ? (
+                    <div className="space-y-1">
+                      <p className="text-xs text-neutral-600">
+                        {nationalIdentityCardFile.name}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setNationalIdentityCardFile(null);
+                        }}
+                        className="text-xs text-red-600 hover:text-red-700">
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-neutral-400">
+                      Image/PDF, Max 10MB
+                    </p>
                   )}
                 </div>
                 <input
@@ -242,6 +425,7 @@ export default function AdminAddDeliveryBoy() {
                   required
                   className="hidden"
                   accept="image/*,.pdf"
+                  disabled={uploading}
                 />
               </label>
             </div>
@@ -249,7 +433,9 @@ export default function AdminAddDeliveryBoy() {
 
           {/* Bank Account Information */}
           <div>
-            <h3 className="text-sm font-bold text-neutral-800 mb-4">Bank Account Information</h3>
+            <h3 className="text-sm font-bold text-neutral-800 mb-4">
+              Bank Account Information
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
               <div>
                 <label className="block text-sm font-bold text-neutral-800 mb-2">
@@ -312,10 +498,11 @@ export default function AdminAddDeliveryBoy() {
                   value={formData.city}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-4 py-2.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
-                >
+                  className="w-full px-4 py-2.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
                   {cities.map((city) => (
-                    <option key={city} value={city === 'Select City' ? '' : city}>
+                    <option
+                      key={city}
+                      value={city === "Select City" ? "" : city}>
                       {city}
                     </option>
                   ))}
@@ -362,10 +549,11 @@ export default function AdminAddDeliveryBoy() {
               value={formData.bonusType}
               onChange={handleInputChange}
               required
-              className="w-full px-4 py-2.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white"
-            >
+              className="w-full px-4 py-2.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
               {bonusTypes.map((type) => (
-                <option key={type} value={type === 'Fixed or Salaried' ? '' : type}>
+                <option
+                  key={type}
+                  value={type === "Fixed or Salaried" ? "" : type}>
                   {type}
                 </option>
               ))}
@@ -380,16 +568,24 @@ export default function AdminAddDeliveryBoy() {
         <div className="p-4 sm:p-6 flex justify-center">
           <button
             type="submit"
-            className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-3 rounded-lg text-base font-medium transition-colors"
-          >
-            Add Delivery Boy
+            disabled={uploading || submitting}
+            className={`px-8 py-3 rounded-lg text-base font-medium transition-colors ${
+              uploading || submitting
+                ? "bg-neutral-400 cursor-not-allowed text-white"
+                : "bg-teal-600 hover:bg-teal-700 text-white"
+            }`}>
+            {uploading
+              ? "Uploading Documents..."
+              : submitting
+              ? "Creating Delivery Boy..."
+              : "Add Delivery Boy"}
           </button>
         </div>
       </form>
 
       {/* Footer */}
       <div className="text-center text-sm text-neutral-500 py-4">
-        Copyright © 2025. Developed By{' '}
+        Copyright © 2025. Developed By{" "}
         <a href="#" className="text-teal-600 hover:text-teal-700">
           SpeeUp - 10 Minute App
         </a>
@@ -397,4 +593,3 @@ export default function AdminAddDeliveryBoy() {
     </div>
   );
 }
-

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface GoogleMapsAutocompleteProps {
   value: string;
-  onChange: (address: string, lat: number, lng: number, placeName: string) => void;
+  onChange: (address: string, lat: number, lng: number, placeName: string, components?: { city?: string; state?: string }) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -19,6 +19,11 @@ interface GoogleMaps {
         fields?: string[];
       }) => {
         getPlace: () => {
+          address_components?: Array<{
+            long_name: string;
+            short_name: string;
+            types: string[];
+          }>;
           formatted_address?: string;
           name?: string;
           geometry?: {
@@ -47,33 +52,20 @@ declare global {
 // Clean address by removing Plus Codes and unwanted identifiers
 const cleanAddress = (address: string): string => {
   if (!address) return address;
-  
-  // Remove Plus Codes more comprehensively:
-  // 1. Match Plus Code at start (with optional trailing delimiters)
-  // 2. Match Plus Code at end (with optional leading delimiters)
-  // 3. Match Plus Code in middle (with surrounding delimiters)
-  // 4. Match standalone Plus Code (with optional surrounding spaces)
-  
+
   const cleaned = address
-    // Remove Plus Code at start (with or without trailing delimiters)
     .replace(/^[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}([,\s]+)?/i, '')
-    // Remove Plus Code at end (with or without leading delimiters)
     .replace(/([,\s]+)?[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}$/i, '')
-    // Remove Plus Code in middle (with surrounding delimiters - most common case)
     .replace(/([,\s]+)[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}([,\s]+)/gi, (_match, before, after) => {
-      // Preserve one delimiter (prefer comma if available)
       return before.includes(',') || after.includes(',') ? ', ' : ' ';
     })
-    // Remove standalone Plus Code with spaces (fallback for any remaining)
     .replace(/\s+[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}\s+/gi, ' ')
-    // Remove any remaining Plus Codes that might be attached to words (no spaces)
     .replace(/\b[A-Z0-9]{2,4}\+[A-Z0-9]{2,4}\b/gi, '')
-    // Clean up multiple commas/spaces
     .replace(/,\s*,+/g, ',')
     .replace(/\s{2,}/g, ' ')
-    .replace(/^[,\s]+|[,\s]+$/g, '') // Remove leading/trailing commas and spaces
+    .replace(/^[,\s]+|[,\s]+$/g, '')
     .trim();
-  
+
   return cleaned;
 };
 
@@ -100,7 +92,7 @@ export default function GoogleMapsAutocomplete({
       const autocomplete = new Autocomplete(inputRef.current, {
         types: ['establishment', 'geocode'],
         componentRestrictions: { country: 'in' }, // Restrict to India
-        fields: ['formatted_address', 'geometry', 'name', 'place_id'],
+        fields: ['address_components', 'formatted_address', 'geometry', 'name', 'place_id'],
       });
 
       autocompleteRef.current = autocomplete;
@@ -116,11 +108,26 @@ export default function GoogleMapsAutocomplete({
         const lat = place.geometry.location.lat();
         const lng = place.geometry.location.lng();
         const rawAddress = place.formatted_address || place.name || value;
-        // Clean address to remove Plus Codes
         const address = cleanAddress(rawAddress);
         const placeName = place.name || address;
 
-        onChange(address, lat, lng, placeName);
+        // Extract city (locality) and state (administrative_area_level_1)
+        let city = '';
+        let state = '';
+
+        if (place.address_components) {
+          for (const component of place.address_components) {
+            if (component.types.includes('locality')) {
+              city = component.long_name;
+            } else if (component.types.includes('administrative_area_level_3') && !city) {
+              city = component.long_name;
+            } else if (component.types.includes('administrative_area_level_1')) {
+              state = component.long_name;
+            }
+          }
+        }
+
+        onChange(address, lat, lng, placeName, { city, state });
         setError('');
       });
     } catch (err: unknown) {
@@ -132,22 +139,19 @@ export default function GoogleMapsAutocomplete({
   // Load Google Maps API script
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    
+
     if (!apiKey) {
       setError('Google Maps API key is not configured');
       return;
     }
 
-    // Check if Google Maps is already loaded
     if (window.google && window.google.maps && window.google.maps.places) {
       setIsLoaded(true);
       initializeAutocomplete();
       return;
     }
 
-    // Check if script is already being loaded
     if (document.querySelector(`script[src*="maps.googleapis.com"]`)) {
-      // Wait for script to load
       const checkInterval = setInterval(() => {
         if (window.google && window.google.maps && window.google.maps.places) {
           clearInterval(checkInterval);
@@ -158,7 +162,6 @@ export default function GoogleMapsAutocomplete({
       return () => clearInterval(checkInterval);
     }
 
-    // Load Google Maps script
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
     script.async = true;
@@ -173,14 +176,12 @@ export default function GoogleMapsAutocomplete({
     document.head.appendChild(script);
 
     return () => {
-      // Cleanup
       if (autocompleteRef.current) {
         window.google?.maps?.event?.clearInstanceListeners?.(autocompleteRef.current);
       }
     };
   }, [initializeAutocomplete]);
 
-  // Re-initialize when input ref is ready and Google Maps is loaded
   useEffect(() => {
     if (isLoaded && inputRef.current && !autocompleteRef.current) {
       initializeAutocomplete();
@@ -194,7 +195,6 @@ export default function GoogleMapsAutocomplete({
         type="text"
         value={value}
         onChange={(e) => {
-          // Allow manual typing
           onChange(e.target.value, 0, 0, e.target.value);
         }}
         placeholder={placeholder}
@@ -212,7 +212,3 @@ export default function GoogleMapsAutocomplete({
     </div>
   );
 }
-
-
-
-

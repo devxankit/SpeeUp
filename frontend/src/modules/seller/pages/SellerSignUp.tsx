@@ -4,6 +4,8 @@ import { register, sendOTP, verifyOTP } from '../../../services/api/auth/sellerA
 import OTPInput from '../../../components/OTPInput';
 import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import { useAuth } from '../../../context/AuthContext';
+import { getCategories, Category } from '../../../services/api/categoryService';
+import { useEffect } from 'react';
 
 export default function SellerSignUp() {
   const navigate = useNavigate();
@@ -33,29 +35,19 @@ export default function SellerSignUp() {
   const [showOTP, setShowOTP] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
 
-  const categories = [
-    'Organic & Premium',
-    'Instant Food',
-    'Masala Oil',
-    'Pet Care',
-    'Sweet Tooth',
-    'Tea Coffee',
-    'Cleaning Essentials',
-    'Personal Care',
-  ];
-
-  const cities = [
-    'Select City',
-    'Mumbai',
-    'Delhi',
-    'Bangalore',
-    'Hyderabad',
-    'Chennai',
-    'Kolkata',
-    'Pune',
-    'Indore',
-  ];
+  useEffect(() => {
+    const fetchCats = async () => {
+      try {
+        const res = await getCategories();
+        if (res.success) setCategories(res.data);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    };
+    fetchCats();
+  }, []);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -92,7 +84,7 @@ export default function SellerSignUp() {
 
     // Validate required fields
     if (!formData.sellerName || !formData.mobile || !formData.email || !formData.password ||
-        !formData.storeName || formData.categories.length === 0 || !formData.address || !formData.city) {
+      !formData.storeName || formData.categories.length === 0 || !formData.address || !formData.city) {
       setError('Please fill all required fields (select at least one category)');
       return;
     }
@@ -162,6 +154,8 @@ export default function SellerSignUp() {
           userType: 'Seller',
           storeName: response.data.user.storeName,
           status: response.data.user.status,
+          address: response.data.user.address,
+          city: response.data.user.city,
         });
         // Navigate to seller dashboard
         navigate('/seller', { replace: true });
@@ -182,7 +176,7 @@ export default function SellerSignUp() {
         aria-label="Back"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
@@ -213,7 +207,7 @@ export default function SellerSignUp() {
               {/* Required Fields Section */}
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-neutral-700 border-b pb-2">Required Information</h3>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Seller Name <span className="text-red-500">*</span>
@@ -307,17 +301,17 @@ export default function SellerSignUp() {
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {categories.map((cat) => {
-                      const checked = formData.categories.includes(cat);
+                      const checked = formData.categories.includes(cat.name);
                       return (
-                        <label key={cat} className="flex items-center gap-2 text-sm text-neutral-700">
+                        <label key={cat._id} className="flex items-center gap-2 text-sm text-neutral-700">
                           <input
                             type="checkbox"
                             checked={checked}
-                            onChange={() => toggleCategory(cat)}
+                            onChange={() => toggleCategory(cat.name)}
                             disabled={loading}
                             className="h-4 w-4 text-teal-600 border-neutral-300 rounded focus:ring-teal-500"
                           />
-                          <span>{cat}</span>
+                          <span>{cat.name}</span>
                         </label>
                       );
                     })}
@@ -333,15 +327,14 @@ export default function SellerSignUp() {
                   </label>
                   <GoogleMapsAutocomplete
                     value={formData.searchLocation}
-                    onChange={(address, lat, lng, placeName) => {
+                    onChange={(address: string, lat: number, lng: number, placeName: string, components?: { city?: string; state?: string }) => {
                       setFormData(prev => ({
                         ...prev,
                         searchLocation: address,
                         latitude: lat.toString(),
                         longitude: lng.toString(),
                         address: address,
-                        // Extract city from address if possible
-                        city: placeName || address.split(',')[0] || '',
+                        city: components?.city || prev.city,
                       }));
                     }}
                     placeholder="Search and select your store location..."
@@ -375,30 +368,14 @@ export default function SellerSignUp() {
                 <input type="hidden" name="latitude" value={formData.latitude} />
                 <input type="hidden" name="longitude" value={formData.longitude} />
 
-                {/* Legacy city select - keeping for backward compatibility but hidden */}
-                <div className="hidden">
-                  <select
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-                    disabled={loading}
-                  >
-                    {cities.map((city) => (
-                      <option key={city} value={city === 'Select City' ? '' : city}>
-                        {city}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+
 
               </div>
 
               {/* Optional Fields Section */}
               <div className="space-y-4 pt-4 border-t">
                 <h3 className="text-sm font-semibold text-neutral-700 border-b pb-2">Optional Information</h3>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-neutral-700 mb-2">PAN Card</label>
@@ -463,11 +440,10 @@ export default function SellerSignUp() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-                  !loading
-                    ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-md'
-                    : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
-                }`}
+                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${!loading
+                  ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-md'
+                  : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                  }`}
               >
                 {loading ? 'Creating Account...' : 'Sign Up'}
               </button>

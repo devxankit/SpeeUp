@@ -10,79 +10,33 @@ interface SpiritualProduct extends Product {
   reviews: number;
 }
 
-// Sample spiritual products - you can replace with actual products from your data
-const spiritualProducts: SpiritualProduct[] = [
-  {
-    id: 'mangaldeep-incense',
-    name: 'Mangaldeep 3 in 1 Scent Incense Sticks / Agarbatti',
-    pack: 'Assorted',
-    price: 118,
-    mrp: 125,
-    rating: 4.5,
-    reviews: 5857,
-    imageUrl: '/assets/shopbystore/spiritual/spiritualheader.png',
-    categoryId: 'spiritual',
-  },
-  {
-    id: 'kuber-brass-diya',
-    name: 'Kuber Brass Diya by Shubhkart',
-    pack: '2.5 x 5.2 cm',
-    price: 128,
-    mrp: 149,
-    rating: 4.5,
-    reviews: 935,
-    imageUrl: '/assets/shopbystore/spiritual/diya.jpg',
-    categoryId: 'spiritual',
-  },
-  {
-    id: 'mitti-kalash',
-    name: 'Mitti Kalash / Matka by Shubhika',
-    pack: '7" Light Brown',
-    price: 99,
-    mrp: 125,
-    rating: 3.5,
-    reviews: 1170,
-    imageUrl: '/assets/shopbystore/spiritual/kalash.jpg',
-    categoryId: 'spiritual',
-  },
-  {
-    id: 'laddu-gopal-dress',
-    name: 'Peacock Design Stones Studded Laddu Gopal Dress',
-    pack: 'Size-0-1 Satin',
-    price: 299,
-    mrp: 399,
-    rating: 4.0,
-    reviews: 245,
-    imageUrl: '/assets/shopbystore/spiritual/dress.jpg',
-    categoryId: 'spiritual',
-  },
-  {
-    id: 'kalnirnaya-calendar',
-    name: 'Kalnirnaya Hindi Calendar / Panchang 2026 - Corepac',
-    pack: 'Calender',
-    price: 89,
-    mrp: 120,
-    rating: 4.5,
-    reviews: 812,
-    imageUrl: '/assets/shopbystore/spiritual/calendar.jpg',
-    categoryId: 'spiritual',
-  },
-  {
-    id: 'om-shanti-camphor',
-    name: 'Om Shanti Bhimseni Camphor / Kapur by Cycle',
-    pack: '50 g 4"x3"x3"',
-    price: 45,
-    mrp: 55,
-    rating: 4.5,
-    reviews: 1292,
-    imageUrl: '/assets/shopbystore/spiritual/camphor.jpg',
-    categoryId: 'spiritual',
-  },
-];
+// Product type definition is already imported or can be used from domain
+import { useEffect, useState } from 'react';
+import { getProducts } from '../../services/api/customerProductService';
 
 export default function SpiritualStore() {
   const navigate = useNavigate();
   const { cart, addToCart, updateQuantity } = useCart();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        // Assuming 'spiritual' is the correct category ID in your database
+        const response = await getProducts({ category: 'spiritual' });
+        // Correctly casting or mapping the response data
+        setProducts(response.data as unknown as Product[]);
+      } catch (error) {
+        console.error('Failed to fetch spiritual products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   return (
     <div className="min-h-screen bg-white">
@@ -153,201 +107,206 @@ export default function SpiritualStore() {
       <div className="px-4 py-4">
         <h3 className="text-lg font-semibold text-neutral-900 mb-4">Top buys</h3>
 
-        <div className="grid grid-cols-3 gap-2">
-          {spiritualProducts.map((product) => {
-            const cartItem = cart.items.find((item) => item.product.id === product.id);
-            const inCartQty = cartItem?.quantity || 0;
-            const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
+        {loading ? (
+          <div className="flex justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            {products.map((product) => {
+              const cartItem = cart.items.find((item) => item.product.id === product.id);
+              const inCartQty = cartItem?.quantity || 0;
+              const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
 
-            return (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className="bg-white rounded-lg overflow-hidden flex flex-col relative"
-                style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)' }}
-              >
-                {/* Product Image */}
-                <Link to={`/product/${product.id}`} className="relative block">
-                  <div className="w-full h-20 bg-neutral-100 flex items-center justify-center overflow-hidden relative">
-                    {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-full h-full object-contain"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-2xl">
-                        {product.name.charAt(0).toUpperCase()}
+              return (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="bg-white rounded-lg overflow-hidden flex flex-col relative"
+                  style={{ boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)' }}
+                >
+                  {/* Product Image */}
+                  <Link to={`/product/${product.id}`} className="relative block">
+                    <div className="w-full h-20 bg-neutral-100 flex items-center justify-center overflow-hidden relative">
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-2xl">
+                          {product.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+
+                      {/* Heart Icon */}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
+                        aria-label="Add to wishlist"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
+                          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    </div>
+                  </Link>
+
+                  {/* Product Details */}
+                  <div className="p-1.5 flex-1 flex flex-col" style={{ background: '#fef9e7' }}>
+                    {/* Pack/Tags */}
+                    <div className="text-[8px] text-neutral-600 mb-0.5 line-clamp-1">
+                      {product.pack}
+                    </div>
+
+                    {/* Product Name */}
+                    <Link to={`/product/${product.id}`} className="mb-0.5">
+                      <h3 className="text-[10px] font-bold text-neutral-900 line-clamp-2 leading-tight">
+                        {product.name}
+                      </h3>
+                    </Link>
+
+                    {/* Rating */}
+                    <div className="flex items-center gap-0.5 mb-0.5">
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, i) => (
+                          <svg
+                            key={i}
+                            width="8"
+                            height="8"
+                            viewBox="0 0 24 24"
+                            fill={i < Math.floor(product.rating || 0) ? '#fbbf24' : '#e5e7eb'}
+                            xmlns="http://www.w3.org/2000/svg"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                        ))}
+                      </div>
+                      <span className="text-[8px] text-neutral-500">({(product.reviews || 0).toLocaleString()})</span>
+                    </div>
+
+                    {/* Delivery Time */}
+                    <div className="text-[9px] text-neutral-600 mb-0.5">
+                      15 MINS
+                    </div>
+
+                    {/* Discount */}
+                    {discount > 0 && (
+                      <div className="text-[9px] text-blue-600 font-semibold mb-0.5">
+                        {discount}% OFF
                       </div>
                     )}
 
-                    {/* Heart Icon */}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
-                      aria-label="Add to wishlist"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
-                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
-                  </div>
-                </Link>
-
-                {/* Product Details */}
-                <div className="p-1.5 flex-1 flex flex-col" style={{ background: '#fef9e7' }}>
-                  {/* Pack/Tags */}
-                  <div className="text-[8px] text-neutral-600 mb-0.5 line-clamp-1">
-                    {product.pack}
-                  </div>
-
-                  {/* Product Name */}
-                  <Link to={`/product/${product.id}`} className="mb-0.5">
-                    <h3 className="text-[10px] font-bold text-neutral-900 line-clamp-2 leading-tight">
-                      {product.name}
-                    </h3>
-                  </Link>
-
-                  {/* Rating */}
-                  <div className="flex items-center gap-0.5 mb-0.5">
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <svg
-                          key={i}
-                          width="8"
-                          height="8"
-                          viewBox="0 0 24 24"
-                          fill={i < Math.floor(product.rating) ? '#fbbf24' : '#e5e7eb'}
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                        </svg>
-                      ))}
-                    </div>
-                    <span className="text-[8px] text-neutral-500">({product.reviews.toLocaleString()})</span>
-                  </div>
-
-                  {/* Delivery Time */}
-                  <div className="text-[9px] text-neutral-600 mb-0.5">
-                    15 MINS
-                  </div>
-
-                  {/* Discount */}
-                  {discount > 0 && (
-                    <div className="text-[9px] text-blue-600 font-semibold mb-0.5">
-                      {discount}% OFF
-                    </div>
-                  )}
-
-                  {/* Price */}
-                  <div className="mb-1">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-[13px] font-bold text-neutral-900">
-                        ₹{product.price.toLocaleString('en-IN')}
-                      </span>
-                      {product.mrp && (
-                        <span className="text-[10px] text-neutral-400 line-through">
-                          ₹{product.mrp.toLocaleString('en-IN')}
+                    {/* Price */}
+                    <div className="mb-1">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-[13px] font-bold text-neutral-900">
+                          ₹{product.price.toLocaleString('en-IN')}
                         </span>
-                      )}
+                        {product.mrp && (
+                          <span className="text-[10px] text-neutral-400 line-through">
+                            ₹{product.mrp.toLocaleString('en-IN')}
+                          </span>
+                        )}
+                      </div>
                     </div>
+
+                    {/* ADD button or Quantity stepper */}
+                    <AnimatePresence mode="wait">
+                      {inCartQty === 0 ? (
+                        <motion.div
+                          key="add-button"
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex justify-center w-full"
+                        >
+                          <Button
+                            variant="outline"
+                            size="default"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(product);
+                            }}
+                            className="w-full border-2 border-green-600 text-green-600 bg-transparent hover:bg-green-50 rounded-full font-semibold text-[10px] h-7 px-2"
+                          >
+                            ADD
+                          </Button>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="stepper"
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.2 }}
+                          className="flex items-center justify-center gap-1.5 bg-white border-2 border-green-600 rounded-full px-1.5 py-1 w-full"
+                        >
+                          <motion.div whileTap={{ scale: 0.9 }}>
+                            <Button
+                              variant="default"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateQuantity(product.id, inCartQty - 1);
+                              }}
+                              className="w-6 h-6 p-0 text-xs"
+                              aria-label="Decrease quantity"
+                            >
+                              −
+                            </Button>
+                          </motion.div>
+                          <motion.span
+                            key={inCartQty}
+                            initial={{ scale: 1.2, y: -4 }}
+                            animate={{ scale: 1, y: 0 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+                            className="text-xs font-bold text-green-600 min-w-[1rem] text-center"
+                          >
+                            {inCartQty}
+                          </motion.span>
+                          <motion.div whileTap={{ scale: 0.9 }}>
+                            <Button
+                              variant="default"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateQuantity(product.id, inCartQty + 1);
+                              }}
+                              className="w-6 h-6 p-0 text-xs"
+                              aria-label="Increase quantity"
+                            >
+                              +
+                            </Button>
+                          </motion.div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Bottom Link */}
+                    <Link
+                      to={`/category/spiritual`}
+                      className="w-full bg-green-100 text-green-700 text-[8px] font-medium py-0.5 rounded-lg flex items-center justify-between px-1 hover:bg-green-200 transition-colors mt-1"
+                    >
+                      <span>See more like this</span>
+                      <svg width="6" height="6" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M0 0L8 4L0 8Z" fill="#16a34a" />
+                      </svg>
+                    </Link>
                   </div>
-
-                  {/* ADD button or Quantity stepper */}
-                  <AnimatePresence mode="wait">
-                    {inCartQty === 0 ? (
-                      <motion.div
-                        key="add-button"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        transition={{ duration: 0.2 }}
-                        className="flex justify-center w-full"
-                      >
-                        <Button
-                          variant="outline"
-                          size="default"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToCart(product);
-                          }}
-                          className="w-full border-2 border-green-600 text-green-600 bg-transparent hover:bg-green-50 rounded-full font-semibold text-[10px] h-7 px-2"
-                        >
-                          ADD
-                        </Button>
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="stepper"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        transition={{ duration: 0.2 }}
-                        className="flex items-center justify-center gap-1.5 bg-white border-2 border-green-600 rounded-full px-1.5 py-1 w-full"
-                      >
-                        <motion.div whileTap={{ scale: 0.9 }}>
-                          <Button
-                            variant="default"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateQuantity(product.id, inCartQty - 1);
-                            }}
-                            className="w-6 h-6 p-0 text-xs"
-                            aria-label="Decrease quantity"
-                          >
-                            −
-                          </Button>
-                        </motion.div>
-                        <motion.span
-                          key={inCartQty}
-                          initial={{ scale: 1.2, y: -4 }}
-                          animate={{ scale: 1, y: 0 }}
-                          transition={{ type: 'spring', stiffness: 500, damping: 15 }}
-                          className="text-xs font-bold text-green-600 min-w-[1rem] text-center"
-                        >
-                          {inCartQty}
-                        </motion.span>
-                        <motion.div whileTap={{ scale: 0.9 }}>
-                          <Button
-                            variant="default"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateQuantity(product.id, inCartQty + 1);
-                            }}
-                            className="w-6 h-6 p-0 text-xs"
-                            aria-label="Increase quantity"
-                          >
-                            +
-                          </Button>
-                        </motion.div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Bottom Link */}
-                  <Link
-                    to={`/category/spiritual`}
-                    className="w-full bg-green-100 text-green-700 text-[8px] font-medium py-0.5 rounded-lg flex items-center justify-between px-1 hover:bg-green-200 transition-colors mt-1"
-                  >
-                    <span>See more like this</span>
-                    <svg width="6" height="6" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M0 0L8 4L0 8Z" fill="#16a34a" />
-                    </svg>
-                  </Link>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
 }
-

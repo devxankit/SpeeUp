@@ -1,60 +1,76 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { register, sendOTP, verifyOTP } from '../../../services/api/auth/deliveryAuthService';
-import OTPInput from '../../../components/OTPInput';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  register,
+  sendOTP,
+  verifyOTP,
+} from "../../../services/api/auth/deliveryAuthService";
+import { uploadDocument } from "../../../services/api/uploadService";
+import { validateDocumentFile } from "../../../utils/imageUpload";
+import OTPInput from "../../../components/OTPInput";
 
 export default function DeliverySignUp() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    name: '',
-    mobile: '',
-    email: '',
-    dateOfBirth: '',
-    password: '',
-    address: '',
-    city: '',
-    pincode: '',
-    drivingLicense: null as File | null,
-    nationalIdentityCard: null as File | null,
-    accountName: '',
-    bankName: '',
-    accountNumber: '',
-    ifscCode: '',
-    bonusType: '',
+    name: "",
+    mobile: "",
+    email: "",
+    dateOfBirth: "",
+    password: "",
+    address: "",
+    city: "",
+    pincode: "",
+    drivingLicenseUrl: "",
+    nationalIdentityCardUrl: "",
+    accountName: "",
+    bankName: "",
+    accountNumber: "",
+    ifscCode: "",
+    bonusType: "",
   });
+
+  // File state for UI
+  const [drivingLicenseFile, setDrivingLicenseFile] = useState<File | null>(
+    null
+  );
+  const [nationalIdentityCardFile, setNationalIdentityCardFile] =
+    useState<File | null>(null);
+  const [uploadingDocs, setUploadingDocs] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const cities = [
-    'Select City',
-    'Mumbai',
-    'Delhi',
-    'Bangalore',
-    'Hyderabad',
-    'Chennai',
-    'Kolkata',
-    'Pune',
-    'Indore',
+    "Select City",
+    "Mumbai",
+    "Delhi",
+    "Bangalore",
+    "Hyderabad",
+    "Chennai",
+    "Kolkata",
+    "Pune",
+    "Indore",
   ];
 
   const bonusTypes = [
-    'Select Bonus Type',
-    'Fixed or Salaried',
-    'Fixed',
-    'Salaried',
-    'Commission Based',
+    "Select Bonus Type",
+    "Fixed or Salaried",
+    "Fixed",
+    "Salaried",
+    "Commission Based",
   ];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    if (name === 'mobile') {
-      setFormData(prev => ({
+    if (name === "mobile") {
+      setFormData((prev) => ({
         ...prev,
-        [name]: value.replace(/\D/g, '').slice(0, 10),
+        [name]: value.replace(/\D/g, "").slice(0, 10),
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         [name]: value,
       }));
@@ -63,40 +79,79 @@ export default function DeliverySignUp() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
-    if (files && files[0]) {
-      setFormData(prev => ({
-        ...prev,
-        [name]: files[0],
-      }));
+    if (!files || !files[0]) return;
+
+    const file = files[0];
+    const validation = validateDocumentFile(file);
+    if (!validation.valid) {
+      setError(validation.error || "Invalid document file");
+      return;
     }
+
+    if (name === "drivingLicense") {
+      setDrivingLicenseFile(file);
+    } else if (name === "nationalIdentityCard") {
+      setNationalIdentityCardFile(file);
+    }
+    setError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate required fields
-    if (!formData.name || !formData.mobile || !formData.email || !formData.password ||
-        !formData.address || !formData.city) {
-      setError('Please fill all required fields');
+    if (
+      !formData.name ||
+      !formData.mobile ||
+      !formData.email ||
+      !formData.password ||
+      !formData.address ||
+      !formData.city
+    ) {
+      setError("Please fill all required fields");
       return;
     }
 
     if (formData.mobile.length !== 10) {
-      setError('Please enter a valid 10-digit mobile number');
+      setError("Please enter a valid 10-digit mobile number");
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError("Password must be at least 6 characters");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      // For file uploads, we'll handle them later with cloud storage
-      // For now, just pass empty strings as placeholders
+      // Upload documents if provided
+      let drivingLicenseUrl = formData.drivingLicenseUrl;
+      let nationalIdentityCardUrl = formData.nationalIdentityCardUrl;
+
+      if (drivingLicenseFile || nationalIdentityCardFile) {
+        setUploadingDocs(true);
+
+        if (drivingLicenseFile) {
+          const drivingLicenseResult = await uploadDocument(
+            drivingLicenseFile,
+            "speeup/delivery/documents"
+          );
+          drivingLicenseUrl = drivingLicenseResult.secureUrl;
+        }
+
+        if (nationalIdentityCardFile) {
+          const nationalIdResult = await uploadDocument(
+            nationalIdentityCardFile,
+            "speeup/delivery/documents"
+          );
+          nationalIdentityCardUrl = nationalIdResult.secureUrl;
+        }
+
+        setUploadingDocs(false);
+      }
+
       const response = await register({
         name: formData.name,
         mobile: formData.mobile,
@@ -106,8 +161,8 @@ export default function DeliverySignUp() {
         address: formData.address,
         city: formData.city,
         pincode: formData.pincode || undefined,
-        drivingLicense: undefined, // Will be uploaded separately later
-        nationalIdentityCard: undefined, // Will be uploaded separately later
+        drivingLicense: drivingLicenseUrl || undefined,
+        nationalIdentityCard: nationalIdentityCardUrl || undefined,
         accountName: formData.accountName || undefined,
         bankName: formData.bankName || undefined,
         accountNumber: formData.accountNumber || undefined,
@@ -117,18 +172,23 @@ export default function DeliverySignUp() {
 
       if (response.success) {
         // Clear token from registration (we'll get it after OTP verification)
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("userData");
         // Registration successful, now send OTP for verification
         try {
           await sendOTP(formData.mobile);
           setShowOTP(true);
         } catch (otpErr: any) {
-          setError(otpErr.response?.data?.message || 'Registration successful but failed to send OTP.');
+          setError(
+            otpErr.response?.data?.message ||
+              "Registration successful but failed to send OTP."
+          );
         }
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      setError(
+        err.response?.data?.message || "Registration failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -136,15 +196,15 @@ export default function DeliverySignUp() {
 
   const handleOTPComplete = async (otp: string) => {
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       const response = await verifyOTP(formData.mobile, otp);
       if (response.success) {
-        navigate('/delivery');
+        navigate("/delivery");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
+      setError(err.response?.data?.message || "Invalid OTP. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -156,17 +216,31 @@ export default function DeliverySignUp() {
       <button
         onClick={() => navigate(-1)}
         className="absolute top-4 left-4 z-10 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-neutral-50 transition-colors"
-        aria-label="Back"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        aria-label="Back">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M15 18L9 12L15 6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </button>
 
       {/* Sign Up Card */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Header Section */}
-        <div className="px-6 py-4 text-center border-b border-green-700" style={{ backgroundColor: 'rgb(21 178 74 / var(--tw-bg-opacity, 1))' }}>
+        <div
+          className="px-6 py-4 text-center border-b border-green-700"
+          style={{
+            backgroundColor: "rgb(21 178 74 / var(--tw-bg-opacity, 1))",
+          }}>
           <div className="mb-0 -mt-4">
             <img
               src="/assets/speeup2.jpeg"
@@ -174,12 +248,23 @@ export default function DeliverySignUp() {
               className="h-44 w-full max-w-xs mx-auto object-fill object-bottom"
             />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-1 -mt-12">Delivery Sign Up</h1>
-          <p className="text-green-50 text-sm -mt-2">Create your delivery partner account</p>
+          <h1 className="text-2xl font-bold text-white mb-1 -mt-12">
+            Delivery Sign Up
+          </h1>
+          <p className="text-green-50 text-sm -mt-2">
+            Create your delivery partner account
+          </p>
         </div>
 
         {/* Sign Up Form */}
-        <div className="p-6 space-y-4 delivery-signup-form" style={{ maxHeight: '70vh', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div
+          className="p-6 space-y-4 delivery-signup-form"
+          style={{
+            maxHeight: "70vh",
+            overflowY: "auto",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}>
           <style>{`
             .delivery-signup-form::-webkit-scrollbar {
               display: none;
@@ -189,8 +274,10 @@ export default function DeliverySignUp() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Personal Information */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-neutral-700 border-b pb-2">Personal Information</h3>
-                
+                <h3 className="text-sm font-semibold text-neutral-700 border-b pb-2">
+                  Personal Information
+                </h3>
+
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Name <span className="text-red-500">*</span>
@@ -302,10 +389,11 @@ export default function DeliverySignUp() {
                     onChange={handleInputChange}
                     required
                     className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-                    disabled={loading}
-                  >
+                    disabled={loading}>
                     {cities.map((city) => (
-                      <option key={city} value={city === 'Select City' ? '' : city}>
+                      <option
+                        key={city}
+                        value={city === "Select City" ? "" : city}>
                         {city}
                       </option>
                     ))}
@@ -330,10 +418,14 @@ export default function DeliverySignUp() {
 
               {/* Bank Information */}
               <div className="space-y-4 pt-4 border-t">
-                <h3 className="text-sm font-semibold text-neutral-700 border-b pb-2">Bank Account Information (Optional)</h3>
-                
+                <h3 className="text-sm font-semibold text-neutral-700 border-b pb-2">
+                  Bank Account Information (Optional)
+                </h3>
+
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Account Name</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Account Name
+                  </label>
                   <input
                     type="text"
                     name="accountName"
@@ -346,7 +438,9 @@ export default function DeliverySignUp() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Bank Name</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Bank Name
+                  </label>
                   <input
                     type="text"
                     name="bankName"
@@ -359,7 +453,9 @@ export default function DeliverySignUp() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Account Number</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Account Number
+                  </label>
                   <input
                     type="text"
                     name="accountNumber"
@@ -372,7 +468,9 @@ export default function DeliverySignUp() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">IFSC Code</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    IFSC Code
+                  </label>
                   <input
                     type="text"
                     name="ifscCode"
@@ -385,16 +483,19 @@ export default function DeliverySignUp() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Bonus Type</label>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Bonus Type
+                  </label>
                   <select
                     name="bonusType"
                     value={formData.bonusType}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-                    disabled={loading}
-                  >
+                    disabled={loading}>
                     {bonusTypes.map((type) => (
-                      <option key={type} value={type === 'Select Bonus Type' ? '' : type}>
+                      <option
+                        key={type}
+                        value={type === "Select Bonus Type" ? "" : type}>
                         {type}
                       </option>
                     ))}
@@ -404,30 +505,50 @@ export default function DeliverySignUp() {
 
               {/* Documents Section */}
               <div className="space-y-4 pt-4 border-t">
-                <h3 className="text-sm font-semibold text-neutral-700 border-b pb-2">Documents (Optional - Can be uploaded later)</h3>
-                
+                <h3 className="text-sm font-semibold text-neutral-700 border-b pb-2">
+                  Documents (Optional - Can be uploaded later)
+                </h3>
+
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Driving License</label>
-                  <input
-                    type="file"
-                    name="drivingLicense"
-                    onChange={handleFileChange}
-                    accept="image/*,.pdf"
-                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-                    disabled={loading}
-                  />
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Driving License
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      name="drivingLicense"
+                      onChange={handleFileChange}
+                      accept="image/*,.pdf"
+                      className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                      disabled={loading || uploadingDocs}
+                    />
+                    {drivingLicenseFile && (
+                      <p className="text-xs text-neutral-600">
+                        {drivingLicenseFile.name}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">National Identity Card</label>
-                  <input
-                    type="file"
-                    name="nationalIdentityCard"
-                    onChange={handleFileChange}
-                    accept="image/*,.pdf"
-                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-                    disabled={loading}
-                  />
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    National Identity Card
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      name="nationalIdentityCard"
+                      onChange={handleFileChange}
+                      accept="image/*,.pdf"
+                      className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                      disabled={loading || uploadingDocs}
+                    />
+                    {nationalIdentityCardFile && (
+                      <p className="text-xs text-neutral-600">
+                        {nationalIdentityCardFile.name}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -439,25 +560,27 @@ export default function DeliverySignUp() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || uploadingDocs}
                 className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-                  !loading
-                    ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-md'
-                    : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
-                }`}
-              >
-                {loading ? 'Creating Account...' : 'Sign Up'}
+                  !loading && !uploadingDocs
+                    ? "bg-teal-600 text-white hover:bg-teal-700 shadow-md"
+                    : "bg-neutral-300 text-neutral-500 cursor-not-allowed"
+                }`}>
+                {uploadingDocs
+                  ? "Uploading Documents..."
+                  : loading
+                  ? "Creating Account..."
+                  : "Sign Up"}
               </button>
 
               {/* Login Link */}
               <div className="text-center pt-2 border-t border-neutral-200">
                 <p className="text-sm text-neutral-600">
-                  Already have a delivery partner account?{' '}
+                  Already have a delivery partner account?{" "}
                   <button
                     type="button"
-                    onClick={() => navigate('/delivery/login')}
-                    className="text-teal-600 hover:text-teal-700 font-semibold"
-                  >
+                    onClick={() => navigate("/delivery/login")}
+                    className="text-teal-600 hover:text-teal-700 font-semibold">
                     Login
                   </button>
                 </p>
@@ -470,7 +593,9 @@ export default function DeliverySignUp() {
                 <p className="text-sm text-neutral-600 mb-2">
                   Enter the 6-digit OTP sent to
                 </p>
-                <p className="text-sm font-semibold text-neutral-800">+91 {formData.mobile}</p>
+                <p className="text-sm font-semibold text-neutral-800">
+                  +91 {formData.mobile}
+                </p>
               </div>
 
               <OTPInput onComplete={handleOTPComplete} disabled={loading} />
@@ -485,29 +610,29 @@ export default function DeliverySignUp() {
                 <button
                   onClick={() => {
                     setShowOTP(false);
-                    setError('');
+                    setError("");
                   }}
                   disabled={loading}
-                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors border border-neutral-300"
-                >
+                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors border border-neutral-300">
                   Back
                 </button>
                 <button
                   onClick={async () => {
                     setLoading(true);
-                    setError('');
+                    setError("");
                     try {
                       await sendOTP(formData.mobile);
                     } catch (err: any) {
-                      setError(err.response?.data?.message || 'Failed to resend OTP.');
+                      setError(
+                        err.response?.data?.message || "Failed to resend OTP."
+                      );
                     } finally {
                       setLoading(false);
                     }
                   }}
                   disabled={loading}
-                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-teal-600 text-white hover:bg-teal-700 transition-colors"
-                >
-                  {loading ? 'Sending...' : 'Resend OTP'}
+                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-teal-600 text-white hover:bg-teal-700 transition-colors">
+                  {loading ? "Sending..." : "Resend OTP"}
                 </button>
               </div>
             </div>
@@ -522,4 +647,3 @@ export default function DeliverySignUp() {
     </div>
   );
 }
-

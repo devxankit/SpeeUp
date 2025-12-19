@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface SubMenuItem {
   label: string;
@@ -20,60 +20,49 @@ interface SellerSidebarProps {
 }
 
 const menuItems: MenuItem[] = [
-  { label: 'Dashboard', path: '/seller' },
-  { label: 'Orders', path: '/seller/orders' },
-  { label: 'POS Orders', path: '/seller/pos-orders' },
-  { label: 'Category', path: '/seller/category' },
-  { label: 'SubCategory', path: '/seller/subcategory' },
-  { 
-    label: 'Product', 
-    path: '/seller/product', 
+  { label: "Dashboard", path: "/seller" },
+  { label: "Orders", path: "/seller/orders" },
+  { label: "Category", path: "/seller/category" },
+  { label: "SubCategory", path: "/seller/subcategory" },
+  {
+    label: "Product",
+    path: "/seller/product",
     hasSubmenu: true,
     submenuItems: [
       {
-        label: 'Add new Product',
-        path: '/seller/product/add',
+        label: "Add new Product",
+        path: "/seller/product/add",
         icon: (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round">
             <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
             <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
             <line x1="12" y1="22.08" x2="12" y2="12"></line>
             <line x1="16" y1="12" x2="8" y2="12"></line>
             <line x1="12" y1="16" x2="12" y2="8"></line>
           </svg>
-        )
+        ),
       },
       {
-        label: 'Bulk Import',
-        path: '/seller/product/bulk-import',
+        label: "Taxes",
+        path: "/seller/product/taxes",
         icon: (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="12" y1="18" x2="12" y2="12"></line>
-            <polyline points="9 15 12 12 15 15"></polyline>
-          </svg>
-        )
-      },
-      {
-        label: 'Bulk Update',
-        path: '/seller/product/bulk-update',
-        icon: (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <path d="M12 18a6 6 0 0 0 0-12 6 6 0 0 0-6 6"></path>
-            <polyline points="6 12 4 14 6 16"></polyline>
-            <path d="M12 6a6 6 0 0 0 0 12 6 6 0 0 0 6-6"></path>
-            <polyline points="18 12 20 10 18 8"></polyline>
-          </svg>
-        )
-      },
-      {
-        label: 'Taxes',
-        path: '/seller/product/taxes',
-        icon: (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round">
             {/* Three stacked coin piles */}
             <ellipse cx="12" cy="18" rx="4" ry="2"></ellipse>
             <ellipse cx="12" cy="14" rx="3.5" ry="1.8"></ellipse>
@@ -83,79 +72,81 @@ const menuItems: MenuItem[] = [
             <line x1="7" y1="7" x2="11" y2="11" strokeWidth="2"></line>
             <circle cx="15" cy="11" r="1" fill="currentColor"></circle>
           </svg>
-        )
+        ),
       },
       {
-        label: 'Product List',
-        path: '/seller/product/list',
+        label: "Product List",
+        path: "/seller/product/list",
         icon: (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             <polyline points="14 2 14 8 20 8"></polyline>
             {/* Two checkmarks */}
             <polyline points="9 12 11 14 15 10"></polyline>
             <polyline points="9 16 11 18 15 14"></polyline>
           </svg>
-        )
+        ),
       },
       {
-        label: 'Stock Management',
-        path: '/seller/product/stock',
+        label: "Stock Management",
+        path: "/seller/product/stock",
         icon: (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round">
             <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
             <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
             <line x1="12" y1="22.08" x2="12" y2="12"></line>
           </svg>
-        )
-      }
-    ]
+        ),
+      },
+    ],
   },
-  { label: 'Wallet Transaction', path: '/seller/wallet-transaction' },
-  { label: 'Withdrawl request', path: '/seller/withdrawal-request' },
-  { 
-    label: 'Reports', 
-    path: '/seller/reports', 
+  {
+    label: "Wallet",
+    path: "/seller/wallet",
+  },
+  {
+    label: "Reports",
+    path: "/seller/reports",
     hasSubmenu: true,
     submenuItems: [
       {
-        label: 'Product Selling Report',
-        path: '/seller/reports/product-selling',
+        label: "Sales Report",
+        path: "/seller/reports/sales",
         icon: (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round">
             <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
             <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
             <line x1="12" y1="22.08" x2="12" y2="12"></line>
           </svg>
-        )
+        ),
       },
-      {
-        label: 'Sales Report',
-        path: '/seller/reports/sales',
-        icon: (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-            <line x1="12" y1="22.08" x2="12" y2="12"></line>
-          </svg>
-        )
-      },
-      {
-        label: 'POS Report',
-        path: '/seller/reports/pos',
-        icon: (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
-            <line x1="6" y1="8" x2="18" y2="8"></line>
-            <line x1="6" y1="12" x2="18" y2="12"></line>
-            <line x1="6" y1="16" x2="12" y2="16"></line>
-            <circle cx="17" cy="16" r="2"></circle>
-          </svg>
-        )
-      }
-    ]
+    ],
   },
-  { label: 'Return', path: '/seller/return' },
+  { label: "Return", path: "/seller/return" },
 ];
 
 export default function SellerSidebar({ onClose }: SellerSidebarProps) {
@@ -164,15 +155,21 @@ export default function SellerSidebar({ onClose }: SellerSidebarProps) {
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
 
   const isActive = (path: string) => {
-    if (path === '/seller') {
-      return location.pathname === '/seller' || location.pathname === '/seller/';
+    if (path === "/seller") {
+      return (
+        location.pathname === "/seller" || location.pathname === "/seller/"
+      );
     }
     return location.pathname.startsWith(path);
   };
 
   const isSubmenuActive = (submenuItems?: SubMenuItem[]) => {
     if (!submenuItems) return false;
-    return submenuItems.some(item => location.pathname === item.path || location.pathname.startsWith(item.path + '/'));
+    return submenuItems.some(
+      (item) =>
+        location.pathname === item.path ||
+        location.pathname.startsWith(item.path + "/")
+    );
   };
 
   const handleNavigation = (path: string) => {
@@ -184,7 +181,7 @@ export default function SellerSidebar({ onClose }: SellerSidebarProps) {
   };
 
   const toggleMenu = (path: string) => {
-    setExpandedMenus(prev => {
+    setExpandedMenus((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(path)) {
         newSet.delete(path);
@@ -196,7 +193,12 @@ export default function SellerSidebar({ onClose }: SellerSidebarProps) {
   };
 
   const isExpanded = (path: string) => {
-    return expandedMenus.has(path) || isSubmenuActive(menuItems.find(item => item.path === path)?.submenuItems);
+    return (
+      expandedMenus.has(path) ||
+      isSubmenuActive(
+        menuItems.find((item) => item.path === path)?.submenuItems
+      )
+    );
   };
 
   return (
@@ -206,9 +208,13 @@ export default function SellerSidebar({ onClose }: SellerSidebarProps) {
         <button
           onClick={onClose}
           className="p-2 text-teal-100 hover:text-white transition-colors"
-          aria-label="Close menu"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          aria-label="Close menu">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg">
             <path
               d="M18 6L6 18M6 6L18 18"
               stroke="currentColor"
@@ -223,8 +229,9 @@ export default function SellerSidebar({ onClose }: SellerSidebarProps) {
         <ul className="space-y-1 px-2 sm:px-4">
           {menuItems.map((item) => {
             const expanded = isExpanded(item.path);
-            const active = isActive(item.path) || isSubmenuActive(item.submenuItems);
-            
+            const active =
+              isActive(item.path) || isSubmenuActive(item.submenuItems);
+
             return (
               <li key={item.path}>
                 <button
@@ -235,15 +242,17 @@ export default function SellerSidebar({ onClose }: SellerSidebarProps) {
                       handleNavigation(item.path);
                     }
                   }}
-                  className={`w-full flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-left transition-colors ${
-                    active
-                      ? 'bg-teal-600 text-white'
-                      : 'text-teal-100 hover:bg-teal-600/50 hover:text-white'
-                  }`}
-                >
+                  className={`w-full flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-left transition-colors ${active
+                    ? "bg-teal-600 text-white"
+                    : "text-teal-100 hover:bg-teal-600/50 hover:text-white"
+                    }`}>
                   <div className="flex items-center gap-2">
-                    {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                    <span className="text-xs sm:text-sm font-medium">{item.label}</span>
+                    {item.icon && (
+                      <span className="flex-shrink-0">{item.icon}</span>
+                    )}
+                    <span className="text-xs sm:text-sm font-medium">
+                      {item.label}
+                    </span>
                   </div>
                   {item.hasSubmenu && (
                     <svg
@@ -252,8 +261,8 @@ export default function SellerSidebar({ onClose }: SellerSidebarProps) {
                       viewBox="0 0 24 24"
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
-                      className={`transition-transform ${expanded ? 'rotate-180' : ''} ${active ? 'text-white' : 'text-teal-200'}`}
-                    >
+                      className={`transition-transform ${expanded ? "rotate-180" : ""
+                        } ${active ? "text-white" : "text-teal-200"}`}>
                       <path
                         d="M6 9L12 15L18 9"
                         stroke="currentColor"
@@ -267,19 +276,23 @@ export default function SellerSidebar({ onClose }: SellerSidebarProps) {
                 {item.hasSubmenu && item.submenuItems && expanded && (
                   <ul className="mt-1 space-y-1 ml-4">
                     {item.submenuItems.map((subItem) => {
-                      const subActive = location.pathname === subItem.path || location.pathname.startsWith(subItem.path + '/');
+                      const subActive =
+                        location.pathname === subItem.path ||
+                        location.pathname.startsWith(subItem.path + "/");
                       return (
                         <li key={subItem.path}>
                           <button
                             onClick={() => handleNavigation(subItem.path)}
-                            className={`w-full flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-left transition-colors ${
-                              subActive
-                                ? 'bg-teal-500 text-white'
-                                : 'text-teal-100 hover:bg-teal-600/50 hover:text-white'
-                            }`}
-                          >
-                            <span className="flex-shrink-0">{subItem.icon}</span>
-                            <span className="text-xs sm:text-sm font-medium">{subItem.label}</span>
+                            className={`w-full flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-left transition-colors ${subActive
+                              ? "bg-teal-500 text-white"
+                              : "text-teal-100 hover:bg-teal-600/50 hover:text-white"
+                              }`}>
+                            <span className="flex-shrink-0">
+                              {subItem.icon}
+                            </span>
+                            <span className="text-xs sm:text-sm font-medium">
+                              {subItem.label}
+                            </span>
                           </button>
                         </li>
                       );
@@ -294,4 +307,3 @@ export default function SellerSidebar({ onClose }: SellerSidebarProps) {
     </aside>
   );
 }
-

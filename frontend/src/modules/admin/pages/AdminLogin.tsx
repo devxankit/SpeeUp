@@ -2,25 +2,29 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { sendOTP, verifyOTP } from '../../../services/api/auth/adminAuthService';
 import OTPInput from '../../../components/OTPInput';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [mobileNumber, setMobileNumber] = useState('');
   const [showOTP, setShowOTP] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const handleMobileLogin = async () => {
     if (mobileNumber.length !== 10) return;
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       await sendOTP(mobileNumber);
       setShowOTP(true);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
+      setError(
+        err.response?.data?.message || "Failed to send OTP. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -28,15 +32,20 @@ export default function AdminLogin() {
 
   const handleOTPComplete = async (otp: string) => {
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       const response = await verifyOTP(mobileNumber, otp);
-      if (response.success) {
-        navigate('/admin');
+      if (response.success && response.data) {
+        // Update AuthContext with token and user data
+        login(response.data.token, {
+          ...response.data.user,
+          userType: "Admin",
+        });
+        navigate("/admin");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid OTP. Please try again.');
+      setError(err.response?.data?.message || "Invalid OTP. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -44,12 +53,12 @@ export default function AdminLogin() {
 
   const handleSpeeUpLogin = () => {
     // Handle SpeeUp login logic here
-    navigate('/admin');
+    navigate("/admin");
   };
 
   const handleSellerLogin = () => {
     // Navigate to seller login page
-    navigate('/seller/login');
+    navigate("/seller/login");
   };
 
   return (
@@ -58,17 +67,31 @@ export default function AdminLogin() {
       <button
         onClick={() => navigate(-1)}
         className="absolute top-4 left-4 z-10 w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-neutral-50 transition-colors"
-        aria-label="Back"
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        aria-label="Back">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M15 18L9 12L15 6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </svg>
       </button>
 
       {/* Login Card */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Header Section */}
-        <div className="px-6 py-4 text-center border-b border-green-700" style={{ backgroundColor: 'rgb(21 178 74 / var(--tw-bg-opacity, 1))' }}>
+        <div
+          className="px-6 py-4 text-center border-b border-green-700"
+          style={{
+            backgroundColor: "rgb(21 178 74 / var(--tw-bg-opacity, 1))",
+          }}>
           <div className="mb-0 -mt-4">
             <img
               src="/assets/speeup2.jpeg"
@@ -76,8 +99,12 @@ export default function AdminLogin() {
               className="h-44 w-full max-w-xs mx-auto object-fill object-bottom"
             />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-1 -mt-12">Admin Login</h1>
-          <p className="text-green-50 text-sm -mt-2">Access your admin dashboard</p>
+          <h1 className="text-2xl font-bold text-white mb-1 -mt-12">
+            Admin Login
+          </h1>
+          <p className="text-green-50 text-sm -mt-2">
+            Access your admin dashboard
+          </p>
         </div>
 
         {/* Login Form */}
@@ -96,7 +123,11 @@ export default function AdminLogin() {
                   <input
                     type="tel"
                     value={mobileNumber}
-                    onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    onChange={(e) =>
+                      setMobileNumber(
+                        e.target.value.replace(/\D/g, "").slice(0, 10)
+                      )
+                    }
                     placeholder="Enter mobile number"
                     className="flex-1 px-3 py-2.5 text-sm placeholder:text-neutral-400 focus:outline-none"
                     maxLength={10}
@@ -114,13 +145,11 @@ export default function AdminLogin() {
               <button
                 onClick={handleMobileLogin}
                 disabled={mobileNumber.length !== 10 || loading}
-                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${
-                  mobileNumber.length === 10 && !loading
-                    ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-md'
-                    : 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
-                }`}
-              >
-                {loading ? 'Sending...' : 'Continue'}
+                className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-colors ${mobileNumber.length === 10 && !loading
+                    ? "bg-teal-600 text-white hover:bg-teal-700 shadow-md"
+                    : "bg-neutral-300 text-neutral-500 cursor-not-allowed"
+                  }`}>
+                {loading ? "Sending..." : "Continue"}
               </button>
             </div>
           ) : (
@@ -130,7 +159,9 @@ export default function AdminLogin() {
                 <p className="text-sm text-neutral-600 mb-2">
                   Enter the 6-digit OTP sent to
                 </p>
-                <p className="text-sm font-semibold text-neutral-800">+91 {mobileNumber}</p>
+                <p className="text-sm font-semibold text-neutral-800">
+                  +91 {mobileNumber}
+                </p>
               </div>
 
               <OTPInput onComplete={handleOTPComplete} disabled={loading} />
@@ -145,19 +176,17 @@ export default function AdminLogin() {
                 <button
                   onClick={() => {
                     setShowOTP(false);
-                    setError('');
+                    setError("");
                   }}
                   disabled={loading}
-                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors border border-neutral-300"
-                >
+                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors border border-neutral-300">
                   Change Number
                 </button>
                 <button
                   onClick={handleMobileLogin}
                   disabled={loading}
-                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-teal-600 text-white hover:bg-teal-700 transition-colors"
-                >
-                  {loading ? 'Verifying...' : 'Resend OTP'}
+                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm bg-teal-600 text-white hover:bg-teal-700 transition-colors">
+                  {loading ? "Verifying..." : "Resend OTP"}
                 </button>
               </div>
             </div>
@@ -173,11 +202,16 @@ export default function AdminLogin() {
           {/* Login with SpeeUp Button */}
           <button
             onClick={handleSpeeUpLogin}
-            className="w-full py-2.5 rounded-lg font-semibold text-sm bg-gradient-to-r from-teal-600 to-green-600 text-white hover:from-teal-700 hover:to-green-700 transition-all shadow-md flex items-center justify-center gap-2"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
+            className="w-full py-2.5 rounded-lg font-semibold text-sm bg-gradient-to-r from-teal-600 to-green-600 text-white hover:from-teal-700 hover:to-green-700 transition-all shadow-md flex items-center justify-center gap-2">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
             </svg>
             <span>Login with</span>
             <span className="font-bold">SpeeUp</span>
@@ -187,12 +221,17 @@ export default function AdminLogin() {
           <div className="pt-2">
             <button
               onClick={handleSellerLogin}
-              className="w-full py-2.5 rounded-lg font-semibold text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-all border border-neutral-300 flex items-center justify-center gap-2"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="8.5" cy="7" r="4"/>
-                <path d="M20 8v6M23 11h-6"/>
+              className="w-full py-2.5 rounded-lg font-semibold text-sm bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-all border border-neutral-300 flex items-center justify-center gap-2">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <path d="M20 8v6M23 11h-6" />
               </svg>
               <span>Login as Seller</span>
             </button>

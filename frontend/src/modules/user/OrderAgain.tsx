@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import HomeHero from './components/HomeHero';
 import { useOrders } from '../../context/OrdersContext';
 import { useCart } from '../../context/CartContext';
-import { products } from '../../data/products';
+import { getProducts } from '../../services/api/customerProductService';
 
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
@@ -69,10 +69,18 @@ export default function OrderAgain() {
   };
 
   // Get bestseller products
-  const bestsellerProducts = useMemo(() => {
-    return products
-      .filter((p) => p.tags?.includes('bestseller') || p.tags?.includes('deal-of-the-day'))
-      .slice(0, 6);
+  const [bestsellerProducts, setBestsellerProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchBestsellers = async () => {
+      try {
+        const response = await getProducts({ sort: 'popular', limit: 6 });
+        setBestsellerProducts(response.data);
+      } catch (error) {
+        console.error('Failed to fetch bestsellers:', error);
+      }
+    };
+    fetchBestsellers();
   }, []);
 
   const hasOrders = orders && orders.length > 0;

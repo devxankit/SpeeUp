@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { products } from '../../data/products';
 import ProductCard from './components/ProductCard';
 import { productImages } from '../../utils/imagePaths';
+import { getProducts } from '../../services/api/customerProductService';
+import { Product } from '../../types/domain';
 
 // Trending categories data
 const trendingCategories = [
@@ -38,70 +39,36 @@ const trendingCategories = [
   },
 ];
 
-// Appliances products
-const appliancesProducts = [
-  {
-    id: 'nea-hot-water-bag',
-    name: 'NEA Electric Hot Water Bag (Multicolour)',
-    pack: '1 piece',
-    price: 239,
-    mrp: 599,
-    imageUrl: productImages['amul-butter'],
-    categoryId: 'electronics',
-    tags: ['trending'],
-    rating: 3.5,
-    reviews: 878,
-    deliveryTime: 21,
-  },
-  {
-    id: 'warmfinity-hot-water-bag',
-    name: 'Warmfinity Electric Hot Water Bag (Multicolour)',
-    pack: '1 piece',
-    price: 250,
-    mrp: 399,
-    imageUrl: productImages['britannia-bread'],
-    categoryId: 'electronics',
-    tags: [],
-    rating: 3.5,
-    reviews: 3487,
-    deliveryTime: 21,
-  },
-  {
-    id: 'havells-immersion-rod',
-    name: 'Havells Zeta Immersion Rod (1500 W)',
-    pack: '1 piece',
-    price: 599,
-    mrp: 1090,
-    imageUrl: productImages['amul-curd'],
-    categoryId: 'electronics',
-    tags: ['trending'],
-    rating: 3.5,
-    reviews: 350,
-    deliveryTime: 22,
-    power: '1500 W, 16 A',
-  },
-];
-
 export default function Search() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('q') || '';
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Filter products based on search query
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return [];
-    }
+  // Fetch products based on search query
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (!searchQuery.trim()) {
+        setSearchResults([]);
+        return;
+      }
 
-    const query = searchQuery.toLowerCase().trim();
-    return products.filter((product) => {
-      const nameMatch = product.name.toLowerCase().includes(query);
-      const packMatch = product.pack?.toLowerCase().includes(query);
-      const categoryMatch = product.categoryId?.toLowerCase().includes(query);
-      const tagMatch = product.tags?.some(tag => tag.toLowerCase().includes(query));
+      setLoading(true);
+      try {
+        const response = await getProducts({ search: searchQuery });
+        // Map API response to Component Product Type if needed, or use directly if compatible.
+        // Explicitly cast or map if types slightly differ between services
+        setSearchResults(response.data as unknown as Product[]);
+      } catch (error) {
+        console.error('Error searching products:', error);
+        setSearchResults([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      return nameMatch || packMatch || categoryMatch || tagMatch;
-    });
+    fetchProducts();
   }, [searchQuery]);
 
   return (
@@ -145,6 +112,7 @@ export default function Search() {
                 <div
                   key={category.id}
                   className="bg-white rounded-lg border-2 border-green-600 p-3 cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => navigate(`/category/${category.id}`)}
                 >
                   <div className="w-full h-24 rounded-lg mb-2 overflow-hidden bg-neutral-50">
                     <div className="w-full h-full grid grid-cols-2 gap-1 p-1">
@@ -172,108 +140,6 @@ export default function Search() {
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Appliances Section */}
-          <div className="px-4 md:px-6 lg:px-8 py-4 md:py-6">
-            <h2 className="text-lg md:text-2xl font-semibold text-neutral-900 mb-3 md:mb-6">Appliances</h2>
-            <div className="overflow-x-auto scrollbar-hide pb-4 md:pb-6">
-              <div className="flex gap-3 md:gap-4" style={{ width: 'max-content' }}>
-                {appliancesProducts.map((product) => {
-                  const discount = product.mrp && product.mrp > product.price
-                    ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
-                    : 0;
-
-                  return (
-                    <div key={product.id} className="flex-shrink-0 w-40 bg-white rounded-lg border border-neutral-200 overflow-hidden shadow-sm">
-                      {/* Product Image */}
-                      <div className="relative w-full h-32 bg-neutral-100">
-                        {product.imageUrl ? (
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            className="w-full h-full object-contain"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-neutral-400">
-                            {product.name.charAt(0)}
-                          </div>
-                        )}
-                        {product.tags?.includes('trending') && (
-                          <div className="absolute top-2 left-2 bg-orange-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded">
-                            Trending
-                          </div>
-                        )}
-                        {discount > 0 && (
-                          <div className="absolute top-2 right-2 bg-green-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded">
-                            {discount}% OFF
-                          </div>
-                        )}
-                        {/* Heart Icon */}
-                        <button className="absolute bottom-2 right-2 w-6 h-6 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                              d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-                              stroke="#ef4444"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              fill="none"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-
-                      {/* Product Info */}
-                      <div className="p-2.5">
-                        <h3 className="text-xs font-semibold text-neutral-900 mb-1 line-clamp-2 min-h-[2rem]">
-                          {product.name}
-                        </h3>
-
-                        {/* Rating */}
-                        <div className="flex items-center gap-1 mb-1">
-                          <div className="flex items-center">
-                            <span className="text-yellow-400 text-[10px]">★★★★★</span>
-                            <span className="text-[10px] text-neutral-600 font-medium ml-1">{product.rating}</span>
-                          </div>
-                          <span className="text-[10px] text-neutral-500">({product.reviews})</span>
-                        </div>
-
-                        {/* Delivery Time */}
-                        <p className="text-[10px] text-green-600 mb-1.5 font-medium flex items-center gap-0.5">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                            <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                          </svg>
-                          {product.deliveryTime} MINS
-                        </p>
-
-                        {/* Price */}
-                        <div className="flex items-center gap-1.5 flex-wrap mb-2">
-                          <span className="text-sm font-bold text-neutral-900">₹{product.price}</span>
-                          {product.mrp && product.mrp > product.price && (
-                            <span className="text-[10px] text-neutral-500 line-through">MRP ₹{product.mrp}</span>
-                          )}
-                        </div>
-
-                        {/* Power info if available */}
-                        {product.power && (
-                          <p className="text-[10px] text-neutral-500 mb-2">{product.power}</p>
-                        )}
-
-                        {/* ADD Button */}
-                        <button
-                          onClick={() => navigate(`/product/${product.id}`)}
-                          className="w-full border-2 border-green-600 text-green-600 bg-transparent hover:bg-green-50 rounded-full font-semibold text-sm h-9 px-3 flex items-center justify-center"
-                        >
-                          ADD
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
           </div>
 

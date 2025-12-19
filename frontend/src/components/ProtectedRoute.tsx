@@ -1,11 +1,11 @@
-import { ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { ReactNode } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 interface ProtectedRouteProps {
   children: ReactNode;
   requiredRole?: string;
-  requiredUserType?: 'Admin' | 'Seller' | 'Customer';
+  requiredUserType?: "Admin" | "Seller" | "Customer";
   redirectTo?: string;
 }
 
@@ -13,7 +13,7 @@ export default function ProtectedRoute({
   children,
   requiredRole,
   requiredUserType,
-  redirectTo = '/login',
+  redirectTo = "/login",
 }: ProtectedRouteProps) {
   const { isAuthenticated, user, token } = useAuth();
   const location = useLocation();
@@ -25,10 +25,18 @@ export default function ProtectedRoute({
 
   // Check user type if required
   if (requiredUserType && user) {
-    // This would need to be stored in user data from the token
-    // For now, we'll check if user has a role field that matches
+    // Check userType or role field
+    // Admin users have role: "Admin" or "Super Admin"
+    // For Admin userType check, we need to verify the user is an admin
     const userType = (user as any).userType || (user as any).role;
-    if (userType && userType !== requiredUserType) {
+
+    // For Admin routes, check if role is "Admin" or "Super Admin"
+    if (requiredUserType === "Admin") {
+      const isAdmin = userType === "Admin" || userType === "Super Admin";
+      if (!isAdmin) {
+        return <Navigate to="/" replace />;
+      }
+    } else if (userType && userType !== requiredUserType) {
       return <Navigate to="/" replace />;
     }
   }
@@ -43,4 +51,3 @@ export default function ProtectedRoute({
 
   return <>{children}</>;
 }
-

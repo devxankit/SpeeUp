@@ -1,61 +1,112 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 import { Order } from '../types/order';
-
-const ORDERS_STORAGE_KEY = 'saved_orders';
-
-interface OrdersContextType {
-  orders: Order[];
-  addOrder: (order: Order) => void;
-  getOrderById: (id: string) => Order | undefined;
-  updateOrderStatus: (id: string, status: Order['status']) => void;
-}
+import { createOrder, getMyOrders } from '../services/api/customerOrderService';
+// updateOrderStatus might not be available in customerOrderService, but typical for cancellation
+// Actually order creation is main thing here.
 
 const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
 
+interface OrdersContextType {
+  orders: Order[];
+  addOrder: (order: Order) => Promise<string | undefined>;
+  getOrderById: (id: string) => Order | undefined;
+  updateOrderStatus: (id: string, status: Order['status']) => void;
+  loading: boolean;
+}
+
 export function OrdersProvider({ children }: { children: ReactNode }) {
-  // Load orders from localStorage on mount
-  const loadOrdersFromStorage = (): Order[] => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const { isAuthenticated, user } = useAuth();
+
+  const fetchOrders = async () => {
+    if (!isAuthenticated || user?.userType !== 'Customer') {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const saved = localStorage.getItem(ORDERS_STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
+      const response = await getMyOrders();
+      if (response && response.data) {
+        // Map backend order to frontend Order type if needed
+        // Currently assuming consistent, but likely need mapping if data structure differs
+        // For now, storing as is, or with minimal mapping
+        setOrders(response.data.map((o: any) => ({
+          ...o,
+          id: o._id, // Map _id to id
+          // Ensure other fields match
+        })));
       }
     } catch (error) {
-      console.error('Error loading orders from storage:', error);
+      console.error("Failed to fetch orders", error);
+    } finally {
+      setLoading(false);
     }
-    return [];
   };
 
-  const [orders, setOrders] = useState<Order[]>(loadOrdersFromStorage);
-
-  // Save orders to localStorage whenever orders change
   useEffect(() => {
-    try {
-      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
-    } catch (error) {
-      console.error('Error saving orders to storage:', error);
+    if (isAuthenticated) {
+      fetchOrders();
+    } else {
+      setOrders([]);
+      setLoading(false);
     }
-  }, [orders]);
+  }, [isAuthenticated, user?.userType]);
 
-  const addOrder = (order: Order) => {
-    setOrders((prevOrders) => {
-      const newOrders = [order, ...prevOrders]; // Most recent first
-      return newOrders;
-    });
+  const addOrder = async (order: Order): Promise<string | undefined> => {
+    try {
+      // Construct payload
+      const payload = {
+        address: {
+          address: order.address.street || '',
+          city: order.address.city,
+          state: order.address.state || '',
+          pincode: order.address.pincode,
+          landmark: order.address.landmark || '',
+          // lat/long if available in order address
+        },
+        paymentMethod: 'COD', // Default or from order object if available
+        items: order.items.map(item => ({
+          product: { id: item.product.id },
+          quantity: item.quantity,
+          variant: undefined // Add logic if variants exist
+        })),
+        fees: {
+          deliveryFee: order.fees?.deliveryFee || 0,
+          platformFee: order.fees?.platformFee || 0
+        }
+      };
+
+      const response = await createOrder(payload as any);
+      await fetchOrders();
+
+      // Return the created order ID from response
+      if (response && response.data) {
+        return response.data._id || response.data.id;
+      }
+      return undefined;
+    } catch (error) {
+      console.error("Failed to create order", error);
+      throw error;
+    }
   };
 
   const getOrderById = (id: string): Order | undefined => {
     return orders.find((order) => order.id === id);
   };
 
-  const updateOrderStatus = (id: string, status: Order['status']) => {
+  const updateOrderStatus = async (id: string, status: Order['status']) => {
+    // This is likely for cancellation if allowed
     setOrders((prevOrders) =>
       prevOrders.map((order) => (order.id === id ? { ...order, status } : order))
     );
+    // Call API if exists
   };
 
   return (
-    <OrdersContext.Provider value={{ orders, addOrder, getOrderById, updateOrderStatus }}>
+    <OrdersContext.Provider value={{ orders, addOrder, getOrderById, updateOrderStatus, loading }}>
       {children}
     </OrdersContext.Provider>
   );
@@ -68,5 +119,6 @@ export function useOrders() {
   }
   return context;
 }
+
 
 

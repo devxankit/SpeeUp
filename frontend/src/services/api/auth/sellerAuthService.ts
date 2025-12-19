@@ -18,6 +18,8 @@ export interface VerifyOTPResponse {
       storeName: string;
       status: string;
       logo?: string;
+      address?: string;
+      city?: string;
     };
   };
 }
@@ -68,12 +70,12 @@ export const sendOTP = async (mobile: string): Promise<SendOTPResponse> => {
  */
 export const verifyOTP = async (mobile: string, otp: string): Promise<VerifyOTPResponse> => {
   const response = await api.post<VerifyOTPResponse>('/auth/seller/verify-otp', { mobile, otp });
-  
+
   if (response.data.success && response.data.data.token) {
     setAuthToken(response.data.data.token);
     localStorage.setItem('userData', JSON.stringify(response.data.data.user));
   }
-  
+
   return response.data;
 };
 
@@ -82,12 +84,28 @@ export const verifyOTP = async (mobile: string, otp: string): Promise<VerifyOTPR
  */
 export const register = async (data: RegisterData): Promise<RegisterResponse> => {
   const response = await api.post<RegisterResponse>('/auth/seller/register', data);
-  
+
   if (response.data.success && response.data.data.token) {
     setAuthToken(response.data.data.token);
     localStorage.setItem('userData', JSON.stringify(response.data.data.user));
   }
-  
+
+  return response.data;
+};
+
+/**
+ * Get current seller profile
+ */
+export const getSellerProfile = async (): Promise<any> => {
+  const response = await api.get('/auth/seller/profile');
+  return response.data;
+};
+
+/**
+ * Update seller profile
+ */
+export const updateSellerProfile = async (data: any): Promise<any> => {
+  const response = await api.put('/auth/seller/profile', data);
   return response.data;
 };
 
@@ -97,4 +115,5 @@ export const register = async (data: RegisterData): Promise<RegisterResponse> =>
 export const logout = (): void => {
   removeAuthToken();
 };
+
 

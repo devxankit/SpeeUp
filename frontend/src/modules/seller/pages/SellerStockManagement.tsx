@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getProducts, updateStock, Product } from '../../../services/api/productService';
+import { getCategories } from '../../../services/api/categoryService';
+import { useAuth } from '../../../context/AuthContext';
 
-// Mock Data based on the image
 interface StockItem {
-    variationId: number;
+    variationId: string;
+    productId: string;
     name: string;
     seller: string;
     image: string;
@@ -12,70 +15,11 @@ interface StockItem {
     category: string;
 }
 
-const STOCK_ITEMS: StockItem[] = [
-    {
-        variationId: 3,
-        name: 'Maggi 2 - Minute Instant Noodles (Pack of 12)',
-        seller: 'SpeeUp store',
-        image: '/assets/product-mtr-poha.jpg',
-        variation: '840 g (12 x 70 g)',
-        stock: 134,
-        status: 'Published',
-        category: 'Instant Food'
-    },
-    {
-        variationId: 14,
-        name: 'Sumeru Grated Coconut (Frozen)',
-        seller: 'SpeeUp store',
-        image: '/assets/category-fruits-veg.png',
-        variation: '200 g',
-        stock: 67,
-        status: 'Published',
-        category: 'Instant Food'
-    },
-    {
-        variationId: 16,
-        name: 'Maggi Masala 2 Minutes Instant Noodles',
-        seller: 'SpeeUp store',
-        image: '/assets/product-mtr-poha.jpg',
-        variation: '100g',
-        stock: 'Unlimited',
-        status: 'Published',
-        category: 'Instant Food'
-    },
-    {
-        variationId: 17,
-        name: "Abbie's Pure Maple Syrup",
-        seller: 'SpeeUp store',
-        image: '/assets/category-sweet-tooth.png',
-        variation: '250 ml',
-        stock: 47,
-        status: 'Published',
-        category: 'Sweet Tooth'
-    },
-    {
-        variationId: 18,
-        name: 'Maggi Masala 2 Minutes Instant Noodles',
-        seller: 'SpeeUp store',
-        image: '/assets/product-mtr-poha.jpg',
-        variation: '200g',
-        stock: 47,
-        status: 'Published',
-        category: 'Instant Food'
-    },
-    {
-        variationId: 21,
-        name: 'Yoga Bar Chocolate Chunk Nut Multigrain Protein Bar (35 g)',
-        seller: 'SpeeUp store',
-        image: '/assets/category-snacks.png',
-        variation: '35 g',
-        stock: 6,
-        status: 'Published',
-        category: 'Snacks'
-    }
-];
-
 export default function SellerStockManagement() {
+    const [stockItems, setStockItems] = useState<StockItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string>('');
+    const [updatingStock, setUpdatingStock] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All Category');
     const [statusFilter, setStatusFilter] = useState('All Products');
@@ -84,17 +28,113 @@ export default function SellerStockManagement() {
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [categories, setCategories] = useState<string[]>([]);
+    const [totalPages, setTotalPages] = useState(1);
+    const { user } = useAuth();
+
+    // Fetch categories for filter
+    useEffect(() => {
+        const fetchCats = async () => {
+            try {
+                const res = await getCategories();
+                if (res.success) {
+                    setCategories(res.data.map(cat => cat.name));
+                }
+            } catch (err) {
+                console.error("Error fetching categories:", err);
+            }
+        };
+        fetchCats();
+    }, []);
+
+    // Fetch products and convert to stock items
+    useEffect(() => {
+        const fetchStockItems = async () => {
+            setLoading(true);
+            setError('');
+            try {
+                const params: any = {
+                    page: currentPage,
+                    limit: rowsPerPage,
+                };
+
+                if (categoryFilter !== 'All Category') {
+                    params.category = categoryFilter;
+                }
+                if (statusFilter === 'Published') {
+                    params.status = 'published';
+                } else if (statusFilter === 'Unpublished') {
+                    params.status = 'unpublished';
+                }
+
+                const response = await getProducts(params);
+                if (response.success && response.data) {
+                    // Convert products to stock items
+                    const items: StockItem[] = [];
+                    response.data.forEach((product: Product) => {
+                        product.variations.forEach((variation, index) => {
+                            items.push({
+                                variationId: variation._id || `${product._id}-${index}`,
+                                productId: product._id,
+                                name: product.productName,
+                                seller: user?.storeName || '',
+                                image: product.mainImageUrl || '/assets/product-placeholder.jpg',
+                                variation: variation.title || variation.value || variation.name || 'Default',
+                                stock: variation.stock === 0 ? 'Unlimited' : variation.stock,
+                                status: product.publish ? 'Published' : 'Unpublished',
+                                category: (product.category as any)?.name || 'Uncategorized',
+                            });
+                        });
+                    });
+                    setStockItems(items);
+                    if ((response as any).pagination) {
+                        setTotalPages((response as any).pagination.pages);
+                    }
+                } else {
+                    setError(response.message || 'Failed to fetch stock items');
+                }
+            } catch (err: any) {
+                setError(err.response?.data?.message || err.message || 'Failed to fetch stock items');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStockItems();
+    }, [currentPage, rowsPerPage, categoryFilter, statusFilter, user]);
+
+    // Handle stock update
+    const handleStockUpdate = async (productId: string, variationId: string, newStock: number) => {
+        setUpdatingStock(variationId);
+        try {
+            const response = await updateStock(productId, variationId, newStock);
+            if (response.success) {
+                // Update local state
+                setStockItems(prev => prev.map(item =>
+                    item.variationId === variationId
+                        ? { ...item, stock: newStock === 0 ? 'Unlimited' : newStock }
+                        : item
+                ));
+            } else {
+                alert(response.message || 'Failed to update stock');
+            }
+        } catch (err: any) {
+            alert(err.response?.data?.message || err.message || 'Failed to update stock');
+        } finally {
+            setUpdatingStock(null);
+        }
+    };
 
     // Filter items
-    let filteredItems = STOCK_ITEMS.filter(item => {
+    let filteredItems = stockItems.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.seller.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = categoryFilter === 'All Category' || item.category === categoryFilter;
-        const matchesStatus = statusFilter === 'All Products' || 
+        const matchesStatus = statusFilter === 'All Products' ||
             (statusFilter === 'Published' && item.status === 'Published') ||
             (statusFilter === 'Unpublished' && item.status === 'Unpublished');
         const matchesStock = stockFilter === 'All Products' ||
-            (stockFilter === 'In Stock' && (item.stock === 'Unlimited' || item.stock > 0)) ||
+            (stockFilter === 'In Stock' && (item.stock === 'Unlimited' || (typeof item.stock === 'number' && item.stock > 0))) ||
             (stockFilter === 'Out of Stock' && item.stock === 0);
         return matchesSearch && matchesCategory && matchesStatus && matchesStock;
     });
@@ -121,11 +161,6 @@ export default function SellerStockManagement() {
         });
     }
 
-    const totalPages = Math.ceil(filteredItems.length / rowsPerPage);
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const displayedItems = filteredItems.slice(startIndex, endIndex);
-
     const handleSort = (column: string) => {
         if (sortColumn === column) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -141,14 +176,14 @@ export default function SellerStockManagement() {
         </span>
     );
 
-    // Get unique categories for filter
-    const categories = Array.from(new Set(STOCK_ITEMS.map(item => item.category)));
-
     return (
         <div className="flex flex-col h-full">
             {/* Page Header */}
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-semibold text-neutral-800">View Stock Management</h1>
+                <h1 className="text-2xl font-semibold text-neutral-800">Stock Management</h1>
+                <div className="text-sm text-blue-500">
+                    <span className="cursor-pointer hover:underline">Home</span> <span className="text-neutral-400">/</span> <span className="text-neutral-600">Dashboard</span>
+                </div>
             </div>
 
             {/* Content Card */}
@@ -214,11 +249,12 @@ export default function SellerStockManagement() {
                         </div>
                         <button
                             onClick={() => {
-                                const headers = ['Variation Id', 'Name', 'Seller', 'Variation', 'Stock', 'Status', 'Category'];
+                                const headers = ['Variation Id', 'Product Id', 'Product Name', 'Seller Name', 'Variation', 'Current Stock', 'Status', 'Category'];
                                 const csvContent = [
                                     headers.join(','),
                                     ...filteredItems.map(item => [
                                         item.variationId,
+                                        item.productId,
                                         `"${item.name}"`,
                                         `"${item.seller}"`,
                                         `"${item.variation}"`,
@@ -267,7 +303,7 @@ export default function SellerStockManagement() {
                     <table className="w-full text-left border-collapse border border-neutral-200">
                         <thead>
                             <tr className="bg-neutral-50 text-xs font-bold text-neutral-800">
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('variationId')}
                                 >
@@ -275,28 +311,36 @@ export default function SellerStockManagement() {
                                         Variation Id <SortIcon column="variationId" />
                                     </div>
                                 </th>
-                                <th 
+                                <th
+                                    className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                    onClick={() => handleSort('productId')}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        Product Id <SortIcon column="productId" />
+                                    </div>
+                                </th>
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('name')}
                                 >
                                     <div className="flex items-center justify-between">
-                                        Name <SortIcon column="name" />
+                                        Product Name <SortIcon column="name" />
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('seller')}
                                 >
                                     <div className="flex items-center justify-between">
-                                        Seller <SortIcon column="seller" />
+                                        Seller Name <SortIcon column="seller" />
                                     </div>
                                 </th>
                                 <th className="p-4 border border-neutral-200">
                                     <div className="flex items-center justify-between">
-                                        Image
+                                        product Image
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('variation')}
                                 >
@@ -304,67 +348,95 @@ export default function SellerStockManagement() {
                                         Variation <SortIcon column="variation" />
                                     </div>
                                 </th>
-                                <th 
+                                <th
                                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                                     onClick={() => handleSort('stock')}
                                 >
                                     <div className="flex items-center justify-between">
-                                        Stock <SortIcon column="stock" />
+                                        Current Stock <SortIcon column="stock" />
                                     </div>
                                 </th>
-                                <th 
-                                    className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                    onClick={() => handleSort('status')}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        Status <SortIcon column="status" />
-                                    </div>
-                                </th>
+                                <th className="p-4 border border-neutral-200 w-32">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {displayedItems.map((item) => (
+                            {filteredItems.map((item) => (
                                 <tr key={item.variationId} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700">
-                                    <td className="p-4 align-middle border border-neutral-200">{item.variationId}</td>
-                                    <td className="p-4 align-middle border border-neutral-200">{item.name}</td>
+                                    <td className="p-4 align-middle border border-neutral-200 text-xs font-mono">{item.variationId}</td>
+                                    <td className="p-4 align-middle border border-neutral-200 text-xs font-mono">{item.productId}</td>
+                                    <td className="p-4 align-middle border border-neutral-200 font-medium">{item.name}</td>
                                     <td className="p-4 align-middle border border-neutral-200">{item.seller}</td>
                                     <td className="p-4 border border-neutral-200">
-                                        <div className="w-12 h-16 bg-white border border-neutral-200 rounded p-1 flex items-center justify-center mx-auto">
+                                        <div className="w-16 h-12 bg-white border border-neutral-200 rounded p-1 flex items-center justify-center mx-auto">
                                             <img
                                                 src={item.image}
                                                 alt={item.name}
                                                 className="max-w-full max-h-full object-contain"
                                                 onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = 'https://placehold.co/40x60?text=Img';
+                                                    (e.target as HTMLImageElement).src = 'https://placehold.co/60x40?text=Img';
                                                 }}
                                             />
                                         </div>
                                     </td>
                                     <td className="p-4 align-middle border border-neutral-200">{item.variation}</td>
                                     <td className="p-4 align-middle border border-neutral-200">
-                                        {item.stock === 'Unlimited' ? (
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                                Unlimited
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.stock === 'Unlimited'
+                                                ? 'bg-blue-50 text-blue-600'
+                                                : item.stock === 0
+                                                    ? 'bg-red-50 text-red-600'
+                                                    : 'bg-green-50 text-green-600'
+                                                }`}>
+                                                {item.stock}
                                             </span>
-                                        ) : (
-                                            <span>{item.stock}</span>
-                                        )}
+                                        </div>
                                     </td>
                                     <td className="p-4 align-middle border border-neutral-200">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium ${
-                                            item.status === 'Published' 
-                                                ? 'bg-green-600 text-white' 
-                                                : 'bg-red-100 text-red-800'
-                                        }`}>
-                                            {item.status}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                defaultValue={item.stock === 'Unlimited' ? 0 : item.stock}
+                                                className="w-20 px-2 py-1 border border-neutral-300 rounded text-sm focus:ring-1 focus:ring-teal-500 outline-none"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        const val = parseInt((e.target as HTMLInputElement).value);
+                                                        if (!isNaN(val)) {
+                                                            handleStockUpdate(item.productId, item.variationId, val);
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                            <button
+                                                disabled={updatingStock === item.variationId}
+                                                onClick={(e) => {
+                                                    const input = (e.currentTarget.previousElementSibling as HTMLInputElement);
+                                                    const val = parseInt(input.value);
+                                                    if (!isNaN(val)) {
+                                                        handleStockUpdate(item.productId, item.variationId, val);
+                                                    }
+                                                }}
+                                                className="p-1.5 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors disabled:bg-neutral-300"
+                                                title="Update Stock"
+                                            >
+                                                {updatingStock === item.variationId ? (
+                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                ) : (
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                                        <polyline points="7 3 7 8 15 8"></polyline>
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
-                            {displayedItems.length === 0 && (
+                            {filteredItems.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="p-8 text-center text-neutral-400 border border-neutral-200">
-                                        No products found.
+                                    <td colSpan={8} className="p-8 text-center text-neutral-400 border border-neutral-200">
+                                        No stock items found.
                                     </td>
                                 </tr>
                             )}
@@ -373,46 +445,32 @@ export default function SellerStockManagement() {
                 </div>
 
                 {/* Pagination Footer */}
-                <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
-                    <div className="text-xs sm:text-sm text-neutral-700">
-                        Showing {startIndex + 1} to {Math.min(endIndex, filteredItems.length)} of {filteredItems.length} entries
+                <div className="px-4 py-3 border-t border-neutral-200 flex items-center justify-between">
+                    <div className="text-sm text-neutral-700">
+                        Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, filteredItems.length)} of {filteredItems.length} entries
                     </div>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                             disabled={currentPage === 1}
-                            className={`p-2 border border-teal-600 rounded ${
-                                currentPage === 1
-                                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                    : 'text-teal-600 hover:bg-teal-50'
-                            }`}
+                            className={`p-2 border border-teal-600 rounded ${currentPage === 1
+                                ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                : 'text-teal-600 hover:bg-teal-50'
+                                }`}
                             aria-label="Previous page"
                         >
-                            <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M15 18L9 12L15 6"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M15 18L9 12L15 6" />
                             </svg>
                         </button>
                         {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                             <button
                                 key={page}
                                 onClick={() => setCurrentPage(page)}
-                                className={`px-3 py-1.5 border border-teal-600 rounded font-medium text-sm ${
-                                    currentPage === page
-                                        ? 'bg-teal-600 text-white'
-                                        : 'text-teal-600 hover:bg-teal-50'
-                                }`}
+                                className={`px-3 py-1.5 border border-teal-600 rounded font-medium text-sm ${currentPage === page
+                                    ? 'bg-teal-600 text-white'
+                                    : 'text-teal-600 hover:bg-teal-50'
+                                    }`}
                             >
                                 {page}
                             </button>
@@ -420,27 +478,14 @@ export default function SellerStockManagement() {
                         <button
                             onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                             disabled={currentPage === totalPages}
-                            className={`p-2 border border-teal-600 rounded ${
-                                currentPage === totalPages
-                                    ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                    : 'text-teal-600 hover:bg-teal-50'
-                            }`}
+                            className={`p-2 border border-teal-600 rounded ${currentPage === totalPages
+                                ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                : 'text-teal-600 hover:bg-teal-50'
+                                }`}
                             aria-label="Next page"
                         >
-                            <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                            >
-                                <path
-                                    d="M9 18L15 12L9 6"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                />
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M9 18L15 12L9 6" />
                             </svg>
                         </button>
                     </div>
@@ -449,4 +494,3 @@ export default function SellerStockManagement() {
         </div>
     );
 }
-

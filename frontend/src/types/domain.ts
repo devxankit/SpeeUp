@@ -15,5 +15,9 @@ export interface Product {
   imageUrl?: string; // imported image path if available
   categoryId: string; // foreign key to Category
   tags?: string[]; // e.g. ["bestseller", "under-99", "deal-of-the-day"]
+  rating?: number;
+  reviews?: number;
+  deliveryTime?: number;
+  power?: string;
 }
 

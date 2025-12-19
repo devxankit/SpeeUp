@@ -344,6 +344,7 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = theme.primary[3] || theme.primary[2];
                 }}
+                onClick={() => navigate('/wallet')}
                 aria-label="Wallet"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -406,10 +407,10 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
                   <div
                     key={suggestion}
                     className={`absolute inset-0 flex items-center transition-all duration-500 ${isActive
-                        ? 'translate-y-0 opacity-100'
-                        : isPrev
-                          ? '-translate-y-full opacity-0'
-                          : 'translate-y-full opacity-0'
+                      ? 'translate-y-0 opacity-100'
+                      : isPrev
+                        ? '-translate-y-full opacity-0'
+                        : 'translate-y-full opacity-0'
                       }`}
                   >
                     <span className={`text-xs md:text-xs`} style={{ color: scrollProgress > 0.5 ? '#9ca3af' : '#6b7280' }}>
