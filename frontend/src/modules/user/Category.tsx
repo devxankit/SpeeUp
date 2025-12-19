@@ -1,220 +1,15 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useMemo, useEffect } from 'react';
-import { categories } from '../../data/categories';
 import ProductCard from './components/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getProducts } from '../../services/api/customerProductService';
+import { getProducts, getCategoryById, Category as ApiCategory } from '../../services/api/customerProductService';
 
-// Subcategories for each category
-const getSubcategories = (categoryId: string) => {
-  const subcategoriesMap: Record<string, Array<{ id: string; name: string; icon: string }>> = {
-    'fruits-veg': [
-      { id: 'all', name: 'All', icon: '🥬' },
-      { id: 'fresh-vegetables', name: 'Fresh Vegetables', icon: '🥒' },
-      { id: 'fresh-fruits', name: 'Fresh Fruits', icon: '🍓' },
-      { id: 'exotics', name: 'Exotics', icon: '🥭' },
-      { id: 'coriander-others', name: 'Coriander & Others', icon: '🌿' },
-      { id: 'flowers-leaves', name: 'Flowers & Leaves', icon: '🌹' },
-      { id: 'trusted-organics', name: 'Trusted Organics', icon: '🍎' },
-      { id: 'seasonal', name: 'Seasonal', icon: '🍊' },
-      { id: 'freshly-cut-sprouts', name: 'Freshly Cut & Sprouts', icon: '🥗' },
-      { id: 'safal', name: 'Safal', icon: '🌿' },
-    ],
-    'dairy-breakfast': [
-      { id: 'all', name: 'All', icon: '🥛' },
-      { id: 'milk', name: 'Milk', icon: '🥛' },
-      { id: 'cheese', name: 'Cheese', icon: '🧀' },
-      { id: 'butter-ghee', name: 'Butter & Ghee', icon: '🧈' },
-      { id: 'bread', name: 'Bread', icon: '🍞' },
-      { id: 'eggs', name: 'Eggs', icon: '🥚' },
-      { id: 'yogurt', name: 'Yogurt', icon: '🥤' },
-      { id: 'cream', name: 'Cream', icon: '🍦' },
-    ],
-    'snacks': [
-      { id: 'all', name: 'All', icon: '🍿' },
-      { id: 'chips', name: 'Chips', icon: '🥔' },
-      { id: 'namkeen', name: 'Namkeen', icon: '🥨' },
-      { id: 'biscuits', name: 'Biscuits', icon: '🍪' },
-      { id: 'sweets', name: 'Sweets', icon: '🍬' },
-      { id: 'chocolates', name: 'Chocolates', icon: '🍫' },
-      { id: 'nuts', name: 'Nuts', icon: '🥜' },
-      { id: 'popcorn', name: 'Popcorn', icon: '🍿' },
-    ],
-    'cold-drinks': [
-      { id: 'all', name: 'All', icon: '🥤' },
-      { id: 'soft-drinks', name: 'Soft Drinks', icon: '🥤' },
-      { id: 'juices', name: 'Juices', icon: '🧃' },
-      { id: 'energy-drinks', name: 'Energy Drinks', icon: '⚡' },
-      { id: 'water', name: 'Water', icon: '💧' },
-      { id: 'soda', name: 'Soda', icon: '🥤' },
-    ],
-    'atta-rice': [
-      { id: 'all', name: 'All', icon: '🌾' },
-      { id: 'atta', name: 'Atta', icon: '🌾' },
-      { id: 'rice', name: 'Rice', icon: '🍚' },
-      { id: 'dal', name: 'Dal', icon: '🫘' },
-      { id: 'besan', name: 'Besan', icon: '🌾' },
-      { id: 'poha', name: 'Poha', icon: '🌾' },
-    ],
-    'masala-oil': [
-      { id: 'all', name: 'All', icon: '🧂' },
-      { id: 'oil', name: 'Oil', icon: '🫒' },
-      { id: 'ghee', name: 'Ghee', icon: '🧈' },
-      { id: 'masala', name: 'Masala', icon: '🌶️' },
-      { id: 'salt', name: 'Salt', icon: '🧂' },
-      { id: 'spices', name: 'Spices', icon: '🌶️' },
-    ],
-    'biscuits-bakery': [
-      { id: 'all', name: 'All', icon: '🍪' },
-      { id: 'biscuits', name: 'Biscuits', icon: '🍪' },
-      { id: 'cookies', name: 'Cookies', icon: '🍪' },
-      { id: 'cakes', name: 'Cakes', icon: '🎂' },
-      { id: 'rusk', name: 'Rusk', icon: '🍞' },
-      { id: 'bread', name: 'Bread', icon: '🍞' },
-    ],
-    'personal-care': [
-      { id: 'all', name: 'All', icon: '🧴' },
-      { id: 'soap', name: 'Soap', icon: '🧼' },
-      { id: 'shampoo', name: 'Shampoo', icon: '🧴' },
-      { id: 'toothpaste', name: 'Toothpaste', icon: '🪥' },
-      { id: 'facewash', name: 'Face Wash', icon: '🧴' },
-      { id: 'conditioner', name: 'Conditioner', icon: '🧴' },
-    ],
-    'cleaning': [
-      { id: 'all', name: 'All', icon: '🧹' },
-      { id: 'detergents', name: 'Detergents', icon: '🧼' },
-      { id: 'cleaners', name: 'Cleaners', icon: '🧽' },
-      { id: 'brooms', name: 'Brooms', icon: '🧹' },
-      { id: 'mops', name: 'Mops', icon: '🧹' },
-      { id: 'sponges', name: 'Sponges', icon: '🧽' },
-    ],
-    'breakfast-instant': [
-      { id: 'all', name: 'All', icon: '🍜' },
-      { id: 'noodles', name: 'Noodles', icon: '🍜' },
-      { id: 'poha', name: 'Poha', icon: '🍚' },
-      { id: 'upma', name: 'Upma', icon: '🍚' },
-      { id: 'cereals', name: 'Cereals', icon: '🥣' },
-      { id: 'instant-mix', name: 'Instant Mix', icon: '🥄' },
-    ],
-    'wedding': [
-      { id: 'all', name: 'All', icon: '💍' },
-      { id: 'gift-packs', name: 'Gift Packs', icon: '🎁' },
-      { id: 'dry-fruits', name: 'Dry Fruits', icon: '🥜' },
-      { id: 'sweets', name: 'Sweets', icon: '🍬' },
-      { id: 'decorative', name: 'Decorative', icon: '🎨' },
-    ],
-    'winter': [
-      { id: 'all', name: 'All', icon: '❄️' },
-      { id: 'woolen', name: 'Woolen', icon: '🧶' },
-      { id: 'caps', name: 'Caps', icon: '🧢' },
-      { id: 'gloves', name: 'Gloves', icon: '🧤' },
-      { id: 'blankets', name: 'Blankets', icon: '🛏️' },
-    ],
-    'electronics': [
-      { id: 'all', name: 'All', icon: '📱' },
-      { id: 'chargers', name: 'Chargers', icon: '🔌' },
-      { id: 'cables', name: 'Cables', icon: '🔌' },
-      { id: 'powerbanks', name: 'Power Banks', icon: '🔋' },
-      { id: 'earphones', name: 'Earphones', icon: '🎧' },
-    ],
-    'beauty': [
-      { id: 'all', name: 'All', icon: '💄' },
-      { id: 'makeup', name: 'Makeup', icon: '💄' },
-      { id: 'skincare', name: 'Skincare', icon: '🧴' },
-      { id: 'lipstick', name: 'Lipstick', icon: '💋' },
-      { id: 'kajal', name: 'Kajal', icon: '👁️' },
-    ],
-    'fashion': [
-      { id: 'all', name: 'All', icon: '👕' },
-      { id: 'clothing', name: 'Clothing', icon: '👕' },
-      { id: 'shoes', name: 'Shoes', icon: '👟' },
-      { id: 'accessories', name: 'Accessories', icon: '👜' },
-      { id: 'watches', name: 'Watches', icon: '⌚' },
-    ],
-    'sports': [
-      { id: 'all', name: 'All', icon: '⚽' },
-      { id: 'cricket', name: 'Cricket', icon: '🏏' },
-      { id: 'football', name: 'Football', icon: '⚽' },
-      { id: 'badminton', name: 'Badminton', icon: '🏸' },
-      { id: 'fitness', name: 'Fitness', icon: '💪' },
-    ],
-    'dry-fruits': [
-      { id: 'all', name: 'All', icon: '🥜' },
-      { id: 'almonds', name: 'Almonds', icon: '🥜' },
-      { id: 'cashews', name: 'Cashews', icon: '🥜' },
-      { id: 'raisins', name: 'Raisins', icon: '🍇' },
-      { id: 'dates', name: 'Dates', icon: '📅' },
-      { id: 'cereals', name: 'Cereals', icon: '🥣' },
-    ],
-    'chicken-meat': [
-      { id: 'all', name: 'All', icon: '🍗' },
-      { id: 'chicken', name: 'Chicken', icon: '🍗' },
-      { id: 'mutton', name: 'Mutton', icon: '🥩' },
-      { id: 'fish', name: 'Fish', icon: '🐟' },
-      { id: 'seafood', name: 'Seafood', icon: '🦐' },
-    ],
-    'kitchenware': [
-      { id: 'all', name: 'All', icon: '🍳' },
-      { id: 'cookware', name: 'Cookware', icon: '🍳' },
-      { id: 'cutlery', name: 'Cutlery', icon: '🔪' },
-      { id: 'appliances', name: 'Appliances', icon: '⚡' },
-      { id: 'storage', name: 'Storage', icon: '📦' },
-    ],
-    'tea-coffee': [
-      { id: 'all', name: 'All', icon: '☕' },
-      { id: 'tea', name: 'Tea', icon: '🍵' },
-      { id: 'coffee', name: 'Coffee', icon: '☕' },
-      { id: 'green-tea', name: 'Green Tea', icon: '🍵' },
-      { id: 'milk-drinks', name: 'Milk Drinks', icon: '🥛' },
-    ],
-    'sauces-spreads': [
-      { id: 'all', name: 'All', icon: '🍯' },
-      { id: 'ketchup', name: 'Ketchup', icon: '🍅' },
-      { id: 'mayonnaise', name: 'Mayonnaise', icon: '🥄' },
-      { id: 'jam', name: 'Jam', icon: '🍯' },
-      { id: 'honey', name: 'Honey', icon: '🍯' },
-    ],
-    'paan-corner': [
-      { id: 'all', name: 'All', icon: '🌿' },
-      { id: 'paan', name: 'Paan', icon: '🌿' },
-      { id: 'mouth-freshener', name: 'Mouth Freshener', icon: '🌿' },
-      { id: 'supari', name: 'Supari', icon: '🌰' },
-    ],
-    'ice-cream': [
-      { id: 'all', name: 'All', icon: '🍦' },
-      { id: 'ice-cream', name: 'Ice Cream', icon: '🍦' },
-      { id: 'frozen-desserts', name: 'Frozen Desserts', icon: '🧊' },
-      { id: 'popsicles', name: 'Popsicles', icon: '🍭' },
-    ],
-    'health-pharma': [
-      { id: 'all', name: 'All', icon: '💊' },
-      { id: 'medicines', name: 'Medicines', icon: '💊' },
-      { id: 'vitamins', name: 'Vitamins', icon: '💊' },
-      { id: 'supplements', name: 'Supplements', icon: '💊' },
-    ],
-    'baby-care': [
-      { id: 'all', name: 'All', icon: '👶' },
-      { id: 'diapers', name: 'Diapers', icon: '👶' },
-      { id: 'baby-food', name: 'Baby Food', icon: '🍼' },
-      { id: 'baby-care-products', name: 'Baby Care Products', icon: '🧴' },
-    ],
-    'oral-care': [
-      { id: 'all', name: 'All', icon: '🦷' },
-      { id: 'toothpaste', name: 'Toothpaste', icon: '🪥' },
-      { id: 'toothbrush', name: 'Toothbrush', icon: '🪥' },
-      { id: 'mouthwash', name: 'Mouthwash', icon: '💧' },
-    ],
-  };
-
-  return subcategoriesMap[categoryId] || [
-    { id: 'all', name: 'All', icon: '📦' },
-  ];
-};
-
-export default function Category() {
+export default function CategoryPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const category = categories.find((c) => c.id === id);
+
+  const [category, setCategory] = useState<ApiCategory | null>(null);
+  const [subcategories, setSubcategories] = useState<ApiCategory[]>([]);
   const [selectedSubcategory, setSelectedSubcategory] = useState('all');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
@@ -223,17 +18,58 @@ export default function Category() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Fetch Category Details
+  useEffect(() => {
+    const fetchCategoryDetails = async () => {
+      try {
+        const response = await getCategoryById(id!);
+        if (response.success && response.data) {
+          const { category: cat, subcategories: subs, currentSubcategory } = response.data;
+
+          setCategory(cat);
+          setSubcategories([
+            { _id: 'all', id: 'all', name: 'All', icon: '📦', isActive: true } as any,
+            ...(subs || [])
+          ]);
+
+          if (currentSubcategory) {
+            setSelectedSubcategory(currentSubcategory._id || currentSubcategory.id);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching category details:", error);
+      }
+    };
+
+    if (id) {
+      fetchCategoryDetails();
+    }
+  }, [id]);
+
+  // Fetch Products when category or subcategory changes
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        const response = await getProducts({ category: id });
+        // If the ID in the URL is actually for a subcategory, we should use the parent category ID
+        // which we fetch in the other useEffect and store in 'category'.
+        // However, for fetching products, the backend getProducts handles 'category' (parent) 
+        // and 'subcategory' separately.
+
+        const params: any = { category: category?._id || id };
+        if (selectedSubcategory !== 'all') {
+          params.subcategory = selectedSubcategory;
+        }
+
+        const response = await getProducts(params);
         if (response.success) {
           // Ensure products have default tags/name array for filtering logic if missing
           const safeProducts = response.data.map((p: any) => ({
             ...p,
+            id: p._id || p.id,
             tags: p.tags || [],
-            name: p.productName || p.name // Map backend productName to frontend name expected by filter logic
+            name: p.productName || p.name,
+            imageUrl: p.mainImage || p.imageUrl
           }));
           setProducts(safeProducts);
         }
@@ -247,265 +83,10 @@ export default function Category() {
     if (id) {
       fetchProducts();
     }
-  }, [id]);
-
-  // Function to filter products by subcategory
-  const filterProductsBySubcategory = (productsList: typeof products, subcategoryId: string, mainCategoryId: string) => {
-    if (subcategoryId === 'all') {
-      return productsList;
-    }
-
-    // Define subcategory priority (higher number = more specific, takes precedence)
-    // Products matching higher priority subcategories should only appear there
-    const subcategoryPriority: Record<string, Record<string, number>> = {
-      'fruits-veg': {
-        'safal': 10,
-        'trusted-organics': 9,
-        'freshly-cut-sprouts': 8,
-        'exotics': 7,
-        'coriander-others': 6,
-        'flowers-leaves': 6,
-        'seasonal': 6,
-        'fresh-vegetables': 5,
-        'fresh-fruits': 5,
-      },
-      'dairy-breakfast': {
-        'cream': 6,
-        'butter-ghee': 5,
-        'milk': 5,
-        'cheese': 5,
-        'yogurt': 5,
-        'bread': 5,
-        'eggs': 5,
-      },
-      'snacks': {
-        'chocolates': 7, // Higher than sweets (5) to avoid overlap
-        'chips': 6,
-        'namkeen': 6,
-        'biscuits': 6, // Higher than biscuits-bakery (6) - but snacks biscuits are different
-        'sweets': 5,
-        'nuts': 6,
-        'popcorn': 6,
-      },
-      'atta-rice': {
-        'poha': 6,
-        'besan': 6,
-        'atta': 5,
-        'rice': 5,
-        'dal': 5,
-      },
-      'masala-oil': {
-        'ghee': 6,
-        'oil': 5,
-        'masala': 5,
-        'salt': 5,
-        'spices': 5,
-      },
-      'biscuits-bakery': {
-        'cookies': 7,
-        'cakes': 7,
-        'rusk': 7,
-        'biscuits': 6,
-        'bread': 6, // Higher than dairy-breakfast bread (5)
-      },
-      'breakfast-instant': {
-        'poha': 7, // Higher than atta-rice poha (6)
-        'noodles': 6,
-        'upma': 6,
-        'cereals': 6,
-        'instant-mix': 6,
-      },
-    };
-
-    // Define keywords for each category's subcategories
-    const categoryKeywords: Record<string, Record<string, string[]>> = {
-      'fruits-veg': {
-        'fresh-vegetables': ['onion', 'tomato', 'potato', 'carrot', 'cabbage', 'cauliflower', 'brinjal', 'cucumber', 'ladyfinger', 'beans', 'peas', 'spinach', 'ginger', 'garlic', 'beetroot', 'radish', 'turnip', 'pumpkin', 'bottle gourd', 'ridge gourd', 'bitter gourd', 'okra', 'capsicum', 'bell pepper'],
-        'fresh-fruits': ['apple', 'banana', 'orange', 'mango', 'guava', 'papaya', 'watermelon', 'grapes', 'sweet lime', 'mosambi'],
-        'exotics': ['dragon fruit', 'kiwi', 'avocado', 'passion fruit', 'blueberry', 'raspberry', 'blackberry', 'strawberry', 'cherry', 'pomegranate', 'pineapple'],
-        'coriander-others': ['coriander', 'mint', 'curry leaf', 'fenugreek', 'dill', 'parsley', 'basil'],
-        'flowers-leaves': ['rose', 'marigold', 'flower', 'jasmine', 'betel leaf', 'betel leaves'],
-        'trusted-organics': ['organic'],
-        'seasonal': ['seasonal', 'lychee', 'jackfruit', 'custard apple', 'wood apple'],
-        'freshly-cut-sprouts': ['freshly cut', 'cut fruits', 'cut vegetables', 'sprout', 'sprouts', 'chopped'],
-        'safal': ['safal'],
-      },
-      'dairy-breakfast': {
-        'milk': ['milk'],
-        'cheese': ['cheese', 'paneer'],
-        'butter-ghee': ['butter', 'ghee', 'cream'],
-        'bread': ['bread', 'pav'],
-        'eggs': ['egg'],
-        'yogurt': ['curd', 'yogurt'],
-        'cream': ['cream'],
-      },
-      'snacks': {
-        'chips': ['lays', 'chip', 'uncle', 'bingo'],
-        'namkeen': ['namkeen', 'sev', 'bhujia', 'haldiram', 'balaji'],
-        'biscuits': ['biscuit', 'parle', 'good day', 'marie', 'tiger', 'monaco'],
-        'sweets': ['sweet', 'chocolate', 'candy'],
-        'chocolates': ['chocolate', 'cadbury', 'dairy milk'],
-        'nuts': ['nut', 'almond', 'cashew', 'pistachio'],
-        'popcorn': ['popcorn', 'act2'],
-      },
-      'cold-drinks': {
-        'soft-drinks': ['coke', 'pepsi', 'sprite', 'fanta', 'thums up', 'mountain dew', 'mirinda', 'limca', '7up'],
-        'juices': ['juice', 'tropicana', 'real', 'maaza', 'slice'],
-        'energy-drinks': ['red bull', 'energy'],
-        'water': ['water', 'bisleri', 'aquafina'],
-        'soda': ['soda'],
-      },
-      'atta-rice': {
-        'atta': ['atta', 'flour', 'wheat'],
-        'rice': ['rice', 'basmati', 'sona', 'kolam', 'pulav'],
-        'dal': ['dal', 'moong', 'toor', 'chana', 'urad', 'masoor', 'rajma'],
-        'besan': ['besan'],
-        'poha': ['poha'],
-      },
-      'masala-oil': {
-        'oil': ['oil', 'refined', 'mustard', 'sunflower', 'groundnut', 'coconut', 'sesame', 'soya'],
-        'ghee': ['ghee'],
-        'masala': ['masala', 'garam', 'chicken', 'everest', 'mdh'],
-        'salt': ['salt', 'tata salt'],
-        'spices': ['chilli', 'turmeric', 'coriander', 'cumin', 'mustard seed', 'fenugreek'],
-      },
-      'biscuits-bakery': {
-        'biscuits': ['biscuit', 'parle', 'good day', 'marie', 'tiger', 'monaco', 'hide', 'seek'],
-        'cookies': ['cookie', 'oreo', 'dark fantasy', 'good day'],
-        'cakes': ['cake', 'britannia'],
-        'rusk': ['rusk'],
-        'bread': ['bread', 'britannia'],
-      },
-      'personal-care': {
-        'soap': ['soap', 'dove', 'lux', 'lifebuoy', 'dettol', 'santoor'],
-        'shampoo': ['shampoo', 'dove', 'sunsilk', 'pantene'],
-        'toothpaste': ['toothpaste', 'colgate', 'pepsodent'],
-        'facewash': ['face', 'himalaya'],
-        'conditioner': ['conditioner', 'dove'],
-      },
-      'cleaning': {
-        'detergents': ['detergent', 'surf', 'ariel', 'rin'],
-        'cleaners': ['cleaner', 'vim', 'harpic', 'lizol', 'colin'],
-        'brooms': ['broom'],
-        'mops': ['mop'],
-        'sponges': ['sponge', 'scrubber'],
-      },
-      'breakfast-instant': {
-        'noodles': ['noodle', 'maggi', 'yippee', 'top ramen'],
-        'poha': ['poha', 'mtr poha'],
-        'upma': ['upma', 'mtr upma'],
-        'cereals': ['corn', 'oats', 'muesli', 'kellogg'],
-        'instant-mix': ['idli', 'dosa', 'mix', 'mtr'],
-      },
-      'wedding': {
-        'gift-packs': ['gift', 'pack', 'box'],
-        'dry-fruits': ['dry', 'fruit', 'nut', 'almond', 'cashew', 'pistachio', 'date'],
-        'sweets': ['sweet', 'chocolate', 'ferrero', 'rocher'],
-        'decorative': ['decorative', 'candle', 'coconut'],
-      },
-      'winter': {
-        'woolen': ['woolen', 'wool'],
-        'caps': ['cap'],
-        'gloves': ['glove'],
-        'blankets': ['blanket'],
-      },
-      'electronics': {
-        'chargers': ['charger'],
-        'cables': ['cable', 'usb'],
-        'powerbanks': ['power', 'bank'],
-        'earphones': ['earphone', 'headphone'],
-      },
-      'beauty': {
-        'makeup': ['makeup', 'cosmetic'],
-        'skincare': ['skincare', 'moisturizer', 'cream'],
-        'lipstick': ['lipstick', 'lakme'],
-        'kajal': ['kajal', 'colossal', 'maybelline'],
-      },
-      'fashion': {
-        'clothing': ['tshirt', 'shirt', 'jeans', 'clothing'],
-        'shoes': ['shoe'],
-        'accessories': ['bag', 'backpack'],
-        'watches': ['watch'],
-      },
-      'sports': {
-        'cricket': ['cricket', 'bat'],
-        'football': ['football'],
-        'badminton': ['badminton', 'racket'],
-        'fitness': ['yoga', 'mat', 'dumbbell', 'fitness'],
-      },
-    };
-
-    const keywords = categoryKeywords[mainCategoryId]?.[subcategoryId] || [];
-    if (keywords.length === 0) return productsList;
-
-    const currentPriority = subcategoryPriority[mainCategoryId]?.[subcategoryId] || 0;
-    const allSubcategories = Object.keys(categoryKeywords[mainCategoryId] || {});
-
-    return productsList.filter((product) => {
-      const nameLower = product.name.toLowerCase();
-      const tagsLower = (product.tags || []).map(tag => tag.toLowerCase());
-
-      // Check if product matches current subcategory
-      const matchesCurrent = keywords.some(keyword => {
-        const keywordLower = keyword.toLowerCase().trim();
-
-        // For multi-word keywords, match the entire phrase
-        if (keywordLower.includes(' ')) {
-          return nameLower.includes(keywordLower) || tagsLower.some(tag => tag.includes(keywordLower));
-        }
-
-        // For single-word keywords, check if it appears as a whole word
-        const nameWords = nameLower.split(/\s+/);
-        const tagWords = tagsLower.flatMap(tag => tag.split(/\s+/));
-
-        const exactMatch = nameWords.includes(keywordLower) || tagWords.includes(keywordLower);
-        const wordBoundaryPattern = new RegExp(`(^|\\s)${keywordLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`, 'i');
-        const boundaryMatch = wordBoundaryPattern.test(nameLower) || tagsLower.some(tag => wordBoundaryPattern.test(tag));
-
-        return exactMatch || boundaryMatch;
-      });
-
-      if (!matchesCurrent) return false;
-
-      // Check if product matches a higher priority subcategory - if so, exclude from current
-      for (const otherSubcatId of allSubcategories) {
-        if (otherSubcatId === subcategoryId) continue;
-
-        const otherPriority = subcategoryPriority[mainCategoryId]?.[otherSubcatId] || 0;
-        if (otherPriority <= currentPriority) continue; // Skip lower or equal priority
-
-        const otherKeywords = categoryKeywords[mainCategoryId]?.[otherSubcatId] || [];
-        const matchesOther = otherKeywords.some(keyword => {
-          const keywordLower = keyword.toLowerCase().trim();
-
-          if (keywordLower.includes(' ')) {
-            return nameLower.includes(keywordLower) || tagsLower.some(tag => tag.includes(keywordLower));
-          }
-
-          const nameWords = nameLower.split(/\s+/);
-          const tagWords = tagsLower.flatMap(tag => tag.split(/\s+/));
-          const exactMatch = nameWords.includes(keywordLower) || tagWords.includes(keywordLower);
-          const wordBoundaryPattern = new RegExp(`(^|\\s)${keywordLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`, 'i');
-          const boundaryMatch = wordBoundaryPattern.test(nameLower) || tagsLower.some(tag => wordBoundaryPattern.test(tag));
-
-          return exactMatch || boundaryMatch;
-        });
-
-        // If product matches a higher priority subcategory, exclude from current
-        if (matchesOther) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  };
-
-  // Get all products for this category and filter by subcategory
-  const categoryProducts = useMemo(() => {
-    const allCategoryProducts = products.filter((p) => p.categoryId === id);
-    return filterProductsBySubcategory(allCategoryProducts, selectedSubcategory, id || '');
   }, [id, selectedSubcategory]);
+
+  // Client-side filtering removed in favor of backend subcategory filtering
+  const categoryProducts = products;
 
   if (!category) {
     return (
@@ -518,7 +99,6 @@ export default function Category() {
     );
   }
 
-  const subcategories = getSubcategories(id || '');
 
   // Extract filter options from products
   const getFilterOptions = () => {
@@ -627,14 +207,14 @@ export default function Category() {
       <div className="w-20 bg-neutral-100 border-r border-neutral-200 overflow-y-auto scrollbar-hide flex-shrink-0">
         <div className="py-2">
           {subcategories.map((subcat) => {
-            const isSelected = selectedSubcategory === subcat.id;
+            const isSelected = selectedSubcategory === (subcat.id || subcat._id);
             return (
               <button
-                key={subcat.id}
+                key={subcat.id || subcat._id}
                 type="button"
                 onClick={() => {
-                  console.log('Clicked subcategory:', subcat.id);
-                  setSelectedSubcategory(subcat.id);
+                  console.log('Clicked subcategory:', subcat.id || subcat._id);
+                  setSelectedSubcategory(subcat.id || subcat._id);
                 }}
                 className="w-full flex flex-col items-center justify-center py-2 relative hover:bg-neutral-50 transition-colors cursor-pointer"
                 style={{
@@ -650,12 +230,16 @@ export default function Category() {
                   <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-green-600" style={{ zIndex: 0, pointerEvents: 'none' }}></div>
                 )}
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-lg mb-1.5 flex-shrink-0 pointer-events-none ${isSelected
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-lg mb-1.5 flex-shrink-0 pointer-events-none overflow-hidden ${isSelected
                     ? 'bg-white border-2 border-green-600'
                     : 'bg-white border border-neutral-300'
                     }`}
                 >
-                  {subcat.icon}
+                  {subcat.image ? (
+                    <img src={subcat.image} alt={subcat.name} className="w-full h-full object-cover" />
+                  ) : (
+                    subcat.icon || '📦'
+                  )}
                 </div>
                 <span
                   className={`text-[9px] text-center leading-tight break-words pointer-events-none ${isSelected ? 'font-semibold text-neutral-900' : 'text-neutral-600'
@@ -737,18 +321,25 @@ export default function Category() {
             </button>
 
             {/* Category Buttons */}
-            {subcategories.filter(subcat => subcat.id !== 'all').map((subcat) => {
-              const isSelected = selectedSubcategory === subcat.id;
+            {subcategories.filter(subcat => (subcat.id || subcat._id) !== 'all').map((subcat) => {
+              const subId = subcat.id || subcat._id;
+              const isSelected = selectedSubcategory === subId;
               return (
                 <button
-                  key={subcat.id}
-                  onClick={() => setSelectedSubcategory(subcat.id)}
+                  key={subId}
+                  onClick={() => setSelectedSubcategory(subId)}
                   className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md transition-colors flex-shrink-0 whitespace-nowrap ${isSelected
                     ? 'bg-white border border-neutral-300 text-neutral-900'
                     : 'bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-50'
                     }`}
                 >
-                  <span className="text-sm flex-shrink-0">{subcat.icon}</span>
+                  <span className="text-sm flex-shrink-0">
+                    {subcat.image ? (
+                      <img src={subcat.image} alt="" className="w-4 h-4 object-cover rounded-full" />
+                    ) : (
+                      subcat.icon || '📦'
+                    )}
+                  </span>
                   <span>{subcat.name}</span>
                 </button>
               );

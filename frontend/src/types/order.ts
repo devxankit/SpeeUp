@@ -7,12 +7,15 @@ export interface OrderAddress {
   phone: string;
   flat: string;
   street: string;
+  address?: string; // Add address field for backend compat
   city: string;
   state?: string;
   pincode: string;
   landmark?: string;
-  id?: string; // Add id for backend ID mapping
-  _id?: string; // Add _id for backend ID mapping
+  latitude?: number;
+  longitude?: number;
+  id?: string;
+  _id?: string;
 }
 
 export interface OrderFees {
@@ -29,6 +32,7 @@ export interface Order {
   totalAmount: number;
   address: OrderAddress;
   status: OrderStatus;
+  paymentMethod?: string;
   createdAt: string;
 }
 

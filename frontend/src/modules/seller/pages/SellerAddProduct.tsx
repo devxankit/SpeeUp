@@ -363,8 +363,8 @@ export default function SellerAddProduct() {
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
                     <option value="">Select Category</option>
-                    {categories.map((cat) => (
-                      <option key={cat._id} value={cat._id}>
+                    {categories.map((cat: any) => (
+                      <option key={cat._id || cat.id} value={cat._id || cat.id}>
                         {cat.name}
                       </option>
                     ))}
@@ -688,7 +688,7 @@ export default function SellerAddProduct() {
                     <option value="">Select Tax</option>
                     {taxes.map((tax) => (
                       <option key={tax._id} value={tax._id}>
-                        {tax.name} ({tax.rate}%)
+                        {tax.name} ({tax.percentage}%)
                       </option>
                     ))}
                   </select>

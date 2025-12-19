@@ -7,9 +7,11 @@ export interface Category {
     name: string;
     parent?: string | null;
     image?: string;
+    icon?: string;
     description?: string;
     isActive: boolean;
     children?: Category[];
+    subcategories?: Category[];
 }
 
 export interface GetProductsParams {
@@ -57,6 +59,14 @@ export const getProducts = async (params?: GetProductsParams): Promise<ProductLi
  */
 export const getProductById = async (id: string): Promise<ProductDetailResponse> => {
     const response = await api.get<ProductDetailResponse>(`/customer/products/${id}`);
+    return response.data;
+};
+
+/**
+ * Get category details by ID or slug (Public)
+ */
+export const getCategoryById = async (id: string): Promise<any> => {
+    const response = await api.get<any>(`/customer/categories/${id}`);
     return response.data;
 };
 

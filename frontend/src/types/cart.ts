@@ -3,6 +3,7 @@ import { Product } from './domain';
 export interface CartItem {
   product: Product;
   quantity: number;
+  variant?: any;
 }
 
 export interface Cart {

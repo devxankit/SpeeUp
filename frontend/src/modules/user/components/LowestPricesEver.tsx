@@ -1,7 +1,8 @@
 import { useRef, useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { products } from '../../../data/products';
+import { getProducts } from '../../../services/api/customerProductService';
+
 import { getTheme } from '../../../utils/themes';
 import { useCart } from '../../../context/CartContext';
 import { Product } from '../../../types/domain';
@@ -50,7 +51,7 @@ const ProductCard = memo(({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-4xl">
-                {product.name.charAt(0).toUpperCase()}
+                {(product.name || product.productName || '?').charAt(0).toUpperCase()}
               </div>
             )}
 
@@ -180,7 +181,7 @@ const ProductCard = memo(({
             className="mb-0.5 cursor-pointer"
           >
             <h3 className="text-[10px] font-bold text-neutral-900 line-clamp-2 leading-tight">
-              {product.name}
+              {product.name || product.productName}
             </h3>
           </div>
 
@@ -296,6 +297,34 @@ export default function LowestPricesEver({ activeTab = 'all' }: LowestPricesEver
     });
     return map;
   }, [cart.items]);
+
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const fetchDiscountedProducts = async () => {
+      try {
+        // Fetch products that might have offers. 
+        // Ideally backend supports sorting by discount or has a 'lowest-prices' endpoint.
+        // For now, we fetch a batch and filter client side as per original logic, 
+        // or rely on backend 'popular' or 'limit'.
+        const response = await getProducts({ limit: 50 }); // Fetch enough to filter
+        if (response.success && response.data) {
+          const mappedProducts = (response.data as any[]).map(p => ({
+            ...p,
+            id: p._id || p.id,
+            name: p.productName || p.name,
+            imageUrl: p.mainImage || p.imageUrl,
+            mrp: p.mrp || p.price,
+            pack: p.variations?.[0]?.title || p.smallDescription || 'Standard'
+          }));
+          setProducts(mappedProducts);
+        }
+      } catch (err) {
+        console.error("Failed to fetch products for LowestPricesEver", err);
+      }
+    };
+    fetchDiscountedProducts();
+  }, []);
 
   // Get products with discounts for this section, filtered by activeTab
   const getFilteredProducts = () => {

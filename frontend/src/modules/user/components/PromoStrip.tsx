@@ -1,7 +1,15 @@
 import { useLayoutEffect, useRef, useState, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { Link } from 'react-router-dom';
-import { products } from '../../../data/products';
+// import { products } from '../../../data/products';
+const products = [
+  { id: 'lays-magic-masala', name: 'Lays Magic Masala', imageUrl: '/assets/product-lays-magic-masala.jpg' },
+  { id: 'amul-butter', name: 'Amul Butter', imageUrl: '/assets/product-amul-butter.jpg' },
+  { id: 'britannia-bread', name: 'Britannia Bread', imageUrl: '/assets/product-britannia-bread.jpg' },
+  { id: 'amul-curd', name: 'Amul Curd', imageUrl: '/assets/product-amul-curd.jpg' },
+  { id: 'mother-dairy-curd', name: 'Mother Dairy Curd', imageUrl: '/assets/product-mother-dairy-curd.jpg' },
+];
+
 import { getTheme } from '../../../utils/themes';
 
 interface PromoCard {
@@ -173,10 +181,12 @@ const getCategoryCards = (activeTab: string): PromoCard[] => {
   return allCards[activeTab] || promoCards;
 };
 
+import { getHomeContent } from '../../../services/api/customerHomeService';
+
 export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
   const theme = getTheme(activeTab);
-  const categoryCards = getCategoryCards(activeTab);
-  const featuredProducts = getFeaturedProducts(activeTab);
+  const [categoryCards, setCategoryCards] = useState<PromoCard[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const snowflakesRef = useRef<HTMLDivElement>(null);
   const housefullRef = useRef<HTMLDivElement>(null);
@@ -186,11 +196,46 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
   const priceContainerRef = useRef<HTMLDivElement>(null);
   const productNameRef = useRef<HTMLDivElement>(null);
   const productImageRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Reset product index when activeTab changes
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await getHomeContent();
+        if (response.success && response.data) {
+          // Map backend promoBanners or other data to categoryCards if needed
+          // For now, let's keep the getCategoryCards(activeTab) logic but maybe filter by real categories
+          const dynamicCards = getCategoryCards(activeTab);
+          setCategoryCards(dynamicCards);
+
+          // Use bestsellers for featuredProducts
+          if (response.data.bestsellers && response.data.bestsellers.length > 0) {
+            setFeaturedProducts(response.data.bestsellers.map((p: any) => ({
+              id: p._id,
+              name: p.productName,
+              originalPrice: p.mrp || Math.round(p.price * 1.2),
+              discountedPrice: p.price,
+              imageUrl: p.mainImage
+            })));
+          } else {
+            setFeaturedProducts(getFeaturedProducts(activeTab));
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching home content for PromoStrip:", error);
+        setCategoryCards(getCategoryCards(activeTab));
+        setFeaturedProducts(getFeaturedProducts(activeTab));
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [activeTab]);
+
+  // Reset product index when activeTab changes or featuredProducts change
   useEffect(() => {
     setCurrentProductIndex(0);
-  }, [activeTab]);
+  }, [activeTab, featuredProducts.length]);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -368,7 +413,11 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
   }, [currentProductIndex]);
 
   const currentProduct = featuredProducts[currentProductIndex];
-  const product = products.find(p => p.id === currentProduct.id);
+  const product = currentProduct ? products.find(p => p.id === currentProduct.id) : null;
+
+  if (loading || !currentProduct) {
+    return <div className="h-[200px] w-full bg-neutral-100 animate-pulse rounded-lg mx-0 mt-4" />;
+  }
 
   return (
     <div
@@ -550,10 +599,10 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
               {/* Product Thumbnail - Bottom Center, sized to container */}
               <div ref={productImageRef} className="flex-1 flex items-end justify-center w-full" style={{ minHeight: '50px', maxHeight: '65px' }}>
                 <div className="w-12 h-16 rounded flex items-center justify-center overflow-visible" style={{ background: 'transparent' }}>
-                  {product?.imageUrl ? (
+                  {(product?.imageUrl || currentProduct.imageUrl) ? (
                     <img
-                      src={product.imageUrl}
-                      alt={product.name}
+                      src={product?.imageUrl || currentProduct.imageUrl}
+                      alt={currentProduct.name}
                       className="w-full h-full object-contain"
                       style={{
                         mixBlendMode: 'normal',

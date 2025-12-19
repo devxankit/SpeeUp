@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { shopByStoreTiles } from "../../../data/homeTiles";
+// import { shopByStoreTiles } from "../../../data/homeTiles"; // REMOVED
+
 import { uploadImage } from "../../../services/api/uploadService";
 import {
   validateImageFile,
@@ -30,8 +31,21 @@ export default function AdminShopByStore() {
 
   // Initialize with existing shop by store tiles
   const [stores, setStores] = useState<ShopByStoreTile[]>([
-    ...shopByStoreTiles,
+    {
+      id: 'spiritual',
+      name: 'Spiritual Store',
+      productImages: ['/assets/products/incense.jpg'],
+      bgColor: 'bg-orange-50'
+    },
+    {
+      id: 'fashion',
+      name: 'Fashion Store',
+      productImages: ['/assets/products/tshirt.jpg'],
+      bgColor: 'bg-blue-50'
+    }
+    // ... Add more if needed or fetch from API
   ]);
+
 
   const bgColorOptions = [
     { value: "bg-yellow-100", label: "Yellow" },
@@ -140,12 +154,12 @@ export default function AdminShopByStore() {
           stores.map((store) =>
             store.id === editingId
               ? {
-                  ...store,
-                  name: storeName.trim(),
-                  id: storeId.trim(),
-                  bgColor: bgColor,
-                  productImages: imageUrl ? [imageUrl] : store.productImages,
-                }
+                ...store,
+                name: storeName.trim(),
+                id: storeId.trim(),
+                bgColor: bgColor,
+                productImages: imageUrl ? [imageUrl] : store.productImages,
+              }
               : store
           )
         );
@@ -181,8 +195,8 @@ export default function AdminShopByStore() {
     } catch (error: any) {
       setUploadError(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to upload store image. Please try again."
+        error.message ||
+        "Failed to upload store image. Please try again."
       );
     } finally {
       setUploading(false);
@@ -265,9 +279,8 @@ export default function AdminShopByStore() {
                 onChange={(e) => setStoreId(e.target.value)}
                 placeholder="e.g., spiritual-store"
                 disabled={editingId !== null}
-                className={`w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 ${
-                  editingId ? "bg-neutral-100 cursor-not-allowed" : ""
-                }`}
+                className={`w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 ${editingId ? "bg-neutral-100 cursor-not-allowed" : ""
+                  }`}
               />
               <p className="text-xs text-neutral-500 mt-1">
                 Used for routing (e.g., /store/spiritual)
@@ -370,16 +383,15 @@ export default function AdminShopByStore() {
               <button
                 onClick={handleAddStore}
                 disabled={uploading}
-                className={`flex-1 py-2.5 rounded text-sm font-medium transition-colors ${
-                  uploading
+                className={`flex-1 py-2.5 rounded text-sm font-medium transition-colors ${uploading
                     ? "bg-neutral-400 cursor-not-allowed text-white"
                     : "bg-teal-600 hover:bg-teal-700 text-white"
-                }`}>
+                  }`}>
                 {uploading
                   ? "Uploading..."
                   : editingId
-                  ? "Update Store"
-                  : "Add Store"}
+                    ? "Update Store"
+                    : "Add Store"}
               </button>
               {editingId && (
                 <button
@@ -532,7 +544,7 @@ export default function AdminShopByStore() {
                       <td className="px-4 sm:px-6 py-3">
                         <div className="w-20 h-16 bg-neutral-100 rounded overflow-hidden flex items-center justify-center">
                           {store.productImages &&
-                          store.productImages.length > 0 ? (
+                            store.productImages.length > 0 ? (
                             <img
                               src={store.productImages[0]}
                               alt={store.name}
@@ -605,11 +617,10 @@ export default function AdminShopByStore() {
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className={`p-2 border border-neutral-300 rounded ${
-                  currentPage === 1
+                className={`p-2 border border-neutral-300 rounded ${currentPage === 1
                     ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
                     : "text-neutral-700 hover:bg-neutral-50"
-                }`}
+                  }`}
                 aria-label="Previous page">
                 <svg
                   width="16"
@@ -631,11 +642,10 @@ export default function AdminShopByStore() {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 border border-neutral-300 rounded text-sm ${
-                      currentPage === page
+                    className={`px-3 py-1 border border-neutral-300 rounded text-sm ${currentPage === page
                         ? "bg-teal-600 text-white border-teal-600"
                         : "text-neutral-700 hover:bg-neutral-50"
-                    }`}>
+                      }`}>
                     {page}
                   </button>
                 )
@@ -645,11 +655,10 @@ export default function AdminShopByStore() {
                   setCurrentPage((prev) => Math.min(totalPages, prev + 1))
                 }
                 disabled={currentPage === totalPages || totalPages === 0}
-                className={`p-2 border border-neutral-300 rounded ${
-                  currentPage === totalPages || totalPages === 0
+                className={`p-2 border border-neutral-300 rounded ${currentPage === totalPages || totalPages === 0
                     ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
                     : "text-neutral-700 hover:bg-neutral-50"
-                }`}
+                  }`}
                 aria-label="Next page">
                 <svg
                   width="16"

@@ -2,17 +2,17 @@ import { Request, Response } from "express";
 import Coupon from "../../../models/Coupon";
 
 // Get available coupons
-export const getCoupons = async (req: Request, res: Response) => {
+export const getCoupons = async (_req: Request, res: Response) => {
     try {
         const currentDate = new Date();
 
         const coupons = await Coupon.find({
             isActive: true,
-            validFrom: { $lte: currentDate },
-            validUntil: { $gte: currentDate },
-        }).sort({ validUntil: 1 });
+            startDate: { $lte: currentDate },
+            endDate: { $gte: currentDate },
+        }).sort({ endDate: 1 });
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             data: coupons,
         });
@@ -29,7 +29,7 @@ export const getCoupons = async (req: Request, res: Response) => {
 export const validateCoupon = async (req: Request, res: Response) => {
     try {
         const { code, orderTotal } = req.body;
-        const userId = req.user!.userId;
+        // const userId = req.user!.userId; // Not currently used, but authentication is checked by middleware
 
         if (!code) {
             return res.status(400).json({
@@ -52,7 +52,7 @@ export const validateCoupon = async (req: Request, res: Response) => {
 
         // Check dates
         const currentDate = new Date();
-        if (currentDate < coupon.validFrom || currentDate > coupon.validUntil) {
+        if (currentDate < coupon.startDate || currentDate > coupon.endDate) {
             return res.status(400).json({
                 success: false,
                 message: "Coupon has expired",
@@ -60,7 +60,7 @@ export const validateCoupon = async (req: Request, res: Response) => {
         }
 
         // Check usage limits
-        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+        if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
             return res.status(400).json({
                 success: false,
                 message: "Coupon usage limit reached",
@@ -68,25 +68,25 @@ export const validateCoupon = async (req: Request, res: Response) => {
         }
 
         // Check min order value
-        if (coupon.minOrderValue && orderTotal < coupon.minOrderValue) {
+        if (coupon.minimumPurchase && orderTotal < coupon.minimumPurchase) {
             return res.status(400).json({
                 success: false,
-                message: `Minimum order value of ₹${coupon.minOrderValue} required`,
+                message: `Minimum order value of ₹${coupon.minimumPurchase} required`,
             });
         }
 
         // Determine discount amount
         let discountAmount = 0;
-        if (coupon.discountType === "percentage") {
+        if (coupon.discountType === "Percentage") {
             discountAmount = (orderTotal * coupon.discountValue) / 100;
-            if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) {
-                discountAmount = coupon.maxDiscountAmount;
+            if (coupon.maximumDiscount && discountAmount > coupon.maximumDiscount) {
+                discountAmount = coupon.maximumDiscount;
             }
         } else {
             discountAmount = coupon.discountValue;
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             data: {
                 isValid: true,
@@ -96,7 +96,7 @@ export const validateCoupon = async (req: Request, res: Response) => {
             },
         });
     } catch (error: any) {
-        res.status(500).json({
+        return res.status(500).json({
             success: false,
             message: "Error validating coupon",
             error: error.message,

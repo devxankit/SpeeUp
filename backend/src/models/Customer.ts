@@ -20,7 +20,6 @@ export interface ICustomer extends Document {
   pincode?: string;
   locationUpdatedAt?: Date;
   createdAt: Date;
-  createdAt: Date;
   updatedAt: Date;
   notificationPreferences?: {
     email: boolean;
@@ -163,7 +162,7 @@ CustomerSchema.pre('save', async function (next) {
   next();
 });
 
-const Customer = mongoose.model<ICustomer>('Customer', CustomerSchema);
+const Customer = mongoose.models.Customer || mongoose.model<ICustomer>('Customer', CustomerSchema);
 
 export default Customer;
 

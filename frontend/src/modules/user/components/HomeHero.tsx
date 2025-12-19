@@ -4,6 +4,9 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getTheme } from '../../../utils/themes';
 import { useLocation } from '../../../context/LocationContext';
+import { appConfig } from '../../../services/configService';
+import { getCategories } from '../../../services/api/categoryService';
+import { Category } from '../../../types/domain';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -140,8 +143,33 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
     return 'SpeeUp, Princess Center, New Palasia, Indore, Madhya Pradesh';
   }, [userLocation]);
 
-  // Search suggestions based on active tab
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  // Fetch categories for search suggestions
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await getCategories();
+        if (response.success) {
+          setCategories(response.data.map((c: any) => ({
+            ...c,
+            id: c._id || c.id
+          })));
+        }
+      } catch (error) {
+        console.error("Error fetching categories for suggestions:", error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Search suggestions based on active tab or fetched categories
   const searchSuggestions = useMemo(() => {
+    if (activeTab === 'all' && categories.length > 0) {
+      // Use real category names for 'all' tab suggestions
+      return categories.slice(0, 8).map(c => c.name.toLowerCase());
+    }
+
     switch (activeTab) {
       case 'wedding':
         return ['gift packs', 'dry fruits', 'sweets', 'decorative items', 'wedding cards', 'return gifts'];
@@ -321,7 +349,7 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
               {/* Service name - small, dark */}
               <div className="text-neutral-800 font-medium text-[10px] md:text-xs mb-0 leading-tight">SpeeUp Quick Commerce</div>
               {/* Delivery time - large, bold, dark grey/black */}
-              <div className="text-neutral-900 font-extrabold text-2xl md:text-xl mb-0 md:mb-0.5 leading-tight">14 minutes</div>
+              <div className="text-neutral-900 font-extrabold text-2xl md:text-xl mb-0 md:mb-0.5 leading-tight">{appConfig.estimatedDeliveryTime}</div>
               {/* Location with dropdown indicator */}
               <div className="text-neutral-700 text-[10px] md:text-xs flex items-center gap-0.5 leading-tight">
                 <span className="line-clamp-1" title={locationDisplayText}>{locationDisplayText}</span>

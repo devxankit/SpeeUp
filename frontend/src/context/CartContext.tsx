@@ -35,7 +35,18 @@ interface ExtendedCartItem extends CartItem {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<ExtendedCartItem[]>([]);
+  // Initialize state from localStorage for persistence on refresh
+  const [items, setItems] = useState<ExtendedCartItem[]>(() => {
+    const saved = localStorage.getItem(CART_STORAGE_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved cart", e);
+      }
+    }
+    return [];
+  });
   const [lastAddEvent, setLastAddEvent] = useState<AddToCartEvent | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -43,26 +54,36 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Helper to map API cart items to internal CartItem structure
   const mapApiItemsToState = (apiItems: any[]): ExtendedCartItem[] => {
-    return apiItems.map((item: any) => ({
-      id: item._id, // Store CartItem ID
-      product: {
-        id: item.product._id, // Map _id to id
-        name: item.product.productName,
-        price: item.product.price,
-        mrp: item.product.mrp,
-        imageUrl: item.product.mainImage,
-        pack: item.product.pack || '1 unit',
-        categoryId: item.product.category || '',
-        description: item.product.description
-      },
-      quantity: item.quantity
-    }));
+    return apiItems
+      .filter((item: any) => item.product) // Safety filter
+      .map((item: any) => ({
+        id: item._id, // Store CartItem ID
+        product: {
+          id: item.product._id, // Map _id to id
+          name: item.product.productName || item.product.name,
+          price: item.product.price,
+          mrp: item.product.mrp,
+          imageUrl: item.product.mainImage || item.product.imageUrl,
+          pack: item.product.pack || '1 unit',
+          categoryId: item.product.category || '',
+          description: item.product.description
+        },
+        quantity: item.quantity
+      }));
   };
+
+  // Sync to localStorage whenever items change
+  useEffect(() => {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
 
   // Helper to sync cart from API
   const fetchCart = async () => {
     if (!isAuthenticated || user?.userType !== 'Customer') {
-      setItems([]);
+      // If we cleared it above but had things in localStorage, we keep them for guests?
+      // For now, if logged out, we clear if it was an authenticated session.
+      // But if guest, we might want to keep it.
+      // Let's only clear if we are transition from logged in to logged out.
       setLoading(false);
       return;
     }
@@ -81,19 +102,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Load cart on mount or auth change
+  // Load cart on auth change
   useEffect(() => {
     if (isAuthenticated) {
       fetchCart();
     } else {
-      setItems([]);
+      // Guest cart is already in 'items' from localStorage if it existed
       setLoading(false);
     }
   }, [isAuthenticated, user?.userType]);
 
   const cart: Cart = useMemo(() => {
-    const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-    const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+    const total = items.reduce((sum, item) => sum + item.product.price * (item.quantity || 0), 0);
+    const itemCount = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
     return { items, total, itemCount };
   }, [items]);
 
@@ -126,8 +147,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
 
     try {
-      await apiAddToCart(product.id);
-      await fetchCart();
+      const response = await apiAddToCart(product.id);
+      if (response && response.data && response.data.items) {
+        // Atomic update from server response
+        setItems(mapApiItemsToState(response.data.items));
+      }
     } catch (error) {
       console.error("Add to cart failed", error);
       // Revert on error
@@ -147,8 +171,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((prevItems) => prevItems.filter((item) => item.product.id !== productId));
 
     try {
-      await apiRemoveFromCart(itemToRemove.id);
-      await fetchCart(); // Sync to be safe
+      const response = await apiRemoveFromCart(itemToRemove.id);
+      if (response && response.data && response.data.items) {
+        setItems(mapApiItemsToState(response.data.items));
+      }
     } catch (error) {
       console.error("Remove from cart failed", error);
       setItems(previousItems);
@@ -175,7 +201,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
 
     try {
-      await apiUpdateCartItem(itemToUpdate.id, quantity);
+      const response = await apiUpdateCartItem(itemToUpdate.id, quantity);
+      if (response && response.data && response.data.items) {
+        setItems(mapApiItemsToState(response.data.items));
+      }
     } catch (error) {
       console.error("Update quantity failed", error);
       setItems(previousItems);

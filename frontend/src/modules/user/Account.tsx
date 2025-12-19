@@ -150,13 +150,14 @@ export default function Account() {
             <div className="text-[10px] md:text-xs font-semibold text-neutral-900">Your orders</div>
           </button>
           <button
+            onClick={() => navigate('/wallet')}
             className="bg-white rounded-lg border border-neutral-200 p-3 md:p-4 hover:shadow-md transition-shadow text-center"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-auto mb-1.5 md:mb-2 text-neutral-700 md:w-6 md:h-6">
               <path d="M21 4H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               <line x1="1" y1="10" x2="23" y2="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            <div className="text-[10px] md:text-xs font-semibold text-neutral-900">SpeeUp Money</div>
+            <div className="text-[10px] md:text-xs font-semibold text-neutral-900">Wallet</div>
           </button>
           <button
             className="bg-white rounded-lg border border-neutral-200 p-3 md:p-4 hover:shadow-md transition-shadow text-center"
@@ -227,7 +228,10 @@ export default function Account() {
       <div className="px-4 py-2.5">
         <h2 className="text-xs font-bold text-neutral-900 mb-2">Your information</h2>
         <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
-          <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors">
+          <button
+            onClick={() => navigate('/address-book')}
+            className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors"
+          >
             <div className="flex items-center gap-2.5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -249,7 +253,10 @@ export default function Account() {
             </div>
             <span className="text-neutral-400 text-base">›</span>
           </button>
-          <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100">
+          <button
+            onClick={() => navigate('/wishlist')}
+            className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors border-t border-neutral-100"
+          >
             <div className="flex items-center gap-2.5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -300,7 +307,10 @@ export default function Account() {
       <div className="px-4 py-2.5">
         <h2 className="text-xs font-bold text-neutral-900 mb-2">Payment and coupons</h2>
         <div className="bg-white rounded-lg border border-neutral-200 overflow-hidden">
-          <button className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors">
+          <button
+            onClick={() => navigate('/wallet')}
+            className="w-full flex items-center justify-between px-3 py-2 hover:bg-neutral-50 transition-colors"
+          >
             <div className="flex items-center gap-2.5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-700">
                 <path d="M21 4H3a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

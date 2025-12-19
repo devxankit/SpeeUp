@@ -1,13 +1,14 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import Button from '../../components/ui/button';
+import { appConfig } from '../../services/configService';
 
 export default function Cart() {
   const { cart, updateQuantity, removeFromCart, clearCart } = useCart();
   const navigate = useNavigate();
 
-  const deliveryFee = cart.total >= 199 ? 0 : 40;
-  const platformFee = 2; // Example platform fee
+  const deliveryFee = cart.total >= appConfig.freeDeliveryThreshold ? 0 : appConfig.deliveryFee;
+  const platformFee = appConfig.platformFee;
   const totalAmount = cart.total + deliveryFee + platformFee;
 
   const handleCheckout = () => {
@@ -44,7 +45,7 @@ export default function Cart() {
             </button>
           )}
         </div>
-        <p className="text-xs md:text-sm text-neutral-600">Delivered in 10–15 mins</p>
+        <p className="text-xs md:text-sm text-neutral-600">Delivered in {appConfig.estimatedDeliveryTime}</p>
       </div>
 
       {/* Cart Items */}
@@ -148,9 +149,9 @@ export default function Cart() {
                 {deliveryFee === 0 ? 'Free' : `₹${deliveryFee}`}
               </span>
             </div>
-            {cart.total < 199 && (
+            {cart.total < appConfig.freeDeliveryThreshold && (
               <div className="text-xs md:text-sm text-green-600 bg-green-50 px-2 py-1 rounded">
-                Add ₹{(199 - cart.total).toFixed(0)} more for free delivery
+                Add ₹{(appConfig.freeDeliveryThreshold - cart.total).toFixed(0)} more for free delivery
               </div>
             )}
           </div>
