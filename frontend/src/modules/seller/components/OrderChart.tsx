@@ -18,7 +18,7 @@ export default function OrderChart({ title, data, maxValue, height = 400 }: Orde
   const [brushStart, setBrushStart] = useState<number | null>(null);
   const [brushEnd, setBrushEnd] = useState<number | null>(null);
   const [chartWidth, setChartWidth] = useState(1200);
-  
+
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -42,6 +42,31 @@ export default function OrderChart({ title, data, maxValue, height = 400 }: Orde
     return () => window.removeEventListener('resize', updateChartWidth);
   }, []);
 
+  // Prevent page scroll when zooming/panning with active listener
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        // Allow default zoom behavior if ctrl is pressed? 
+        // Or strictly prevent all scrolling? 
+        // Original code was strictly e.preventDefault()
+        e.preventDefault();
+        e.stopPropagation();
+      } else {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
+
   const chartHeight = height;
   const padding = { top: 30, right: 15, bottom: 80, left: 30 };
   const graphWidth = chartWidth - padding.left - padding.right;
@@ -60,18 +85,18 @@ export default function OrderChart({ title, data, maxValue, height = 400 }: Orde
     if (points.length === 2) {
       return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
     }
-    
+
     const xAxisY = padding.top + graphHeight; // X-axis position (bottom of chart)
-    
+
     let path = `M ${points[0].x} ${points[0].y}`;
-    
+
     // Use cubic Bezier curves for smooth, curvy transitions
     for (let i = 0; i < points.length - 1; i++) {
       const current = points[i];
       const next = points[i + 1];
-      
+
       let cp1x, cp1y, cp2x, cp2y;
-      
+
       if (i === 0) {
         // First segment: create smooth curve towards next point
         const dx = next.x - current.x;
@@ -93,45 +118,45 @@ export default function OrderChart({ title, data, maxValue, height = 400 }: Orde
         // Middle segments: use Catmull-Rom style control points for smooth curves
         const prev = points[i - 1];
         const nextNext = points[i + 2];
-        
+
         // Calculate tangent vectors for smooth curve
         const t1x = (next.x - prev.x) * 0.3;
         const t1y = (next.y - prev.y) * 0.3;
         const t2x = (nextNext.x - current.x) * 0.3;
         const t2y = (nextNext.y - current.y) * 0.3;
-        
+
         cp1x = current.x + t1x;
         cp1y = current.y + t1y;
         cp2x = next.x - t2x;
         cp2y = next.y - t2y;
       }
-      
+
       // Constrain control points to prevent curve from going below x-axis
       // Find the minimum Y value among current, next, and x-axis
       const minAllowedY = Math.min(current.y, next.y, xAxisY);
-      
+
       // Ensure control points don't go below the minimum allowed Y
       cp1y = Math.max(cp1y, minAllowedY);
       cp2y = Math.max(cp2y, minAllowedY);
-      
+
       // Also ensure they don't go below x-axis
       cp1y = Math.min(cp1y, xAxisY);
       cp2y = Math.min(cp2y, xAxisY);
-      
+
       // Additional constraint: ensure control points create smooth curves
       // by keeping them within reasonable bounds relative to data points
       const maxY = Math.max(current.y, next.y);
       cp1y = Math.min(cp1y, maxY + (maxY - minAllowedY) * 0.2);
       cp2y = Math.min(cp2y, maxY + (maxY - minAllowedY) * 0.2);
-      
+
       path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${next.x} ${next.y}`;
     }
-    
+
     return path;
   };
 
   const smoothPath = createSmoothPath();
-  
+
   // Create area path (for gradient fill)
   const areaPath = `${smoothPath} L ${points[points.length - 1]?.x || 0} ${padding.top + graphHeight} L ${points[0]?.x || 0} ${padding.top + graphHeight} Z`;
 
@@ -190,19 +215,19 @@ export default function OrderChart({ title, data, maxValue, height = 400 }: Orde
 
   const handleMouseMovePan = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!isPanning || !svgRef.current) return;
-    
+
     const deltaX = e.clientX - panStart.x;
     const svgRect = svgRef.current.getBoundingClientRect();
     const viewBoxWidth = chartWidth / zoom;
     const scaleX = svgRect.width / viewBoxWidth;
     const adjustedDeltaX = deltaX / scaleX;
-    
+
     setPanX((prev) => {
       const maxPan = chartWidth * (1 - 1 / zoom);
       const newPan = prev - adjustedDeltaX;
       return Math.max(-maxPan, Math.min(0, newPan));
     });
-    
+
     setPanStart({ x: e.clientX, y: e.clientY });
   };
 
@@ -215,12 +240,12 @@ export default function OrderChart({ title, data, maxValue, height = 400 }: Orde
       const end = Math.max(brushStart, brushEnd);
       const range = end - start;
       if (range > 0) {
-      const newZoom = Math.min(5, data.length / range);
-      setZoom(newZoom);
-      const centerX = (start + end) / 2;
-      const centerXPixel = padding.left + (centerX / (data.length - 1)) * graphWidth;
-      const newPanX = -(centerXPixel - chartWidth / 2);
-      setPanX(Math.max(-chartWidth * (1 - 1 / newZoom), Math.min(0, newPanX)));
+        const newZoom = Math.min(5, data.length / range);
+        setZoom(newZoom);
+        const centerX = (start + end) / 2;
+        const centerXPixel = padding.left + (centerX / (data.length - 1)) * graphWidth;
+        const newPanX = -(centerXPixel - chartWidth / 2);
+        setPanX(Math.max(-chartWidth * (1 - 1 / newZoom), Math.min(0, newPanX)));
       }
       setBrushStart(null);
       setBrushEnd(null);
@@ -357,14 +382,9 @@ export default function OrderChart({ title, data, maxValue, height = 400 }: Orde
       </div>
 
       {/* Chart */}
-      <div 
-        ref={containerRef} 
+      <div
+        ref={containerRef}
         className="w-full relative overflow-hidden"
-        onWheel={(e) => {
-          // Prevent page zoom when scrolling over chart area
-          e.preventDefault();
-          e.stopPropagation();
-        }}
       >
         <svg
           ref={svgRef}
@@ -393,10 +413,10 @@ export default function OrderChart({ title, data, maxValue, height = 400 }: Orde
               <stop offset="100%" stopColor="#ccfbf1" stopOpacity="0" />
             </linearGradient>
             <filter id={`glow-${title.replace(/\s+/g, '-')}`}>
-              <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+              <feGaussianBlur stdDeviation="4" result="coloredBlur" />
               <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
           </defs>
@@ -404,10 +424,10 @@ export default function OrderChart({ title, data, maxValue, height = 400 }: Orde
           {/* Grid Lines */}
           {(() => {
             // For maxValue 20, show grid at 0, 5, 10, 15, 20; for others show proportional
-            const ratios = maxValue === 20 
+            const ratios = maxValue === 20
               ? [0, 0.25, 0.5, 0.75, 1]
               : [0, 0.25, 0.5, 0.75, 1];
-            
+
             return ratios.map((ratio, idx) => {
               const y = padding.top + graphHeight - ratio * graphHeight;
               return (
@@ -441,8 +461,8 @@ export default function OrderChart({ title, data, maxValue, height = 400 }: Orde
           )}
 
           {/* Area Fill with Gradient - Very Light Teal */}
-          <path 
-            d={areaPath} 
+          <path
+            d={areaPath}
             fill={`url(#gradient-${title.replace(/\s+/g, '-')})`}
             style={{ opacity: 1 }}
           />
@@ -486,7 +506,7 @@ export default function OrderChart({ title, data, maxValue, height = 400 }: Orde
                 fill={isHovered ? '#0d9488' : '#14b8a6'}
                 stroke="white"
                 strokeWidth={isHovered ? 4 : 3}
-                style={{ 
+                style={{
                   transition: 'all 0.2s ease',
                   filter: isHovered ? 'drop-shadow(0 0 8px rgba(13, 148, 136, 0.9))' : 'drop-shadow(0 2px 4px rgba(20, 184, 166, 0.3))'
                 }}
@@ -515,10 +535,10 @@ export default function OrderChart({ title, data, maxValue, height = 400 }: Orde
           {/* Y-Axis Labels */}
           {(() => {
             // For maxValue 20, show 0, 5, 10, 15, 20; for others show proportional
-            const labels = maxValue === 20 
+            const labels = maxValue === 20
               ? [0, 5, 10, 15, 20]
               : [0, 0.25, 0.5, 0.75, 1].map(ratio => Math.round(maxValue * ratio));
-            
+
             return labels.map((value, idx) => {
               const ratio = maxValue === 20 ? value / 20 : value / maxValue;
               const y = padding.top + graphHeight - ratio * graphHeight;

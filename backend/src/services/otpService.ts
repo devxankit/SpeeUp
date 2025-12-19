@@ -1,4 +1,6 @@
 import Otp, { UserType } from '../models/Otp';
+import axios from 'axios';
+
 
 const OTP_EXPIRY_MINUTES = parseInt(process.env.OTP_EXPIRES_IN?.replace('m', '') || '5', 10);
 const DEFAULT_OTP = process.env.DEFAULT_OTP || '999999';
@@ -8,17 +10,19 @@ const DEFAULT_OTP = process.env.DEFAULT_OTP || '999999';
  * @param isLogin - If true, always returns default OTP for login flows
  */
 export function generateOTP(isLogin: boolean = false): string {
-  // For login flows, always use default OTP
+  // If USE_MOCK_OTP is explicitly true, always use default
+  if (process.env.USE_MOCK_OTP === 'true') {
+    return DEFAULT_OTP;
+  }
+
+  // For login flows, use default OTP if isLogin is true
   if (isLogin) {
     return DEFAULT_OTP;
   }
-  
-  // For signup flows, use default OTP in development, random in production
-  if (process.env.NODE_ENV === 'development') {
-    return DEFAULT_OTP;
-  }
+
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
+
 
 /**
  * Send OTP to mobile number
@@ -46,33 +50,77 @@ export async function sendOTP(mobile: string, userType: UserType, isLogin: boole
       isVerified: false,
     });
 
-    // In production, send via SMSIndiaHub
-    if (process.env.NODE_ENV === 'production') {
-      // TODO: Integrate with SMSIndiaHub API
-      // const smsResult = await sendSMSViaSMSIndiaHub(mobile, otp);
-      // if (!smsResult.success) {
-      //   throw new Error('Failed to send OTP via SMS');
-      // }
+    // Check if we should use mock OTP (dev mode or forced via env)
+    const useMock = process.env.USE_MOCK_OTP === 'true';
+
+    if (!useMock && process.env.FAST2SMS_API_KEY) {
+      // Send real SMS via Fast2SMS
+      const smsSent = await sendViaFast2SMS(mobile, otp);
+      if (!smsSent) {
+        // Fallback to error or maybe allow if it's critical?
+        // For now, let's treat SMS failure as critical unless in dev
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error('Failed to send OTP via SMS Gateway');
+        }
+      }
     }
 
-    // For login flows, always show the default OTP in the message
-    if (isLogin) {
+    // Return success message
+    // In production/real-mode, don't return the OTP in the response body!
+    if (!useMock && process.env.NODE_ENV === 'production') {
       return {
         success: true,
-        message: `OTP sent (Login OTP: ${otp})`,
+        message: 'OTP sent successfully to your mobile number',
       };
     }
 
+    // specific debug mode message
     return {
       success: true,
-      message: process.env.NODE_ENV === 'development' 
-        ? `OTP sent (dev mode: ${otp})` 
-        : 'OTP sent successfully',
+      message: `OTP sent (Debug: ${otp})`,
     };
+
   } catch (error: any) {
     throw new Error(`Failed to send OTP: ${error.message}`);
   }
 }
+
+/**
+ * Send SMS using Fast2SMS API
+ */
+async function sendViaFast2SMS(mobile: string, otp: string): Promise<boolean> {
+  try {
+    const apiKey = process.env.FAST2SMS_API_KEY;
+    const route = process.env.FAST2SMS_ROUTE || 'otp';
+
+    // Construct payload based on route type if needed, but 'otp' route is simplest
+    // https://www.fast2sms.com/dev/bulkV2
+    const url = 'https://www.fast2sms.com/dev/bulkV2';
+
+    const response = await axios.post(url, {
+      route: route,
+      variables_values: otp,
+      numbers: mobile,
+    }, {
+      headers: {
+        'authorization': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.data && response.data.return === true) {
+      console.log(`Fast2SMS Success: ${mobile}`);
+      return true;
+    } else {
+      console.error('Fast2SMS Failed:', response.data);
+      return false;
+    }
+  } catch (error: any) {
+    console.error('Fast2SMS Error:', error.response?.data || error.message);
+    return false;
+  }
+}
+
 
 /**
  * Verify OTP against stored value

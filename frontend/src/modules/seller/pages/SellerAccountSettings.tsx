@@ -165,8 +165,8 @@ const SellerAccountSettings = () => {
               whileTap={{ scale: 0.98 }}
               onClick={() => setIsEditing(!isEditing)}
               className={`px-5 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 shadow-sm flex items-center gap-2 ${isEditing
-                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-                  : 'bg-teal-600 text-white hover:bg-teal-700 hover:shadow-md'
+                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                : 'bg-teal-600 text-white hover:bg-teal-700 hover:shadow-md'
                 }`}
             >
               {isEditing ? (
@@ -195,8 +195,8 @@ const SellerAccountSettings = () => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${activeTab === tab.id
-                      ? 'bg-teal-50 text-teal-700 shadow-sm ring-1 ring-teal-200'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-teal-50 text-teal-700 shadow-sm ring-1 ring-teal-200'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                 >
                   <span className={`${activeTab === tab.id ? 'text-teal-600' : 'text-gray-400'}`}>
@@ -280,14 +280,16 @@ const SellerAccountSettings = () => {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <InputGroup label="Full Name" name="sellerName" value={sellerData.sellerName} onChange={handleInputChange} disabled={!isEditing} />
-                          <InputGroup label="Email Address" name="email" value={sellerData.email} onChange={handleInputChange} disabled={!isEditing} type="email" />
-                          <InputGroup label="Mobile Number" name="mobile" value={sellerData.mobile} onChange={handleInputChange} disabled={!isEditing} type="tel" />
+                          <InputGroup label="Full Name" name="sellerName" value={sellerData.sellerName} onChange={handleInputChange} disabled={!isEditing} autoComplete="name" />
+                          <InputGroup label="Email Address" name="email" value={sellerData.email} onChange={handleInputChange} disabled={!isEditing} type="email" autoComplete="email" />
+                          <InputGroup label="Mobile Number" name="mobile" value={sellerData.mobile} onChange={handleInputChange} disabled={!isEditing} type="tel" autoComplete="tel" />
+
                           <div className="space-y-1.5">
                             <label className="text-sm font-semibold text-gray-700 ml-1">Password</label>
                             <div className="relative">
                               <input
                                 type="password"
+                                autoComplete="new-password"
                                 placeholder="••••••••"
                                 disabled={!isEditing}
                                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none disabled:bg-gray-50/50 disabled:text-gray-500 transition-all placeholder:text-gray-300"
@@ -477,7 +479,8 @@ const SellerAccountSettings = () => {
   );
 };
 
-const InputGroup = ({ label, name, value, onChange, disabled, type = "text", placeholder = "" }: any) => (
+const InputGroup = ({ label, name, value, onChange, disabled, type = "text", placeholder = "", autoComplete }: any) => (
+
   <div className="space-y-1.5">
     <label className="text-sm font-semibold text-gray-700 ml-1">{label}</label>
     <input
@@ -487,7 +490,9 @@ const InputGroup = ({ label, name, value, onChange, disabled, type = "text", pla
       onChange={onChange}
       disabled={disabled}
       placeholder={placeholder}
+      autoComplete={autoComplete}
       className={`w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all ${disabled ? 'bg-gray-50/50 text-gray-500 cursor-default' : 'bg-white'
+
         }`}
     />
   </div>
