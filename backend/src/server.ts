@@ -1,3 +1,12 @@
+import express, { Application, Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import connectDB from './config/db';
+import routes from './routes';
+import { errorHandler } from './middleware/errorHandler';
+import { notFound } from './middleware/notFound';
+import { ensureDefaultAdmin } from './utils/ensureDefaultAdmin';
+import { seedHeaderCategories } from './utils/seedHeaderCategories';
 import express, { Application, Request, Response } from "express";
 import { createServer } from "http";
 import cors from "cors";
@@ -42,6 +51,7 @@ app.get("/", (_req: Request, res: Response) => {
 });
 
 // Debug middleware - log all incoming requests
+app.use((req: Request, res: Response, next: NextFunction) => {
 app.use((req: Request, _res: Response, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
@@ -60,6 +70,7 @@ async function startServer() {
   // Connect DB then ensure default admin exists
   await connectDB();
   await ensureDefaultAdmin();
+  await seedHeaderCategories();
 
   httpServer.listen(PORT, () => {
     console.log("\n\x1b[32m✓\x1b[0m \x1b[1mSpeeUp Server Started\x1b[0m");

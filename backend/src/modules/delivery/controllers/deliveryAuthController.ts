@@ -83,7 +83,17 @@ export const verifyCallOtp = asyncHandler(async (req: Request, res: Response) =>
   // Find delivery partner
   console.log('Looking for Delivery Partner with mobile:', mobile);
   const delivery = await Delivery.findOne({ mobile }).select("-password");
-  console.log('Delivery Partner Found:', delivery ? 'Yes' : 'No', delivery?._id);
+
+  if (delivery) {
+    console.log('Delivery Partner Found:', delivery._id);
+    console.log('ID Type:', typeof delivery._id);
+    try {
+      console.log('ID Constructor:', delivery._id.constructor.name);
+      console.log('Is Mongoose ObjectId:', delivery._id instanceof require('mongoose').Types.ObjectId);
+    } catch (e) { console.log('Could not check constructor'); }
+  } else {
+    console.log('Delivery Partner Found: No');
+  }
 
   if (!delivery) {
     console.log('Error: Delivery Partner not found in DB');
@@ -200,6 +210,10 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 export const getProfile = asyncHandler(async (req: Request, res: Response) => {
   // @ts-ignore - req.user is added by middleware
   const userId = (req.user as any).userId;
+
+  if (!userId) {
+    return res.status(401).json({ success: false, message: "User not authenticated" });
+  }
 
   const delivery = await Delivery.findById(userId).select("-password");
 

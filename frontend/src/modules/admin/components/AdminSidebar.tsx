@@ -28,7 +28,6 @@ interface AdminSidebarProps {
 }
 
 const menuSections: MenuSection[] = [
-
   {
     title: 'Product Section',
     items: [
@@ -468,8 +467,6 @@ const menuSections: MenuSection[] = [
                 <path d="M1 1H4L6.68 14.39C6.77144 14.8504 7.02191 15.264 7.38755 15.5583C7.75318 15.8526 8.2107 16.009 8.68 16H19C19.4693 16.009 19.9268 15.8526 20.2925 15.5583C20.6581 15.264 20.9086 14.8504 21 14.39L22.54 6.62C22.6214 6.22389 22.6172 5.81177 22.528 5.41838C22.4388 5.02499 22.2672 4.66078 22.026 4.35277C21.7848 4.04476 21.4805 3.80134 21.1372 3.63988C20.794 3.47841 20.4208 3.40296 20.044 3.42H5.82M1 1L3 3M1 1V5"></path>
               </svg>
             ),
-            badge: '405',
-            badgeColor: 'bg-pink-500 text-white',
           },
           {
             label: 'Pending Order',
@@ -477,76 +474,64 @@ const menuSections: MenuSection[] = [
             icon: (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
-                <path d="M12 6V12L16 14"></path>
+                <polyline points="12 6 12 12 16 14"></polyline>
               </svg>
             ),
-            badge: '22',
-            badgeColor: 'bg-orange-500 text-white',
           },
           {
             label: 'Received Order',
             path: '/admin/orders/received',
             icon: (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.7088 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98232 16.07 2.85999"></path>
-                <path d="M22 4L12 14.01L9 11.01"></path>
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
               </svg>
             ),
-            badge: '195',
-            badgeColor: 'bg-blue-500 text-white',
           },
           {
             label: 'Processed Order',
             path: '/admin/orders/processed',
             icon: (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"></path>
-                <path d="M14 2V8H20"></path>
-                <path d="M9 12L11 14L15 10"></path>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
               </svg>
             ),
-            badge: '13',
-            badgeColor: 'bg-teal-400 text-white',
           },
           {
             label: 'Shipped Order',
             path: '/admin/orders/shipped',
             icon: (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 3H15V13H1V3Z"></path>
-                <path d="M15 3H23L18 8L23 13H15V3Z"></path>
-                <path d="M4.5 12H9.5"></path>
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                <line x1="4" y1="22" x2="4" y2="15"></line>
               </svg>
             ),
-            badge: '13',
-            badgeColor: 'bg-gray-400 text-gray-900 border border-white',
           },
           {
             label: 'Out For Delivery',
             path: '/admin/orders/out-for-delivery',
             icon: (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 3H15V13H1V3Z"></path>
-                <path d="M15 3H23L18 8L23 13H15V3Z"></path>
+                <rect x="1" y="3" width="15" height="13"></rect>
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
                 <circle cx="5.5" cy="18.5" r="2.5"></circle>
                 <circle cx="18.5" cy="18.5" r="2.5"></circle>
-                <path d="M4.5 12H9.5"></path>
               </svg>
             ),
-            badge: '18',
-            badgeColor: 'bg-white text-gray-900 border border-gray-900',
           },
           {
             label: 'Delivered Order',
             path: '/admin/orders/delivered',
             icon: (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.7088 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98232 16.07 2.85999"></path>
-                <path d="M22 4L12 14.01L9 11.01"></path>
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
               </svg>
             ),
-            badge: '44',
-            badgeColor: 'bg-green-500 text-white',
           },
           {
             label: 'Cancelled Order',
@@ -554,25 +539,23 @@ const menuSections: MenuSection[] = [
             icon: (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
-                <path d="M15 9L9 15"></path>
-                <path d="M9 9L15 15"></path>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
               </svg>
             ),
-            badge: '40',
-            badgeColor: 'bg-red-500 text-white',
+          },
+          {
+            label: 'Return',
+            path: '/admin/return',
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z"></path>
+                <path d="M16 21V5C16 4.46957 15.7893 3.96086 15.4142 3.58579C15.0391 3.21071 14.5304 3 14 3H10C9.46957 3 8.96086 3.21071 8.58579 3.58579C8.21071 3.96086 8 4.46957 8 5V21"></path>
+                <path d="M8 12L12 8L16 12M12 8V16"></path>
+              </svg>
+            ),
           },
         ],
-      },
-      {
-        label: 'Return',
-        path: '/admin/return',
-        icon: (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z"></path>
-            <path d="M16 21V5C16 4.46957 15.7893 3.96086 15.4142 3.58579C15.0391 3.21071 14.5304 3 14 3H10C9.46957 3 8.96086 3.21071 8.58579 3.58579C8.21071 3.96086 8 4.46957 8 5V21"></path>
-            <path d="M8 12L12 8L16 12M12 8V16"></path>
-          </svg>
-        ),
       },
     ],
   },
@@ -731,9 +714,9 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
   })).filter(section => section.items.length > 0);
 
   return (
-    <aside className="w-64 bg-teal-700 h-screen flex flex-col">
+    <aside className="w-64 bg-teal-700 h-screen flex flex-col" >
       {/* Close button - only show on mobile */}
-      <div className="flex justify-end p-4 border-b border-teal-600 lg:hidden">
+      < div className="flex justify-end p-4 border-b border-teal-600 lg:hidden" >
         <button
           onClick={onClose}
           className="p-2 text-teal-100 hover:text-white transition-colors"
@@ -749,10 +732,10 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
             />
           </svg>
         </button>
-      </div>
+      </div >
 
       {/* Search Bar */}
-      <div className="p-4 border-b border-teal-600">
+      < div className="p-4 border-b border-teal-600" >
         <div className="relative">
           <input
             type="text"
@@ -774,15 +757,15 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
             <path d="M21 21L16.65 16.65"></path>
           </svg>
         </div>
-      </div>
+      </div >
 
       {/* Dashboard Link */}
-      <div className="px-4 py-2 border-b border-teal-600">
+      < div className="px-4 py-2 border-b border-teal-600" >
         <button
           onClick={() => handleNavigation('/admin')}
           className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors ${isActive('/admin')
-              ? 'bg-teal-600 text-white'
-              : 'text-teal-100 hover:bg-teal-600/50 hover:text-white'
+            ? 'bg-teal-600 text-white'
+            : 'text-teal-100 hover:bg-teal-600/50 hover:text-white'
             }`}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -795,98 +778,91 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
           </svg>
           <span className="text-sm font-medium">Dashboard</span>
         </button>
-      </div>
+      </div >
 
       {/* Navigation Menu */}
-      <nav className="flex-1 py-4 overflow-y-auto admin-sidebar-nav" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      < nav className="flex-1 py-4 overflow-y-auto admin-sidebar-nav" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         <style>{`
           .admin-sidebar-nav::-webkit-scrollbar {
             display: none;
           }
         `}</style>
-        {filteredSections.map((section, sectionIndex) => (
-          <div key={sectionIndex} className="mb-6">
-            <h3 className="px-4 mb-2 text-xs font-bold text-teal-200 uppercase tracking-wider">
-              {section.title}
-            </h3>
-            <ul className="space-y-1 px-2">
-              {section.items.map((item) => {
-                const expanded = isExpanded(item.path);
-                const active = isActive(item.path) || isSubmenuActive(item.submenuItems);
+        {
+          filteredSections.map((section, sectionIndex) => (
+            <div key={sectionIndex} className="mb-6">
+              <h3 className="px-4 mb-2 text-xs font-bold text-teal-200 uppercase tracking-wider">
+                {section.title}
+              </h3>
+              <ul className="space-y-1 px-2">
+                {section.items.map((item) => {
+                  const expanded = isExpanded(item.path);
+                  const active = isActive(item.path) || isSubmenuActive(item.submenuItems);
 
-                return (
-                  <li key={item.path}>
-                    <button
-                      onClick={() => {
-                        if (item.hasSubmenu) {
-                          toggleMenu(item.path);
-                        } else {
-                          handleNavigation(item.path);
-                        }
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${active
+                  return (
+                    <li key={item.path}>
+                      <button
+                        onClick={() => {
+                          if (item.hasSubmenu) {
+                            toggleMenu(item.path);
+                          } else {
+                            handleNavigation(item.path);
+                          }
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${active
                           ? 'bg-teal-600 text-white'
                           : 'text-teal-100 hover:bg-teal-600/50 hover:text-white'
-                        }`}
-                    >
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="flex-shrink-0">{item.icon}</span>
-                        <span className="text-sm font-medium truncate">{item.label}</span>
-                        {item.badge && (
-                          <span className="ml-auto px-2 py-0.5 text-xs font-semibold bg-pink-500 text-white rounded">
-                            {item.badge}
-                          </span>
+                          }`}
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="flex-shrink-0">{item.icon}</span>
+                          <span className="text-sm font-medium truncate">{item.label}</span>
+                        </div>
+                        {item.hasSubmenu && (
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className={`transition-transform flex-shrink-0 ml-2 ${expanded ? 'rotate-90' : ''} ${active ? 'text-white' : 'text-teal-200'}`}
+                          >
+                            <path d="M9 18L15 12L9 6" strokeLinecap="round" strokeLinejoin="round"></path>
+                          </svg>
                         )}
-                      </div>
-                      {item.hasSubmenu && (
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          className={`transition-transform flex-shrink-0 ml-2 ${expanded ? 'rotate-90' : ''} ${active ? 'text-white' : 'text-teal-200'}`}
-                        >
-                          <path d="M9 18L15 12L9 6" strokeLinecap="round" strokeLinejoin="round"></path>
-                        </svg>
-                      )}
-                    </button>
-                    {item.hasSubmenu && expanded && (
-                      <ul className="mt-1 space-y-1 ml-4">
-                        {item.submenuItems && item.submenuItems.map((subItem) => {
-                          const subActive = location.pathname === subItem.path || location.pathname.startsWith(subItem.path + '/');
-                          return (
-                            <li key={subItem.path}>
-                              <button
-                                onClick={() => handleNavigation(subItem.path)}
-                                className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-left transition-colors ${subActive
+                      </button>
+                      {item.hasSubmenu && expanded && (
+                        <ul className="mt-1 space-y-1 ml-4">
+                          {item.submenuItems && item.submenuItems.map((subItem) => {
+                            const subActive = location.pathname === subItem.path || location.pathname.startsWith(subItem.path + '/');
+                            return (
+                              <li key={subItem.path}>
+                                <button
+                                  onClick={() => handleNavigation(subItem.path)}
+                                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-left transition-colors ${subActive
                                     ? 'bg-teal-500 text-white'
                                     : 'text-teal-100 hover:bg-teal-600/50 hover:text-white'
-                                  }`}
-                              >
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <span className="flex-shrink-0">{subItem.icon}</span>
-                                  <span className="text-sm font-medium truncate">{subItem.label}</span>
-                                </div>
-                                {subItem.badge && (
-                                  <span className={`ml-auto px-2 py-0.5 text-xs font-semibold rounded flex-shrink-0 ${subItem.badgeColor || 'bg-pink-500 text-white'}`}>
-                                    {subItem.badge}
-                                  </span>
-                                )}
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </nav>
-    </aside>
+                                    }`}
+                                >
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <span className="flex-shrink-0">{subItem.icon}</span>
+                                    <span className="text-sm font-medium truncate">{subItem.label}</span>
+                                  </div>
+
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))
+        }
+      </nav >
+    </aside >
   );
 }
