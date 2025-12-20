@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   getProducts,
   getCategories,
+  deleteProduct,
   type Product,
   type Category,
 } from "../../../services/api/admin/adminProductService";
@@ -25,6 +27,7 @@ const STATUS_OPTIONS = ["All Products", "Published", "Unpublished"];
 const STOCK_OPTIONS = ["All Products", "In Stock", "Out of Stock", "Unlimited"];
 
 export default function AdminStockManagement() {
+  const navigate = useNavigate();
   const { isAuthenticated, token } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -41,64 +44,63 @@ export default function AdminStockManagement() {
   const [filterStatus, setFilterStatus] = useState("All Products");
   const [filterStock, setFilterStock] = useState("All Products");
 
-  // Fetch products and categories on component mount
+  // Fetch products and categories
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch categories for filter dropdown
+      const categoriesResponse = await getCategories();
+      if (categoriesResponse.success) {
+        setCategories(categoriesResponse.data);
+      }
+
+      // Fetch products
+      const params: any = {
+        page: currentPage,
+        limit: rowsPerPage,
+      };
+
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+
+      if (filterCategory !== "All Category") {
+        params.category = filterCategory;
+      }
+
+      if (filterStatus !== "All Products") {
+        params.publish = filterStatus === "Published";
+      }
+
+      const response = await getProducts(params);
+      if (response.success) {
+        setProducts(response.data);
+      }
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      if (err && typeof err === "object" && "response" in err) {
+        const axiosError = err as {
+          response?: { data?: { message?: string } };
+        };
+        setError(
+          axiosError.response?.data?.message ||
+          "Failed to load products. Please try again."
+        );
+      } else {
+        setError("Failed to load products. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated || !token) {
       setLoading(false);
       return;
     }
-
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch categories for filter dropdown
-        const categoriesResponse = await getCategories();
-        if (categoriesResponse.success) {
-          setCategories(categoriesResponse.data);
-        }
-
-        // Fetch products
-        const params: any = {
-          page: currentPage,
-          limit: rowsPerPage,
-        };
-
-        if (searchTerm) {
-          params.search = searchTerm;
-        }
-
-        if (filterCategory !== "All Category") {
-          params.category = filterCategory;
-        }
-
-        if (filterStatus !== "All Products") {
-          params.publish = filterStatus === "Published";
-        }
-
-        const response = await getProducts(params);
-        if (response.success) {
-          setProducts(response.data);
-        }
-      } catch (err) {
-        console.error("Error fetching products:", err);
-        if (err && typeof err === "object" && "response" in err) {
-          const axiosError = err as {
-            response?: { data?: { message?: string } };
-          };
-          setError(
-            axiosError.response?.data?.message ||
-            "Failed to load products. Please try again."
-          );
-        } else {
-          setError("Failed to load products. Please try again.");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [
     isAuthenticated,
@@ -109,6 +111,27 @@ export default function AdminStockManagement() {
     filterCategory,
     filterStatus,
   ]);
+
+  const handleDelete = async (productId: string) => {
+    if (window.confirm("Are you sure you want to delete this product?")) {
+      try {
+        const response = await deleteProduct(productId);
+        if (response.success || response.message === "Product deleted successfully") {
+          alert("Product deleted successfully");
+          fetchData();
+        } else {
+          alert("Failed to delete product");
+        }
+      } catch (error) {
+        console.error("Error deleting product:", error);
+        alert("An error occurred while deleting the product");
+      }
+    }
+  };
+
+  const handleEdit = (productId: string) => {
+    navigate(`/admin/product/edit/${productId}`);
+  };
 
   // Flatten products with variations into individual rows
   const productVariations = useMemo(() => {
@@ -520,27 +543,32 @@ export default function AdminStockManagement() {
                       Status <SortIcon column="status" />
                     </div>
                   </th>
+                  <th className="p-4">
+                    <div className="flex items-center">
+                      Action
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="p-8 text-center text-neutral-400">
                       Loading products...
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-red-600">
+                    <td colSpan={8} className="p-8 text-center text-red-600">
                       {error}
                     </td>
                   </tr>
                 ) : displayedProducts.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="p-8 text-center text-neutral-400">
                       No products found.
                     </td>
@@ -585,11 +613,35 @@ export default function AdminStockManagement() {
                       <td className="p-4 align-middle">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${product.status === "Published"
-                              ? "bg-teal-100 text-teal-800"
-                              : "bg-gray-100 text-gray-800"
+                            ? "bg-teal-100 text-teal-800"
+                            : "bg-gray-100 text-gray-800"
                             }`}>
                           {product.status}
                         </span>
+                      </td>
+                      <td className="p-4 align-middle">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleEdit(product.productId)}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                            title="Edit">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(product.productId)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Delete">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              <line x1="10" y1="11" x2="10" y2="17"></line>
+                              <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -610,8 +662,8 @@ export default function AdminStockManagement() {
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
                 className={`p-2 border border-teal-600 rounded ${currentPage === 1
-                    ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
-                    : "text-teal-600 hover:bg-teal-50"
+                  ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
+                  : "text-teal-600 hover:bg-teal-50"
                   }`}
                 aria-label="Previous page">
                 <svg
@@ -638,8 +690,8 @@ export default function AdminStockManagement() {
                 }
                 disabled={currentPage === totalPages}
                 className={`p-2 border border-teal-600 rounded ${currentPage === totalPages
-                    ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
-                    : "text-teal-600 hover:bg-teal-50"
+                  ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
+                  : "text-teal-600 hover:bg-teal-50"
                   }`}
                 aria-label="Next page">
                 <svg

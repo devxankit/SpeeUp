@@ -217,7 +217,7 @@ export const getMyOrders = async (req: Request, res: Response) => {
         const orders = await Order.find(query)
             .populate({
                 path: 'items',
-                populate: { path: 'product', select: 'productName mainImage' }
+                populate: { path: 'product', select: 'productName mainImage price' }
             })
             .sort({ createdAt: -1 })
             .skip(skip)
@@ -225,9 +225,27 @@ export const getMyOrders = async (req: Request, res: Response) => {
 
         const total = await Order.countDocuments(query);
 
+        // Transform orders to match frontend Order type
+        const transformedOrders = orders.map(order => {
+            const orderObj = order.toObject();
+            return {
+                ...orderObj,
+                id: orderObj._id.toString(),
+                totalItems: Array.isArray(orderObj.items) ? orderObj.items.length : 0,
+                totalAmount: orderObj.total,
+                fees: {
+                    platformFee: orderObj.platformFee || 0,
+                    deliveryFee: orderObj.shipping || 0
+                },
+                // Keep original fields for backward compatibility
+                subtotal: orderObj.subtotal,
+                address: orderObj.deliveryAddress
+            };
+        });
+
         return res.status(200).json({
             success: true,
-            data: orders,
+            data: transformedOrders,
             pagination: {
                 page: Number(page),
                 limit: Number(limit),
@@ -255,7 +273,7 @@ export const getOrderById = async (req: Request, res: Response) => {
             .populate({
                 path: 'items',
                 populate: [
-                    { path: 'product', select: 'productName mainImage pack manufacturer' },
+                    { path: 'product', select: 'productName mainImage pack manufacturer price' },
                     { path: 'seller', select: 'storeName city phone fssaiLicNo' }
                 ]
             });
@@ -267,9 +285,25 @@ export const getOrderById = async (req: Request, res: Response) => {
             });
         }
 
+        // Transform order to match frontend Order type
+        const orderObj = order.toObject();
+        const transformedOrder = {
+            ...orderObj,
+            id: orderObj._id.toString(),
+            totalItems: Array.isArray(orderObj.items) ? orderObj.items.length : 0,
+            totalAmount: orderObj.total,
+            fees: {
+                platformFee: orderObj.platformFee || 0,
+                deliveryFee: orderObj.shipping || 0
+            },
+            // Keep original fields for backward compatibility
+            subtotal: orderObj.subtotal,
+            address: orderObj.deliveryAddress
+        };
+
         return res.status(200).json({
             success: true,
-            data: order,
+            data: transformedOrder,
         });
     } catch (error: any) {
         return res.status(500).json({
