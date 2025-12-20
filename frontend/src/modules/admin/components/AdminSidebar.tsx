@@ -469,6 +469,82 @@ const menuSections: MenuSection[] = [
             ),
           },
           {
+            label: 'Pending Order',
+            path: '/admin/orders/pending',
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            ),
+          },
+          {
+            label: 'Received Order',
+            path: '/admin/orders/received',
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            ),
+          },
+          {
+            label: 'Processed Order',
+            path: '/admin/orders/processed',
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+            ),
+          },
+          {
+            label: 'Shipped Order',
+            path: '/admin/orders/shipped',
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                <line x1="4" y1="22" x2="4" y2="15"></line>
+              </svg>
+            ),
+          },
+          {
+            label: 'Out For Delivery',
+            path: '/admin/orders/out-for-delivery',
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="1" y="3" width="15" height="13"></rect>
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+              </svg>
+            ),
+          },
+          {
+            label: 'Delivered Order',
+            path: '/admin/orders/delivered',
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            ),
+          },
+          {
+            label: 'Cancelled Order',
+            path: '/admin/orders/cancelled',
+            icon: (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+            ),
+          },
+          {
             label: 'Return',
             path: '/admin/return',
             icon: (
@@ -772,11 +848,7 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
                                     <span className="flex-shrink-0">{subItem.icon}</span>
                                     <span className="text-sm font-medium truncate">{subItem.label}</span>
                                   </div>
-                                  {subItem.badge && (
-                                    <span className={`ml-auto px-2 py-0.5 text-xs font-semibold rounded flex-shrink-0 ${subItem.badgeColor || 'bg-pink-500 text-white'}`}>
-                                      {subItem.badge}
-                                    </span>
-                                  )}
+
                                 </button>
                               </li>
                             );
