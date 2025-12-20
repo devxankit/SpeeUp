@@ -99,14 +99,11 @@ export default function AdminAddProduct() {
               fssaiLicNo: product.fssaiLicNo || "",
               totalAllowedQuantity: product.totalAllowedQuantity?.toString() || "",
               mainImage: product.mainImage || "",
-              mainImageUrl: product.mainImage || "",
               galleryImageUrls: product.galleryImages || [],
               price: product.price?.toString() || "",
               stock: product.stock?.toString() || "",
             });
 
-            if (product.mainImage) {
-              setMainImagePreview(product.mainImage || "");
             if (product.mainImage) {
               setMainImagePreview(product.mainImage || "");
             }
