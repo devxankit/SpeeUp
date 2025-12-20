@@ -20,6 +20,7 @@ import Cart from "./modules/user/Cart";
 import Checkout from "./modules/user/Checkout";
 import CheckoutAddress from "./modules/user/CheckoutAddress";
 import ProductDetail from "./modules/user/ProductDetail";
+import Invoice from "./modules/user/Invoice";
 import Login from "./modules/user/Login";
 import SignUp from "./modules/user/SignUp";
 import AboutUs from "./modules/user/AboutUs";
@@ -127,75 +128,51 @@ function App() {
                 future={{
                   v7_startTransition: true,
                   v7_relativeSplatPath: true,
-                }}
-              >
+                }}>
                 <Routes>
                   {/* Public Routes */}
-                  <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                  <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
-                  <Route path="/seller/login" element={<PublicRoute><SellerLogin /></PublicRoute>} />
-                  <Route path="/seller/signup" element={<PublicRoute><SellerSignUp /></PublicRoute>} />
-                  <Route path="/delivery/login" element={<PublicRoute><DeliveryLogin /></PublicRoute>} />
-                  <Route path="/delivery/signup" element={<PublicRoute><DeliverySignUp /></PublicRoute>} />
-                  <Route path="/admin/login" element={<PublicRoute><AdminLogin /></PublicRoute>} />
-
-                  {/* Delivery App Routes */}
                   <Route
-                    path="/delivery/*"
+                    path="/login"
                     element={
-                      <ProtectedRoute requiredUserType="Delivery" redirectTo="/delivery/login">
-                        <DeliveryLayout>
-                          <Routes>
-                            <Route path="" element={<DeliveryDashboard />} />
-                            <Route path="orders" element={<DeliveryOrders />} />
-                            <Route path="orders/:id" element={<DeliveryOrderDetail />} />
-                            <Route path="orders/pending" element={<DeliveryPendingOrders />} />
-                            <Route path="orders/all" element={<DeliveryAllOrders />} />
-                            <Route path="orders/return" element={<DeliveryReturnOrders />} />
-                            <Route path="notifications" element={<DeliveryNotifications />} />
-                            <Route path="menu" element={<DeliveryMenu />} />
-                            <Route path="profile" element={<DeliveryProfile />} />
-                            <Route path="earnings" element={<DeliveryEarnings />} />
-                            <Route path="settings" element={<DeliverySettings />} />
-                            <Route path="help" element={<DeliveryHelp />} />
-                            <Route path="about" element={<DeliveryAbout />} />
-                          </Routes>
-                        </DeliveryLayout>
-                      </ProtectedRoute>
+                      <PublicRoute>
+                        <Login />
+                      </PublicRoute>
                     }
                   />
-
-                  {/* Seller App Routes */}
                   <Route
-                    path="/seller/*"
+                    path="/signup"
                     element={
-                      <ProtectedRoute requiredUserType="Seller" redirectTo="/seller/login">
-                        <SellerLayout>
-                          <Routes>
-                            <Route path="" element={<SellerDashboard />} />
-                            <Route path="orders" element={<SellerOrders />} />
-                            <Route path="orders/:id" element={<SellerOrderDetail />} />
-                            <Route path="category" element={<SellerCategory />} />
-                            <Route path="subcategory" element={<SellerSubCategory />} />
-                            <Route path="product/add" element={<SellerAddProduct />} />
-                            <Route path="product/edit/:id" element={<SellerAddProduct />} />
-                            <Route path="product/taxes" element={<SellerTaxes />} />
-                            <Route path="product/list" element={<SellerProductList />} />
-                            <Route path="product/stock" element={<SellerStockManagement />} />
-                            <Route path="return" element={<SellerReturnRequest />} />
-                            <Route path="return-order" element={<SellerReturnRequest />} />
-                            <Route path="wallet" element={<SellerWallet />} />
-                            <Route path="reports/sales" element={<SellerSalesReport />} />
-                            <Route path="account-settings" element={<SellerAccountSettings />} />
-                          </Routes>
-                        </SellerLayout>
-                      </ProtectedRoute>
+                      <PublicRoute>
+                        <SignUp />
+                      </PublicRoute>
                     }
                   />
-
-                  {/* Admin App Routes */}
                   <Route
-                    path="/admin/*"
+                    path="/seller/login"
+                    element={
+                      <PublicRoute>
+                        <SellerLogin />
+                      </PublicRoute>
+                    }
+                  />
+                  <Route
+                    path="/seller/signup"
+                    element={
+                      <PublicRoute>
+                        <SellerSignUp />
+                      </PublicRoute>
+                    }
+                  />
+                  <Route
+                    path="/delivery/login"
+                    element={
+                      <PublicRoute>
+                        <DeliveryLogin />
+                      </PublicRoute>
+                    }
+                  />
+                  <Route
+                    path="/delivery/signup"
                     element={
                       <ProtectedRoute requiredUserType="Admin" redirectTo="/admin/login">
                         <AdminLayout>
@@ -256,7 +233,7 @@ function App() {
 
                   {/* Main App Routes */}
                   <Route
-                    path="/*"
+                    path="/admin/login"
                     element={
                       <AppLayout>
                         <Routes>

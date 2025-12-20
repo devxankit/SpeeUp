@@ -40,6 +40,12 @@ export default function ProtectedRoute({
       if (requiredUserType === 'Seller') return <Navigate to="/seller/login" replace />;
       if (requiredUserType === 'Delivery') return <Navigate to="/delivery/login" replace />;
       if (requiredUserType === 'Customer') return <Navigate to="/login" replace />;
+      if (requiredUserType === "Seller")
+        return <Navigate to="/seller/login" replace />;
+      if (requiredUserType === "Delivery")
+        return <Navigate to="/delivery/login" replace />;
+      if (requiredUserType === "Customer")
+        return <Navigate to="/login" replace />;
       return <Navigate to="/" replace />;
     }
   }

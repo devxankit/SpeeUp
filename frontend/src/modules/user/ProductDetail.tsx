@@ -34,10 +34,12 @@ export default function ProductDetail() {
           const productData = response.data as any;
           setProduct({
             ...productData,
-            // Ensure compat with UI fields
-            name: productData.productName || productData.name,
-            imageUrl: productData.mainImage || productData.imageUrl,
-            // Map pack from variations or small description
+            // Ensure all critical fields have safe defaults
+            id: productData._id || productData.id,
+            name: productData.productName || productData.name || 'Product',
+            imageUrl: productData.mainImage || productData.imageUrl || '',
+            price: productData.price || 0,
+            mrp: productData.mrp || productData.price || 0,
             pack: productData.variations?.[0]?.title || productData.smallDescription || 'Standard',
           });
           setSimilarProducts(response.data.similarProducts || []);
@@ -74,7 +76,7 @@ export default function ProductDetail() {
   }, [id]);
 
   // Get quantity in cart
-  const cartItem = product ? cart.items.find(item => item.product.id === product.id || item.product.id === product._id) : null;
+  const cartItem = product ? cart.items.find(item => item?.product && (item.product.id === product.id || item.product.id === product._id)) : null;
   const inCartQty = cartItem?.quantity || 0;
 
   if (loading) {
@@ -102,8 +104,10 @@ export default function ProductDetail() {
     ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
     : 0;
 
-  // Get category info
-  const category = product.category ? { name: product.category.name, id: product.category._id } : null;
+  // Get category info - safe access
+  const category = product.category && product.category.name
+    ? { name: product.category.name, id: product.category._id }
+    : null;
 
   const handleAddToCart = () => {
     addToCart(product, addButtonRef.current);
@@ -184,7 +188,7 @@ export default function ProductDetail() {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-neutral-400 text-6xl">
-                {product.name.charAt(0).toUpperCase()}
+                {(product.name || product.productName || '?').charAt(0).toUpperCase()}
               </div>
             )}
           </div>
@@ -472,7 +476,7 @@ export default function ProductDetail() {
               <h3 className="text-lg font-semibold text-neutral-900 mb-4 px-1">Top products in this category</h3>
               <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2 px-1">
                 {similarProducts.map((similarProduct) => {
-                  const similarCartItem = cart.items.find((item) => item.product.id === similarProduct.id || item.product.id === similarProduct._id);
+                  const similarCartItem = cart.items.find((item) => item?.product && (item.product.id === similarProduct.id || item.product.id === similarProduct._id));
                   const similarInCartQty = similarCartItem?.quantity || 0;
 
                   return (

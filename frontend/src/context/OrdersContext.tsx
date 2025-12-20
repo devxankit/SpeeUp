@@ -23,12 +23,19 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated, user } = useAuth();
 
   const fetchOrders = async () => {
+    console.log('🚀 fetchOrders called', { isAuthenticated, userType: user?.userType });
+
     if (!isAuthenticated || user?.userType !== 'Customer') {
+      console.log('⚠️ fetchOrders: Skipping - not authenticated or not a customer', {
+        isAuthenticated,
+        userType: user?.userType
+      });
       setLoading(false);
       return;
     }
 
     try {
+      console.log('📡 Calling getMyOrders API...');
       const response = await getMyOrders();
       console.log('📦 Fetched orders response:', response);
       if (response && response.data) {
@@ -41,6 +48,8 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         }));
         console.log('📦 Mapped orders:', orders);
         setOrders(orders);
+      } else {
+        console.log('⚠️ No data in response:', response);
       }
     } catch (error) {
       console.error("❌ Failed to fetch orders", error);
@@ -50,9 +59,17 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    console.log('🔄 OrdersContext useEffect triggered', {
+      isAuthenticated,
+      userType: user?.userType,
+      userId: user?.id
+    });
+
     if (isAuthenticated) {
+      console.log('✅ User is authenticated, fetching orders...');
       fetchOrders();
     } else {
+      console.log('❌ User NOT authenticated, clearing orders');
       setOrders([]);
       setLoading(false);
     }

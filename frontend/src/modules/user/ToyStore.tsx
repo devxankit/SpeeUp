@@ -98,7 +98,7 @@ export default function ToyStore() {
         ) : (
           <div className="grid grid-cols-3 gap-2">
             {products.map((product) => {
-              const cartItem = cart.items.find((item) => item.product.id === product.id);
+              const cartItem = cart.items.find((item) => item?.product && item.product.id === product.id);
               const inCartQty = cartItem?.quantity || 0;
               const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
 
