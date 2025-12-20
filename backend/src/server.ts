@@ -1,12 +1,3 @@
-import express, { Application, Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import connectDB from './config/db';
-import routes from './routes';
-import { errorHandler } from './middleware/errorHandler';
-import { notFound } from './middleware/notFound';
-import { ensureDefaultAdmin } from './utils/ensureDefaultAdmin';
-import { seedHeaderCategories } from './utils/seedHeaderCategories';
 import express, { Application, Request, Response } from "express";
 import { createServer } from "http";
 import cors from "cors";
@@ -16,6 +7,7 @@ import routes from "./routes";
 import { errorHandler } from "./middleware/errorHandler";
 import { notFound } from "./middleware/notFound";
 import { ensureDefaultAdmin } from "./utils/ensureDefaultAdmin";
+import { seedHeaderCategories } from "./utils/seedHeaderCategories";
 import { initializeSocket } from "./socket/socketService";
 
 // Load environment variables
@@ -51,7 +43,6 @@ app.get("/", (_req: Request, res: Response) => {
 });
 
 // Debug middleware - log all incoming requests
-app.use((req: Request, res: Response, next: NextFunction) => {
 app.use((req: Request, _res: Response, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
