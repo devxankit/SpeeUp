@@ -12,6 +12,7 @@ import customerRoutes from "./customerRoutes";
 import sellerRoutes from "./sellerRoutes";
 import uploadRoutes from "./uploadRoutes";
 import productRoutes from "./productRoutes";
+import headerCategoryRoutes from "./headerCategoryRoutes";
 import categoryRoutes from "./categoryRoutes";
 import orderRoutes from "./orderRoutes";
 import returnRoutes from "./returnRoutes";
@@ -92,6 +93,9 @@ router.use("/products", productRoutes);
 
 // Category routes (protected, seller/admin)
 router.use("/categories", categoryRoutes);
+
+// Header Category Routes
+router.use("/header-categories", headerCategoryRoutes);
 
 // Order routes (protected, seller only)
 router.use("/orders", orderRoutes);

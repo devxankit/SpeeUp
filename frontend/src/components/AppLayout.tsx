@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import FloatingCartPill from './FloatingCartPill';
 import { useLocation as useLocationContext } from '../context/LocationContext';
 import LocationPermissionRequest from './LocationPermissionRequest';
+import { useThemeContext } from '../context/ThemeContext';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -20,6 +21,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { isLocationEnabled, isLocationLoading, location: userLocation } = useLocationContext();
   const [showLocationRequest, setShowLocationRequest] = useState(false);
   const [showLocationChangeModal, setShowLocationChangeModal] = useState(false);
+  const { currentTheme } = useThemeContext();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -111,14 +113,23 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <div className="md:w-full md:min-h-screen md:flex md:flex-col overflow-x-hidden">
           {/* Top Navigation Bar - Desktop Only */}
           {showFooter && (
-            <nav className="hidden md:flex items-center justify-center gap-8 px-6 lg:px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 border-b border-green-600 shadow-sm">
+            <nav
+              className="hidden md:flex items-center justify-center gap-8 px-6 lg:px-8 py-3 shadow-sm transition-colors duration-300"
+              style={{
+                background: `linear-gradient(to right, ${currentTheme.primary[0]}, ${currentTheme.primary[1]})`,
+                borderBottom: `1px solid ${currentTheme.primary[0]}`
+              }}
+            >
               {/* Home */}
               <Link
                 to="/"
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${isActive('/')
-                  ? 'bg-white text-green-600 shadow-md font-semibold'
-                  : 'text-white hover:bg-white/20 hover:text-white'
+                  ? 'bg-white shadow-md font-semibold'
+                  : 'hover:bg-white/20'
                   }`}
+                style={{
+                  color: isActive('/') ? currentTheme.accentColor : currentTheme.headerTextColor
+                }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   {isActive('/') ? (
@@ -140,9 +151,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <Link
                 to="/order-again"
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${isActive('/order-again')
-                  ? 'bg-white text-green-600 shadow-md font-semibold'
-                  : 'text-white hover:bg-white/20 hover:text-white'
+                  ? 'bg-white shadow-md font-semibold'
+                  : 'hover:bg-white/20'
                   }`}
+                style={{
+                  color: isActive('/order-again') ? currentTheme.accentColor : currentTheme.headerTextColor
+                }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   {isActive('/order-again') ? (
@@ -158,9 +172,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <Link
                 to="/categories"
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${(isActive('/categories') || location.pathname.startsWith('/category/'))
-                  ? 'bg-white text-green-600 shadow-md font-semibold'
-                  : 'text-white hover:bg-white/20 hover:text-white'
+                  ? 'bg-white shadow-md font-semibold'
+                  : 'hover:bg-white/20'
                   }`}
+                style={{
+                  color: (isActive('/categories') || location.pathname.startsWith('/category/')) ? currentTheme.accentColor : currentTheme.headerTextColor
+                }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   {(isActive('/categories') || location.pathname.startsWith('/category/')) ? (
@@ -186,9 +203,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <Link
                 to="/account"
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${isActive('/account')
-                  ? 'bg-white text-green-600 shadow-md font-semibold'
-                  : 'text-white hover:bg-white/20 hover:text-white'
+                  ? 'bg-white shadow-md font-semibold'
+                  : 'hover:bg-white/20'
                   }`}
+                style={{
+                  color: isActive('/account') ? currentTheme.accentColor : currentTheme.headerTextColor
+                }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   {isActive('/account') ? (
@@ -219,15 +239,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
               {/* Location line */}
               <div className="px-4 md:px-6 lg:px-8 py-2 flex items-center justify-between text-sm">
                 <span className="text-neutral-700 line-clamp-1" title={userLocation?.address || 'Location not set'}>
-                  {userLocation?.address 
-                    ? userLocation.address.length > 50 
-                      ? `${userLocation.address.substring(0, 50)}...` 
+                  {userLocation?.address
+                    ? userLocation.address.length > 50
+                      ? `${userLocation.address.substring(0, 50)}...`
                       : userLocation.address
                     : userLocation?.city && userLocation?.state
-                    ? `${userLocation.city}, ${userLocation.state}`
-                    : userLocation?.city || 'Location not set'}
+                      ? `${userLocation.city}, ${userLocation.state}`
+                      : userLocation?.city || 'Location not set'}
                 </span>
-                <button 
+                <button
                   onClick={() => setShowLocationChangeModal(true)}
                   className="text-blue-600 font-medium hover:text-blue-700 transition-colors flex-shrink-0 ml-2"
                 >

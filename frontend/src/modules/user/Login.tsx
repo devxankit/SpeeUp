@@ -12,9 +12,7 @@ export default function Login() {
   const [sessionId, setSessionId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const videoSectionRef = useRef<HTMLDivElement>(null);
-  const loginSectionRef = useRef<HTMLDivElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
+
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleContinue = async () => {
@@ -67,63 +65,7 @@ export default function Login() {
     navigate('/');
   };
 
-  useEffect(() => {
-    const updateOverlayPosition = () => {
-      if (videoSectionRef.current && loginSectionRef.current && overlayRef.current) {
-        // Use requestAnimationFrame to ensure DOM is fully rendered
-        requestAnimationFrame(() => {
-          if (videoSectionRef.current && loginSectionRef.current && overlayRef.current) {
-            const videoRect = videoSectionRef.current.getBoundingClientRect();
 
-            // Position the unified overlay at the boundary between sections
-            // Center it on the boundary line (half above, half below)
-            const boundaryY = videoRect.bottom;
-            const overlayHeight = 12; // Fixed height for the unified overlay
-            overlayRef.current.style.top = `${boundaryY - overlayHeight / 2}px`;
-            overlayRef.current.style.height = `${overlayHeight}px`;
-          }
-        });
-      }
-    };
-
-    // Initial calculation with multiple attempts to ensure accuracy
-    const timeoutId1 = setTimeout(updateOverlayPosition, 50);
-    const timeoutId2 = setTimeout(updateOverlayPosition, 200);
-    const timeoutId3 = setTimeout(updateOverlayPosition, 500);
-
-    // Update on resize with debouncing
-    let resizeTimeout: ReturnType<typeof setTimeout>;
-    const handleResize = () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(updateOverlayPosition, 100);
-    };
-    window.addEventListener('resize', handleResize);
-
-    // Use ResizeObserver for more accurate updates when sections resize
-    const resizeObserver = new ResizeObserver(() => {
-      updateOverlayPosition();
-    });
-
-    if (videoSectionRef.current) {
-      resizeObserver.observe(videoSectionRef.current);
-    }
-    if (loginSectionRef.current) {
-      resizeObserver.observe(loginSectionRef.current);
-    }
-
-    // Also observe scroll events in case layout shifts
-    window.addEventListener('scroll', updateOverlayPosition, { passive: true });
-
-    return () => {
-      clearTimeout(timeoutId1);
-      clearTimeout(timeoutId2);
-      clearTimeout(timeoutId3);
-      clearTimeout(resizeTimeout);
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('scroll', updateOverlayPosition);
-      resizeObserver.disconnect();
-    };
-  }, []);
 
   return (
     <div className="h-screen bg-white flex flex-col" style={{ overflow: 'hidden', backgroundColor: '#ffffff', width: '100%', margin: 0, padding: 0, boxSizing: 'border-box' }}>
@@ -140,7 +82,6 @@ export default function Login() {
 
       {/* Video Section */}
       <div
-        ref={videoSectionRef}
         className="overflow-hidden relative flex-1"
         style={{ minHeight: 0, border: 'none', borderBottom: 'none', padding: 0, margin: 0, marginLeft: '2px', backgroundColor: '#ffffff', zIndex: 0, width: 'calc(100% - 2px)', boxSizing: 'border-box', position: 'relative' }}
       >
@@ -181,23 +122,10 @@ export default function Login() {
         />
       </div>
 
-      {/* Unified white overlay to cover black partition - spans both sections */}
-      <div
-        ref={overlayRef}
-        className="fixed bg-white"
-        style={{
-          height: '12px',
-          zIndex: 10,
-          left: '0px',
-          right: '0px',
-          width: '100%',
-          pointerEvents: 'none'
-        }}
-      ></div>
+
 
       {/* Login Section */}
       <div
-        ref={loginSectionRef}
         className="bg-white flex flex-col items-center flex-shrink-0 relative"
         style={{ border: 'none', borderTop: 'none', margin: 0, marginTop: '-100px', marginLeft: '-2px', boxShadow: 'none', outline: 'none', backgroundColor: '#ffffff', zIndex: 1, padding: '4px 0px 12px', paddingTop: '6px', width: 'calc(100% + 4px)', boxSizing: 'border-box', position: 'relative' }}
       >
