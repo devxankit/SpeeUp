@@ -38,59 +38,78 @@ export interface TopSeller {
  * Get dashboard statistics
  */
 export const getDashboardStats = async (): Promise<DashboardStats> => {
-  const [
-    totalUser,
-    totalCategory,
-    totalSubcategory,
-    totalProduct,
-    totalOrders,
-    completedOrders,
-    pendingOrders,
-    cancelledOrders,
-    soldOutProducts,
-    lowStockProducts,
-    revenueData,
-    avgOrderValue,
-  ] = await Promise.all([
-    Customer.countDocuments({ status: "Active" }),
-    Category.countDocuments(),
-    SubCategory.countDocuments(),
-    Product.countDocuments({ status: "Active" }),
-    Order.countDocuments(),
-    Order.countDocuments({ status: "Delivered" }),
-    Order.countDocuments({
-      status: { $in: ["Received", "Pending", "Processed"] },
-    }),
-    Order.countDocuments({ status: "Cancelled" }),
-    Product.countDocuments({ stock: 0, status: "Active" }),
-    Product.countDocuments({ stock: { $lte: 10, $gt: 0 }, status: "Active" }),
-    Order.aggregate([
-      { $match: { status: "Delivered", paymentStatus: "Paid" } },
-      { $group: { _id: null, total: { $sum: "$total" } } },
-    ]),
-    Order.aggregate([
-      { $match: { status: "Delivered", paymentStatus: "Paid" } },
-      { $group: { _id: null, avg: { $avg: "$total" } } },
-    ]),
-  ]);
+  try {
+    const [
+      totalUser,
+      totalCategory,
+      totalSubcategory,
+      totalProduct,
+      totalOrders,
+      completedOrders,
+      pendingOrders,
+      cancelledOrders,
+      soldOutProducts,
+      lowStockProducts,
+      revenueData,
+      avgOrderValue,
+    ] = await Promise.all([
+      Customer.countDocuments({ status: "Active" }).catch(() => 0),
+      Category.countDocuments().catch(() => 0),
+      SubCategory.countDocuments().catch(() => 0),
+      Product.countDocuments({ status: "Active" }).catch(() => 0),
+      Order.countDocuments().catch(() => 0),
+      Order.countDocuments({ status: "Delivered" }).catch(() => 0),
+      Order.countDocuments({
+        status: { $in: ["Received", "Pending", "Processed"] },
+      }).catch(() => 0),
+      Order.countDocuments({ status: "Cancelled" }).catch(() => 0),
+      Product.countDocuments({ stock: 0, status: "Active" }).catch(() => 0),
+      Product.countDocuments({ stock: { $lte: 10, $gt: 0 }, status: "Active" }).catch(() => 0),
+      Order.aggregate([
+        { $match: { status: "Delivered", paymentStatus: "Paid" } },
+        { $group: { _id: null, total: { $sum: { $ifNull: ["$total", 0] } } } },
+      ]).catch(() => []),
+      Order.aggregate([
+        { $match: { status: "Delivered", paymentStatus: "Paid" } },
+        { $group: { _id: null, avg: { $avg: { $ifNull: ["$total", 0] } } } },
+      ]).catch(() => []),
+    ]);
 
-  const totalRevenue = revenueData[0]?.total || 0;
-  const avgCompletedOrderValue = avgOrderValue[0]?.avg || 0;
+    const totalRevenue = revenueData[0]?.total || 0;
+    const avgCompletedOrderValue = avgOrderValue[0]?.avg || 0;
 
-  return {
-    totalUser,
-    totalCategory,
-    totalSubcategory,
-    totalProduct,
-    totalOrders,
-    completedOrders,
-    pendingOrders,
-    cancelledOrders,
-    soldOutProducts,
-    lowStockProducts,
-    totalRevenue,
-    avgCompletedOrderValue: Math.round(avgCompletedOrderValue * 100) / 100,
-  };
+    return {
+      totalUser: totalUser || 0,
+      totalCategory: totalCategory || 0,
+      totalSubcategory: totalSubcategory || 0,
+      totalProduct: totalProduct || 0,
+      totalOrders: totalOrders || 0,
+      completedOrders: completedOrders || 0,
+      pendingOrders: pendingOrders || 0,
+      cancelledOrders: cancelledOrders || 0,
+      soldOutProducts: soldOutProducts || 0,
+      lowStockProducts: lowStockProducts || 0,
+      totalRevenue: totalRevenue || 0,
+      avgCompletedOrderValue: Math.round((avgCompletedOrderValue || 0) * 100) / 100,
+    };
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error);
+    // Return default values on error
+    return {
+      totalUser: 0,
+      totalCategory: 0,
+      totalSubcategory: 0,
+      totalProduct: 0,
+      totalOrders: 0,
+      completedOrders: 0,
+      pendingOrders: 0,
+      cancelledOrders: 0,
+      soldOutProducts: 0,
+      lowStockProducts: 0,
+      totalRevenue: 0,
+      avgCompletedOrderValue: 0,
+    };
+  }
 };
 
 /**
@@ -99,7 +118,8 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
 export const getSalesAnalytics = async (
   period: "day" | "week" | "month" | "year" = "month"
 ): Promise<{ thisPeriod: SalesData[]; lastPeriod: SalesData[] }> => {
-  const now = new Date();
+  try {
+    const now = new Date();
   let startDate: Date;
   let lastPeriodStart: Date;
   let groupFormat: string;
@@ -152,11 +172,11 @@ export const getSalesAnalytics = async (
       {
         $group: {
           _id: { $dateToString: { format: groupFormat, date: "$orderDate" } },
-          total: { $sum: "$total" },
+          total: { $sum: { $ifNull: ["$total", 0] } },
         },
       },
       { $sort: { _id: 1 } },
-    ]),
+    ]).catch(() => []),
     Order.aggregate([
       {
         $match: {
@@ -168,24 +188,218 @@ export const getSalesAnalytics = async (
       {
         $group: {
           _id: { $dateToString: { format: groupFormat, date: "$orderDate" } },
-          total: { $sum: "$total" },
+          total: { $sum: { $ifNull: ["$total", 0] } },
         },
       },
       { $sort: { _id: 1 } },
-    ]),
+    ]).catch(() => []),
   ]);
 
-  const thisPeriod = thisPeriodData.map((item) => ({
-    date: item._id,
-    value: item.total,
+  const thisPeriod = (thisPeriodData || []).map((item) => ({
+    date: item._id || "",
+    value: item.total || 0,
   }));
 
-  const lastPeriod = lastPeriodData.map((item) => ({
-    date: item._id,
-    value: item.total,
+  const lastPeriod = (lastPeriodData || []).map((item) => ({
+    date: item._id || "",
+    value: item.total || 0,
   }));
 
-  return { thisPeriod, lastPeriod };
+    return { thisPeriod, lastPeriod };
+  } catch (error) {
+    console.error("Error fetching sales analytics:", error);
+    return { thisPeriod: [], lastPeriod: [] };
+  }
+};
+
+/**
+ * Get order analytics (order counts by period)
+ */
+export const getOrderAnalytics = async (
+  period: "day" | "month" = "month"
+): Promise<{ thisPeriod: SalesData[]; lastPeriod: SalesData[] }> => {
+  try {
+    const now = new Date();
+    let startDate: Date;
+    let lastPeriodStart: Date;
+
+    if (period === "day") {
+      // Current month's daily data
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      lastPeriodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    } else {
+      // Yearly monthly data
+      startDate = new Date(now.getFullYear(), 0, 1);
+      lastPeriodStart = new Date(now.getFullYear() - 1, 0, 1);
+    }
+
+    // Get all orders for the period
+    const [thisPeriodOrders, lastPeriodOrders] = await Promise.all([
+      Order.find({
+        orderDate: { $gte: startDate },
+      })
+        .select("orderDate")
+        .lean()
+        .catch(() => []),
+      Order.find({
+        orderDate: { $gte: lastPeriodStart, $lt: startDate },
+      })
+        .select("orderDate")
+        .lean()
+        .catch(() => []),
+    ]);
+
+    let thisPeriod: SalesData[] = [];
+    let lastPeriod: SalesData[] = [];
+
+    if (period === "day") {
+      // Daily data for current month
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const daysLastMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+      
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const currentMonthName = monthNames[now.getMonth()];
+      const lastMonthName = monthNames[(now.getMonth() - 1 + 12) % 12];
+
+      // Count orders by day for current month
+      const currentMonthCounts: { [key: number]: number } = {};
+      thisPeriodOrders.forEach((order: any) => {
+        const orderDate = new Date(order.orderDate);
+        if (orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear()) {
+          const day = orderDate.getDate();
+          currentMonthCounts[day] = (currentMonthCounts[day] || 0) + 1;
+        }
+      });
+
+      // Fill current month
+      thisPeriod = Array.from({ length: daysInMonth }, (_, i) => {
+        const day = i + 1;
+        return {
+          date: `${String(day).padStart(2, "0")}-${currentMonthName}`,
+          value: currentMonthCounts[day] || 0,
+        };
+      });
+
+      // Count orders by day for last month
+      const lastMonthCounts: { [key: number]: number } = {};
+      lastPeriodOrders.forEach((order: any) => {
+        const orderDate = new Date(order.orderDate);
+        const lastMonth = (now.getMonth() - 1 + 12) % 12;
+        const lastMonthYear = lastMonth === 11 ? now.getFullYear() - 1 : now.getFullYear();
+        if (orderDate.getMonth() === lastMonth && orderDate.getFullYear() === lastMonthYear) {
+          const day = orderDate.getDate();
+          lastMonthCounts[day] = (lastMonthCounts[day] || 0) + 1;
+        }
+      });
+
+      // Fill last month
+      lastPeriod = Array.from({ length: daysLastMonth }, (_, i) => {
+        const day = i + 1;
+        return {
+          date: `${String(day).padStart(2, "0")}-${lastMonthName}`,
+          value: lastMonthCounts[day] || 0,
+        };
+      });
+    } else {
+      // Monthly data for current year
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      
+      // Count orders by month for current year
+      const currentYearCounts: { [key: number]: number } = {};
+      thisPeriodOrders.forEach((order: any) => {
+        const orderDate = new Date(order.orderDate);
+        if (orderDate.getFullYear() === now.getFullYear()) {
+          const month = orderDate.getMonth();
+          currentYearCounts[month] = (currentYearCounts[month] || 0) + 1;
+        }
+      });
+
+      // Fill current year
+      thisPeriod = monthNames.map((month, index) => ({
+        date: month,
+        value: currentYearCounts[index] || 0,
+      }));
+
+      // Count orders by month for last year
+      const lastYearCounts: { [key: number]: number } = {};
+      lastPeriodOrders.forEach((order: any) => {
+        const orderDate = new Date(order.orderDate);
+        if (orderDate.getFullYear() === now.getFullYear() - 1) {
+          const month = orderDate.getMonth();
+          lastYearCounts[month] = (lastYearCounts[month] || 0) + 1;
+        }
+      });
+
+      // Fill last year
+      lastPeriod = monthNames.map((month, index) => ({
+        date: month,
+        value: lastYearCounts[index] || 0,
+      }));
+    }
+
+    return { thisPeriod, lastPeriod };
+  } catch (error) {
+    console.error("Error fetching order analytics:", error);
+    return { thisPeriod: [], lastPeriod: [] };
+  }
+};
+
+/**
+ * Get today's sales total and comparison with last week same day
+ */
+export const getTodaySales = async (): Promise<{ salesToday: number; salesLastWeekSameDay: number }> => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const lastWeekSameDay = new Date(today);
+    lastWeekSameDay.setDate(lastWeekSameDay.getDate() - 7);
+    const lastWeekNextDay = new Date(lastWeekSameDay);
+    lastWeekNextDay.setDate(lastWeekNextDay.getDate() + 1);
+    
+    // Get ALL orders booked today (any status)
+    const todayOrders = await Order.aggregate([
+      {
+        $match: {
+          orderDate: { $gte: today, $lt: tomorrow }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: { $ifNull: ["$total", 0] } }
+        }
+      }
+    ]).catch(() => []);
+    
+    // Get orders from same day last week
+    const lastWeekOrders = await Order.aggregate([
+      {
+        $match: {
+          orderDate: { $gte: lastWeekSameDay, $lt: lastWeekNextDay }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: { $ifNull: ["$total", 0] } }
+        }
+      }
+    ]).catch(() => []);
+    
+    return {
+      salesToday: todayOrders[0]?.total || 0,
+      salesLastWeekSameDay: lastWeekOrders[0]?.total || 0
+    };
+  } catch (error) {
+    console.error("Error fetching today's sales:", error);
+    return {
+      salesToday: 0,
+      salesLastWeekSameDay: 0
+    };
+  }
 };
 
 /**
@@ -194,119 +408,149 @@ export const getSalesAnalytics = async (
 export const getTopSellers = async (
   limit: number = 10
 ): Promise<TopSeller[]> => {
-  const topSellers = await Order.aggregate([
-    {
-      $match: {
-        status: "Delivered",
-        paymentStatus: "Paid",
+  try {
+    const topSellers = await Order.aggregate([
+      {
+        $match: {
+          status: "Delivered",
+          paymentStatus: "Paid",
+        },
       },
-    },
-    {
-      $unwind: "$items",
-    },
-    {
-      $lookup: {
-        from: "orderitems",
-        localField: "items",
-        foreignField: "_id",
-        as: "orderItem",
+      {
+        $unwind: "$items",
       },
-    },
-    {
-      $unwind: "$orderItem",
-    },
-    {
-      $group: {
-        _id: "$orderItem.seller",
-        totalRevenue: { $sum: "$orderItem.total" },
-        totalOrders: { $sum: 1 },
+      {
+        $lookup: {
+          from: "orderitems",
+          localField: "items",
+          foreignField: "_id",
+          as: "orderItem",
+        },
       },
-    },
-    {
-      $sort: { totalRevenue: -1 },
-    },
-    {
-      $limit: limit,
-    },
-    {
-      $lookup: {
-        from: "sellers",
-        localField: "_id",
-        foreignField: "_id",
-        as: "seller",
+      {
+        $unwind: {
+          path: "$orderItem",
+          preserveNullAndEmptyArrays: false,
+        },
       },
-    },
-    {
-      $unwind: "$seller",
-    },
-    {
-      $project: {
-        sellerId: "$_id",
-        sellerName: "$seller.sellerName",
-        storeName: "$seller.storeName",
-        totalRevenue: 1,
-        totalOrders: 1,
+      {
+        $group: {
+          _id: {
+            seller: "$orderItem.seller",
+            orderId: "$_id",
+          },
+          totalRevenue: { $sum: "$orderItem.total" },
+        },
       },
-    },
-  ]);
+      {
+        $group: {
+          _id: "$_id.seller",
+          totalRevenue: { $sum: "$totalRevenue" },
+          totalOrders: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { totalRevenue: -1 },
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $lookup: {
+          from: "sellers",
+          localField: "_id",
+          foreignField: "_id",
+          as: "seller",
+        },
+      },
+      {
+        $unwind: {
+          path: "$seller",
+          preserveNullAndEmptyArrays: false,
+        },
+      },
+      {
+        $project: {
+          sellerId: { $toString: "$_id" },
+          sellerName: "$seller.sellerName",
+          storeName: "$seller.storeName",
+          totalRevenue: { $ifNull: ["$totalRevenue", 0] },
+          totalOrders: { $ifNull: ["$totalOrders", 0] },
+        },
+      },
+    ]);
 
-  return topSellers;
+    return topSellers || [];
+  } catch (error) {
+    console.error("Error fetching top sellers:", error);
+    return [];
+  }
 };
 
 /**
  * Get recent orders
  */
 export const getRecentOrders = async (limit: number = 10) => {
-  const orders = await Order.find()
-    .populate("customer", "name email phone")
-    .populate("deliveryBoy", "name mobile")
-    .sort({ orderDate: -1 })
-    .limit(limit)
-    .lean();
+  try {
+    const orders = await Order.find()
+      .populate("customer", "name email phone")
+      .populate("deliveryBoy", "name mobile")
+      .sort({ orderDate: -1 })
+      .limit(limit)
+      .lean();
 
-  return orders.map((order: any) => ({
-    id: order._id.toString(),
-    orderNumber: order.orderNumber,
-    customerName: order.customerName,
-    orderDate: order.orderDate,
-    status: order.status,
-    amount: order.total,
-    deliveryBoy: order.deliveryBoy
-      ? {
-        name: (order.deliveryBoy as any).name,
-        mobile: (order.deliveryBoy as any).mobile,
-      }
-      : null,
-  }));
+    return orders.map((order: any) => ({
+      id: order._id.toString(),
+      orderNumber: order.orderNumber || order._id.toString(),
+      customerName: order.customerName || (order.customer?.name || "Unknown"),
+      orderDate: order.orderDate || order.createdAt,
+      status: order.status || "Received",
+      amount: order.total || 0,
+      deliveryBoy: order.deliveryBoy
+        ? {
+          name: (order.deliveryBoy as any).name || "Unknown",
+          mobile: (order.deliveryBoy as any).mobile || "",
+        }
+        : null,
+    }));
+  } catch (error) {
+    console.error("Error fetching recent orders:", error);
+    return [];
+  }
 };
 
 /**
  * Get sales by location
  */
 export const getSalesByLocation = async () => {
-  const salesByLocation = await Order.aggregate([
-    {
-      $match: {
-        status: "Delivered",
-        paymentStatus: "Paid",
+  try {
+    const salesByLocation = await Order.aggregate([
+      {
+        $match: {
+          status: "Delivered",
+          paymentStatus: "Paid",
+        },
       },
-    },
-    {
-      $group: {
-        _id: "$deliveryAddress.city",
-        amount: { $sum: "$total" },
+      {
+        $group: {
+          _id: "$deliveryAddress.city",
+          amount: { $sum: { $ifNull: ["$total", 0] } },
+        },
       },
-    },
-    {
-      $sort: { amount: -1 },
-    },
-    {
-      $project: {
-        location: { $ifNull: ["$_id", "Unknown"] },
-        amount: 1,
+      {
+        $sort: { amount: -1 },
       },
-    },
-  ]);
+      {
+        $project: {
+          location: { $ifNull: ["$_id", "Unknown"] },
+          amount: { $ifNull: ["$amount", 0] },
+        },
+      },
+    ]);
 
-  return salesByLocation;
+    return salesByLocation || [];
+  } catch (error) {
+    console.error("Error fetching sales by location:", error);
+    return [];
+  }
 };

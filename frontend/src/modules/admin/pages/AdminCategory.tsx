@@ -53,7 +53,7 @@ export default function AdminCategory() {
         console.error("Error fetching categories:", err);
         setError(
           err.response?.data?.message ||
-            "Failed to load categories. Please try again."
+          "Failed to load categories. Please try again."
         );
       } finally {
         setLoading(false);
@@ -62,54 +62,6 @@ export default function AdminCategory() {
 
     fetchCategories();
   }, [isAuthenticated, token, searchTerm]);
-
-  const mockCategories = [
-    {
-      id: 2,
-      name: "Pet Care",
-      image: "/api/placeholder/100/100",
-      totalSubcategory: 2,
-      groupCategory: "",
-      isBestseller: false,
-      hasWarning: false,
-    },
-    {
-      id: 3,
-      name: "Sweet Tooth",
-      image: "/api/placeholder/100/100",
-      totalSubcategory: 3,
-      groupCategory: "",
-      isBestseller: false,
-      hasWarning: false,
-    },
-    {
-      id: 4,
-      name: "Tea Coffee",
-      image: "/api/placeholder/100/100",
-      totalSubcategory: 3,
-      groupCategory: "",
-      isBestseller: false,
-      hasWarning: false,
-    },
-    {
-      id: 6,
-      name: "Instant Food",
-      image: "/api/placeholder/100/100",
-      totalSubcategory: 3,
-      groupCategory: "",
-      isBestseller: false,
-      hasWarning: false,
-    },
-    {
-      id: 7,
-      name: "Cleaning Essentials",
-      image: "/api/placeholder/100/100",
-      totalSubcategory: 2,
-      groupCategory: "",
-      isBestseller: false,
-      hasWarning: false,
-    },
-  ];
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -211,8 +163,8 @@ export default function AdminCategory() {
     } catch (error: any) {
       setUploadError(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to save category. Please try again."
+        error.message ||
+        "Failed to save category. Please try again."
       );
     } finally {
       setUploading(false);
@@ -242,7 +194,7 @@ export default function AdminCategory() {
       } catch (error: any) {
         alert(
           error.response?.data?.message ||
-            "Failed to delete category. Please try again."
+          "Failed to delete category. Please try again."
         );
       }
     }
@@ -395,16 +347,15 @@ export default function AdminCategory() {
             <button
               onClick={handleAddCategory}
               disabled={uploading}
-              className={`w-full py-2.5 rounded text-sm font-medium transition-colors ${
-                uploading
+              className={`w-full py-2.5 rounded text-sm font-medium transition-colors ${uploading
                   ? "bg-neutral-400 cursor-not-allowed text-white"
                   : "bg-teal-600 hover:bg-teal-700 text-white"
-              }`}>
+                }`}>
               {uploading
                 ? "Saving..."
                 : editingId
-                ? "Update Category"
-                : "Add Category"}
+                  ? "Update Category"
+                  : "Add Category"}
             </button>
             {editingId && (
               <button
@@ -678,11 +629,10 @@ export default function AdminCategory() {
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className={`p-2 border border-neutral-300 rounded ${
-                  currentPage === 1
+                className={`p-2 border border-neutral-300 rounded ${currentPage === 1
                     ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
                     : "text-neutral-700 hover:bg-neutral-50"
-                }`}
+                  }`}
                 aria-label="Previous page">
                 <svg
                   width="16"
@@ -704,11 +654,10 @@ export default function AdminCategory() {
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 border border-neutral-300 rounded text-sm ${
-                      currentPage === page
+                    className={`px-3 py-1 border border-neutral-300 rounded text-sm ${currentPage === page
                         ? "bg-teal-600 text-white border-teal-600"
                         : "text-neutral-700 hover:bg-neutral-50"
-                    }`}>
+                      }`}>
                     {page}
                   </button>
                 )
@@ -718,11 +667,10 @@ export default function AdminCategory() {
                   setCurrentPage((prev) => Math.min(totalPages, prev + 1))
                 }
                 disabled={currentPage === totalPages || totalPages === 0}
-                className={`p-2 border border-neutral-300 rounded ${
-                  currentPage === totalPages || totalPages === 0
+                className={`p-2 border border-neutral-300 rounded ${currentPage === totalPages || totalPages === 0
                     ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
                     : "text-neutral-700 hover:bg-neutral-50"
-                }`}
+                  }`}
                 aria-label="Next page">
                 <svg
                   width="16"

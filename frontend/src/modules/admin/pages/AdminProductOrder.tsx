@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import {
   getProducts,
   updateProductOrder,
+  getCategories,
   type Product,
+  type Category,
 } from "../../../services/api/admin/adminProductService";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -13,16 +15,37 @@ interface ProductOrderItem {
 
 export default function AdminProductOrder() {
   const { isAuthenticated, token } = useAuth();
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [products, setProducts] = useState<ProductOrderItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingCategories, setLoadingCategories] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch categories on mount
+  useEffect(() => {
+    const fetchCategoriesList = async () => {
+      if (!isAuthenticated || !token) return;
+      setLoadingCategories(true);
+      try {
+        const response = await getCategories();
+        if (response?.success && response?.data) {
+          setCategories(response.data);
+        }
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+    fetchCategoriesList();
+  }, [isAuthenticated, token]);
+
   // Fetch products when category changes
   useEffect(() => {
-    if (!selectedCategory || selectedCategory === "Select category") {
+    if (!selectedCategoryId) {
       setProducts([]);
       return;
     }
@@ -35,12 +58,11 @@ export default function AdminProductOrder() {
         setError(null);
 
         const response = await getProducts({
-          category: selectedCategory,
-          publish: true,
+          category: selectedCategoryId,
           limit: 100, // Fetch more products for ordering
         });
 
-        if (response.success) {
+        if (response?.success && response?.data) {
           // Convert API products to our format
           const productItems: ProductOrderItem[] = response.data.map(
             (product: Product) => ({
@@ -50,35 +72,19 @@ export default function AdminProductOrder() {
           );
           setProducts(productItems);
         } else {
-          setError("Failed to load products");
+          setProducts([]);
         }
       } catch (err) {
         console.error("Error fetching products:", err);
         setError("Failed to load products. Please try again.");
+        setProducts([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProducts();
-  }, [selectedCategory, isAuthenticated, token]);
-
-  const categories = [
-    "Select category",
-    "Organic & Premium",
-    "Instant Food",
-    "Masala Oil",
-    "Pet Care",
-    "Sweet Tooth",
-    "Tea Coffee",
-    "Cleaning Essentials",
-    "Personal Care",
-    "Paan Corner",
-    "Pharma And Wellness",
-    "Bakery Biscuits",
-    "Sauces Spreads",
-    "Home Office",
-  ];
+  }, [selectedCategoryId, isAuthenticated, token]);
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -101,7 +107,7 @@ export default function AdminProductOrder() {
   };
 
   const handleUpdate = async () => {
-    if (!selectedCategory || selectedCategory === "Select category") {
+    if (!selectedCategoryId) {
       alert("Please select a category");
       return;
     }
@@ -144,19 +150,18 @@ export default function AdminProductOrder() {
     }
 
     // Re-fetch products to reset to original order
-    if (selectedCategory && selectedCategory !== "Select category") {
+    if (selectedCategoryId) {
       const fetchProducts = async () => {
         try {
           setLoading(true);
           setError(null);
 
           const response = await getProducts({
-            category: selectedCategory,
-            publish: true,
+            category: selectedCategoryId,
             limit: 100,
           });
 
-          if (response.success) {
+          if (response?.success && response?.data) {
             const productItems: ProductOrderItem[] = response.data.map(
               (product: Product) => ({
                 id: product._id,
@@ -198,20 +203,25 @@ export default function AdminProductOrder() {
             <label className="block text-sm font-bold text-neutral-800 mb-2">
               Select category
             </label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-4 py-2.5 border-2 border-blue-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+            {loadingCategories ? (
+              <div className="text-sm text-neutral-500 py-2">Loading categories...</div>
+            ) : (
+              <select
+                value={selectedCategoryId}
+                onChange={(e) => setSelectedCategoryId(e.target.value)}
+                className="w-full px-4 py-2.5 border-2 border-blue-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
+                <option value="">Select category</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Product List */}
-          {selectedCategory && selectedCategory !== "Select category" && (
+          {selectedCategoryId && (
             <div className="space-y-3">
               <label className="block text-sm font-bold text-neutral-800 mb-2">
                 Product List (Drag to reorder)
@@ -243,13 +253,12 @@ export default function AdminProductOrder() {
                       onDragStart={() => handleDragStart(index)}
                       onDragOver={(e) => handleDragOver(e, index)}
                       onDragEnd={handleDragEnd}
-                      className={`flex items-center justify-between p-3 bg-neutral-50 rounded-lg border-2 border-transparent cursor-move hover:border-teal-300 transition-colors ${
-                        draggedIndex === index
+                      className={`flex items-center justify-between p-3 bg-neutral-50 rounded-lg border-2 border-transparent cursor-move hover:border-teal-300 transition-colors ${draggedIndex === index
                           ? "opacity-50"
                           : saving
-                          ? "cursor-not-allowed opacity-60"
-                          : ""
-                      }`}>
+                            ? "cursor-not-allowed opacity-60"
+                            : ""
+                        }`}>
                       <span className="text-sm font-medium text-neutral-800 flex-1">
                         {product.name}
                       </span>
@@ -275,7 +284,7 @@ export default function AdminProductOrder() {
           )}
 
           {/* Action Buttons */}
-          {selectedCategory && selectedCategory !== "Select category" && (
+          {selectedCategoryId && (
             <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-neutral-200">
               <button
                 onClick={handleUpdate}

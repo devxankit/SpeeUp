@@ -135,21 +135,18 @@ export const getHomeContent = async (_req: Request, res: Response) => {
 
     // 3. Shop By Store - Fetch from database
     const shopDocuments = await Shop.find({ isActive: true })
-      .select("name image slug bgColor order")
-      .sort({ order: 1, createdAt: 1 })
+      .populate('category', 'name slug')
+      .sort({ order: 1, createdAt: -1 })
       .lean();
 
     // Transform shop data to match frontend expected format
-    const shops = shopDocuments.map((shop) => ({
-      id: shop._id.toString(),
+    const shops = shopDocuments.map((shop: any) => ({
+      id: shop.storeId || shop._id.toString(),
       name: shop.name,
       image: shop.image,
-      slug:
-        shop.slug ||
-        shop.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)/g, ""),
+      slug: shop.storeId || shop._id.toString(),
+      category: shop.category,
+      productIds: shop.products?.map((p: any) => p.toString()) || [],
       bgColor: shop.bgColor || "bg-neutral-50",
     }));
 
@@ -393,56 +390,64 @@ export const getHomeContent = async (_req: Request, res: Response) => {
 };
 
 // Get Products for a specific "Store" (Campaign/Collection)
-// This maps the virtual store IDs (e.g., 'faith-store') to actual product queries
+// Fetch products based on store configuration from database
 export const getStoreProducts = async (req: Request, res: Response) => {
   try {
     const { storeId } = req.params;
     let query: any = { status: "Active", publish: true };
 
-    // Map store IDs to queries
-    switch (storeId) {
-      case "spiritual-store":
-        query.category = await getCategoryIdByName("Spiritual");
-        break;
-      case "pharma-store":
-        query.category = await getCategoryIdByName("Pharma");
-        break;
-      case "e-gifts-store":
-        query.category = await getCategoryIdByName("E-Gifts");
-        break;
-      case "pet-store":
-        query.category = await getCategoryIdByName("Pet Supplies");
-        break;
-      case "fashion-basics-store":
-        // Could be multiple categories
-        query.$or = [
-          { category: await getCategoryIdByName("Fashion") },
-          { category: await getCategoryIdByName("Clothing") },
-        ];
-        break;
-      case "hobby-store":
-        query.category = await getCategoryIdByName("Hobbies");
-        break;
-      default:
-        // If it looks like a category ID, try that
-        // query.category = storeId;
-        break;
-    }
+        // Find the shop by storeId
+        const shop = await Shop.findOne({ 
+            $or: [
+                { storeId: storeId },
+                { _id: storeId }
+            ],
+            isActive: true
+        })
+        .populate('category', '_id')
+        .populate('subCategory', '_id');
 
-    if (query.category || query.$or) {
-      const products = await Product.find(query).limit(50);
-      return res.status(200).json({ success: true, data: products });
-    } else {
-      // Fallback or empty if mapping fails
-      return res.status(200).json({ success: true, data: [] });
+        if (shop) {
+            // If shop has specific products assigned, use those
+            if (shop.products && shop.products.length > 0) {
+                query._id = { $in: shop.products };
+            } 
+            // Otherwise, filter by category/subcategory
+            else if (shop.category) {
+                query.category = shop.category._id;
+                
+                // If subcategory is also specified, filter by both
+                if (shop.subCategory) {
+                    query.$or = [
+                        { category: shop.category._id },
+                        { subcategory: shop.subCategory._id }
+                    ];
+                }
+            }
+        } else {
+            // Fallback: try to match by category name (legacy support)
+            const categoryId = await getCategoryIdByName(storeId);
+            if (categoryId) {
+                query.category = categoryId;
+            } else {
+                // No matching shop or category found
+                return res.status(200).json({ success: true, data: [] });
+            }
+        }
+
+        const products = await Product.find(query)
+            .populate('category', 'name slug')
+            .limit(50);
+            
+        return res.status(200).json({ success: true, data: products });
+
+    } catch (error: any) {
+        return res.status(500).json({
+            success: false,
+            message: "Error fetching store products",
+            error: error.message,
+        });
     }
-  } catch (error: any) {
-    return res.status(500).json({
-      success: false,
-      message: "Error fetching store products",
-      error: error.message,
-    });
-  }
 };
 
 // Helper

@@ -41,6 +41,7 @@ export interface SubCategory {
   category: string | Category;
   image?: string;
   order: number;
+  totalProduct?: number; // Total products in this subcategory
   createdAt?: string;
   updatedAt?: string;
 }

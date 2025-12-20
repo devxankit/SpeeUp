@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+// @ts-ignore - socket.io-client types may not be available
 import { io, Socket } from 'socket.io-client'
 
 interface LocationUpdate {
@@ -82,7 +83,7 @@ export const useDeliveryTracking = (orderId: string | undefined) => {
             socket.emit('track-order', orderId)
         })
 
-        socket.on('tracking-started', (data) => {
+        socket.on('tracking-started', (data: any) => {
             console.log('📡 Tracking started:', data)
         })
 
@@ -103,7 +104,7 @@ export const useDeliveryTracking = (orderId: string | undefined) => {
             }))
         })
 
-        socket.on('disconnect', (reason) => {
+        socket.on('disconnect', (reason: any) => {
             console.log('❌ Socket disconnected:', reason)
             setTrackingData(prev => ({ ...prev, isConnected: false }))
 
@@ -115,7 +116,7 @@ export const useDeliveryTracking = (orderId: string | undefined) => {
             attemptReconnect()
         })
 
-        socket.on('connect_error', (error) => {
+        socket.on('connect_error', (error: any) => {
             console.error('Socket connection error:', error)
             setTrackingData(prev => ({
                 ...prev,
@@ -126,7 +127,7 @@ export const useDeliveryTracking = (orderId: string | undefined) => {
             attemptReconnect()
         })
 
-        socket.on('error', (error) => {
+        socket.on('error', (error: any) => {
             console.error('Socket error:', error)
             setTrackingData(prev => ({
                 ...prev,

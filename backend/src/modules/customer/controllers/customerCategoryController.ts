@@ -6,9 +6,11 @@ import mongoose from "mongoose";
 // Get all categories (public)
 export const getCategories = async (_req: Request, res: Response) => {
     try {
-        const categories = await Category.find()
+        const categories = await Category.find({
+            status: "Active" // Only return active categories
+        })
             .sort({ order: 1 })
-            .select("name image icon description color");
+            .select("name image icon description color slug _id");
 
         return res.status(200).json({
             success: true,

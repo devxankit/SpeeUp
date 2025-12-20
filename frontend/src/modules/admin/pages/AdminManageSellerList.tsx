@@ -89,134 +89,11 @@ const FALLBACK_LOGO =
         </svg>`
     );
 
-// Mock data - kept as fallback
-const MOCK_SELLERS: Seller[] = [
-    {
-        _id: 'mock1',
-        id: 1,
-        name: 'Chirag Seller',
-        sellerName: 'Chirag Seller',
-        storeName: 'Chirag store',
-        phone: '9766846429',
-        mobile: '9766846429',
-        email: 'info@chirag.com',
-        logo: '/api/placeholder/40/40',
-        balance: 1.70,
-        commission: 5.00,
-        categories: ['Organic & Premium', 'Instant Food', 'Pet Care', 'Sweet Tooth', 'Tea Coffee', 'Cleaning Essentials', 'Pharma And Wellness'],
-        status: 'Approved',
-        needApproval: false,
-        category: 'Organic & Premium',
-        address: '123 Main Street, Sector 5',
-        city: 'Mumbai',
-        serviceableArea: 'Area 1',
-        panCard: 'ABCDE1234F',
-        taxName: 'GST',
-        taxNumber: '27ABCDE1234F1Z5',
-        accountName: 'Chirag Seller',
-        bankName: 'State Bank of India',
-        branch: 'Mumbai Branch',
-        accountNumber: '1234567890',
-        ifsc: 'SBIN0001234',
-        requireProductApproval: false,
-        viewCustomerDetails: false,
-    },
-    {
-        _id: 'mock2',
-        id: 2,
-        name: 'Vaishnavi Seller',
-        sellerName: 'Vaishnavi Seller',
-        storeName: 'Vaishnavi Store',
-        phone: '9766846428',
-        mobile: '9766846428',
-        email: 'info@vaishnavi.com',
-        logo: '/api/placeholder/40/40',
-        balance: 7929.75,
-        commission: 5.00,
-        categories: ['Pet Care', 'Sweet Tooth', 'Personal Care', 'Paan Corner', 'Home Office'],
-        status: 'Approved',
-        needApproval: false,
-        category: 'Pet Care',
-        address: '456 Park Avenue, Sector 10',
-        city: 'Delhi',
-        serviceableArea: 'Area 2',
-        panCard: 'FGHIJ5678K',
-        taxName: 'GST',
-        taxNumber: '07FGHIJ5678K2Z6',
-        accountName: 'Vaishnavi Seller',
-        bankName: 'HDFC Bank',
-        branch: 'Delhi Branch',
-        accountNumber: '9876543210',
-        ifsc: 'HDFC0005678',
-        requireProductApproval: true,
-        viewCustomerDetails: true,
-    },
-    {
-        _id: 'mock3',
-        id: 3,
-        name: 'Pratik Seller',
-        sellerName: 'Pratik Seller',
-        storeName: 'Pratik Store',
-        phone: '9766846427',
-        mobile: '9766846427',
-        email: 'info@pratik.com',
-        logo: '/api/placeholder/40/40',
-        balance: 8379.00,
-        commission: 5.00,
-        categories: ['Pet Care', 'Sweet Tooth', 'Tea Coffee'],
-        status: 'Pending',
-        needApproval: true,
-        category: 'Tea Coffee',
-        address: '789 Market Road, Sector 15',
-        city: 'Bangalore',
-        serviceableArea: 'Area 3',
-        panCard: 'LMNOP9012Q',
-        taxName: 'GST',
-        taxNumber: '29LMNOP9012Q3Z7',
-        accountName: 'Pratik Seller',
-        bankName: 'ICICI Bank',
-        branch: 'Bangalore Branch',
-        accountNumber: '5555555555',
-        ifsc: 'ICIC0009012',
-        requireProductApproval: false,
-        viewCustomerDetails: false,
-    },
-    {
-        _id: 'mock4',
-        id: 4,
-        name: 'New Seller',
-        sellerName: 'New Seller',
-        storeName: 'New Store',
-        phone: '9766846426',
-        mobile: '9766846426',
-        email: 'info@newseller.com',
-        logo: '/api/placeholder/40/40',
-        balance: 0.00,
-        commission: 0.00,
-        categories: ['Cleaning Essentials'],
-        status: 'Pending',
-        needApproval: true,
-        category: 'Cleaning Essentials',
-        address: '321 New Street, Sector 20',
-        city: 'Pune',
-        serviceableArea: 'Area 4',
-        panCard: 'QRSTU3456V',
-        taxName: 'GST',
-        taxNumber: '27QRSTU3456V4Z8',
-        accountName: 'New Seller',
-        bankName: 'Axis Bank',
-        branch: 'Pune Branch',
-        accountNumber: '1111111111',
-        ifsc: 'UTIB0003456',
-        requireProductApproval: false,
-        viewCustomerDetails: false,
-    },
-];
-
 export default function AdminManageSellerList() {
     const [sellers, setSellers] = useState<Seller[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>('');
+    const [successMessage, setSuccessMessage] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState('');
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
@@ -248,8 +125,8 @@ export default function AdminManageSellerList() {
                 } else {
                     setError(err.response?.data?.message || 'Failed to fetch sellers. Please try again.');
                 }
-                // Fallback to mock data on error
-                setSellers(MOCK_SELLERS);
+                // Show empty on error - no mock data fallback
+                setSellers([]);
             } finally {
                 setLoading(false);
             }
@@ -377,15 +254,16 @@ export default function AdminManageSellerList() {
                             : seller
                     )
                 );
-                alert(`Seller has been approved.`);
+                setSuccessMessage('Seller has been approved.');
                 setIsEditModalOpen(false);
                 setEditingSeller(null);
+                setTimeout(() => setSuccessMessage(''), 3000);
             } else {
-                alert('Failed to approve seller. Please try again.');
+                setError('Failed to approve seller. Please try again.');
             }
         } catch (err: any) {
             console.error('Error approving seller:', err);
-            alert(err.response?.data?.message || 'Failed to approve seller. Please try again.');
+            setError(err.response?.data?.message || 'Failed to approve seller. Please try again.');
         }
     };
 
@@ -404,15 +282,16 @@ export default function AdminManageSellerList() {
                             : seller
                     )
                 );
-                alert(`Seller has been rejected.`);
+                setSuccessMessage('Seller has been rejected.');
                 setIsEditModalOpen(false);
                 setEditingSeller(null);
+                setTimeout(() => setSuccessMessage(''), 3000);
             } else {
-                alert('Failed to reject seller. Please try again.');
+                setError('Failed to reject seller. Please try again.');
             }
         } catch (err: any) {
             console.error('Error rejecting seller:', err);
-            alert(err.response?.data?.message || 'Failed to reject seller. Please try again.');
+            setError(err.response?.data?.message || 'Failed to reject seller. Please try again.');
         }
     };
 
@@ -431,13 +310,14 @@ export default function AdminManageSellerList() {
                 if (response.success) {
                     // Remove from local state
                     setSellers(prevSellers => prevSellers.filter(seller => seller._id !== sellerId));
-                    alert('Seller deleted successfully.');
+                    setSuccessMessage('Seller deleted successfully.');
+                    setTimeout(() => setSuccessMessage(''), 3000);
                 } else {
-                    alert('Failed to delete seller. Please try again.');
+                    setError('Failed to delete seller. Please try again.');
                 }
             } catch (err: any) {
                 console.error('Error deleting seller:', err);
-                alert(err.response?.data?.message || 'Failed to delete seller. Please try again.');
+                setError(err.response?.data?.message || 'Failed to delete seller. Please try again.');
             }
         }
     };
@@ -465,8 +345,28 @@ export default function AdminManageSellerList() {
 
                     {/* Error Message */}
                     {error && (
-                        <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+                        <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 flex items-center justify-between">
                             <p className="text-sm">{error}</p>
+                            <button
+                                onClick={() => setError('')}
+                                className="text-red-700 hover:text-red-900 ml-4 text-lg font-bold"
+                                type="button"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    )}
+                    {/* Success Message */}
+                    {successMessage && (
+                        <div className="p-4 bg-green-50 border-l-4 border-green-500 text-green-700 flex items-center justify-between">
+                            <p className="text-sm">{successMessage}</p>
+                            <button
+                                onClick={() => setSuccessMessage('')}
+                                className="text-green-700 hover:text-green-900 ml-4 text-lg font-bold"
+                                type="button"
+                            >
+                                ×
+                            </button>
                         </div>
                     )}
 
@@ -523,239 +423,235 @@ export default function AdminManageSellerList() {
 
                     {/* Table */}
                     {!loading && (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-neutral-50 text-xs font-bold text-neutral-800 border-b border-neutral-200">
-                                    <th 
-                                        className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                        onClick={() => handleSort('id')}
-                                    >
-                                        <div className="flex items-center">
-                                            Id <SortIcon column="id" />
-                                        </div>
-                                    </th>
-                                    <th 
-                                        className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                        onClick={() => handleSort('name')}
-                                    >
-                                        <div className="flex items-center">
-                                            Name <SortIcon column="name" />
-                                        </div>
-                                    </th>
-                                    <th 
-                                        className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                        onClick={() => handleSort('storeName')}
-                                    >
-                                        <div className="flex items-center">
-                                            Store Name <SortIcon column="storeName" />
-                                        </div>
-                                    </th>
-                                    <th className="p-4">
-                                        Contact
-                                    </th>
-                                    <th className="p-4">
-                                        Logo
-                                    </th>
-                                    <th 
-                                        className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                        onClick={() => handleSort('balance')}
-                                    >
-                                        <div className="flex items-center">
-                                            Balance <SortIcon column="balance" />
-                                        </div>
-                                    </th>
-                                    <th 
-                                        className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                        onClick={() => handleSort('commission')}
-                                    >
-                                        <div className="flex items-center">
-                                            Commission <SortIcon column="commission" />
-                                        </div>
-                                    </th>
-                                    <th className="p-4">
-                                        Category
-                                    </th>
-                                    <th 
-                                        className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                        onClick={() => handleSort('status')}
-                                    >
-                                        <div className="flex items-center">
-                                            Status <SortIcon column="status" />
-                                        </div>
-                                    </th>
-                                    <th className="p-4">
-                                        Need Approval?
-                                    </th>
-                                    <th className="p-4">
-                                        Action
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {displayedSellers.map((seller) => (
-                                    <tr key={seller._id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200">
-                                        <td className="p-4 align-middle">{seller.id || seller._id.slice(-6)}</td>
-                                        <td className="p-4 align-middle">{seller.name}</td>
-                                        <td className="p-4 align-middle">{seller.storeName}</td>
-                                        <td className="p-4 align-middle">
-                                            <div className="text-xs">
-                                                <div>{seller.phone}</div>
-                                                <div className="text-neutral-500">{seller.email}</div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-neutral-50 text-xs font-bold text-neutral-800 border-b border-neutral-200">
+                                        <th
+                                            className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('id')}
+                                        >
+                                            <div className="flex items-center">
+                                                Id <SortIcon column="id" />
                                             </div>
-                                        </td>
-                                        <td className="p-4 align-middle">
-                                            <img 
-                                                src={(seller.logo && seller.logo.trim() !== '') ? seller.logo : FALLBACK_LOGO} 
-                                                alt={seller.storeName}
-                                                className="w-10 h-10 object-cover rounded"
-                                                loading="lazy"
-                                                onError={(e) => {
-                                                    const img = e.currentTarget;
-                                                    if (img.dataset.fallbackApplied === 'true') return;
-                                                    img.dataset.fallbackApplied = 'true';
-                                                    img.src = FALLBACK_LOGO;
-                                                }}
-                                            />
-                                        </td>
-                                        <td className="p-4 align-middle">{seller.balance.toFixed(2)}</td>
-                                        <td className="p-4 align-middle">{seller.commission.toFixed(2)}%</td>
-                                        <td className="p-4 align-middle">
-                                            <button
-                                                onClick={() => handleViewCategories(seller)}
-                                                className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1"
-                                            >
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                                    <circle cx="12" cy="12" r="3"></circle>
-                                                </svg>
-                                                View ({seller.categories.length})
-                                            </button>
-                                        </td>
-                                        <td className="p-4 align-middle">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                seller.status === 'Approved' 
-                                                    ? 'bg-green-100 text-green-800' 
-                                                    : seller.status === 'Pending'
-                                                    ? 'bg-yellow-100 text-yellow-800'
-                                                    : 'bg-red-100 text-red-800'
-                                            }`}>
-                                                {seller.status}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 align-middle">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                seller.needApproval 
-                                                    ? 'bg-pink-100 text-pink-800' 
-                                                    : 'bg-pink-100 text-pink-800'
-                                            }`}>
-                                                {seller.needApproval ? 'Yes' : 'No'}
-                                            </span>
-                                        </td>
-                                        <td className="p-4 align-middle">
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => handleEdit(seller._id)}
-                                                    className="p-1.5 text-teal-600 hover:bg-teal-50 rounded transition-colors"
-                                                    title="Edit"
-                                                >
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(seller._id)}
-                                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                                    title="Delete"
-                                                >
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                                    </svg>
-                                                </button>
+                                        </th>
+                                        <th
+                                            className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('name')}
+                                        >
+                                            <div className="flex items-center">
+                                                Name <SortIcon column="name" />
                                             </div>
-                                        </td>
+                                        </th>
+                                        <th
+                                            className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('storeName')}
+                                        >
+                                            <div className="flex items-center">
+                                                Store Name <SortIcon column="storeName" />
+                                            </div>
+                                        </th>
+                                        <th className="p-4">
+                                            Contact
+                                        </th>
+                                        <th className="p-4">
+                                            Logo
+                                        </th>
+                                        <th
+                                            className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('balance')}
+                                        >
+                                            <div className="flex items-center">
+                                                Balance <SortIcon column="balance" />
+                                            </div>
+                                        </th>
+                                        <th
+                                            className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('commission')}
+                                        >
+                                            <div className="flex items-center">
+                                                Commission <SortIcon column="commission" />
+                                            </div>
+                                        </th>
+                                        <th className="p-4">
+                                            Category
+                                        </th>
+                                        <th
+                                            className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
+                                            onClick={() => handleSort('status')}
+                                        >
+                                            <div className="flex items-center">
+                                                Status <SortIcon column="status" />
+                                            </div>
+                                        </th>
+                                        <th className="p-4">
+                                            Need Approval?
+                                        </th>
+                                        <th className="p-4">
+                                            Action
+                                        </th>
                                     </tr>
-                                ))}
-                                {displayedSellers.length === 0 && (
-                                    <tr>
-                                        <td colSpan={11} className="p-8 text-center text-neutral-400">
-                                            No sellers found.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {displayedSellers.map((seller) => (
+                                        <tr key={seller._id} className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200">
+                                            <td className="p-4 align-middle">{seller.id || seller._id.slice(-6)}</td>
+                                            <td className="p-4 align-middle">{seller.name}</td>
+                                            <td className="p-4 align-middle">{seller.storeName}</td>
+                                            <td className="p-4 align-middle">
+                                                <div className="text-xs">
+                                                    <div>{seller.phone}</div>
+                                                    <div className="text-neutral-500">{seller.email}</div>
+                                                </div>
+                                            </td>
+                                            <td className="p-4 align-middle">
+                                                <img
+                                                    src={(seller.logo && seller.logo.trim() !== '') ? seller.logo : FALLBACK_LOGO}
+                                                    alt={seller.storeName}
+                                                    className="w-10 h-10 object-cover rounded"
+                                                    loading="lazy"
+                                                    onError={(e) => {
+                                                        const img = e.currentTarget;
+                                                        if (img.dataset.fallbackApplied === 'true') return;
+                                                        img.dataset.fallbackApplied = 'true';
+                                                        img.src = FALLBACK_LOGO;
+                                                    }}
+                                                />
+                                            </td>
+                                            <td className="p-4 align-middle">{seller.balance.toFixed(2)}</td>
+                                            <td className="p-4 align-middle">{seller.commission.toFixed(2)}%</td>
+                                            <td className="p-4 align-middle">
+                                                <button
+                                                    onClick={() => handleViewCategories(seller)}
+                                                    className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1"
+                                                >
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                        <circle cx="12" cy="12" r="3"></circle>
+                                                    </svg>
+                                                    View ({seller.categories.length})
+                                                </button>
+                                            </td>
+                                            <td className="p-4 align-middle">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${seller.status === 'Approved'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : seller.status === 'Pending'
+                                                            ? 'bg-yellow-100 text-yellow-800'
+                                                            : 'bg-red-100 text-red-800'
+                                                    }`}>
+                                                    {seller.status}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 align-middle">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${seller.needApproval
+                                                        ? 'bg-pink-100 text-pink-800'
+                                                        : 'bg-pink-100 text-pink-800'
+                                                    }`}>
+                                                    {seller.needApproval ? 'Yes' : 'No'}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 align-middle">
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => handleEdit(seller._id)}
+                                                        className="p-1.5 text-teal-600 hover:bg-teal-50 rounded transition-colors"
+                                                        title="Edit"
+                                                    >
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                        </svg>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(seller._id)}
+                                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                        title="Delete"
+                                                    >
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {displayedSellers.length === 0 && (
+                                        <tr>
+                                            <td colSpan={11} className="p-8 text-center text-neutral-400">
+                                                No sellers found.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
 
                     {/* Pagination Footer */}
                     {!loading && (
-                    <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
-                        <div className="text-xs sm:text-sm text-neutral-700">
-                            Showing {startIndex + 1} to {Math.min(endIndex, filteredSellers.length)} of {filteredSellers.length} entries
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                                disabled={currentPage === 1}
-                                className={`p-2 border border-teal-600 rounded ${
-                                    currentPage === 1
-                                        ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                        : 'text-teal-600 hover:bg-teal-50'
-                                }`}
-                                aria-label="Previous page"
-                            >
-                                <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    xmlns="http://www.w3.org/2000/svg"
+                        <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+                            <div className="text-xs sm:text-sm text-neutral-700">
+                                Showing {startIndex + 1} to {Math.min(endIndex, filteredSellers.length)} of {filteredSellers.length} entries
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className={`p-2 border border-teal-600 rounded ${currentPage === 1
+                                            ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                            : 'text-teal-600 hover:bg-teal-50'
+                                        }`}
+                                    aria-label="Previous page"
                                 >
-                                    <path
-                                        d="M15 18L9 12L15 6"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-                                </svg>
-                            </button>
-                            <button
-                                className="px-3 py-1.5 border border-teal-600 bg-teal-600 text-white rounded font-medium text-sm"
-                            >
-                                {currentPage}
-                            </button>
-                            <button
-                                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages}
-                                className={`p-2 border border-teal-600 rounded ${
-                                    currentPage === totalPages
-                                        ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                                        : 'text-teal-600 hover:bg-teal-50'
-                                }`}
-                                aria-label="Next page"
-                            >
-                                <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    xmlns="http://www.w3.org/2000/svg"
+                                    <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path
+                                            d="M15 18L9 12L15 6"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                    </svg>
+                                </button>
+                                <button
+                                    className="px-3 py-1.5 border border-teal-600 bg-teal-600 text-white rounded font-medium text-sm"
                                 >
-                                    <path
-                                        d="M9 18L15 12L9 6"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    />
-                                </svg>
-                            </button>
+                                    {currentPage}
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className={`p-2 border border-teal-600 rounded ${currentPage === totalPages
+                                            ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                            : 'text-teal-600 hover:bg-teal-50'
+                                        }`}
+                                    aria-label="Next page"
+                                >
+                                    <svg
+                                        width="16"
+                                        height="16"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path
+                                            d="M9 18L15 12L9 6"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
-                    </div>
                     )}
                 </div>
             </div>
@@ -854,22 +750,21 @@ export default function AdminManageSellerList() {
                                     display: none;
                                 }
                             `}</style>
-                            
+
                             <div className="space-y-6">
                                 {/* Status Badge */}
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                                            editingSeller.status === 'Approved' 
-                                                ? 'bg-green-100 text-green-800' 
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${editingSeller.status === 'Approved'
+                                                ? 'bg-green-100 text-green-800'
                                                 : editingSeller.status === 'Pending'
-                                                ? 'bg-yellow-100 text-yellow-800'
-                                                : 'bg-red-100 text-red-800'
-                                        }`}>
+                                                    ? 'bg-yellow-100 text-yellow-800'
+                                                    : 'bg-red-100 text-red-800'
+                                            }`}>
                                             Status: {editingSeller.status}
                                         </span>
                                     </div>
-                                        {editingSeller.status === 'Pending' && (
+                                    {editingSeller.status === 'Pending' && (
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => handleApprove(editingSeller._id)}
