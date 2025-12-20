@@ -1,19 +1,130 @@
 import { Request, Response } from "express";
 import Product from "../../../models/Product";
 import Category from "../../../models/Category";
+import SubCategory from "../../../models/SubCategory";
 import Shop from "../../../models/Shop";
+import Seller from "../../../models/Seller";
 
 // Get Home Page Content
 export const getHomeContent = async (_req: Request, res: Response) => {
   try {
-    // 1. Featured / Bestsellers (Top 10 popular products)
-    const bestsellers = await Product.find({
-      status: "Active",
-      publish: true,
-      popular: true,
+    // 1. Featured / Bestsellers - Get 6 sellers with their top 4 products each
+    // First, get approved sellers
+    const approvedSellers = await Seller.find({
+      status: "Approved",
     })
-      .limit(10)
-      .select("productName price mainImage discount rating reviews pack");
+      .select("_id storeName logo")
+      .limit(6)
+      .lean();
+
+    // For each seller, get their top 4 popular/active products
+    const sellerCards = await Promise.all(
+      approvedSellers.map(async (seller) => {
+        const sellerProducts = await Product.find({
+          seller: seller._id,
+          status: "Active",
+          publish: true,
+        })
+          .select("productName mainImage galleryImages")
+          .limit(4)
+          .lean();
+
+        // Extract exactly 4 product images (one mainImage from each of 4 products)
+        const productImages: string[] = [];
+        sellerProducts.forEach((product) => {
+          if (productImages.length < 4 && product.mainImage) {
+            productImages.push(product.mainImage);
+          }
+        });
+
+        // If we have less than 4 products, try to use gallery images
+        if (productImages.length < 4) {
+          sellerProducts.forEach((product) => {
+            if (
+              productImages.length < 4 &&
+              product.galleryImages &&
+              product.galleryImages.length > 0
+            ) {
+              productImages.push(product.galleryImages[0]);
+            }
+          });
+        }
+
+        // Ensure we have exactly 4 images (pad with first image if needed)
+        while (productImages.length < 4 && productImages[0]) {
+          productImages.push(productImages[0]);
+        }
+
+        return {
+          id: seller._id.toString(),
+          sellerId: seller._id.toString(),
+          name: seller.storeName,
+          logo: seller.logo,
+          productImages: productImages.slice(0, 4),
+          productCount: sellerProducts.length,
+        };
+      })
+    );
+
+    // Fallback: If we don't have enough sellers, use popular products grouped by seller
+    let bestsellers = sellerCards;
+    if (sellerCards.length < 6) {
+      // Get popular products and group by seller
+      const popularProducts = await Product.find({
+        status: "Active",
+        publish: true,
+        popular: true,
+      })
+        .select("seller productName mainImage galleryImages")
+        .populate("seller", "storeName logo")
+        .limit(24) // Get enough products to fill 6 sellers × 4 products
+        .lean();
+
+      // Group products by seller
+      const sellerMap = new Map();
+      popularProducts.forEach((product: any) => {
+        if (!product.seller || !product.seller._id) return;
+
+        const sellerId = product.seller._id.toString();
+        if (!sellerMap.has(sellerId)) {
+          sellerMap.set(sellerId, {
+            id: sellerId,
+            sellerId: sellerId,
+            name: product.seller.storeName || "Seller",
+            logo: product.seller.logo,
+            productImages: [],
+            productCount: 0,
+          });
+        }
+
+        const sellerCard = sellerMap.get(sellerId);
+        if (sellerCard.productImages.length < 4) {
+          // Prefer mainImage, fallback to first gallery image
+          const imageToAdd =
+            product.mainImage ||
+            (product.galleryImages && product.galleryImages[0]
+              ? product.galleryImages[0]
+              : null);
+          if (imageToAdd) {
+            sellerCard.productImages.push(imageToAdd);
+            sellerCard.productCount++;
+          }
+        }
+      });
+
+      // Convert map to array and take first 6
+      bestsellers = Array.from(sellerMap.values())
+        .filter((card) => card.productImages.length > 0)
+        .slice(0, 6);
+
+      // Pad images if needed
+      bestsellers.forEach((card) => {
+        while (card.productImages.length < 4 && card.productImages[0]) {
+          card.productImages.push(card.productImages[0]);
+        }
+        card.productImages = card.productImages.slice(0, 4);
+      });
+    }
 
     // 2. Categories for Tiles (Grocery, Snacks, etc)
     const categories = await Category.find({
@@ -56,7 +167,147 @@ export const getHomeContent = async (_req: Request, res: Response) => {
       type: "category",
     }));
 
-    // 5. Cooking Ideas (Fetch some products from 'Food' or 'Grocery' categories)
+    // 5. Grocery & Kitchen Subcategories - Fetch subcategories from "Grocery & Kitchen" category
+    const groceryKitchenCategory = await Category.findOne({
+      slug: "grocery-kitchen",
+      status: "Active",
+    }).lean();
+
+    let groceryKitchenTiles: any[] = [];
+
+    if (groceryKitchenCategory) {
+      // Fetch subcategories for Grocery & Kitchen category
+      const subcategories = await SubCategory.find({
+        category: groceryKitchenCategory._id,
+      })
+        .select("name image order")
+        .sort({ order: 1 })
+        .limit(10)
+        .lean();
+
+      groceryKitchenTiles = subcategories.map((sub: any) => ({
+        id: sub._id.toString(),
+        subcategoryId: sub._id.toString(),
+        categoryId: groceryKitchenCategory._id.toString(),
+        name: sub.name,
+        image: sub.image || groceryKitchenCategory.image,
+        slug: sub.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        type: "subcategory",
+      }));
+    } else {
+      // Fallback: If category doesn't exist, fetch products from grocery/kitchen categories
+      const groceryKitchenCategories = await Category.find({
+        status: "Active",
+        $or: [
+          { slug: { $regex: /grocery|kitchen|atta|rice|dal|spices|oil/i } },
+          { name: { $regex: /grocery|kitchen|atta|rice|dal|spices|oil/i } },
+        ],
+      })
+        .select("_id")
+        .lean();
+
+      const groceryKitchenCategoryIds = groceryKitchenCategories.map(
+        (c) => c._id
+      );
+
+      const groceryKitchenProducts = await Product.find({
+        status: "Active",
+        publish: true,
+        category: { $in: groceryKitchenCategoryIds },
+      })
+        .limit(8)
+        .select("productName mainImage price mrp discount")
+        .lean();
+
+      groceryKitchenTiles = groceryKitchenProducts.map((p: any) => ({
+        id: p._id.toString(),
+        productId: p._id.toString(),
+        name: p.productName,
+        productName: p.productName,
+        image: p.mainImage,
+        mainImage: p.mainImage,
+        price: p.price,
+        discount:
+          p.discount ||
+          (p.mrp && p.price
+            ? Math.round(((p.mrp - p.price) / p.mrp) * 100)
+            : 0),
+        productImages: p.mainImage ? [p.mainImage] : [],
+        type: "product",
+      }));
+    }
+
+    // 5b. Personal Care Subcategories - Fetch subcategories from "Personal Care" category
+    const personalCareCategory = await Category.findOne({
+      slug: "personal-care",
+      status: "Active",
+    }).lean();
+
+    let personalCareTiles: any[] = [];
+
+    if (personalCareCategory) {
+      // Fetch subcategories for Personal Care category
+      const subcategories = await SubCategory.find({
+        category: personalCareCategory._id,
+      })
+        .select("name image order")
+        .sort({ order: 1 })
+        .limit(10)
+        .lean();
+
+      personalCareTiles = subcategories.map((sub: any) => ({
+        id: sub._id.toString(),
+        subcategoryId: sub._id.toString(),
+        categoryId: personalCareCategory._id.toString(),
+        name: sub.name,
+        image: sub.image || personalCareCategory.image,
+        slug: sub.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        type: "subcategory",
+      }));
+    } else {
+      // Fallback: If category doesn't exist, fetch products from personal care categories
+      const personalCareCategories = await Category.find({
+        status: "Active",
+        $or: [
+          { slug: { $regex: /personal-care|beauty|health|wellness/i } },
+          { name: { $regex: /personal-care|beauty|health|wellness/i } },
+        ],
+      })
+        .select("_id")
+        .lean();
+
+      const personalCareCategoryIds = personalCareCategories.map((c) => c._id);
+
+      const personalCareProducts = await Product.find({
+        status: "Active",
+        publish: true,
+        category: { $in: personalCareCategoryIds },
+      })
+        .limit(8)
+        .select("productName mainImage price mrp discount")
+        .lean();
+
+      personalCareTiles = personalCareProducts.map((p: any) => ({
+        id: p._id.toString(),
+        productId: p._id.toString(),
+        name: p.productName,
+        productName: p.productName,
+        image: p.mainImage,
+        mainImage: p.mainImage,
+        price: p.price,
+        discount:
+          p.discount ||
+          (p.mrp && p.price
+            ? Math.round(((p.mrp - p.price) / p.mrp) * 100)
+            : 0),
+        productImages: p.mainImage ? [p.mainImage] : [],
+        type: "product",
+      }));
+    }
+
+    // 6. Personal Care Subcategories - Already fetched above
+
+    // 7. Cooking Ideas (Fetch some products from 'Food' or 'Grocery' categories)
     const foodProducts = await Product.find({
       status: "Active",
       publish: true,
@@ -71,7 +322,7 @@ export const getHomeContent = async (_req: Request, res: Response) => {
       productId: p._id,
     }));
 
-    // 6. Promo Cards (Curated collections for PromoStrip)
+    // 8. Promo Cards (Curated collections for PromoStrip)
     // These match the frontend "PromoCard" interface
     // Added specifically to restore missing frontend section via API
     const promoCards = [
@@ -110,6 +361,8 @@ export const getHomeContent = async (_req: Request, res: Response) => {
       data: {
         bestsellers,
         categories,
+        groceryKitchenProducts: groceryKitchenTiles,
+        personalCareProducts: personalCareTiles,
         shops,
         promoBanners: [
           {
