@@ -45,7 +45,7 @@ export default function AdminAddProduct() {
     maxReturnDays: "",
     fssaiLicNo: "",
     totalAllowedQuantity: "",
-    mainImageUrl: "",
+    mainImage: "",
     galleryImageUrls: [] as string[],
     // Required fields for product creation
     price: "",
@@ -98,12 +98,15 @@ export default function AdminAddProduct() {
               maxReturnDays: product.maxReturnDays?.toString() || "",
               fssaiLicNo: product.fssaiLicNo || "",
               totalAllowedQuantity: product.totalAllowedQuantity?.toString() || "",
+              mainImage: product.mainImage || "",
               mainImageUrl: product.mainImage || "",
               galleryImageUrls: product.galleryImages || [],
               price: product.price?.toString() || "",
               stock: product.stock?.toString() || "",
             });
 
+            if (product.mainImage) {
+              setMainImagePreview(product.mainImage || "");
             if (product.mainImage) {
               setMainImagePreview(product.mainImage || "");
             }
@@ -272,7 +275,7 @@ export default function AdminAddProduct() {
 
     try {
       // Upload main image if provided
-      let mainImageUrl = formData.mainImageUrl;
+      let mainImageUrl = formData.mainImage;
       if (mainImageFile) {
         const mainImageResult = await uploadImage(
           mainImageFile,
@@ -363,7 +366,7 @@ export default function AdminAddProduct() {
             maxReturnDays: "",
             fssaiLicNo: "",
             totalAllowedQuantity: "",
-            mainImageUrl: "",
+            mainImage: "",
             galleryImageUrls: [],
             price: "",
             stock: "",

@@ -933,7 +933,11 @@ export default function AdminPendingOrders() {
           }}
           orderId={selectedOrder._id}
           orderNumber={selectedOrder.orderNumber}
-          currentDeliveryBoy={selectedOrder.deliveryBoy}
+          currentDeliveryBoy={
+            typeof selectedOrder.deliveryBoy === 'object' && selectedOrder.deliveryBoy
+              ? { name: selectedOrder.deliveryBoy.name, _id: selectedOrder.deliveryBoy._id }
+              : selectedOrder.deliveryBoy
+          }
           onAssignSuccess={async () => {
             // Refresh orders after successful assignment
             try {
