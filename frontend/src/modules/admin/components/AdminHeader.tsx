@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import speeUpLogo from '@assets/speeup1.jpeg';
+import speeUpLogo from '@assets/speeup1.png';
 
 interface AdminHeaderProps {
   onMenuClick: () => void;

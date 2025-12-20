@@ -27,7 +27,7 @@ const imageMap = {
   'Personal Care': 'category-personal-care.png',
   'Cleaning Essentials': 'category-cleaning.png',
   'Breakfast & Instant Food': 'category-breakfast.png',
-  
+
   // Products - Snacks
   'Lay\'s India\'s Magic Masala': 'product-lays-magic-masala.jpg',
   'Lay\'s American Style Cream & Onion': 'product-lays-cream-onion.jpg',
@@ -37,7 +37,7 @@ const imageMap = {
   'Doritos Cheese Nachos': 'product-doritos.jpg',
   'Parle Real Elaichi Premium Rusk': 'product-parle-rusk.jpg',
   'Act II Butter Popcorn': 'product-act2-popcorn.jpg',
-  
+
   // Products - Dairy
   'Amul Salted Butter': 'product-amul-butter.jpg',
   'Britannia Brown Bread': 'product-britannia-bread.jpg',
@@ -47,7 +47,7 @@ const imageMap = {
   'Table White White Eggs': 'product-eggs.jpg',
   'MTR 3 Minute Poha': 'product-mtr-poha.jpg',
   'MTR Upma Breakfast Mix': 'product-mtr-upma.jpg',
-  
+
   // Products - Atta/Rice
   'Aashirvaad Superior MP Whole Wheat Atta': 'product-aashirvaad-atta.jpg',
   'Fortune Chakki Fresh': 'product-fortune-atta.jpg',
@@ -63,7 +63,7 @@ const imageMap = {
 function copyCategoryImages() {
   const categoryDir = path.join(assetsDir, 'category');
   if (!fs.existsSync(categoryDir)) return;
-  
+
   const files = fs.readdirSync(categoryDir);
   files.forEach((file) => {
     if (file.endsWith('.png')) {
@@ -83,7 +83,7 @@ function copyCategoryImages() {
 function copyProductImages() {
   const productBaseDir = path.join(assetsDir, 'Image-20251130T081301Z-1-001', 'Image', 'product', 'product');
   if (!fs.existsSync(productBaseDir)) return;
-  
+
   // Copy key product images based on our mapping
   const productMappings = [
     // Snacks
@@ -95,7 +95,7 @@ function copyProductImages() {
     { src: 'Snacks & Munchies/Nachos/Doritos Cheese Nachos - Pack of 2/Doritos Cheese Nachos - Pack of 2.jpg', dest: 'product-doritos.jpg' },
     { src: 'Snacks & Munchies/Rusks & Wafers/Parle Real Elaichi Premium Rusk/Parle Real Elaichi Premium Rusk.jpg', dest: 'product-parle-rusk.jpg' },
     { src: 'Snacks & Munchies/Popcorn/Act II Butter Popcorn/Act II Butter Popcorn.jpg', dest: 'product-act2-popcorn.jpg' },
-    
+
     // Dairy
     { src: 'Dairy, Bread & Eggs/Butter & More/Amul Salted Butter/Amul Salted Butter.jpg', dest: 'product-amul-butter.jpg' },
     { src: 'Dairy, Bread & Eggs/Bread & Pav/Britannia Brown Bread/Britannia Brown Bread.jpg', dest: 'product-britannia-bread.jpg' },
@@ -105,7 +105,7 @@ function copyProductImages() {
     { src: 'Dairy, Bread & Eggs/Eggs/Table White White Eggs (10 pieces)/Table White White Eggs (10 pieces).jpg', dest: 'product-eggs.jpg' },
     { src: 'Dairy, Bread & Eggs/Breakfast Mixes/MTR 3 Minute Poha Breakfast Mix - Pack of 5/488706a.jpg', dest: 'product-mtr-poha.jpg' },
     { src: 'Dairy, Bread & Eggs/Breakfast Mixes/MTR Upma Breakfast Mix/MTR Upma Breakfast Mix.jpg', dest: 'product-mtr-upma.jpg' },
-    
+
     // Atta/Rice
     { src: 'Atta, Rice & Dal/Atta/Aashirvaad Superior MP Whole Wheat Atta/Aashirvaad Superior MP Whole Wheat Atta.jpg', dest: 'product-aashirvaad-atta.jpg' },
     { src: 'Atta, Rice & Dal/Atta/Fortune Chakki Fresh (100% Atta, 0% Maida) Atta/380156b.jpg', dest: 'product-fortune-atta.jpg' },
@@ -116,7 +116,7 @@ function copyProductImages() {
     { src: 'Atta, Rice & Dal/Besan, Sooji & Maida/Rajdhani Besan (1 kg)/Rajdhani Besan (1 kg).jpg', dest: 'product-rajdhani-besan.jpg' },
     { src: 'Atta, Rice & Dal/Besan, Sooji & Maida/Tata Sampann 100% Chana Dal Fine BesanGram Flour/309447b.jpg', dest: 'product-tata-besan.jpg' },
   ];
-  
+
   productMappings.forEach(({ src, dest }) => {
     const srcPath = path.join(productBaseDir, src);
     const destPath = path.join(publicAssetsDir, dest);
@@ -147,12 +147,12 @@ function copyBannerImage() {
 function copyLoginVideo() {
   const loginDir = path.join(assetsDir, 'login');
   if (!fs.existsSync(loginDir)) return;
-  
+
   const publicLoginDir = path.join(publicAssetsDir, 'login');
   if (!fs.existsSync(publicLoginDir)) {
     fs.mkdirSync(publicLoginDir, { recursive: true });
   }
-  
+
   const videoPath = path.join(loginDir, 'loginvideo.mp4');
   if (fs.existsSync(videoPath)) {
     const destPath = path.join(publicLoginDir, 'loginvideo.mp4');
@@ -167,18 +167,18 @@ function copyLoginVideo() {
 function copyShopByStoreImages() {
   const shopbystoreDir = path.join(assetsDir, 'shopbystore');
   if (!fs.existsSync(shopbystoreDir)) return;
-  
+
   const publicShopbystoreDir = path.join(publicAssetsDir, 'shopbystore');
   if (!fs.existsSync(publicShopbystoreDir)) {
     fs.mkdirSync(publicShopbystoreDir, { recursive: true });
   }
-  
+
   // Copy main shopbystore images
   const files = fs.readdirSync(shopbystoreDir);
   files.forEach((file) => {
     const filePath = path.join(shopbystoreDir, file);
     const stat = fs.statSync(filePath);
-    
+
     if (stat.isFile() && (file.endsWith('.jpg') || file.endsWith('.jpeg') || file.endsWith('.png'))) {
       const destPath = path.join(publicShopbystoreDir, file);
       if (!fs.existsSync(destPath)) {
@@ -190,11 +190,11 @@ function copyShopByStoreImages() {
       const subDir = file;
       const subDirPath = path.join(shopbystoreDir, subDir);
       const publicSubDirPath = path.join(publicShopbystoreDir, subDir);
-      
+
       if (!fs.existsSync(publicSubDirPath)) {
         fs.mkdirSync(publicSubDirPath, { recursive: true });
       }
-      
+
       const subFiles = fs.readdirSync(subDirPath);
       subFiles.forEach((subFile) => {
         if (subFile.endsWith('.jpg') || subFile.endsWith('.jpeg') || subFile.endsWith('.png')) {
@@ -212,12 +212,12 @@ function copyShopByStoreImages() {
 
 // Copy speeup logo
 function copySpeeUpLogo() {
-  const speeupPath = path.join(assetsDir, 'speeup1.jpeg');
+  const speeupPath = path.join(assetsDir, 'speeup1.png');
   if (fs.existsSync(speeupPath)) {
-    const destPath = path.join(publicAssetsDir, 'speeup1.jpeg');
+    const destPath = path.join(publicAssetsDir, 'speeup1.png');
     if (!fs.existsSync(destPath)) {
       fs.copyFileSync(speeupPath, destPath);
-      console.log('Copied speeup logo: speeup1.jpeg');
+      console.log('Copied speeup logo: speeup1.png');
     }
   }
 }
