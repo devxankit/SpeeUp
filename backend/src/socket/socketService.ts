@@ -5,7 +5,26 @@ import jwt from 'jsonwebtoken';
 export const initializeSocket = (httpServer: HttpServer) => {
     const io = new SocketIOServer(httpServer, {
         cors: {
-            origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+            origin: (origin, callback) => {
+                // Allow requests with no origin (like mobile apps or server-to-server)
+                if (!origin) return callback(null, true);
+
+                // In production, check against FRONTEND_URL
+                if (process.env.NODE_ENV === 'production') {
+                    const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+                    if (origin === allowedOrigin) {
+                        return callback(null, true);
+                    }
+                    return callback(null, false);
+                }
+
+                // In development, allow any localhost port
+                if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+                    return callback(null, true);
+                }
+
+                return callback(null, false);
+            },
             methods: ['GET', 'POST'],
             credentials: true,
         },

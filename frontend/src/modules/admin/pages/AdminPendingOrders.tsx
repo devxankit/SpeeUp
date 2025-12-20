@@ -940,11 +940,6 @@ export default function AdminPendingOrders() {
           orderId={selectedOrder._id}
           orderNumber={selectedOrder.orderNumber}
           currentDeliveryBoy={
-            typeof selectedOrder.deliveryBoy === 'object' && selectedOrder.deliveryBoy
-              ? { name: selectedOrder.deliveryBoy.name, _id: selectedOrder.deliveryBoy._id }
-              : selectedOrder.deliveryBoy
-          }
-          currentDeliveryBoy={
             typeof selectedOrder.deliveryBoy === "string"
               ? selectedOrder.deliveryBoy
               : selectedOrder.deliveryBoy &&
