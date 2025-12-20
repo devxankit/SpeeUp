@@ -131,13 +131,13 @@ function App() {
               }}
             >
               <Routes>
-                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-                <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
-                <Route path="/seller/login" element={<PublicRoute><SellerLogin /></PublicRoute>} />
-                <Route path="/seller/signup" element={<PublicRoute><SellerSignUp /></PublicRoute>} />
-                <Route path="/delivery/login" element={<PublicRoute><DeliveryLogin /></PublicRoute>} />
-                <Route path="/delivery/signup" element={<PublicRoute><DeliverySignUp /></PublicRoute>} />
-                <Route path="/admin/login" element={<PublicRoute><AdminLogin /></PublicRoute>} />
+                <Route path="/login" element={<PublicRoute userType="Customer"><Login /></PublicRoute>} />
+                <Route path="/signup" element={<PublicRoute userType="Customer"><SignUp /></PublicRoute>} />
+                <Route path="/seller/login" element={<PublicRoute userType="Seller"><SellerLogin /></PublicRoute>} />
+                <Route path="/seller/signup" element={<PublicRoute userType="Seller"><SellerSignUp /></PublicRoute>} />
+                <Route path="/delivery/login" element={<PublicRoute userType="Delivery"><DeliveryLogin /></PublicRoute>} />
+                <Route path="/delivery/signup" element={<PublicRoute userType="Delivery"><DeliverySignUp /></PublicRoute>} />
+                <Route path="/admin/login" element={<PublicRoute userType="Admin"><AdminLogin /></PublicRoute>} />
                 {/* Delivery App Routes */}
                 <Route
                   path="/delivery/*"
