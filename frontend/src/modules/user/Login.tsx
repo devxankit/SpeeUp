@@ -249,7 +249,7 @@ export default function Login() {
             {/* OTP Verification */}
             <div className="w-full mb-2 px-4 relative z-10 text-center">
               <p className="text-xs text-neutral-600 mb-2">
-                Enter the 6-digit OTP sent via voice call to
+                Enter the 4-digit OTP sent via voice call to
               </p>
               <p className="text-xs font-semibold text-neutral-800">+91 {mobileNumber}</p>
             </div>

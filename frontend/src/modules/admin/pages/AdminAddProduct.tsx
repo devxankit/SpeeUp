@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { uploadImage, uploadImages } from "../../../services/api/uploadService";
 import {
   validateImageFile,
@@ -6,6 +7,8 @@ import {
 } from "../../../utils/imageUpload";
 import {
   createProduct,
+  updateProduct,
+  getProductById,
   type CreateProductData,
   getCategories,
   getSubCategories,
@@ -18,6 +21,8 @@ import { useAuth } from "../../../context/AuthContext";
 
 export default function AdminAddProduct() {
   const { isAuthenticated, token } = useAuth();
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     productName: "",
     category: "",
@@ -62,6 +67,58 @@ export default function AdminAddProduct() {
   const [uploadError, setUploadError] = useState<string>("");
   const [submitError, setSubmitError] = useState<string>("");
   const [loading, setLoading] = useState(true);
+
+  // Fetch product details if in edit mode
+  useEffect(() => {
+    if (id && isAuthenticated && token) {
+      const fetchProduct = async () => {
+        try {
+          const response = await getProductById(id);
+          if (response.success && response.data) {
+            const product = response.data;
+            setFormData({
+              productName: product.productName,
+              category: (product.category as any)?._id || (typeof product.category === 'string' ? product.category : "") || "",
+              subcategory: (product.subcategory as any)?._id || (typeof product.subcategory === 'string' ? product.subcategory : "") || "",
+              publish: product.publish ? "Yes" : "No",
+              popular: product.popular ? "Yes" : "No",
+              dealOfDay: product.dealOfDay ? "Yes" : "No",
+              brand: (product.brand as any)?._id || (typeof product.brand === 'string' ? product.brand : "") || "",
+              tags: product.tags ? product.tags.join(", ") : "",
+              smallDescription: product.smallDescription || "",
+              seoTitle: product.seoTitle || "",
+              seoKeywords: product.seoKeywords || "",
+              seoImageAlt: product.seoImageAlt || "",
+              seoDescription: product.seoDescription || "",
+              variationType: product.variationType || "",
+              manufacturer: product.manufacturer || "",
+              madeIn: product.madeIn || "",
+              tax: product.tax || "",
+              isReturnable: product.isReturnable ? "Yes" : "No",
+              maxReturnDays: product.maxReturnDays?.toString() || "",
+              fssaiLicNo: product.fssaiLicNo || "",
+              totalAllowedQuantity: product.totalAllowedQuantity?.toString() || "",
+              mainImageUrl: product.mainImageUrl || product.mainImage || "",
+              galleryImageUrls: product.galleryImages || [],
+              price: product.price?.toString() || "",
+              stock: product.stock?.toString() || "",
+            });
+
+            if (product.mainImageUrl || product.mainImage) {
+              setMainImagePreview(product.mainImageUrl || product.mainImage || "");
+            }
+            if (product.galleryImages) {
+              setGalleryImagePreviews(product.galleryImages);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching product:", error);
+          setSubmitError("Failed to fetch product details");
+        }
+      };
+      fetchProduct();
+    }
+  }, [id, isAuthenticated, token]);
 
   // Fetch categories, subcategories, and brands on component mount
   useEffect(() => {
@@ -271,46 +328,56 @@ export default function AdminAddProduct() {
         // seller: formData.seller, - Auto-assigned by backend
       };
 
-      // Create product via API
-      const response = await createProduct(productData);
+      // Create or Update product via API
+      let response;
+      if (id) {
+        response = await updateProduct(id, productData);
+      } else {
+        response = await createProduct(productData);
+      }
 
       if (response.success) {
-        alert("Product added successfully!");
+        alert(id ? "Product updated successfully!" : "Product added successfully!");
 
-        // Reset form
-        setFormData({
-          productName: "",
-          category: "",
-          subcategory: "",
-          publish: "No",
-          popular: "No",
-          dealOfDay: "No",
-          brand: "",
-          tags: "",
-          smallDescription: "",
-          seoTitle: "",
-          seoKeywords: "",
-          seoImageAlt: "",
-          seoDescription: "",
-          variationType: "",
-          manufacturer: "",
-          madeIn: "",
-          tax: "",
-          isReturnable: "No",
-          maxReturnDays: "",
-          fssaiLicNo: "",
-          totalAllowedQuantity: "",
-          mainImageUrl: "",
-          galleryImageUrls: [],
-          price: "",
-          stock: "",
-        });
-        setMainImageFile(null);
-        setMainImagePreview("");
-        setGalleryImageFiles([]);
-        setGalleryImagePreviews([]);
+        // Reset form or navigate
+        if (!id) {
+          setFormData({
+            productName: "",
+            category: "",
+            subcategory: "",
+            publish: "No",
+            popular: "No",
+            dealOfDay: "No",
+            brand: "",
+            tags: "",
+            smallDescription: "",
+            seoTitle: "",
+            seoKeywords: "",
+            seoImageAlt: "",
+            seoDescription: "",
+            variationType: "",
+            manufacturer: "",
+            madeIn: "",
+            tax: "",
+            isReturnable: "No",
+            maxReturnDays: "",
+            fssaiLicNo: "",
+            totalAllowedQuantity: "",
+            mainImageUrl: "",
+            galleryImageUrls: [],
+            price: "",
+            stock: "",
+          });
+          setMainImageFile(null);
+          setMainImagePreview("");
+          setGalleryImageFiles([]);
+          setGalleryImagePreviews([]);
+        } else {
+          // If editing, navigate back
+          navigate("/admin/product/list");
+        }
       } else {
-        setSubmitError(response.message || "Failed to create product.");
+        setSubmitError(response.message || (id ? "Failed to update product." : "Failed to create product."));
       }
     } catch (error: any) {
       console.error("Error creating product:", error);

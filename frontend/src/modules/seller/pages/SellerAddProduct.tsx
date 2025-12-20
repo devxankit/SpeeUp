@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { uploadImage, uploadImages } from "../../../services/api/uploadService";
 import {
   validateImageFile,
   createImagePreview,
 } from "../../../utils/imageUpload";
-import { createProduct, ProductVariation } from "../../../services/api/productService";
+import { createProduct, updateProduct, getProductById, ProductVariation } from "../../../services/api/productService";
 import { getCategories, getSubcategories, Category, SubCategory } from "../../../services/api/categoryService";
 import { getActiveTaxes, Tax } from "../../../services/api/taxService";
 
 export default function SellerAddProduct() {
   const navigate = useNavigate();
+  const { id } = useParams();
   const [formData, setFormData] = useState({
     productName: "",
     category: "",
@@ -77,6 +78,55 @@ export default function SellerAddProduct() {
   }, []);
 
   useEffect(() => {
+    if (id) {
+      const fetchProduct = async () => {
+        try {
+          const response = await getProductById(id);
+          if (response.success && response.data) {
+            const product = response.data;
+            setFormData({
+              productName: product.productName,
+              category: (product.category as any)?._id || product.categoryId || "",
+              subcategory: (product.subcategory as any)?._id || product.subcategoryId || "",
+              publish: product.publish ? "Yes" : "No",
+              popular: product.popular ? "Yes" : "No",
+              dealOfDay: product.dealOfDay ? "Yes" : "No",
+              brand: (product.brand as any)?._id || product.brandId || "",
+              tags: product.tags.join(", "),
+              smallDescription: product.smallDescription || "",
+              seoTitle: product.seoTitle || "",
+              seoKeywords: product.seoKeywords || "",
+              seoImageAlt: product.seoImageAlt || "",
+              seoDescription: product.seoDescription || "",
+              variationType: product.variationType || "",
+              manufacturer: product.manufacturer || "",
+              madeIn: product.madeIn || "",
+              tax: (product.tax as any)?._id || product.taxId || "",
+              isReturnable: product.isReturnable ? "Yes" : "No",
+              maxReturnDays: product.maxReturnDays?.toString() || "",
+              fssaiLicNo: product.fssaiLicNo || "",
+              totalAllowedQuantity: product.totalAllowedQuantity?.toString() || "10",
+              mainImageUrl: product.mainImageUrl || product.mainImage || "",
+              galleryImageUrls: product.galleryImageUrls || [],
+            });
+            setVariations(product.variations);
+            if (product.mainImageUrl || product.mainImage) {
+              setMainImagePreview(product.mainImageUrl || product.mainImage || "");
+            }
+            if (product.galleryImageUrls) {
+              setGalleryImagePreviews(product.galleryImageUrls);
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching product:", err);
+          setUploadError("Failed to fetch product details");
+        }
+      };
+      fetchProduct();
+    }
+  }, [id]);
+
+  useEffect(() => {
     const fetchSubs = async () => {
       if (formData.category) {
         try {
@@ -89,7 +139,11 @@ export default function SellerAddProduct() {
         setSubcategories([]);
       }
     };
-    fetchSubs();
+    // Only fetch if category changed and user is interacting (or initial load)
+    // For edit mode, we want to load subcategories for the selected category
+    if (formData.category) {
+      fetchSubs();
+    }
   }, [formData.category]);
 
   const handleChange = (
@@ -278,47 +332,54 @@ export default function SellerAddProduct() {
         variationType: formData.variationType || undefined,
       };
 
-      // Create product via API
-      const response = await createProduct(productData);
+      // Create or Update product via API
+      let response;
+      if (id) {
+        response = await updateProduct(id as string, productData);
+      } else {
+        response = await createProduct(productData);
+      }
 
       if (response.success) {
-        setSuccessMessage("Product added successfully!");
+        setSuccessMessage(id ? "Product updated successfully!" : "Product added successfully!");
         setTimeout(() => {
-          // Reset form
-          setFormData({
-            productName: "",
-            category: "",
-            subcategory: "",
-            publish: "No",
-            popular: "No",
-            dealOfDay: "No",
-            brand: "",
-            tags: "",
-            smallDescription: "",
-            seoTitle: "",
-            seoKeywords: "",
-            seoImageAlt: "",
-            seoDescription: "",
-            variationType: "",
-            manufacturer: "",
-            madeIn: "",
-            tax: "",
-            isReturnable: "No",
-            maxReturnDays: "",
-            fssaiLicNo: "",
-            totalAllowedQuantity: "10",
-            mainImageUrl: "",
-            galleryImageUrls: [],
-          });
-          setVariations([]);
-          setMainImageFile(null);
-          setMainImagePreview("");
-          setGalleryImageFiles([]);
-          setGalleryImagePreviews([]);
+          // Reset form or navigate
+          if (!id) {
+            setFormData({
+              productName: "",
+              category: "",
+              subcategory: "",
+              publish: "No",
+              popular: "No",
+              dealOfDay: "No",
+              brand: "",
+              tags: "",
+              smallDescription: "",
+              seoTitle: "",
+              seoKeywords: "",
+              seoImageAlt: "",
+              seoDescription: "",
+              variationType: "",
+              manufacturer: "",
+              madeIn: "",
+              tax: "",
+              isReturnable: "No",
+              maxReturnDays: "",
+              fssaiLicNo: "",
+              totalAllowedQuantity: "10",
+              mainImageUrl: "",
+              galleryImageUrls: [],
+            });
+            setVariations([]);
+            setMainImageFile(null);
+            setMainImagePreview("");
+            setGalleryImageFiles([]);
+            setGalleryImagePreviews([]);
+          }
           setSuccessMessage("");
           // Navigate to product list
           navigate("/seller/product/list");
-        }, 2000);
+        }, 1500);
       } else {
         setUploadError(response.message || "Failed to create product");
       }

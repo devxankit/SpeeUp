@@ -1,26 +1,13 @@
 import { useState, useEffect } from 'react';
-import { getProducts, Product, ProductVariation } from '../../../services/api/productService';
+import { useNavigate } from 'react-router-dom';
+import { getProducts, deleteProduct, Product, ProductVariation } from '../../../services/api/productService';
 import { getCategories, Category as apiCategory } from '../../../services/api/categoryService';
 import { useAuth } from '../../../context/AuthContext';
 
-interface ProductVariationDisplay extends ProductVariation {
-    variationId: string;
-    productName: string;
-    sellerName: string;
-    productImage: string;
-    brandName: string;
-    category: string;
-    subCategory: string;
-    variation: string;
-    isPopular?: boolean;
-}
-
-interface ProductDisplay {
-    productId: string;
-    variations: ProductVariationDisplay[];
-}
+// ... (interfaces remain same)
 
 export default function SellerProductList() {
+    const navigate = useNavigate();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string>('');
@@ -37,68 +24,82 @@ export default function SellerProductList() {
     const [allCategories, setAllCategories] = useState<apiCategory[]>([]);
     const { user } = useAuth();
 
-    // Fetch categories for filter
-    useEffect(() => {
-        const fetchCats = async () => {
-            try {
-                const res = await getCategories();
-                if (res.success) setAllCategories(res.data);
-            } catch (err) {
-                console.error("Error fetching categories:", err);
+    // ... (fetchCats useEffect)
+
+    // Fetch products
+    const fetchProducts = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const params: any = {
+                page: currentPage,
+                limit: rowsPerPage,
+                sortBy: sortColumn || 'createdAt',
+                sortOrder: sortDirection,
+            };
+
+            if (searchTerm) {
+                params.search = searchTerm;
             }
-        };
-        fetchCats();
-    }, []);
-
-    // Fetch products from API
-    useEffect(() => {
-        const fetchProducts = async () => {
-            setLoading(true);
-            setError('');
-            try {
-                const params: any = {
-                    page: currentPage,
-                    limit: rowsPerPage,
-                    sortBy: sortColumn || 'createdAt',
-                    sortOrder: sortDirection,
-                };
-
-                if (searchTerm) {
-                    params.search = searchTerm;
-                }
-                if (categoryFilter !== 'All Category') {
-                    params.category = categoryFilter;
-                }
-                if (statusFilter === 'Published') {
-                    params.status = 'published';
-                } else if (statusFilter === 'Unpublished') {
-                    params.status = 'unpublished';
-                }
-                if (stockFilter === 'In Stock') {
-                    params.stock = 'inStock';
-                } else if (stockFilter === 'Out of Stock') {
-                    params.stock = 'outOfStock';
-                }
-
-                const response = await getProducts(params);
-                if (response.success && response.data) {
-                    setProducts(response.data);
-                    // Extract pagination info if available
-                    if ((response as any).pagination) {
-                        setTotalPages((response as any).pagination.pages);
-                    }
-                } else {
-                    setError(response.message || 'Failed to fetch products');
-                }
-            } catch (err: any) {
-                setError(err.response?.data?.message || err.message || 'Failed to fetch products');
-            } finally {
-                setLoading(false);
+            if (categoryFilter !== 'All Category') {
+                params.category = categoryFilter;
             }
-        };
+            if (statusFilter === 'Published') {
+                params.status = 'published';
+            } else if (statusFilter === 'Unpublished') {
+                params.status = 'unpublished';
+            }
+            if (stockFilter === 'In Stock') {
+                params.stock = 'inStock';
+            } else if (stockFilter === 'Out of Stock') {
+                params.stock = 'outOfStock';
+            }
 
+            const response = await getProducts(params);
+            if (response.success && response.data) {
+                setProducts(response.data);
+                // Extract pagination info if available
+                if ((response as any).pagination) {
+                    setTotalPages((response as any).pagination.pages);
+                }
+            } else {
+                setError(response.message || 'Failed to fetch products');
+            }
+        } catch (err: any) {
+            setError(err.response?.data?.message || err.message || 'Failed to fetch products');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchProducts();
     }, [currentPage, rowsPerPage, searchTerm, categoryFilter, statusFilter, stockFilter, sortColumn, sortDirection]);
+
+    const handleDelete = async (productId: string) => {
+        if (window.confirm("Are you sure you want to delete this product?")) {
+            try {
+                const response = await deleteProduct(productId);
+                if (response.success || response.message === "Product deleted successfully") {
+                    alert("Product deleted successfully");
+                    fetchProducts();
+                } else {
+                    alert("Failed to delete product");
+                }
+            } catch (error) {
+                console.error("Error deleting product:", error);
+                alert("An error occurred while deleting the product");
+            }
+        }
+    };
+
+    const handleEdit = (productId: string) => {
+        navigate(`/seller/product/edit/${productId}`);
+    };
+
+    // ... (rest of logic: flatten, filter, sort)
+
+
 
     // Flatten products with variations for display
     const allVariations = products.flatMap(product =>

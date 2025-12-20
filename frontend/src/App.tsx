@@ -5,6 +5,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { LocationProvider } from "./context/LocationContext";
 import AppLayout from "./components/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
 import Home from "./modules/user/Home";
 import Search from "./modules/user/Search";
 import Orders from "./modules/user/Orders";
@@ -130,13 +131,13 @@ function App() {
               }}
             >
               <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<SignUp />} />
-                <Route path="/seller/login" element={<SellerLogin />} />
-                <Route path="/seller/signup" element={<SellerSignUp />} />
-                <Route path="/delivery/login" element={<DeliveryLogin />} />
-                <Route path="/delivery/signup" element={<DeliverySignUp />} />
-                <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
+                <Route path="/seller/login" element={<PublicRoute><SellerLogin /></PublicRoute>} />
+                <Route path="/seller/signup" element={<PublicRoute><SellerSignUp /></PublicRoute>} />
+                <Route path="/delivery/login" element={<PublicRoute><DeliveryLogin /></PublicRoute>} />
+                <Route path="/delivery/signup" element={<PublicRoute><DeliverySignUp /></PublicRoute>} />
+                <Route path="/admin/login" element={<PublicRoute><AdminLogin /></PublicRoute>} />
                 {/* Delivery App Routes */}
                 <Route
                   path="/delivery/*"
@@ -206,6 +207,10 @@ function App() {
                             element={<SellerAddProduct />}
                           />
                           <Route
+                            path="product/edit/:id"
+                            element={<SellerAddProduct />}
+                          />
+                          <Route
                             path="product/taxes"
                             element={<SellerTaxes />}
                           />
@@ -267,6 +272,10 @@ function App() {
                           <Route path="brand" element={<AdminBrand />} />
                           <Route
                             path="product/add"
+                            element={<AdminAddProduct />}
+                          />
+                          <Route
+                            path="product/edit/:id"
                             element={<AdminAddProduct />}
                           />
                           <Route

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 import speeUpLogo from '@assets/speeup1.jpeg';
 
 interface AdminHeaderProps {
@@ -10,6 +11,7 @@ interface AdminHeaderProps {
 export default function AdminHeader({ onMenuClick, isSidebarOpen }: AdminHeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -36,6 +38,7 @@ export default function AdminHeader({ onMenuClick, isSidebarOpen }: AdminHeaderP
   }, []);
 
   const handleLogout = () => {
+    logout();
     navigate('/admin/login');
   };
 
