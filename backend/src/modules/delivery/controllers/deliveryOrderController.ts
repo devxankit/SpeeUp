@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../../../utils/asyncHandler";
 import Order from "../../../models/Order";
 import Delivery from "../../../models/Delivery";
-// import mongoose from "mongoose";
 
 /**
  * Helper to map order items for response
@@ -16,7 +15,6 @@ const mapOrderItems = (items: any[]) => {
         image: item.productImage
     }));
 };
-// import mongoose from "mongoose";
 
 /**
  * Get All Orders History
@@ -186,8 +184,8 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
         return res.status(403).json({ success: false, message: "This order is not assigned to you" });
     }
 
-    // const oldStatus = order.status;
     order.status = status;
+
     // Status transition logic
     if (status) order.status = status;
 
