@@ -3,6 +3,8 @@ import { asyncHandler } from "../../../utils/asyncHandler";
 import {
   getDashboardStats,
   getSalesAnalytics,
+  getOrderAnalytics,
+  getTodaySales,
   getTopSellers,
   getRecentOrders,
   getSalesByLocation,
@@ -87,6 +89,41 @@ export const getSalesByLocationController = asyncHandler(
       success: true,
       message: "Sales by location fetched successfully",
       data: salesByLocation,
+    });
+  }
+);
+
+/**
+ * Get today's sales
+ */
+export const getTodaySalesController = asyncHandler(
+  async (_req: Request, res: Response) => {
+    const todaySales = await getTodaySales();
+    return res.status(200).json({
+      success: true,
+      message: "Today's sales fetched successfully",
+      data: todaySales,
+    });
+  }
+);
+
+/**
+ * Get order analytics data
+ */
+export const getOrderAnalyticsController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { period } = req.query;
+    const validPeriods = ["day", "month"];
+    const analyticsPeriod = validPeriods.includes(period as string)
+      ? (period as "day" | "month")
+      : "month";
+
+    const analytics = await getOrderAnalytics(analyticsPeriod);
+
+    return res.status(200).json({
+      success: true,
+      message: "Order analytics fetched successfully",
+      data: analytics,
     });
   }
 );

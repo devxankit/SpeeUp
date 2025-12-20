@@ -54,6 +54,11 @@ export interface SalesByLocation {
   amount: number;
 }
 
+export interface TodaySales {
+  salesToday: number;
+  salesLastWeekSameDay: number;
+}
+
 /**
  * Get dashboard statistics
  */
@@ -119,6 +124,31 @@ export const getSalesByLocation = async (): Promise<
 > => {
   const response = await api.get<ApiResponse<SalesByLocation[]>>(
     "/admin/dashboard/sales-by-location"
+  );
+  return response.data;
+};
+
+/**
+ * Get today's sales
+ */
+export const getTodaySales = async (): Promise<ApiResponse<TodaySales>> => {
+  const response = await api.get<ApiResponse<TodaySales>>(
+    "/admin/dashboard/today-sales"
+  );
+  return response.data;
+};
+
+/**
+ * Get order analytics
+ */
+export const getOrderAnalytics = async (
+  period?: "day" | "month"
+): Promise<ApiResponse<SalesAnalytics>> => {
+  const response = await api.get<ApiResponse<SalesAnalytics>>(
+    "/admin/dashboard/order-analytics",
+    {
+      params: { period },
+    }
   );
   return response.data;
 };

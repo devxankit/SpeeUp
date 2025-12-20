@@ -5,23 +5,21 @@ import {
   createImagePreview,
 } from "../../../utils/imageUpload";
 import { getCategories, getSubcategories, Category, SubCategory } from "../../../services/api/categoryService";
-import { getProducts, Product } from "../../../services/api/productService";
+import { getProducts, Product } from "../../../services/api/admin/adminProductService";
+import {
+  getShopByStores,
+  createShopByStore,
+  updateShopByStore,
+  deleteShopByStore,
+  ShopByStore
+} from "../../../services/api/admin/adminMiscService";
 
-interface ShopByStoreTile {
-  id: string;
-  name: string;
-  productImages: string[];
-  bgColor: string;
-  categoryId?: string;
-  subCategoryId?: string;
-  productIds?: string[];
-}
+// Using ShopByStore from API service instead of local interface
 
 export default function AdminShopByStore() {
   const [storeName, setStoreName] = useState("");
   const [storeImageFile, setStoreImageFile] = useState<File | null>(null);
   const [storeImagePreview, setStoreImagePreview] = useState<string>("");
-  const [bgColor, setBgColor] = useState("bg-yellow-100");
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -30,6 +28,7 @@ export default function AdminShopByStore() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string>("");
 
   // New State for Selections
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
@@ -41,26 +40,15 @@ export default function AdminShopByStore() {
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+  const [loadingStores, setLoadingStores] = useState(false);
 
-  // Initialize with empty shops
-  const [stores, setStores] = useState<ShopByStoreTile[]>([]);
+  // Initialize with empty shops - using ShopByStore from API
+  const [stores, setStores] = useState<ShopByStore[]>([]);
 
-  const bgColorOptions = [
-    { value: "bg-yellow-100", label: "Yellow" },
-    { value: "bg-green-100", label: "Green" },
-    { value: "bg-pink-100", label: "Pink" },
-    { value: "bg-blue-100", label: "Blue" },
-    { value: "bg-orange-100", label: "Orange" },
-    { value: "bg-purple-100", label: "Purple" },
-    { value: "bg-red-100", label: "Red" },
-    { value: "bg-teal-100", label: "Teal" },
-    { value: "bg-amber-50", label: "Amber" },
-    { value: "bg-indigo-50", label: "Indigo" },
-  ];
-
-  // Fetch Initial Data (Categories)
+  // Fetch Initial Data (Categories and Stores)
   useEffect(() => {
     fetchCategories();
+    fetchStores();
   }, []);
 
   // Fetch Subcategories when Category changes
@@ -111,32 +99,68 @@ export default function AdminShopByStore() {
   };
 
   const fetchProducts = async () => {
+    if (!selectedCategoryId) {
+      setProducts([]);
+      return;
+    }
+
     setLoadingData(true);
     try {
-      const params: any = {};
-      if (selectedCategoryId) params.category = selectedCategoryId;
-      // Filter by subcategory if productService supports it logic or client side
-      // Assuming getProducts supports basic filtering
-      // If the API doesn't filter strictly by subcategory, we might need to filter client side
+      const params: any = {
+        category: selectedCategoryId,
+        limit: 1000, // Get a large number of products for selection
+        page: 1,
+        // Don't filter by status or publish - admin should see ALL products in the category
+        // so they can select any product regardless of status
+      };
+
+      // Add subcategory filter if selected
+      if (selectedSubCategoryId) {
+        params.subcategory = selectedSubCategoryId;
+      }
 
       const res = await getProducts(params);
       if (res.success && res.data) {
-        let prods = res.data;
-        // Client-side subcategory filter as fallback if API ignores it or to be safe
-        if (selectedSubCategoryId) {
+        // Ensure we have an array
+        let prods = Array.isArray(res.data) ? res.data : [];
+
+        // Additional client-side filtering if needed (in case API doesn't filter by subcategory properly)
+        if (selectedSubCategoryId && prods.length > 0) {
           prods = prods.filter(p => {
-            // p.subcategory could be string id or object
-            const pSubId = (typeof p.subcategory === 'string') ? p.subcategory : p.subcategory?._id;
-            const pSubId2 = (typeof p.subcategoryId === 'string') ? p.subcategoryId : undefined;
-            return pSubId === selectedSubCategoryId || pSubId2 === selectedSubCategoryId;
+            // Handle subcategory which could be string id, object, or null
+            if (!p.subcategory) return false;
+            const pSubId = typeof p.subcategory === 'string'
+              ? p.subcategory
+              : p.subcategory._id;
+            return pSubId === selectedSubCategoryId;
           });
         }
+
+        // No additional filtering - show all products for admin to select
         setProducts(prods);
+      } else {
+        setProducts([]);
       }
     } catch (error) {
       console.error("Failed to fetch products", error);
+      setProducts([]);
     } finally {
       setLoadingData(false);
+    }
+  };
+
+  const fetchStores = async () => {
+    setLoadingStores(true);
+    try {
+      const res = await getShopByStores();
+      if (res.success && res.data) {
+        setStores(res.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch stores", error);
+      setUploadError("Failed to load stores. Please refresh the page.");
+    } finally {
+      setLoadingStores(false);
     }
   };
 
@@ -153,7 +177,8 @@ export default function AdminShopByStore() {
   const filteredStores = stores.filter(
     (store) =>
       store.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      store.id.toLowerCase().includes(searchTerm.toLowerCase())
+      (store.storeId && store.storeId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (store._id && store._id.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Sort stores
@@ -165,8 +190,8 @@ export default function AdminShopByStore() {
 
     switch (sortColumn) {
       case "id":
-        aValue = a.id.toLowerCase();
-        bValue = b.id.toLowerCase();
+        aValue = (a.storeId || a._id).toLowerCase();
+        bValue = (b.storeId || b._id).toLowerCase();
         break;
       case "name":
         aValue = a.name.toLowerCase();
@@ -231,61 +256,60 @@ export default function AdminShopByStore() {
       if (storeImageFile) {
         const imageResult = await uploadImage(storeImageFile, "speeup/stores");
         imageUrl = imageResult.secureUrl;
+      } else if (editingId && !storeImagePreview) {
+        // If editing and no new image and no preview, we need at least one image
+        setUploadError("Store image is required");
+        setUploading(false);
+        return;
       }
 
-      // Generate ID from name
-      const generatedId = storeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const storeData = {
+        name: storeName.trim(),
+        image: imageUrl || (editingId ? stores.find(s => s._id === editingId)?.image || "" : ""),
+        description: "",
+        category: selectedCategoryId || undefined,
+        subCategory: selectedSubCategoryId || undefined,
+        products: selectedProductIds,
+        order: stores.length,
+        isActive: true,
+      };
 
       if (editingId !== null) {
         // Update existing store
-        setStores(
-          stores.map((store) =>
-            store.id === editingId
-              ? {
-                ...store,
-                name: storeName.trim(),
-                id: generatedId,
-                bgColor: bgColor,
-                productImages: imageUrl ? [imageUrl] : store.productImages,
-                categoryId: selectedCategoryId,
-                subCategoryId: selectedSubCategoryId,
-                productIds: selectedProductIds
-              }
-              : store
-          )
-        );
-        alert("Store updated successfully!");
-        setEditingId(null);
-      } else {
-        // Check if ID already exists (generated)
-        let finalId = generatedId;
-        if (stores.some((s) => s.id === finalId)) {
-          finalId = `${generatedId}-${Math.floor(Math.random() * 1000)}`;
+        const res = await updateShopByStore(editingId, storeData);
+        if (res.success) {
+          await fetchStores(); // Refresh the list
+          setSuccessMessage("Store updated successfully!");
+          setEditingId(null);
+          handleReset();
+          // Clear success message after 3 seconds
+          setTimeout(() => setSuccessMessage(""), 3000);
+        } else {
+          setUploadError("Failed to update store. Please try again.");
         }
-
-        // Add new store
-        const newStore: ShopByStoreTile = {
-          id: finalId,
-          name: storeName.trim(),
-          bgColor: bgColor,
-          productImages: imageUrl
-            ? [imageUrl]
-            : ["/assets/shopbystore/default.jpg"],
-          categoryId: selectedCategoryId,
-          subCategoryId: selectedSubCategoryId,
-          productIds: selectedProductIds
-        };
-        setStores([...stores, newStore]);
-        alert("Store added successfully!");
+      } else {
+        // Create new store
+        if (!imageUrl) {
+          setUploadError("Store image is required");
+          setUploading(false);
+          return;
+        }
+        const res = await createShopByStore(storeData);
+        if (res.success) {
+          await fetchStores(); // Refresh the list
+          setSuccessMessage("Store added successfully!");
+          handleReset();
+          // Clear success message after 3 seconds
+          setTimeout(() => setSuccessMessage(""), 3000);
+        } else {
+          setUploadError("Failed to create store. Please try again.");
+        }
       }
-
-      // Reset form
-      handleReset();
     } catch (error: any) {
       setUploadError(
         error.response?.data?.message ||
         error.message ||
-        "Failed to upload store image. Please try again."
+        "Failed to save store. Please try again."
       );
     } finally {
       setUploading(false);
@@ -293,20 +317,22 @@ export default function AdminShopByStore() {
   };
 
   const handleEdit = (id: string) => {
-    const store = stores.find((s) => s.id === id);
+    const store = stores.find((s) => s._id === id);
     if (store) {
       setStoreName(store.name);
-      setBgColor(store.bgColor);
-      setSelectedCategoryId(store.categoryId || "");
-      // trigger subcat fetch? effect will handle it, but we need to wait or just set state
-      // Effect handles fetch, but we need to set Selected SubCat after. 
-      // Simplified: Just set state, effect runs, subCats load. 
-      // Ideally we should wait for subcats to load to show selected value correctly but React state might handle it if options match value.
-      setSelectedSubCategoryId(store.subCategoryId || "");
-      setSelectedProductIds(store.productIds || []);
 
-      if (store.productImages && store.productImages.length > 0) {
-        setStoreImagePreview(store.productImages[0]);
+      // Handle category - could be string ID or object
+      const categoryId = typeof store.category === 'string' ? store.category : store.category?._id;
+      setSelectedCategoryId(categoryId || "");
+
+      // Handle subcategory - could be string ID or object
+      const subCategoryId = typeof store.subCategory === 'string' ? store.subCategory : store.subCategory?._id;
+      setSelectedSubCategoryId(subCategoryId || "");
+
+      setSelectedProductIds(store.products || []);
+
+      if (store.image) {
+        setStoreImagePreview(store.image);
       } else {
         setStoreImagePreview("");
       }
@@ -316,13 +342,24 @@ export default function AdminShopByStore() {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this store?")) {
-      setStores(stores.filter((store) => store.id !== id));
-      if (editingId === id) {
-        handleReset();
+      try {
+        const res = await deleteShopByStore(id);
+        if (res.success) {
+          await fetchStores(); // Refresh the list
+          if (editingId === id) {
+            handleReset();
+          }
+          setSuccessMessage("Store deleted successfully!");
+          // Clear success message after 3 seconds
+          setTimeout(() => setSuccessMessage(""), 3000);
+        } else {
+          setUploadError("Failed to delete store. Please try again.");
+        }
+      } catch (error: any) {
+        setUploadError(error.response?.data?.message || "Failed to delete store. Please try again.");
       }
-      alert("Store deleted successfully!");
     }
   };
 
@@ -330,16 +367,16 @@ export default function AdminShopByStore() {
     setStoreName("");
     setStoreImageFile(null);
     setStoreImagePreview("");
-    setBgColor("bg-yellow-100");
     setEditingId(null);
     setUploadError("");
+    setSuccessMessage("");
     setSelectedCategoryId("");
     setSelectedSubCategoryId("");
     setSelectedProductIds([]);
   };
 
   const handleExport = () => {
-    alert("Export functionality will be implemented here");
+    setUploadError("Export functionality will be implemented soon.");
   };
 
   return (
@@ -422,53 +459,65 @@ export default function AdminShopByStore() {
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-2">
                 Select Products: {selectedProductIds.length} selected
+                {products.length > 0 && ` (${products.length} available)`}
               </label>
               <div className="border border-neutral-300 rounded-md max-h-48 overflow-y-auto p-2 bg-neutral-50">
-                {loadingData ? (
-                  <div className="text-center text-sm text-neutral-500 py-2">Loading products...</div>
+                {!selectedCategoryId ? (
+                  <div className="text-center text-sm text-neutral-500 py-2">
+                    Please select a category first
+                  </div>
+                ) : loadingData ? (
+                  <div className="text-center text-sm text-neutral-500 py-2">
+                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-teal-600 mr-2"></div>
+                    Loading products...
+                  </div>
                 ) : products.length > 0 ? (
-                  products.map((product) => (
-                    <div key={product._id} className="flex items-center mb-2 hover:bg-neutral-100 p-1 rounded">
-                      <input
-                        type="checkbox"
-                        id={`prod-${product._id}`}
-                        checked={selectedProductIds.includes(product._id)}
-                        onChange={() => toggleProductSelection(product._id)}
-                        className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded cursor-pointer"
-                      />
-                      <label htmlFor={`prod-${product._id}`} className="ml-2 block text-sm text-gray-900 truncate cursor-pointer flex-1">
-                        {product.productName}
-                      </label>
-                    </div>
-                  ))
+                  <>
+                    {products.map((product) => (
+                      <div key={product._id} className="flex items-center mb-2 hover:bg-neutral-100 p-1 rounded">
+                        <input
+                          type="checkbox"
+                          id={`prod-${product._id}`}
+                          checked={selectedProductIds.includes(product._id)}
+                          onChange={() => toggleProductSelection(product._id)}
+                          className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded cursor-pointer"
+                        />
+                        <label htmlFor={`prod-${product._id}`} className="ml-2 block text-sm text-gray-900 truncate cursor-pointer flex-1">
+                          {product.productName}
+                        </label>
+                      </div>
+                    ))}
+                  </>
                 ) : (
                   <div className="text-center text-sm text-neutral-500 py-2">
-                    {selectedCategoryId ? "No products found in this category" : "Select a category to view products"}
+                    No products found in this {selectedSubCategoryId ? 'subcategory' : 'category'}
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Background Color */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Background Color:
-              </label>
-              <select
-                value={bgColor}
-                onChange={(e) => setBgColor(e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 bg-white">
-                {bgColorOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {uploadError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                {uploadError}
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
+                <span>{uploadError}</span>
+                <button
+                  onClick={() => setUploadError("")}
+                  className="text-red-700 hover:text-red-900 ml-4 text-lg font-bold"
+                  type="button"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            {successMessage && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center justify-between">
+                <span>{successMessage}</span>
+                <button
+                  onClick={() => setSuccessMessage("")}
+                  className="text-green-700 hover:text-green-900 ml-4 text-lg font-bold"
+                  type="button"
+                >
+                  ×
+                </button>
               </div>
             )}
             {/* Store Image */}
@@ -675,7 +724,15 @@ export default function AdminShopByStore() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-neutral-200">
-                {displayedStores.length === 0 ? (
+                {loadingStores ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-4 sm:px-6 py-8 text-center text-sm text-neutral-500">
+                      Loading stores...
+                    </td>
+                  </tr>
+                ) : displayedStores.length === 0 ? (
                   <tr>
                     <td
                       colSpan={5}
@@ -685,22 +742,21 @@ export default function AdminShopByStore() {
                   </tr>
                 ) : (
                   displayedStores.map((store) => (
-                    <tr key={store.id} className="hover:bg-neutral-50">
+                    <tr key={store._id} className="hover:bg-neutral-50">
                       <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900 font-mono">
-                        {store.id}
+                        {store.storeId || store._id}
                       </td>
                       <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900 font-medium">
                         {store.name}
                       </td>
                       <td className="px-4 sm:px-6 py-3 text-xs text-neutral-500">
-                        {store.productIds?.length || 0} Products
+                        {store.products?.length || 0} Products
                       </td>
                       <td className="px-4 sm:px-6 py-3">
                         <div className="w-12 h-12 bg-neutral-100 rounded overflow-hidden flex items-center justify-center border border-neutral-200">
-                          {store.productImages &&
-                            store.productImages.length > 0 ? (
+                          {store.image ? (
                             <img
-                              src={store.productImages[0]}
+                              src={store.image}
                               alt={store.name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -718,7 +774,7 @@ export default function AdminShopByStore() {
                       <td className="px-4 sm:px-6 py-3">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleEdit(store.id)}
+                            onClick={() => handleEdit(store._id)}
                             className="p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors"
                             title="Edit">
                             <svg
@@ -735,7 +791,7 @@ export default function AdminShopByStore() {
                             </svg>
                           </button>
                           <button
-                            onClick={() => handleDelete(store.id)}
+                            onClick={() => handleDelete(store._id)}
                             className="p-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded transition-colors"
                             title="Delete">
                             <svg

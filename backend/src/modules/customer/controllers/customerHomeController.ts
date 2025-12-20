@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Product from "../../../models/Product";
 import Category from "../../../models/Category";
+import Shop from "../../../models/Shop";
 
 // Get Home Page Content
 export const getHomeContent = async (_req: Request, res: Response) => {
@@ -21,17 +22,19 @@ export const getHomeContent = async (_req: Request, res: Response) => {
             .select("name image icon color slug")
             .sort({ order: 1 });
 
-        // 3. Shop By Store (Virtual categories)
-        // Here we return categories that have a specific parent or tag, 
-        // for now we'll keep the list but try to match with real category slugs
-        const shops = [
-            { id: 'spiritual-store', name: 'Spiritual Store', image: '/assets/shopbystore/spiritual.jpg', slug: 'spiritual' },
-            { id: 'pharma-store', name: 'Pharma Store', image: '/assets/shopbystore/pharma.jpg', slug: 'pharma' },
-            { id: 'e-gifts-store', name: 'E-Gifts Store', image: '/assets/shopbystore/egift.jpg', slug: 'e-gifts' },
-            { id: 'pet-store', name: 'Pet Store', image: '/assets/shopbystore/pet.jpg', slug: 'pet-supplies' },
-            { id: 'fashion-basics-store', name: 'Fashion Store', image: '/assets/shopbystore/fashion.jpg', slug: 'fashion' },
-            { id: 'hobby-store', name: 'Hobby Store', image: '/assets/shopbystore/hobby.jpg', slug: 'hobbies' },
-        ];
+        // 3. Shop By Store (Fetch from database)
+        const shopDocuments = await Shop.find({ isActive: true })
+            .populate('category', 'name slug')
+            .sort({ order: 1, createdAt: -1 });
+        
+        const shops = shopDocuments.map((shop) => ({
+            id: shop.storeId || shop._id.toString(),
+            name: shop.name,
+            image: shop.image,
+            slug: shop.storeId || shop._id.toString(),
+            category: shop.category,
+            productIds: shop.products?.map(p => p.toString()) || [],
+        }));
 
         // 4. Trending Items (Fetch some popular categories or products)
         const trendingCategories = await Category.find({
@@ -117,49 +120,56 @@ export const getHomeContent = async (_req: Request, res: Response) => {
 };
 
 // Get Products for a specific "Store" (Campaign/Collection)
-// This maps the virtual store IDs (e.g., 'faith-store') to actual product queries
+// Fetch products based on store configuration from database
 export const getStoreProducts = async (req: Request, res: Response) => {
     try {
         const { storeId } = req.params;
         let query: any = { status: "Active", publish: true };
 
-        // Map store IDs to queries
-        switch (storeId) {
-            case 'spiritual-store':
-                query.category = await getCategoryIdByName('Spiritual');
-                break;
-            case 'pharma-store':
-                query.category = await getCategoryIdByName('Pharma');
-                break;
-            case 'e-gifts-store':
-                query.category = await getCategoryIdByName('E-Gifts');
-                break;
-            case 'pet-store':
-                query.category = await getCategoryIdByName('Pet Supplies');
-                break;
-            case 'fashion-basics-store':
-                // Could be multiple categories
-                query.$or = [
-                    { category: await getCategoryIdByName('Fashion') },
-                    { category: await getCategoryIdByName('Clothing') }
-                ];
-                break;
-            case 'hobby-store':
-                query.category = await getCategoryIdByName('Hobbies');
-                break;
-            default:
-                // If it looks like a category ID, try that
-                // query.category = storeId; 
-                break;
+        // Find the shop by storeId
+        const shop = await Shop.findOne({ 
+            $or: [
+                { storeId: storeId },
+                { _id: storeId }
+            ],
+            isActive: true
+        })
+        .populate('category', '_id')
+        .populate('subCategory', '_id');
+
+        if (shop) {
+            // If shop has specific products assigned, use those
+            if (shop.products && shop.products.length > 0) {
+                query._id = { $in: shop.products };
+            } 
+            // Otherwise, filter by category/subcategory
+            else if (shop.category) {
+                query.category = shop.category._id;
+                
+                // If subcategory is also specified, filter by both
+                if (shop.subCategory) {
+                    query.$or = [
+                        { category: shop.category._id },
+                        { subcategory: shop.subCategory._id }
+                    ];
+                }
+            }
+        } else {
+            // Fallback: try to match by category name (legacy support)
+            const categoryId = await getCategoryIdByName(storeId);
+            if (categoryId) {
+                query.category = categoryId;
+            } else {
+                // No matching shop or category found
+                return res.status(200).json({ success: true, data: [] });
+            }
         }
 
-        if (query.category || query.$or) {
-            const products = await Product.find(query).limit(50);
-            return res.status(200).json({ success: true, data: products });
-        } else {
-            // Fallback or empty if mapping fails
-            return res.status(200).json({ success: true, data: [] });
-        }
+        const products = await Product.find(query)
+            .populate('category', 'name slug')
+            .limit(50);
+            
+        return res.status(200).json({ success: true, data: products });
 
     } catch (error: any) {
         return res.status(500).json({

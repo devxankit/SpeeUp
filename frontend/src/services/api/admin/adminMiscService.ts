@@ -67,11 +67,12 @@ export interface MiscHomeSection {
 export interface ShopByStore {
   _id: string;
   storeId: string;
-  storeName: string;
-  logo?: string;
-  banner?: string;
+  name: string;
+  image: string;
   description?: string;
-  category: string;
+  category?: string | { _id: string; name: string };
+  subCategory?: string | { _id: string; subcategoryName: string };
+  products?: string[];
   isActive: boolean;
   order: number;
   createdAt?: string;
@@ -313,7 +314,16 @@ export const getShopByStores = async (
 };
 
 export const createShopByStore = async (
-  data: Partial<ShopByStore>
+  data: {
+    name: string;
+    image: string;
+    description?: string;
+    category?: string;
+    subCategory?: string;
+    products?: string[];
+    order?: number;
+    isActive?: boolean;
+  }
 ): Promise<ApiResponse<ShopByStore>> => {
   const response = await api.post<ApiResponse<ShopByStore>>(
     "/admin/shop-by-stores",
@@ -324,7 +334,17 @@ export const createShopByStore = async (
 
 export const updateShopByStore = async (
   id: string,
-  data: Partial<ShopByStore>
+  data: {
+    name?: string;
+    storeId?: string;
+    image?: string;
+    description?: string;
+    category?: string;
+    subCategory?: string;
+    products?: string[];
+    order?: number;
+    isActive?: boolean;
+  }
 ): Promise<ApiResponse<ShopByStore>> => {
   const response = await api.put<ApiResponse<ShopByStore>>(
     `/admin/shop-by-stores/${id}`,

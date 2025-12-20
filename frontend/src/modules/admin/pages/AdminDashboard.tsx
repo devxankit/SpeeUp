@@ -7,6 +7,8 @@ import { useAuth } from "../../../context/AuthContext";
 import {
   getDashboardStats,
   getSalesAnalytics,
+  getOrderAnalytics,
+  getTodaySales,
   getTopSellers,
   getRecentOrders,
   getSalesByLocation,
@@ -15,6 +17,7 @@ import {
   type RecentOrder,
   type SalesByLocation,
   type SalesAnalytics,
+  type TodaySales,
 } from "../../../services/api/admin/adminDashboardService";
 
 export default function AdminDashboard() {
@@ -26,6 +29,13 @@ export default function AdminDashboard() {
   const [salesAnalytics, setSalesAnalytics] = useState<SalesAnalytics | null>(
     null
   );
+  const [orderAnalytics, setOrderAnalytics] = useState<SalesAnalytics | null>(
+    null
+  );
+  const [orderAnalyticsDaily, setOrderAnalyticsDaily] = useState<SalesAnalytics | null>(
+    null
+  );
+  const [todaySales, setTodaySales] = useState<TodaySales | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
@@ -51,12 +61,18 @@ export default function AdminDashboard() {
           sellersResponse,
           locationResponse,
           analyticsResponse,
+          orderAnalyticsResponse,
+          orderAnalyticsDailyResponse,
+          todaySalesResponse,
         ] = await Promise.all([
           getDashboardStats(),
           getRecentOrders(10),
           getTopSellers(10),
           getSalesByLocation(),
-          getSalesAnalytics("month"),
+          getSalesAnalytics("day"), // Use daily data for the sales line chart
+          getOrderAnalytics("month"),
+          getOrderAnalytics("day"),
+          getTodaySales(),
         ]);
 
         if (statsResponse.success) {
@@ -77,6 +93,18 @@ export default function AdminDashboard() {
 
         if (analyticsResponse.success) {
           setSalesAnalytics(analyticsResponse.data);
+        }
+
+        if (orderAnalyticsResponse.success) {
+          setOrderAnalytics(orderAnalyticsResponse.data);
+        }
+
+        if (orderAnalyticsDailyResponse.success) {
+          setOrderAnalyticsDaily(orderAnalyticsDailyResponse.data);
+        }
+
+        if (todaySalesResponse.success) {
+          setTodaySales(todaySalesResponse.data);
         }
       } catch (err: any) {
         console.error("Error fetching dashboard data:", err);
@@ -322,30 +350,9 @@ export default function AdminDashboard() {
   const salesThisMonth = salesAnalytics?.thisPeriod || [];
   const salesLastMonth = salesAnalytics?.lastPeriod || [];
 
-  // Transform order data for charts (mock data structure for now - can be enhanced with real data)
-  const orderDataDec2025 = stats
-    ? Array.from({ length: 31 }, (_, i) => ({
-        date: `${String(i + 1).padStart(2, "0")}-Dec`,
-        value: 0, // This would come from order analytics if available
-      }))
-    : [];
-
-  const orderData2025 = stats
-    ? [
-        { date: "January", value: 0 },
-        { date: "February", value: 0 },
-        { date: "March", value: 0 },
-        { date: "April", value: 0 },
-        { date: "May", value: 0 },
-        { date: "June", value: 0 },
-        { date: "July", value: 0 },
-        { date: "August", value: 0 },
-        { date: "September", value: 0 },
-        { date: "October", value: 0 },
-        { date: "November", value: 0 },
-        { date: "December", value: 0 },
-      ]
-    : [];
+  // Transform order analytics data for charts (real data from backend)
+  const orderDataDec2025 = orderAnalyticsDaily?.thisPeriod || [];
+  const orderData2025 = orderAnalytics?.thisPeriod || [];
 
   const totalPagesNewOrders = Math.ceil(newOrders.length / entriesPerPage);
   const startIndexNewOrders = (currentPage - 1) * entriesPerPage;
@@ -363,20 +370,14 @@ export default function AdminDashboard() {
     endIndexTopSellers
   );
 
-  // Calculate sales today and comparison
-  const salesToday =
-    salesThisMonth.length > 0
-      ? salesThisMonth[salesThisMonth.length - 1]?.value || 0
-      : 0;
-  const salesLastWeekSameDay =
-    salesLastMonth.length > 0
-      ? salesLastMonth[salesLastMonth.length - 1]?.value || 0
-      : 0;
+  // Calculate sales today and comparison from today's sales data
+  const salesToday = todaySales?.salesToday || 0;
+  const salesLastWeekSameDay = todaySales?.salesLastWeekSameDay || 0;
   const salesDifference = salesToday - salesLastWeekSameDay;
   const salesPercentChange =
     salesLastWeekSameDay > 0
       ? ((salesDifference / salesLastWeekSameDay) * 100).toFixed(0)
-      : "0";
+      : salesToday > 0 ? "100" : "0";
 
   // Loading state
   if (loading) {
@@ -512,10 +513,17 @@ export default function AdminDashboard() {
             <p className="text-3xl font-bold text-neutral-900">
               ₹{salesToday.toFixed(2)}
             </p>
-            <p className="text-sm text-red-600 mt-1">
-              ▼ ₹{Math.abs(salesDifference).toFixed(2)} ({salesPercentChange}%)
-              vs same day last week
-            </p>
+            {salesDifference >= 0 ? (
+              <p className="text-sm text-green-600 mt-1">
+                ▲ ₹{Math.abs(salesDifference).toFixed(2)} (+{salesPercentChange}%)
+                vs same day last week
+              </p>
+            ) : (
+              <p className="text-sm text-red-600 mt-1">
+                ▼ ₹{Math.abs(salesDifference).toFixed(2)} ({salesPercentChange}%)
+                vs same day last week
+              </p>
+            )}
           </div>
           <SalesLineChart
             thisMonthData={salesThisMonth}

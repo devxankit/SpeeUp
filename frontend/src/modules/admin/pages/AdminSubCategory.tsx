@@ -626,8 +626,7 @@ export default function AdminSubCategory() {
                           </div>
                         </td>
                         <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900">
-                          {/* Total products count would come from backend if available */}
-                          0
+                          {subCategory.totalProduct ?? 0}
                         </td>
                         <td className="px-4 sm:px-6 py-3">
                           <div className="flex items-center gap-2">

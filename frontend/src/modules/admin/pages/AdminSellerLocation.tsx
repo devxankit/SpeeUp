@@ -46,15 +46,15 @@ export default function AdminSellerLocation() {
             (seller) => seller.latitude && seller.longitude
           );
 
-          setSellers(sellersWithLocation.length > 0 ? sellersWithLocation : MOCK_SELLERS);
+          setSellers(sellersWithLocation);
         } else {
-          // Use mock data as fallback
-          setSellers(MOCK_SELLERS);
+          // No data available
+          setSellers([]);
         }
       } catch (error) {
         console.error('Error fetching sellers:', error);
-        // Use mock data as fallback
-        setSellers(MOCK_SELLERS);
+        // Show empty on error
+        setSellers([]);
       }
     };
 
@@ -76,14 +76,20 @@ export default function AdminSellerLocation() {
 
   // Generate Google Maps embed URL with markers
   const generateMapUrl = () => {
+    // If a seller is selected, center on that seller with a marker
+    if (selectedSeller && selectedSeller.latitude && selectedSeller.longitude) {
+      const lat = selectedSeller.latitude;
+      const lng = selectedSeller.longitude;
+      // Use Google Maps embed with a place marker
+      return `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${lat},${lng}&zoom=16`;
+    }
+
     if (filteredSellers.length === 0) {
       // Default map location (India center)
       return 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3771.5!2d77.2090!3d28.6139!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390cfd5b347eb62d%3A0x52c2b7494e204dce!2sNew%20Delhi%2C%20Delhi!5e0!3m2!1sen!2sin!4v1234567890123!5m2!1sen!2sin';
     }
 
     // If we have sellers with locations, create a map with markers
-
-
     // Use Google Maps Static API or embed with markers
     // For now, use embed with center point
     const centerLat = filteredSellers[0]?.latitude || '28.6139';
@@ -267,47 +273,3 @@ export default function AdminSellerLocation() {
     </div>
   );
 }
-
-// Mock data as fallback
-const MOCK_SELLERS: Seller[] = [
-  {
-    _id: 'mock1',
-    sellerName: 'Chirag Seller',
-    storeName: 'Chirag Store',
-    email: 'chirag@example.com',
-    phone: '9766846429',
-    address: '123 Main Street',
-    city: 'Mumbai',
-    searchLocation: 'Mumbai, Maharashtra',
-    latitude: '19.0760',
-    longitude: '72.8777',
-    status: 'Approved',
-  },
-  {
-    _id: 'mock2',
-    sellerName: 'Rajesh Kumar',
-    storeName: 'Rajesh Electronics',
-    email: 'rajesh@example.com',
-    phone: '9876543210',
-    address: '456 Park Avenue',
-    city: 'Delhi',
-    searchLocation: 'New Delhi, Delhi',
-    latitude: '28.6139',
-    longitude: '77.2090',
-    status: 'Approved',
-  },
-  {
-    _id: 'mock3',
-    sellerName: 'Priya Sharma',
-    storeName: 'Priya Fashion',
-    email: 'priya@example.com',
-    phone: '9123456789',
-    address: '789 MG Road',
-    city: 'Bangalore',
-    searchLocation: 'Bangalore, Karnataka',
-    latitude: '12.9716',
-    longitude: '77.5946',
-    status: 'Pending',
-  },
-];
-

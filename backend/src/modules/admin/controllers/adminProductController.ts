@@ -234,10 +234,24 @@ export const getSubCategories = asyncHandler(
       .populate("category", "name")
       .sort(sort);
 
+    // Get product counts for each subcategory
+    const subcategoriesWithCounts = await Promise.all(
+      subcategories.map(async (subcategory) => {
+        const productCount = await Product.countDocuments({
+          subcategory: subcategory._id,
+        });
+
+        return {
+          ...subcategory.toObject(),
+          totalProduct: productCount,
+        };
+      })
+    );
+
     return res.status(200).json({
       success: true,
       message: "Subcategories fetched successfully",
-      data: subcategories,
+      data: subcategoriesWithCounts,
     });
   }
 );

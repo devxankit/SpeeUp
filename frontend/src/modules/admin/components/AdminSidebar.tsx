@@ -130,33 +130,6 @@ const menuSections: MenuSection[] = [
             ),
           },
           {
-            label: 'Bulk Import',
-            path: '/admin/product/bulk-import',
-            icon: (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"></path>
-                <path d="M14 2V8H20"></path>
-                <path d="M12 18V12"></path>
-                <polyline points="9 15 12 12 15 15"></polyline>
-                <path d="M3 12H21"></path>
-              </svg>
-            ),
-          },
-          {
-            label: 'Bulk Update',
-            path: '/admin/product/bulk-update',
-            icon: (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-                <path d="M9 9H15M9 15H12"></path>
-                <path d="M12 6L10 8L12 10"></path>
-                <path d="M12 14L10 16L12 18"></path>
-                <path d="M18 12L16 10L18 8"></path>
-                <path d="M6 12L8 10L6 8"></path>
-              </svg>
-            ),
-          },
-          {
             label: 'Taxes',
             path: '/admin/product/taxes',
             icon: (
