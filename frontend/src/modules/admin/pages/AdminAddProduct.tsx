@@ -98,14 +98,14 @@ export default function AdminAddProduct() {
               maxReturnDays: product.maxReturnDays?.toString() || "",
               fssaiLicNo: product.fssaiLicNo || "",
               totalAllowedQuantity: product.totalAllowedQuantity?.toString() || "",
-              mainImageUrl: product.mainImageUrl || product.mainImage || "",
+              mainImageUrl: product.mainImage || "",
               galleryImageUrls: product.galleryImages || [],
               price: product.price?.toString() || "",
               stock: product.stock?.toString() || "",
             });
 
-            if (product.mainImageUrl || product.mainImage) {
-              setMainImagePreview(product.mainImageUrl || product.mainImage || "");
+            if (product.mainImage) {
+              setMainImagePreview(product.mainImage || "");
             }
             if (product.galleryImages) {
               setGalleryImagePreviews(product.galleryImages);
