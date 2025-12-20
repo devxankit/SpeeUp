@@ -30,6 +30,9 @@ const formatDate = (dateString: string) => {
 export default function Orders() {
   const { orders } = useOrders();
 
+  console.log('📋 Orders component - orders:', orders);
+  console.log('📋 Orders count:', orders.length);
+
   if (orders.length === 0) {
     return (
       <div className="px-4 md:px-6 lg:px-8 py-12 md:py-16 text-center">

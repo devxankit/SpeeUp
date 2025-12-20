@@ -30,18 +30,20 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
 
     try {
       const response = await getMyOrders();
+      console.log('📦 Fetched orders response:', response);
       if (response && response.data) {
-        // Map backend order to frontend Order type if needed
-        // Currently assuming consistent, but likely need mapping if data structure differs
-        // For now, storing as is, or with minimal mapping
-        setOrders(response.data.map((o: any) => ({
+        // Backend now returns transformed data with id, totalItems, totalAmount, fees
+        // Just use it directly
+        const orders = response.data.map((o: any) => ({
           ...o,
-          id: o._id, // Map _id to id
-          // Ensure other fields match
-        })));
+          // Backend already provides 'id', but ensure it's set from _id if missing
+          id: o.id || o._id,
+        }));
+        console.log('📦 Mapped orders:', orders);
+        setOrders(orders);
       }
     } catch (error) {
-      console.error("Failed to fetch orders", error);
+      console.error("❌ Failed to fetch orders", error);
     } finally {
       setLoading(false);
     }
