@@ -84,7 +84,7 @@ export default function AdminPendingOrders() {
           };
           setError(
             axiosError.response?.data?.message ||
-            "Failed to load orders. Please try again."
+              "Failed to load orders. Please try again."
           );
         } else {
           setError("Failed to load orders. Please try again.");
@@ -207,10 +207,10 @@ export default function AdminPendingOrders() {
             return 0;
         }
 
-        if (typeof aValue === 'string') {
+        if (typeof aValue === "string") {
           aValue = aValue.toLowerCase();
         }
-        if (typeof bValue === 'string') {
+        if (typeof bValue === "string") {
           bValue = bValue.toLowerCase();
         }
 
@@ -780,8 +780,8 @@ export default function AdminPendingOrders() {
                       <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">
                         {order.estimatedDeliveryDate
                           ? new Date(
-                            order.estimatedDeliveryDate
-                          ).toLocaleDateString()
+                              order.estimatedDeliveryDate
+                            ).toLocaleDateString()
                           : "-"}
                       </td>
                       <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">
@@ -815,13 +815,19 @@ export default function AdminPendingOrders() {
                               setSelectedOrder(order);
                               setAssignModalOpen(true);
                             }}
-                            className={`px-2 py-1.5 text-xs font-medium rounded transition-colors ${order.deliveryBoyStatus === 'Assigned'
-                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                              : 'bg-blue-600 text-white hover:bg-blue-700'
-                              }`}
-                            title={order.deliveryBoyStatus === 'Assigned' ? 'Re-assign delivery boy' : 'Assign delivery boy'}
-                          >
-                            {order.deliveryBoyStatus === 'Assigned' ? 'Re-assign' : 'Assign'}
+                            className={`px-2 py-1.5 text-xs font-medium rounded transition-colors ${
+                              order.deliveryBoyStatus === "Assigned"
+                                ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                : "bg-blue-600 text-white hover:bg-blue-700"
+                            }`}
+                            title={
+                              order.deliveryBoyStatus === "Assigned"
+                                ? "Re-assign delivery boy"
+                                : "Assign delivery boy"
+                            }>
+                            {order.deliveryBoyStatus === "Assigned"
+                              ? "Re-assign"
+                              : "Assign"}
                           </button>
                           <Link to={`/admin/orders/${order._id}`}>
                             <button
@@ -933,7 +939,14 @@ export default function AdminPendingOrders() {
           }}
           orderId={selectedOrder._id}
           orderNumber={selectedOrder.orderNumber}
-          currentDeliveryBoy={selectedOrder.deliveryBoy}
+          currentDeliveryBoy={
+            typeof selectedOrder.deliveryBoy === "string"
+              ? selectedOrder.deliveryBoy
+              : selectedOrder.deliveryBoy &&
+                typeof selectedOrder.deliveryBoy === "object"
+              ? (selectedOrder.deliveryBoy as any)._id || undefined
+              : undefined
+          }
           onAssignSuccess={async () => {
             // Refresh orders after successful assignment
             try {
@@ -947,7 +960,7 @@ export default function AdminPendingOrders() {
                 setOrders(response.data);
               }
             } catch (err) {
-              console.error('Error refreshing orders:', err);
+              console.error("Error refreshing orders:", err);
             }
             setAssignModalOpen(false);
             setSelectedOrder(null);

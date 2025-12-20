@@ -294,7 +294,9 @@ export default function LowestPricesEver({ activeTab = 'all' }: LowestPricesEver
   const cartItemsMap = useMemo(() => {
     const map = new Map();
     cart.items.forEach(item => {
-      map.set(item.product.id, item.quantity);
+      if (item?.product) {
+        map.set(item.product.id, item.quantity);
+      }
     });
     return map;
   }, [cart.items]);

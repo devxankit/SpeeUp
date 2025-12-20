@@ -18,6 +18,7 @@ import Cart from "./modules/user/Cart";
 import Checkout from "./modules/user/Checkout";
 import CheckoutAddress from "./modules/user/CheckoutAddress";
 import ProductDetail from "./modules/user/ProductDetail";
+import Invoice from "./modules/user/Invoice";
 import Login from "./modules/user/Login";
 import SignUp from "./modules/user/SignUp";
 import AboutUs from "./modules/user/AboutUs";
@@ -127,8 +128,7 @@ function App() {
               future={{
                 v7_startTransition: true,
                 v7_relativeSplatPath: true,
-              }}
-            >
+              }}>
               <Routes>
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<SignUp />} />
@@ -141,7 +141,9 @@ function App() {
                 <Route
                   path="/delivery/*"
                   element={
-                    <ProtectedRoute requiredUserType="Delivery" redirectTo="/delivery/login">
+                    <ProtectedRoute
+                      requiredUserType="Delivery"
+                      redirectTo="/delivery/login">
                       <DeliveryLayout>
                         <Routes>
                           <Route path="" element={<DeliveryDashboard />} />
@@ -187,7 +189,9 @@ function App() {
                 <Route
                   path="/seller/*"
                   element={
-                    <ProtectedRoute requiredUserType="Seller" redirectTo="/seller/login">
+                    <ProtectedRoute
+                      requiredUserType="Seller"
+                      redirectTo="/seller/login">
                       <SellerLayout>
                         <Routes>
                           <Route path="" element={<SellerDashboard />} />
@@ -434,6 +438,10 @@ function App() {
                         <Route path="/user/home" element={<Home />} />
                         <Route path="/search" element={<Search />} />
                         <Route path="/orders" element={<Orders />} />
+                        <Route
+                          path="/orders/:id/invoice"
+                          element={<Invoice />}
+                        />
                         <Route path="/orders/:id" element={<OrderDetail />} />
                         <Route path="/order-again" element={<OrderAgain />} />
                         <Route path="/account" element={<Account />} />
@@ -441,6 +449,10 @@ function App() {
                         <Route path="/wishlist" element={<Wishlist />} />
                         <Route path="/categories" element={<Categories />} />
                         <Route path="/category/:id" element={<Category />} />
+                        <Route
+                          path="/product/:id"
+                          element={<ProductDetail />}
+                        />
                         <Route path="/address-book" element={<AddressBook />} />
                         <Route path="/wallet" element={<Wallet />} />
                         <Route path="/checkout" element={<Checkout />} />
@@ -448,10 +460,7 @@ function App() {
                           path="/checkout/address"
                           element={<CheckoutAddress />}
                         />
-                        <Route
-                          path="/store/:slug"
-                          element={<StorePage />}
-                        />
+                        <Route path="/store/:slug" element={<StorePage />} />
                         <Route
                           path="/store/spiritual"
                           element={<StorePage />}

@@ -19,7 +19,6 @@ import reportRoutes from "./reportRoutes";
 import walletRoutes from "./walletRoutes";
 import taxRoutes from "./taxRoutes";
 import customerProductRoutes from "./customerProductRoutes";
-import customerOrderRoutes from "./customerOrderRoutes";
 import customerCategoryRoutes from "./customerCategoryRoutes";
 import customerCouponRoutes from "./customerCouponRoutes";
 import customerAddressRoutes from "./customerAddressRoutes";
@@ -29,7 +28,13 @@ import customerCartRoutes from "./customerCartRoutes";
 import wishlistRoutes from "./wishlistRoutes";
 import productReviewRoutes from "./productReviewRoutes";
 import adminRoutes from "./adminRoutes";
-import { createOrder, getMyOrders, getOrderById } from "../modules/customer/controllers/customerOrderController";
+import customerTrackingRoutes from "../modules/customer/routes/trackingRoutes";
+import deliveryTrackingRoutes from "../modules/delivery/routes/trackingRoutes";
+import {
+  createOrder,
+  getMyOrders,
+  getOrderById,
+} from "../modules/customer/controllers/customerOrderController";
 
 const router = Router();
 
@@ -49,7 +54,18 @@ router.use("/auth/customer", customerAuthRoutes);
 router.use("/auth/delivery", deliveryAuthRoutes);
 
 // Delivery routes (protected)
-router.use("/delivery", authenticate, requireUserType("Delivery"), deliveryRoutes);
+router.use(
+  "/delivery",
+  authenticate,
+  requireUserType("Delivery"),
+  deliveryRoutes
+);
+router.use(
+  "/delivery",
+  authenticate,
+  requireUserType("Delivery"),
+  deliveryTrackingRoutes
+);
 
 // Customer routes - Specific routes MUST be registered before general /customer route
 // to prevent Express from matching the broader route first
@@ -57,11 +73,16 @@ router.use("/customer/products", customerProductRoutes);
 router.use("/customer/categories", customerCategoryRoutes);
 
 // Customer orders route - direct registration to avoid module loading issue
-console.log('🔥 REGISTERING CUSTOMER ORDER ROUTES');
-router.post("/customer/orders", (req, res, next) => {
-  console.log('✅ POST /customer/orders ROUTE MATCHED!');
-  next();
-}, authenticate, createOrder);
+console.log("🔥 REGISTERING CUSTOMER ORDER ROUTES");
+router.post(
+  "/customer/orders",
+  (_req, _res, next) => {
+    console.log("✅ POST /customer/orders ROUTE MATCHED!");
+    next();
+  },
+  authenticate,
+  createOrder
+);
 router.get("/customer/orders", authenticate, getMyOrders);
 router.get("/customer/orders/:id", authenticate, getOrderById);
 
@@ -72,6 +93,8 @@ router.use("/customer/cart", customerCartRoutes);
 router.use("/customer/wallet", customerWalletRoutes);
 router.use("/customer/wishlist", wishlistRoutes);
 router.use("/customer/reviews", productReviewRoutes);
+// Tracking routes (must be before general /customer route)
+router.use("/customer", customerTrackingRoutes);
 // General customer route (must be last to avoid intercepting specific routes)
 router.use("/customer", customerRoutes);
 

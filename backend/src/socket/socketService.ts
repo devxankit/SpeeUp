@@ -1,0 +1,90 @@
+import { Server as SocketIOServer } from 'socket.io';
+import { Server as HttpServer } from 'http';
+import jwt from 'jsonwebtoken';
+
+export const initializeSocket = (httpServer: HttpServer) => {
+    const io = new SocketIOServer(httpServer, {
+        cors: {
+            origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+            methods: ['GET', 'POST'],
+            credentials: true,
+        },
+    });
+
+    // Authentication middleware
+    io.use((socket, next) => {
+        const token = socket.handshake.auth.token;
+
+        if (!token) {
+            // Allow connection but mark as unauthenticated
+            return next();
+        }
+
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+            (socket as any).user = decoded;
+            next();
+        } catch (error) {
+            next(new Error('Authentication error'));
+        }
+    });
+
+    io.on('connection', (socket) => {
+        console.log('✅ Socket connected:', socket.id);
+
+        // Customer subscribes to order tracking
+        socket.on('track-order', (orderId: string) => {
+            console.log(`📦 Customer tracking order: ${orderId}`);
+            socket.join(`order-${orderId}`);
+
+            // Send acknowledgment
+            socket.emit('tracking-started', {
+                orderId,
+                message: 'Live tracking started',
+            });
+        });
+
+        // Customer unsubscribes from order tracking
+        socket.on('stop-tracking', (orderId: string) => {
+            console.log(`🛑 Stopped tracking order: ${orderId}`);
+            socket.leave(`order-${orderId}`);
+        });
+
+        // Delivery partner joins their active deliveries room
+        socket.on('join-delivery-room', (deliveryPartnerId: string) => {
+            console.log(`🛵 Delivery partner joined: ${deliveryPartnerId}`);
+            socket.join(`delivery-${deliveryPartnerId}`);
+        });
+
+        // Handle disconnection
+        socket.on('disconnect', () => {
+            console.log('❌ Socket disconnected:', socket.id);
+        });
+
+        // Error handling
+        socket.on('error', (error) => {
+            console.error('Socket error:', error);
+        });
+    });
+
+    console.log('🔌 Socket.io initialized');
+    return io;
+};
+
+// Helper function to emit location updates
+export const emitLocationUpdate = (
+    io: SocketIOServer,
+    orderId: string,
+    data: {
+        location: { latitude: number; longitude: number; timestamp: Date };
+        eta: number;
+        distance: number;
+        status: string;
+    }
+) => {
+    io.to(`order-${orderId}`).emit('location-update', {
+        orderId,
+        ...data,
+        timestamp: new Date(),
+    });
+};

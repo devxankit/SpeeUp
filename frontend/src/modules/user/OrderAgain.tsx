@@ -48,25 +48,27 @@ export default function OrderAgain() {
     setAddedOrders(prev => new Set(prev).add(order.id));
 
     // Add each item from the order to the cart
-    order.items.forEach((item: any) => {
-      // Check if product is already in cart
-      const existingCartItem = cart.items.find(cartItem => cartItem.product.id === item.product.id);
+    order.items
+      .filter((item: any) => item?.product) // Filter out items with null/undefined products
+      .forEach((item: any) => {
+        // Check if product is already in cart
+        const existingCartItem = cart.items.find(cartItem => cartItem?.product && cartItem.product.id === item.product.id);
 
-      if (existingCartItem) {
-        // If already in cart, add the order quantity to existing quantity
-        updateQuantity(item.product.id, existingCartItem.quantity + item.quantity);
-      } else {
-        // If not in cart, add it first (adds 1)
-        addToCart(item.product);
-        // Then update to the correct quantity if needed
-        if (item.quantity > 1) {
-          // Use setTimeout to ensure the item is added first
-          setTimeout(() => {
-            updateQuantity(item.product.id, item.quantity);
-          }, 10);
+        if (existingCartItem) {
+          // If already in cart, add the order quantity to existing quantity
+          updateQuantity(item.product.id, existingCartItem.quantity + item.quantity);
+        } else {
+          // If not in cart, add it first (adds 1)
+          addToCart(item.product);
+          // Then update to the correct quantity if needed
+          if (item.quantity > 1) {
+            // Use setTimeout to ensure the item is added first
+            setTimeout(() => {
+              updateQuantity(item.product.id, item.quantity);
+            }, 10);
+          }
         }
-      }
-    });
+      });
   };
 
   // Get bestseller products
@@ -135,25 +137,27 @@ export default function OrderAgain() {
 
                       {/* Product Images Preview - Compact */}
                       <div className="flex items-center gap-1">
-                        {previewItems.map((item, idx) => (
-                          <div
-                            key={item.product.id}
-                            className="w-6 h-6 bg-neutral-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden"
-                            style={{ marginLeft: idx > 0 ? '-4px' : '0' }}
-                          >
-                            {item.product.imageUrl ? (
-                              <img
-                                src={item.product.imageUrl}
-                                alt={item.product.name}
-                                className="w-full h-full object-contain"
-                              />
-                            ) : (
-                              <span className="text-[8px] text-neutral-400">
-                                {(item.product.name || item.product.productName || '?').charAt(0).toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-                        ))}
+                        {previewItems
+                          .filter(item => item?.product) // Filter out items with null/undefined products
+                          .map((item, idx) => (
+                            <div
+                              key={item.product.id}
+                              className="w-6 h-6 bg-neutral-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden"
+                              style={{ marginLeft: idx > 0 ? '-4px' : '0' }}
+                            >
+                              {item.product.imageUrl ? (
+                                <img
+                                  src={item.product.imageUrl}
+                                  alt={item.product.name}
+                                  className="w-full h-full object-contain"
+                                />
+                              ) : (
+                                <span className="text-[8px] text-neutral-400">
+                                  {(item.product.name || item.product.productName || '?').charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                          ))}
                         {order.items.length > 3 && (
                           <div className="w-6 h-6 bg-neutral-200 rounded flex items-center justify-center text-[8px] font-medium text-neutral-600">
                             +{order.items.length - 3}
@@ -198,7 +202,7 @@ export default function OrderAgain() {
             const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
 
             // Get quantity in cart
-            const cartItem = cart.items.find(item => item.product.id === product.id);
+            const cartItem = cart.items.find(item => item?.product && item.product.id === product.id);
             const inCartQty = cartItem?.quantity || 0;
 
             return (
