@@ -8,13 +8,14 @@ import FeaturedThisWeek from './components/FeaturedThisWeek';
 import ProductCard from './components/ProductCard';
 import { getHomeContent } from '../../services/api/customerHomeService';
 
-// Fallback data if API fails or for initial render
-// Fallback data removed - using dynamic homeData
+import { useThemeContext } from '../../context/ThemeContext';
 
 
 export default function Home() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('all');
+  const { activeCategory, setActiveCategory } = useThemeContext();
+  const activeTab = activeCategory; // mapping for existing code compatibility
+  const setActiveTab = setActiveCategory;
   const contentRef = useRef<HTMLDivElement>(null);
 
   // State for dynamic data

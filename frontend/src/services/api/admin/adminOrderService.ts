@@ -56,7 +56,7 @@ export interface Order {
   | "Delivered"
   | "Cancelled"
   | "Returned";
-  deliveryBoy?: string | { name: string; mobile: string; email?: string };
+  deliveryBoy?: string | { _id: string; name: string; mobile: string; email?: string };
   deliveryBoyStatus?:
   | "Assigned"
   | "Picked Up"

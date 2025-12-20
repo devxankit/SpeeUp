@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import speeUpLogo from '@assets/speeup1.jpeg';
+import speeUpLogo from '@assets/speeup1.png';
 
 interface AdminHeaderProps {
   onMenuClick: () => void;
@@ -105,11 +105,7 @@ export default function AdminHeader({ onMenuClick, isSidebarOpen }: AdminHeaderP
               }`}
           >
             Orders
-            {!isActive('/admin/orders') && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">
-                195
-              </span>
-            )}
+
           </button>
           <button
             onClick={() => navigate('/admin/settings')}

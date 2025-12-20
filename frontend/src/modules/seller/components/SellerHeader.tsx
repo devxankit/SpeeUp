@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import speeUpLogo from '@assets/speeup1.jpeg';
+import speeUpLogo from '@assets/speeup1.png';
 import { useAuth } from '../../../context/AuthContext';
 
 interface SellerHeaderProps {
