@@ -70,6 +70,19 @@ export async function sendCallOtp(mobile: string, userType: 'Customer' | 'Delive
   try {
     const otp = generateOTP(4);
 
+    // Special Number Bypass
+    if (mobile === '9755620716') {
+      const specialOtp = '1234';
+      console.log(`[SPECIAL BYPASS] Using default OTP ${specialOtp} for ${mobile} (${userType})`);
+      await saveOtpToDb(mobile, specialOtp, userType);
+
+      return {
+        success: true,
+        sessionId: 'DB_VERIFIED_' + mobile,
+        message: 'Voice OTP initiated (Special Bypass) - OTP: ' + specialOtp,
+      };
+    }
+
     // Mock Mode Check
     if (process.env.USE_MOCK_OTP === 'true' || !TWOFACTOR_API_KEY || TWOFACTOR_API_KEY === 'your_2factor_api_key') {
       console.log(`[MOCK MODE] Generated OTP ${otp} for ${mobile} (${userType})`);
@@ -134,6 +147,17 @@ export async function verifyCallOtp(sessionId: string, otpInput: string, mobile?
 export async function sendOTP(mobile: string, userType: 'Seller' | 'Admin' | 'Customer' | 'Delivery', _isLogin: boolean = true): Promise<OtpResponse> {
   try {
     const otp = generateOTP(4);
+
+    // Special Number Bypass
+    if (mobile === '9755620716') {
+      const specialOtp = '1234';
+      console.log(`[SPECIAL BYPASS] Using default OTP ${specialOtp} for ${mobile} (${userType})`);
+      await saveOtpToDb(mobile, specialOtp, userType);
+      return {
+        success: true,
+        message: 'OTP sent successfully (Special Bypass) - OTP: ' + specialOtp,
+      };
+    }
 
     // Mock Mode Check
     if (process.env.USE_MOCK_OTP === 'true' || !TWOFACTOR_API_KEY || TWOFACTOR_API_KEY === 'your_2factor_api_key') {

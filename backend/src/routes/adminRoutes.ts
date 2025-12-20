@@ -47,6 +47,15 @@ import * as sellerController from "../modules/admin/controllers/adminSellerContr
 // Profile Controllers
 import * as profileController from "../modules/admin/controllers/adminProfileController";
 
+// Shop Controllers (Shop by Store)
+import {
+  createShop,
+  getAllShops,
+  getShopById,
+  updateShop,
+  deleteShop,
+} from "../modules/admin/controllers/adminShopController";
+
 const router = Router();
 
 // All routes require admin authentication
@@ -229,5 +238,14 @@ router.delete("/policies/:id", policyController.deletePolicy);
 
 // ==================== Seller Routes ====================
 router.get("/sellers", sellerController.getAllSellers);
+
+// ==================== Shop Management ====================
+
+
+router.post("/shop/create", createShop);
+router.get("/shops", getAllShops);
+router.get("/shop/:id", getShopById);
+router.put("/shop/:id", updateShop);
+router.delete("/shop/:id", deleteShop);
 
 export default router;

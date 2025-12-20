@@ -6,6 +6,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { LocationProvider } from "./context/LocationContext";
 import AppLayout from "./components/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PublicRoute from "./components/PublicRoute";
 import Home from "./modules/user/Home";
 import Search from "./modules/user/Search";
 import Orders from "./modules/user/Orders";
@@ -132,13 +133,15 @@ function App() {
                 }}
               >
                 <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<SignUp />} />
-                  <Route path="/seller/login" element={<SellerLogin />} />
-                  <Route path="/seller/signup" element={<SellerSignUp />} />
-                  <Route path="/delivery/login" element={<DeliveryLogin />} />
-                  <Route path="/delivery/signup" element={<DeliverySignUp />} />
-                  <Route path="/admin/login" element={<AdminLogin />} />
+                  {/* Public Routes */}
+                  <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                  <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
+                  <Route path="/seller/login" element={<PublicRoute><SellerLogin /></PublicRoute>} />
+                  <Route path="/seller/signup" element={<PublicRoute><SellerSignUp /></PublicRoute>} />
+                  <Route path="/delivery/login" element={<PublicRoute><DeliveryLogin /></PublicRoute>} />
+                  <Route path="/delivery/signup" element={<PublicRoute><DeliverySignUp /></PublicRoute>} />
+                  <Route path="/admin/login" element={<PublicRoute><AdminLogin /></PublicRoute>} />
+
                   {/* Delivery App Routes */}
                   <Route
                     path="/delivery/*"
@@ -148,36 +151,15 @@ function App() {
                           <Routes>
                             <Route path="" element={<DeliveryDashboard />} />
                             <Route path="orders" element={<DeliveryOrders />} />
-                            <Route
-                              path="orders/:id"
-                              element={<DeliveryOrderDetail />}
-                            />
-                            <Route
-                              path="orders/pending"
-                              element={<DeliveryPendingOrders />}
-                            />
-                            <Route
-                              path="orders/all"
-                              element={<DeliveryAllOrders />}
-                            />
-                            <Route
-                              path="orders/return"
-                              element={<DeliveryReturnOrders />}
-                            />
-                            <Route
-                              path="notifications"
-                              element={<DeliveryNotifications />}
-                            />
+                            <Route path="orders/:id" element={<DeliveryOrderDetail />} />
+                            <Route path="orders/pending" element={<DeliveryPendingOrders />} />
+                            <Route path="orders/all" element={<DeliveryAllOrders />} />
+                            <Route path="orders/return" element={<DeliveryReturnOrders />} />
+                            <Route path="notifications" element={<DeliveryNotifications />} />
                             <Route path="menu" element={<DeliveryMenu />} />
                             <Route path="profile" element={<DeliveryProfile />} />
-                            <Route
-                              path="earnings"
-                              element={<DeliveryEarnings />}
-                            />
-                            <Route
-                              path="settings"
-                              element={<DeliverySettings />}
-                            />
+                            <Route path="earnings" element={<DeliveryEarnings />} />
+                            <Route path="settings" element={<DeliverySettings />} />
                             <Route path="help" element={<DeliveryHelp />} />
                             <Route path="about" element={<DeliveryAbout />} />
                           </Routes>
@@ -185,6 +167,7 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
+
                   {/* Seller App Routes */}
                   <Route
                     path="/seller/*"
@@ -194,238 +177,89 @@ function App() {
                           <Routes>
                             <Route path="" element={<SellerDashboard />} />
                             <Route path="orders" element={<SellerOrders />} />
-                            <Route
-                              path="orders/:id"
-                              element={<SellerOrderDetail />}
-                            />
+                            <Route path="orders/:id" element={<SellerOrderDetail />} />
                             <Route path="category" element={<SellerCategory />} />
-                            <Route
-                              path="subcategory"
-                              element={<SellerSubCategory />}
-                            />
-                            <Route
-                              path="product/add"
-                              element={<SellerAddProduct />}
-                            />
-                            <Route
-                              path="product/taxes"
-                              element={<SellerTaxes />}
-                            />
-                            <Route
-                              path="product/list"
-                              element={<SellerProductList />}
-                            />
-                            <Route
-                              path="product/stock"
-                              element={<SellerStockManagement />}
-                            />
-                            <Route
-                              path="return"
-                              element={<SellerReturnRequest />}
-                            />
-                            <Route
-                              path="return-order"
-                              element={<SellerReturnRequest />}
-                            />
+                            <Route path="subcategory" element={<SellerSubCategory />} />
+                            <Route path="product/add" element={<SellerAddProduct />} />
+                            <Route path="product/edit/:id" element={<SellerAddProduct />} />
+                            <Route path="product/taxes" element={<SellerTaxes />} />
+                            <Route path="product/list" element={<SellerProductList />} />
+                            <Route path="product/stock" element={<SellerStockManagement />} />
+                            <Route path="return" element={<SellerReturnRequest />} />
+                            <Route path="return-order" element={<SellerReturnRequest />} />
                             <Route path="wallet" element={<SellerWallet />} />
-                            <Route
-                              path="reports/sales"
-                              element={<SellerSalesReport />}
-                            />
-                            <Route
-                              path="account-settings"
-                              element={<SellerAccountSettings />}
-                            />
+                            <Route path="reports/sales" element={<SellerSalesReport />} />
+                            <Route path="account-settings" element={<SellerAccountSettings />} />
                           </Routes>
                         </SellerLayout>
                       </ProtectedRoute>
                     }
                   />
+
                   {/* Admin App Routes */}
                   <Route
                     path="/admin/*"
                     element={
-                      <ProtectedRoute
-                        requiredUserType="Admin"
-                        redirectTo="/admin/login">
+                      <ProtectedRoute requiredUserType="Admin" redirectTo="/admin/login">
                         <AdminLayout>
                           <Routes>
                             <Route path="" element={<AdminDashboard />} />
                             <Route path="profile" element={<AdminProfile />} />
-
                             <Route path="category" element={<AdminCategory />} />
-                            <Route
-                              path="category/header"
-                              element={<AdminHeaderCategory />}
-                            />
-                            <Route
-                              path="subcategory"
-                              element={<AdminSubCategory />}
-                            />
-                            <Route
-                              path="subcategory-order"
-                              element={<AdminSubcategoryOrder />}
-                            />
+                            <Route path="category/header" element={<AdminHeaderCategory />} />
+                            <Route path="subcategory" element={<AdminSubCategory />} />
+                            <Route path="subcategory-order" element={<AdminSubcategoryOrder />} />
                             <Route path="brand" element={<AdminBrand />} />
-                            <Route
-                              path="product/add"
-                              element={<AdminAddProduct />}
-                            />
-                            <Route
-                              path="product/bulk-import"
-                              element={<AdminBulkImport />}
-                            />
-                            <Route
-                              path="product/bulk-update"
-                              element={<AdminBulkUpdate />}
-                            />
-                            <Route
-                              path="product/taxes"
-                              element={<AdminTaxes />}
-                            />
-                            <Route
-                              path="product/list"
-                              element={<AdminStockManagement />}
-                            />
-                            <Route
-                              path="product/order"
-                              element={<AdminProductOrder />}
-                            />
-                            <Route
-                              path="product/request"
-                              element={<AdminProductRequest />}
-                            />
-                            <Route
-                              path="category-order"
-                              element={<AdminCategoryOrder />}
-                            />
-                            <Route
-                              path="manage-seller/add"
-                              element={<AdminAddSeller />}
-                            />
-                            <Route
-                              path="manage-seller/list"
-                              element={<AdminManageSellerList />}
-                            />
-                            <Route
-                              path="manage-seller/transaction"
-                              element={<AdminSellerTransaction />}
-                            />
-                            <Route
-                              path="delivery-boy/add"
-                              element={<AdminAddDeliveryBoy />}
-                            />
-                            <Route
-                              path="delivery-boy/manage"
-                              element={<AdminManageDeliveryBoy />}
-                            />
-                            <Route
-                              path="delivery-boy/fund-transfer"
-                              element={<AdminFundTransfer />}
-                            />
-                            <Route
-                              path="delivery-boy/cash-collection"
-                              element={<AdminCashCollection />}
-                            />
-                            <Route
-                              path="stock-management"
-                              element={<AdminStockManagement />}
-                            />
-                            <Route
-                              path="manage-location/seller-location"
-                              element={<AdminSellerLocation />}
-                            />
+                            <Route path="product/add" element={<AdminAddProduct />} />
+                            <Route path="product/edit/:id" element={<AdminAddProduct />} />
+                            <Route path="product/bulk-import" element={<AdminBulkImport />} />
+                            <Route path="product/bulk-update" element={<AdminBulkUpdate />} />
+                            <Route path="product/taxes" element={<AdminTaxes />} />
+                            <Route path="product/list" element={<AdminStockManagement />} />
+                            <Route path="product/order" element={<AdminProductOrder />} />
+                            <Route path="product/request" element={<AdminProductRequest />} />
+                            <Route path="category-order" element={<AdminCategoryOrder />} />
+                            <Route path="manage-seller/add" element={<AdminAddSeller />} />
+                            <Route path="manage-seller/list" element={<AdminManageSellerList />} />
+                            <Route path="manage-seller/transaction" element={<AdminSellerTransaction />} />
+                            <Route path="delivery-boy/add" element={<AdminAddDeliveryBoy />} />
+                            <Route path="delivery-boy/manage" element={<AdminManageDeliveryBoy />} />
+                            <Route path="delivery-boy/fund-transfer" element={<AdminFundTransfer />} />
+                            <Route path="delivery-boy/cash-collection" element={<AdminCashCollection />} />
+                            <Route path="stock-management" element={<AdminStockManagement />} />
+                            <Route path="manage-location/seller-location" element={<AdminSellerLocation />} />
                             <Route path="wallet" element={<AdminWallet />} />
                             <Route path="coupon" element={<AdminCoupon />} />
-                            <Route
-                              path="return"
-                              element={<AdminReturnRequest />}
-                            />
-                            <Route
-                              path="notification"
-                              element={<AdminNotification />}
-                            />
+                            <Route path="return" element={<AdminReturnRequest />} />
+                            <Route path="notification" element={<AdminNotification />} />
                             <Route path="orders" element={<AdminOrders />} />
                             <Route path="settings" element={<AdminSettings />} />
-                            <Route
-                              path="customers"
-                              element={<AdminManageCustomer />}
-                            />
-                            <Route
-                              path="collect-cash"
-                              element={<AdminCashCollection />}
-                            />
-                            <Route
-                              path="payment-list"
-                              element={<AdminPaymentList />}
-                            />
-                            <Route
-                              path="sms-gateway"
-                              element={<AdminSmsGateway />}
-                            />
-                            <Route
-                              path="system-user"
-                              element={<AdminSystemUser />}
-                            />
-                            <Route
-                              path="manage-roles"
-                              element={<AdminManageRoles />}
-                            />
-                            <Route
-                              path="customer-app-policy"
-                              element={<AdminCustomerAppPolicy />}
-                            />
-                            <Route
-                              path="delivery-app-policy"
-                              element={<AdminDeliveryAppPolicy />}
-                            />
+                            <Route path="customers" element={<AdminManageCustomer />} />
+                            <Route path="collect-cash" element={<AdminCashCollection />} />
+                            <Route path="payment-list" element={<AdminPaymentList />} />
+                            <Route path="sms-gateway" element={<AdminSmsGateway />} />
+                            <Route path="system-user" element={<AdminSystemUser />} />
+                            <Route path="manage-roles" element={<AdminManageRoles />} />
+                            <Route path="customer-app-policy" element={<AdminCustomerAppPolicy />} />
+                            <Route path="delivery-app-policy" element={<AdminDeliveryAppPolicy />} />
                             <Route path="users" element={<AdminUsers />} />
                             <Route path="faq" element={<AdminFAQ />} />
-                            <Route
-                              path="home-section"
-                              element={<AdminHomeSection />}
-                            />
-                            <Route
-                              path="shop-by-store"
-                              element={<AdminShopByStore />}
-                            />
-                            <Route
-                              path="orders/all"
-                              element={<AdminAllOrders />}
-                            />
-                            <Route
-                              path="orders/pending"
-                              element={<AdminPendingOrders />}
-                            />
-                            <Route
-                              path="orders/received"
-                              element={<AdminReceivedOrders />}
-                            />
-                            <Route
-                              path="orders/processed"
-                              element={<AdminProcessedOrders />}
-                            />
-                            <Route
-                              path="orders/shipped"
-                              element={<AdminShippedOrders />}
-                            />
-                            <Route
-                              path="orders/out-for-delivery"
-                              element={<AdminOutForDeliveryOrders />}
-                            />
-                            <Route
-                              path="orders/delivered"
-                              element={<AdminDeliveredOrders />}
-                            />
-                            <Route
-                              path="orders/cancelled"
-                              element={<AdminCancelledOrders />}
-                            />
+                            <Route path="home-section" element={<AdminHomeSection />} />
+                            <Route path="shop-by-store" element={<AdminShopByStore />} />
+                            <Route path="orders/all" element={<AdminAllOrders />} />
+                            <Route path="orders/pending" element={<AdminPendingOrders />} />
+                            <Route path="orders/received" element={<AdminReceivedOrders />} />
+                            <Route path="orders/processed" element={<AdminProcessedOrders />} />
+                            <Route path="orders/shipped" element={<AdminShippedOrders />} />
+                            <Route path="orders/out-for-delivery" element={<AdminOutForDeliveryOrders />} />
+                            <Route path="orders/delivered" element={<AdminDeliveredOrders />} />
+                            <Route path="orders/cancelled" element={<AdminCancelledOrders />} />
                           </Routes>
                         </AdminLayout>
                       </ProtectedRoute>
                     }
                   />
+
                   {/* Main App Routes */}
                   <Route
                     path="/*"
@@ -446,26 +280,14 @@ function App() {
                           <Route path="/address-book" element={<AddressBook />} />
                           <Route path="/wallet" element={<Wallet />} />
                           <Route path="/checkout" element={<Checkout />} />
-                          <Route
-                            path="/checkout/address"
-                            element={<CheckoutAddress />}
-                          />
-                          <Route
-                            path="/store/:slug"
-                            element={<StorePage />}
-                          />
-                          <Route
-                            path="/store/spiritual"
-                            element={<StorePage />}
-                          />
+                          <Route path="/checkout/address" element={<CheckoutAddress />} />
+                          <Route path="/store/:slug" element={<StorePage />} />
+                          <Route path="/store/spiritual" element={<StorePage />} />
                           <Route path="/store/pharma" element={<StorePage />} />
                           <Route path="/store/e-gifts" element={<StorePage />} />
                           <Route path="/store/pet" element={<StorePage />} />
                           <Route path="/store/sports" element={<StorePage />} />
-                          <Route
-                            path="/store/fashion-basics"
-                            element={<StorePage />}
-                          />
+                          <Route path="/store/fashion-basics" element={<StorePage />} />
                           <Route path="/store/toy" element={<StorePage />} />
                           <Route path="/store/hobby" element={<StorePage />} />
                         </Routes>
