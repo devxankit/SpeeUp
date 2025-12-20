@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IShop extends Document {
     name: string;
@@ -12,16 +12,6 @@ export interface IShop extends Document {
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
-  name: string;
-  image: string;
-  description?: string;
-  slug?: string;
-  bgColor?: string;
-  order?: number;
-  products: mongoose.Types.ObjectId[];
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 const ShopSchema = new Schema<IShop>(
@@ -71,6 +61,28 @@ const ShopSchema = new Schema<IShop>(
     {
         timestamps: true,
     }
+);
+
+const Shop = mongoose.model<IShop>('Shop', ShopSchema);
+
+export default Shop;
+
+import mongoose, { Document, Schema } from "mongoose";
+
+export interface IShop extends Document {
+  name: string;
+  image: string;
+  description?: string;
+  slug?: string;
+  bgColor?: string;
+  order?: number;
+  products: mongoose.Types.ObjectId[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const ShopSchema = new Schema<IShop>(
   {
     name: {
       type: String,

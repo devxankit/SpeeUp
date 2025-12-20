@@ -37,9 +37,6 @@ export default function ProtectedRoute({
         return <Navigate to="/" replace />;
       }
     } else if (userType && userType !== requiredUserType) {
-      if (requiredUserType === 'Seller') return <Navigate to="/seller/login" replace />;
-      if (requiredUserType === 'Delivery') return <Navigate to="/delivery/login" replace />;
-      if (requiredUserType === 'Customer') return <Navigate to="/login" replace />;
       if (requiredUserType === "Seller")
         return <Navigate to="/seller/login" replace />;
       if (requiredUserType === "Delivery")

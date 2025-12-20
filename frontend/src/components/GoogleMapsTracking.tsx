@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+// @ts-ignore - @react-google-maps/api types may not be available
 import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api'
 import { motion } from 'framer-motion'
 
@@ -43,12 +44,14 @@ export default function GoogleMapsTracking({
         customerLocation
     ]
 
-    const onLoad = useCallback((map: google.maps.Map) => {
-        const bounds = new window.google.maps.LatLngBounds()
-        bounds.extend(storeLocation)
-        bounds.extend(customerLocation)
-        if (deliveryLocation) bounds.extend(deliveryLocation)
-        map.fitBounds(bounds)
+    const onLoad = useCallback((map: any) => {
+        if (window.google && window.google.maps) {
+            const bounds = new window.google.maps.LatLngBounds()
+            bounds.extend(storeLocation)
+            bounds.extend(customerLocation)
+            if (deliveryLocation) bounds.extend(deliveryLocation)
+            map.fitBounds(bounds)
+        }
     }, [storeLocation, customerLocation, deliveryLocation])
 
     if (loadError) {
@@ -95,8 +98,8 @@ export default function GoogleMapsTracking({
                     position={storeLocation}
                     icon={{
                         url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text x="8" y="32" font-size="32">🏪</text></svg>')}`,
-                        scaledSize: new google.maps.Size(40, 40)
-                    }}
+                        scaledSize: window.google?.maps?.Size ? new window.google.maps.Size(40, 40) : undefined
+                    } as any}
                     title="Store Location"
                 />
 
@@ -105,8 +108,8 @@ export default function GoogleMapsTracking({
                     position={customerLocation}
                     icon={{
                         url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text x="8" y="32" font-size="32">📍</text></svg>')}`,
-                        scaledSize: new google.maps.Size(40, 40)
-                    }}
+                        scaledSize: window.google?.maps?.Size ? new window.google.maps.Size(40, 40) : undefined
+                    } as any}
                     title="Delivery Address"
                 />
 
@@ -116,10 +119,10 @@ export default function GoogleMapsTracking({
                         position={deliveryLocation}
                         icon={{
                             url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text x="8" y="32" font-size="32">🛵</text></svg>')}`,
-                            scaledSize: new google.maps.Size(40, 40)
-                        }}
+                            scaledSize: window.google?.maps?.Size ? new window.google.maps.Size(40, 40) : undefined
+                        } as any}
                         title="Delivery Partner"
-                        animation={google.maps.Animation.BOUNCE}
+                        animation={window.google?.maps?.Animation?.BOUNCE}
                     />
                 )}
 
