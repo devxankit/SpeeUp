@@ -5,7 +5,13 @@ import { serveAssetsPlugin } from './vite-plugin-serve-assets'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), serveAssetsPlugin()],
+  plugins: [
+    react({
+      // Ensure React Fast Refresh works properly
+      fastRefresh: true,
+    }),
+    serveAssetsPlugin()
+  ],
   assetsInclude: ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.webp'],
   server: {
     fs: {
@@ -18,8 +24,20 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       '@assets': path.resolve(__dirname, './assets'),
     },
+    // Ensure single React instance
+    dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
+    // Force include React and react-dom to ensure single instance
+    include: ['react', 'react-dom', 'react-apexcharts', 'apexcharts'],
+    // Exclude problematic packages if needed
     exclude: [],
+  },
+  build: {
+    commonjsOptions: {
+      // Ensure proper CommonJS handling
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
   },
 })

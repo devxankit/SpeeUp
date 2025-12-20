@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import Product from "../../../models/Product";
 import Category from "../../../models/Category";
 import Shop from "../../../models/Shop";
-import Shop from "../../../models/Shop";
 
 // Get Home Page Content
 export const getHomeContent = async (_req: Request, res: Response) => {
@@ -23,36 +22,20 @@ export const getHomeContent = async (_req: Request, res: Response) => {
       .select("name image icon color slug")
       .sort({ order: 1 });
 
-        // 3. Shop By Store (Fetch from database)
-        const shopDocuments = await Shop.find({ isActive: true })
-            .populate('category', 'name slug')
-            .sort({ order: 1, createdAt: -1 });
-        
-        const shops = shopDocuments.map((shop) => ({
-            id: shop.storeId || shop._id.toString(),
-            name: shop.name,
-            image: shop.image,
-            slug: shop.storeId || shop._id.toString(),
-            category: shop.category,
-            productIds: shop.products?.map(p => p.toString()) || [],
-        }));
     // 3. Shop By Store - Fetch from database
     const shopDocuments = await Shop.find({ isActive: true })
-      .select("name image slug bgColor order")
-      .sort({ order: 1, createdAt: 1 })
+      .populate('category', 'name slug')
+      .sort({ order: 1, createdAt: -1 })
       .lean();
 
     // Transform shop data to match frontend expected format
-    const shops = shopDocuments.map((shop) => ({
-      id: shop._id.toString(),
+    const shops = shopDocuments.map((shop: any) => ({
+      id: shop.storeId || shop._id.toString(),
       name: shop.name,
       image: shop.image,
-      slug:
-        shop.slug ||
-        shop.name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)/g, ""),
+      slug: shop.storeId || shop._id.toString(),
+      category: shop.category,
+      productIds: shop.products?.map((p: any) => p.toString()) || [],
       bgColor: shop.bgColor || "bg-neutral-50",
     }));
 
@@ -212,51 +195,6 @@ export const getStoreProducts = async (req: Request, res: Response) => {
             error: error.message,
         });
     }
-}
-    // Map store IDs to queries
-    switch (storeId) {
-      case "spiritual-store":
-        query.category = await getCategoryIdByName("Spiritual");
-        break;
-      case "pharma-store":
-        query.category = await getCategoryIdByName("Pharma");
-        break;
-      case "e-gifts-store":
-        query.category = await getCategoryIdByName("E-Gifts");
-        break;
-      case "pet-store":
-        query.category = await getCategoryIdByName("Pet Supplies");
-        break;
-      case "fashion-basics-store":
-        // Could be multiple categories
-        query.$or = [
-          { category: await getCategoryIdByName("Fashion") },
-          { category: await getCategoryIdByName("Clothing") },
-        ];
-        break;
-      case "hobby-store":
-        query.category = await getCategoryIdByName("Hobbies");
-        break;
-      default:
-        // If it looks like a category ID, try that
-        // query.category = storeId;
-        break;
-    }
-
-    if (query.category || query.$or) {
-      const products = await Product.find(query).limit(50);
-      return res.status(200).json({ success: true, data: products });
-    } else {
-      // Fallback or empty if mapping fails
-      return res.status(200).json({ success: true, data: [] });
-    }
-  } catch (error: any) {
-    return res.status(500).json({
-      success: false,
-      message: "Error fetching store products",
-      error: error.message,
-    });
-  }
 };
 
 // Helper

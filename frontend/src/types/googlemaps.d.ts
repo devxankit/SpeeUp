@@ -2,7 +2,8 @@
 
 declare global {
   interface Window {
-    google: typeof google;
+    google?: typeof google;
+    initGoogleMaps?: () => void;
   }
 }
 

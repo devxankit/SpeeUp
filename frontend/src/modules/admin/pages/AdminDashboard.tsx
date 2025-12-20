@@ -3,6 +3,7 @@ import DashboardCard from "../components/DashboardCard";
 import OrderChart from "../components/OrderChart";
 import SalesLineChart from "../components/SalesLineChart";
 import GaugeChart from "../components/GaugeChart";
+import ErrorBoundary from "../../../components/ErrorBoundary";
 import { useAuth } from "../../../context/AuthContext";
 import {
   getDashboardStats,
@@ -577,18 +578,22 @@ export default function AdminDashboard() {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        <OrderChart
-          title="Order - Dec 2025"
-          data={orderDataDec2025}
-          maxValue={3}
-          height={400}
-        />
-        <OrderChart
-          title="Order - 2025"
-          data={orderData2025}
-          maxValue={80}
-          height={400}
-        />
+        <ErrorBoundary fallback={<div className="text-sm text-red-600 p-4">Chart failed to load</div>}>
+          <OrderChart
+            title="Order - Dec 2025"
+            data={orderDataDec2025}
+            maxValue={3}
+            height={400}
+          />
+        </ErrorBoundary>
+        <ErrorBoundary fallback={<div className="text-sm text-red-600 p-4">Chart failed to load</div>}>
+          <OrderChart
+            title="Order - 2025"
+            data={orderData2025}
+            maxValue={80}
+            height={400}
+          />
+        </ErrorBoundary>
       </div>
 
       {/* Tables Row */}
