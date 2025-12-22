@@ -9,45 +9,8 @@ interface GoogleMapsAutocompleteProps {
   required?: boolean;
 }
 
-// Google Maps types
-interface GoogleMaps {
-  maps: {
-    places: {
-      Autocomplete: new (input: HTMLInputElement, options?: {
-        types?: string[];
-        componentRestrictions?: { country?: string };
-        fields?: string[];
-      }) => {
-        getPlace: () => {
-          address_components?: Array<{
-            long_name: string;
-            short_name: string;
-            types: string[];
-          }>;
-          formatted_address?: string;
-          name?: string;
-          geometry?: {
-            location?: {
-              lat: () => number;
-              lng: () => number;
-            };
-          };
-        };
-        addListener: (event: string, callback: () => void) => void;
-      };
-    };
-    event?: {
-      clearInstanceListeners?: (instance: unknown) => void;
-    };
-  };
-}
-
-declare global {
-  interface Window {
-    google?: GoogleMaps;
-    initGoogleMaps?: () => void;
-  }
-}
+// Google Maps types are now declared globally in types/googlemaps.d.ts
+// We use window.google directly from the global namespace
 
 // Clean address by removing Plus Codes and unwanted identifiers
 const cleanAddress = (address: string): string => {
@@ -88,7 +51,7 @@ export default function GoogleMapsAutocomplete({
     if (!inputRef.current || !window.google?.maps?.places) return;
 
     try {
-      const Autocomplete = window.google.maps.places.Autocomplete;
+      const Autocomplete = (window.google.maps.places as any).Autocomplete;
       const autocomplete = new Autocomplete(inputRef.current, {
         types: ['establishment', 'geocode'],
         componentRestrictions: { country: 'in' }, // Restrict to India

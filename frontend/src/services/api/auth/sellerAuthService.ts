@@ -28,7 +28,6 @@ export interface RegisterData {
   sellerName: string;
   mobile: string;
   email: string;
-  password: string;
   storeName: string;
   category?: string; // primary category (optional if categories array provided)
   categories: string[]; // multiple categories
@@ -38,6 +37,7 @@ export interface RegisterData {
   searchLocation?: string;
   latitude?: string;
   longitude?: string;
+  serviceRadiusKm?: string | number;
 }
 
 export interface RegisterResponse {

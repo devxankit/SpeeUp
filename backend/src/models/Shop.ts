@@ -1,44 +1,78 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IShop extends Document {
-    name: string;
-    image: string;
-    description?: string;
-    products: mongoose.Types.ObjectId[];
-    isActive: boolean;
-    createdAt: Date;
-    updatedAt: Date;
+  name: string;
+  storeId: string; // slug/identifier for the store
+  image: string;
+  description?: string;
+  category?: mongoose.Types.ObjectId; // Reference to Category
+  subCategory?: mongoose.Types.ObjectId; // Reference to SubCategory
+  products: mongoose.Types.ObjectId[];
+  order: number; // For sorting/ordering
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const ShopSchema = new Schema<IShop>(
-    {
-        name: {
-            type: String,
-            required: [true, 'Shop name is required'],
-            trim: true,
-        },
-        image: {
-            type: String,
-            required: [true, 'Shop image is required'],
-            trim: true,
-        },
-        description: {
-            type: String,
-            trim: true,
-        },
-        products: [{
-            type: Schema.Types.ObjectId,
-            ref: 'Product',
-        }],
-        isActive: {
-            type: Boolean,
-            default: true,
-        },
+  {
+    name: {
+      type: String,
+      required: [true, 'Shop name is required'],
+      trim: true,
     },
-    {
-        timestamps: true,
-    }
+    storeId: {
+      type: String,
+      required: [true, 'Store ID is required'],
+      trim: true,
+      unique: true,
+      lowercase: true,
+    },
+    image: {
+      type: String,
+      required: [true, 'Shop image is required'],
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    category: {
+      type: Schema.Types.ObjectId,
+      ref: 'Category',
+    },
+    subCategory: {
+      type: Schema.Types.ObjectId,
+      ref: 'SubCategory',
+    },
+    products: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Product',
+    }],
+    order: {
+      type: Number,
+      default: 0,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
 );
+
+// Generate storeId from name if not provided
+ShopSchema.pre('save', function (next) {
+  if (!this.storeId && this.name) {
+    this.storeId = this.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  }
+  next();
+});
 
 const Shop = mongoose.model<IShop>('Shop', ShopSchema);
 

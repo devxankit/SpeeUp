@@ -107,7 +107,6 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     sellerName,
     mobile,
     email,
-    password,
     storeName,
     category,
     address,
@@ -115,12 +114,11 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     serviceableArea,
   } = req.body;
 
-  // Validation
+  // Validation (password removed - sellers don't need password during signup)
   if (
     !sellerName ||
     !mobile ||
     !email ||
-    !password ||
     !storeName ||
     !category ||
     !address ||
@@ -139,6 +137,34 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
+  // Validate location is provided
+  const latitude = req.body.latitude ? parseFloat(req.body.latitude) : null;
+  const longitude = req.body.longitude ? parseFloat(req.body.longitude) : null;
+  const serviceRadiusKm = req.body.serviceRadiusKm ? parseFloat(req.body.serviceRadiusKm) : 10; // Default 10km
+
+  if (!latitude || !longitude || isNaN(latitude) || isNaN(longitude)) {
+    return res.status(400).json({
+      success: false,
+      message: "Store location (latitude and longitude) is required. Please select location on map.",
+    });
+  }
+
+  // Validate latitude and longitude ranges
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid location coordinates",
+    });
+  }
+
+  // Validate service radius
+  if (serviceRadiusKm < 0.1 || serviceRadiusKm > 100) {
+    return res.status(400).json({
+      success: false,
+      message: "Service radius must be between 0.1 and 100 kilometers",
+    });
+  }
+
   // Check if seller already exists
   const existingSeller = await Seller.findOne({
     $or: [{ mobile }, { email }],
@@ -151,12 +177,18 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  // Create new seller
+  // Create GeoJSON location point [longitude, latitude]
+  const location = {
+    type: 'Point' as const,
+    coordinates: [longitude, latitude],
+  };
+
+  // Create new seller with GeoJSON location (password not required during signup)
   const seller = await Seller.create({
     sellerName,
     mobile,
     email,
-    password,
+    // password field removed - sellers don't need password during signup
     storeName,
     category,
     address,
@@ -165,6 +197,8 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     searchLocation: req.body.searchLocation,
     latitude: req.body.latitude,
     longitude: req.body.longitude,
+    location, // GeoJSON location for geospatial queries
+    serviceRadiusKm, // Service radius in kilometers
     status: "Pending",
     requireProductApproval: false,
     viewCustomerDetails: false,

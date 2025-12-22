@@ -1,6 +1,5 @@
 import api from "../config";
 
-
 import { ApiResponse } from "./types";
 
 // ==================== Category Interfaces ====================
@@ -13,6 +12,17 @@ export interface Category {
   hasWarning: boolean;
   groupCategory?: string;
   totalSubcategories?: number;
+  status: "Active" | "Inactive";
+  parentId?: string | null;
+  parent?: Category;
+  children?: Category[];
+  childrenCount?: number;
+  headerCategoryId?: string | null;
+  headerCategory?: {
+    _id: string;
+    name: string;
+    status: "Published" | "Unpublished";
+  };
   createdAt?: string;
   updatedAt?: string;
 }
@@ -24,6 +34,19 @@ export interface CreateCategoryData {
   isBestseller?: boolean;
   hasWarning?: boolean;
   groupCategory?: string;
+  parentId?: string | null;
+  headerCategoryId?: string | null;
+  status?: "Active" | "Inactive";
+}
+
+export interface UpdateCategoryData extends Partial<CreateCategoryData> {}
+
+export interface BulkDeleteData {
+  categoryIds: string[];
+}
+
+export interface ReorderCategoriesData {
+  categories: Array<{ id: string; order: number }>;
 }
 
 export interface UpdateCategoryOrderData {
@@ -41,6 +64,7 @@ export interface SubCategory {
   category: string | Category;
   image?: string;
   order: number;
+  totalProduct?: number; // Total products in this subcategory
   createdAt?: string;
   updatedAt?: string;
 }
@@ -208,9 +232,20 @@ export const getCategories = async (params?: {
   search?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  parentId?: string | null;
+  includeChildren?: boolean;
+  status?: "Active" | "Inactive";
 }): Promise<ApiResponse<Category[]>> => {
+  const queryParams: any = { ...params };
+  if (params?.includeChildren !== undefined) {
+    queryParams.includeChildren = params.includeChildren.toString();
+  }
+  if (params?.parentId === null || params?.parentId === undefined) {
+    // Don't include parentId in query if it's null/undefined
+    delete queryParams.parentId;
+  }
   const response = await api.get<ApiResponse<Category[]>>("/admin/categories", {
-    params,
+    params: queryParams,
   });
   return response.data;
 };
@@ -220,7 +255,7 @@ export const getCategories = async (params?: {
  */
 export const updateCategory = async (
   id: string,
-  data: Partial<CreateCategoryData>
+  data: UpdateCategoryData
 ): Promise<ApiResponse<Category>> => {
   const response = await api.put<ApiResponse<Category>>(
     `/admin/categories/${id}`,
@@ -245,12 +280,47 @@ export const deleteCategory = async (
  * Update category order
  */
 export const updateCategoryOrder = async (
-  data: UpdateCategoryOrderData
+  data: ReorderCategoriesData
 ): Promise<ApiResponse<void>> => {
   const response = await api.put<ApiResponse<void>>(
-    "/admin/categories/order",
+    "/admin/categories/reorder",
     data
   );
+  return response.data;
+};
+
+/**
+ * Toggle category status
+ */
+export const toggleCategoryStatus = async (
+  id: string,
+  status: "Active" | "Inactive",
+  cascadeToChildren?: boolean
+): Promise<ApiResponse<Category>> => {
+  const response = await api.patch<ApiResponse<Category>>(
+    `/admin/categories/${id}/status`,
+    { status, cascadeToChildren }
+  );
+  return response.data;
+};
+
+/**
+ * Bulk delete categories
+ */
+export const bulkDeleteCategories = async (
+  categoryIds: string[]
+): Promise<
+  ApiResponse<{
+    deleted: string[];
+    failed: Array<{ id: string; reason: string }>;
+  }>
+> => {
+  const response = await api.post<
+    ApiResponse<{
+      deleted: string[];
+      failed: Array<{ id: string; reason: string }>;
+    }>
+  >("/admin/categories/bulk-delete", { categoryIds });
   return response.data;
 };
 

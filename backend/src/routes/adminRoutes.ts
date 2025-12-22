@@ -84,13 +84,23 @@ router.get(
   "/dashboard/sales-by-location",
   dashboardController.getSalesByLocationController
 );
+router.get(
+  "/dashboard/today-sales",
+  dashboardController.getTodaySalesController
+);
+router.get(
+  "/dashboard/order-analytics",
+  dashboardController.getOrderAnalyticsController
+);
 
 // ==================== Category Routes ====================
 router.post("/categories", productController.createCategory);
 router.get("/categories", productController.getCategories);
 router.put("/categories/:id", productController.updateCategory);
 router.delete("/categories/:id", productController.deleteCategory);
-router.put("/categories/order", productController.updateCategoryOrder);
+router.patch("/categories/:id/status", productController.toggleCategoryStatus);
+router.post("/categories/bulk-delete", productController.bulkDeleteCategories);
+router.put("/categories/reorder", productController.updateCategoryOrder);
 
 // ==================== SubCategory Routes ====================
 router.post("/subcategories", productController.createSubCategory);
@@ -105,7 +115,8 @@ router.put("/brands/:id", productController.updateBrand);
 router.delete("/brands/:id", productController.deleteBrand);
 
 // ==================== Product Routes ====================
-router.post("/products", productController.createProduct);
+// Admin cannot create products - only sellers can add products
+// router.post("/products", productController.createProduct);
 router.get("/products", productController.getProducts);
 router.put("/products/order", productController.updateProductOrder);
 router.get("/products/:id", productController.getProductById);
@@ -143,20 +154,29 @@ router.get("/delivery", deliveryController.getAllDeliveryBoys);
 router.get("/delivery/:id", deliveryController.getDeliveryBoyById);
 router.put("/delivery/:id", deliveryController.updateDeliveryBoy);
 router.patch("/delivery/:id/status", deliveryController.updateDeliveryStatus);
-router.patch("/delivery/:id/availability", deliveryController.updateDeliveryBoyAvailability);
+router.patch(
+  "/delivery/:id/availability",
+  deliveryController.updateDeliveryBoyAvailability
+);
 router.delete("/delivery/:id", deliveryController.deleteDeliveryBoy);
 router.get(
   "/delivery/:id/assignments",
   deliveryController.getDeliveryAssignments
 );
 router.post("/delivery/:id/collect-cash", deliveryController.collectCash);
-router.get("/delivery/:id/cash-collections", deliveryController.getDeliveryBoyCashCollections);
+router.get(
+  "/delivery/:id/cash-collections",
+  deliveryController.getDeliveryBoyCashCollections
+);
 
 // ==================== Payment Routes ====================
 router.get("/payment-methods", paymentController.getPaymentMethods);
 router.get("/payment-methods/:id", paymentController.getPaymentMethodById);
 router.put("/payment-methods/:id", paymentController.updatePaymentMethod);
-router.patch("/payment-methods/:id/status", paymentController.updatePaymentMethodStatus);
+router.patch(
+  "/payment-methods/:id/status",
+  paymentController.updatePaymentMethodStatus
+);
 
 // ==================== Settings Routes ====================
 router.get("/settings", settingsController.getAppSettings);
@@ -188,8 +208,14 @@ router.put("/notifications/:id", notificationController.updateNotification);
 router.delete("/notifications/:id", notificationController.deleteNotification);
 router.post("/notifications/:id/send", notificationController.sendNotification);
 router.patch("/notifications/:id/read", notificationController.markAsRead);
-router.patch("/notifications/read-all", notificationController.markMultipleAsRead);
-router.patch("/notifications/mark-read", notificationController.markMultipleAsRead); // Legacy support
+router.patch(
+  "/notifications/read-all",
+  notificationController.markMultipleAsRead
+);
+router.patch(
+  "/notifications/mark-read",
+  notificationController.markMultipleAsRead
+); // Legacy support
 
 // ==================== Wallet Routes ====================
 router.get("/wallet/transactions", walletController.getWalletTransactions);
@@ -207,10 +233,19 @@ router.delete("/taxes/:id", taxController.deleteTax);
 
 // ==================== Cash Collection Routes ====================
 router.get("/cash-collections", cashCollectionController.getCashCollections);
-router.get("/cash-collections/:id", cashCollectionController.getCashCollectionById);
+router.get(
+  "/cash-collections/:id",
+  cashCollectionController.getCashCollectionById
+);
 router.post("/cash-collections", cashCollectionController.createCashCollection);
-router.put("/cash-collections/:id", cashCollectionController.updateCashCollection);
-router.delete("/cash-collections/:id", cashCollectionController.deleteCashCollection);
+router.put(
+  "/cash-collections/:id",
+  cashCollectionController.updateCashCollection
+);
+router.delete(
+  "/cash-collections/:id",
+  cashCollectionController.deleteCashCollection
+);
 
 // ==================== FAQ Routes ====================
 router.get("/faqs", faqController.getFAQs);
@@ -240,12 +275,18 @@ router.delete("/policies/:id", policyController.deletePolicy);
 router.get("/sellers", sellerController.getAllSellers);
 
 // ==================== Shop Management ====================
-
-
+// Legacy routes (keep for backward compatibility)
 router.post("/shop/create", createShop);
 router.get("/shops", getAllShops);
 router.get("/shop/:id", getShopById);
 router.put("/shop/:id", updateShop);
 router.delete("/shop/:id", deleteShop);
+
+// Shop by Store routes (matching frontend API expectations)
+router.post("/shop-by-stores", createShop);
+router.get("/shop-by-stores", getAllShops);
+router.get("/shop-by-stores/:id", getShopById);
+router.put("/shop-by-stores/:id", updateShop);
+router.delete("/shop-by-stores/:id", deleteShop);
 
 export default router;

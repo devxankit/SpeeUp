@@ -1,7 +1,13 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { useAuth } from './AuthContext';
-import { Order } from '../types/order';
-import { createOrder, getMyOrders } from '../services/api/customerOrderService';
+import {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from "react";
+import { useAuth } from "./AuthContext";
+import { Order } from "../types/order";
+import { createOrder, getMyOrders } from "../services/api/customerOrderService";
 // updateOrderStatus might not be available in customerOrderService, but typical for cancellation
 // Actually order creation is main thing here.
 
@@ -12,7 +18,7 @@ interface OrdersContextType {
   addOrder: (order: Order) => Promise<string | undefined>;
   getOrderById: (id: string) => Order | undefined;
   fetchOrderById: (id: string) => Promise<Order | undefined>; // Add this
-  updateOrderStatus: (id: string, status: Order['status']) => void;
+  updateOrderStatus: (id: string, status: Order["status"]) => void;
   loading: boolean;
 }
 
@@ -20,24 +26,36 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, updateUser } = useAuth();
 
   const fetchOrders = async () => {
-    console.log('🚀 fetchOrders called', { isAuthenticated, userType: user?.userType });
+    // Ensure userType is set - if user is authenticated but userType is missing, assume Customer
+    // This handles cases where user was logged in before userType was added to the login flow
+    const userType =
+      user?.userType || (isAuthenticated && user ? "Customer" : undefined);
 
-    if (!isAuthenticated || user?.userType !== 'Customer') {
-      console.log('⚠️ fetchOrders: Skipping - not authenticated or not a customer', {
-        isAuthenticated,
-        userType: user?.userType
-      });
+    console.log("🚀 fetchOrders called", {
+      isAuthenticated,
+      userType,
+      userId: user?.id,
+    });
+
+    if (!isAuthenticated || userType !== "Customer") {
+      console.log(
+        "⚠️ fetchOrders: Skipping - not authenticated or not a customer",
+        {
+          isAuthenticated,
+          userType,
+        }
+      );
       setLoading(false);
       return;
     }
 
     try {
-      console.log('📡 Calling getMyOrders API...');
+      console.log("📡 Calling getMyOrders API...");
       const response = await getMyOrders();
-      console.log('📦 Fetched orders response:', response);
+      console.log("📦 Fetched orders response:", response);
       if (response && response.data) {
         // Backend now returns transformed data with id, totalItems, totalAmount, fees
         // Just use it directly
@@ -46,10 +64,10 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
           // Backend already provides 'id', but ensure it's set from _id if missing
           id: o.id || o._id,
         }));
-        console.log('📦 Mapped orders:', orders);
+        console.log("📦 Mapped orders:", orders);
         setOrders(orders);
       } else {
-        console.log('⚠️ No data in response:', response);
+        console.log("⚠️ No data in response:", response);
       }
     } catch (error) {
       console.error("❌ Failed to fetch orders", error);
@@ -59,47 +77,56 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    console.log('🔄 OrdersContext useEffect triggered', {
+    // Ensure userType is set in user object if missing (for backward compatibility)
+    // This handles cases where user was logged in before userType was added to the login flow
+    if (isAuthenticated && user && !user.userType) {
+      console.log("🔧 Fixing missing userType for user:", user.id);
+      const updatedUser = { ...user, userType: "Customer" as const };
+      updateUser(updatedUser);
+    }
+
+    console.log("🔄 OrdersContext useEffect triggered", {
       isAuthenticated,
       userType: user?.userType,
-      userId: user?.id
+      userId: user?.id,
     });
 
     if (isAuthenticated) {
-      console.log('✅ User is authenticated, fetching orders...');
+      console.log("✅ User is authenticated, fetching orders...");
       fetchOrders();
     } else {
-      console.log('❌ User NOT authenticated, clearing orders');
+      console.log("❌ User NOT authenticated, clearing orders");
       setOrders([]);
       setLoading(false);
     }
-  }, [isAuthenticated, user?.userType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.userType, user?.id]);
 
   const addOrder = async (order: Order): Promise<string | undefined> => {
     try {
       // Construct payload
       const payload = {
         address: {
-          address: order.address.street || order.address.address || '',
+          address: order.address.street || order.address.address || "",
           city: order.address.city,
-          state: order.address.state || '',
+          state: order.address.state || "",
           pincode: order.address.pincode,
-          landmark: order.address.landmark || '',
+          landmark: order.address.landmark || "",
           latitude: order.address.latitude,
           longitude: order.address.longitude,
         },
-        paymentMethod: order.paymentMethod || 'COD',
-        items: order.items.map(item => ({
+        paymentMethod: order.paymentMethod || "COD",
+        items: order.items.map((item) => ({
           product: {
-            id: item.product.id || (item.product as any)._id
+            id: item.product.id || (item.product as any)._id,
           },
           quantity: item.quantity,
-          variant: item.variant // Pass variant if available
+          variant: item.variant, // Pass variant if available
         })),
         fees: {
           deliveryFee: order.fees?.deliveryFee || 0,
-          platformFee: order.fees?.platformFee || 0
-        }
+          platformFee: order.fees?.platformFee || 0,
+        },
       };
 
       const response = await createOrder(payload as any);
@@ -122,16 +149,18 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
 
   const fetchOrderById = async (id: string): Promise<Order | undefined> => {
     try {
-      const { getOrderById: apiGetOrderById } = await import('../services/api/customerOrderService');
+      const { getOrderById: apiGetOrderById } = await import(
+        "../services/api/customerOrderService"
+      );
       const response = await apiGetOrderById(id);
       if (response && response.data) {
         const mappedOrder = {
           ...response.data,
-          id: response.data._id || response.data.id
+          id: response.data._id || response.data.id,
         };
         // Optionally update the orders list
-        setOrders(prev => {
-          if (prev.find(o => o.id === mappedOrder.id)) return prev;
+        setOrders((prev) => {
+          if (prev.find((o) => o.id === mappedOrder.id)) return prev;
           return [...prev, mappedOrder];
         });
         return mappedOrder;
@@ -142,16 +171,26 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     return undefined;
   };
 
-  const updateOrderStatus = async (id: string, status: Order['status']) => {
+  const updateOrderStatus = async (id: string, status: Order["status"]) => {
     // This is likely for cancellation if allowed
     setOrders((prevOrders) =>
-      prevOrders.map((order) => (order.id === id ? { ...order, status } : order))
+      prevOrders.map((order) =>
+        order.id === id ? { ...order, status } : order
+      )
     );
     // Call API if exists
   };
 
   return (
-    <OrdersContext.Provider value={{ orders, addOrder, getOrderById, fetchOrderById, updateOrderStatus, loading }}>
+    <OrdersContext.Provider
+      value={{
+        orders,
+        addOrder,
+        getOrderById,
+        fetchOrderById,
+        updateOrderStatus,
+        loading,
+      }}>
       {children}
     </OrdersContext.Provider>
   );
@@ -160,10 +199,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
 export function useOrders() {
   const context = useContext(OrdersContext);
   if (context === undefined) {
-    throw new Error('useOrders must be used within an OrdersProvider');
+    throw new Error("useOrders must be used within an OrdersProvider");
   }
   return context;
 }
-
-
-

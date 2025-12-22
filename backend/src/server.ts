@@ -16,9 +16,45 @@ dotenv.config();
 const app: Application = express();
 const httpServer = createServer(app);
 
-// CORS configuration
+// CORS configuration - Allow multiple localhost ports in development
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || "http://localhost:5173", // Vite default port
+  origin: (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean | string) => void
+  ) => {
+    console.log(
+      `🔍 CORS check - Origin: ${origin}, NODE_ENV: ${process.env.NODE_ENV}`
+    );
+
+    // Allow requests with no origin (like mobile apps, Postman, or server-to-server)
+    if (!origin) {
+      console.log("✅ CORS: Allowing request with no origin");
+      return callback(null, true);
+    }
+
+    // In production, check against FRONTEND_URL
+    if (process.env.NODE_ENV === "production") {
+      const allowedOrigin = process.env.FRONTEND_URL || "http://localhost:5173";
+      if (origin === allowedOrigin) {
+        console.log(`✅ CORS: Allowing production origin: ${origin}`);
+        return callback(null, origin);
+      }
+      console.log(`❌ CORS: Rejecting origin in production: ${origin}`);
+      return callback(new Error("Not allowed by CORS"));
+    }
+
+    // In development, allow any localhost port
+    if (
+      origin.startsWith("http://localhost:") ||
+      origin.startsWith("http://127.0.0.1:")
+    ) {
+      console.log(`✅ CORS: Allowing localhost origin: ${origin}`);
+      return callback(null, origin);
+    }
+
+    console.log(`❌ CORS: Rejecting origin: ${origin}`);
+    return callback(new Error("Not allowed by CORS"));
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],

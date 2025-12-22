@@ -1,756 +1,637 @@
-import { useState, useEffect } from "react";
-import { uploadImage } from "../../../services/api/uploadService";
-import {
-  validateImageFile,
-  createImagePreview,
-} from "../../../utils/imageUpload";
+import { useState, useEffect, useMemo } from "react";
 import {
   getCategories,
   createCategory,
   updateCategory,
   deleteCategory,
+  toggleCategoryStatus,
+  bulkDeleteCategories,
   type Category,
+  type CreateCategoryData,
+  type UpdateCategoryData,
 } from "../../../services/api/admin/adminProductService";
 import { useAuth } from "../../../context/AuthContext";
+import CategoryFormModal from "../components/CategoryFormModal";
+import CategoryTreeView from "../components/CategoryTreeView";
+import CategoryListView from "../components/CategoryListView";
+import {
+  buildCategoryTree,
+  searchCategories,
+  filterCategoriesByStatus,
+} from "../../../utils/categoryUtils";
+
+// Flatten tree structure for filtering (works for both tree and list view)
+const flattenTree = (cats: Category[]): Category[] => {
+  const result: Category[] = [];
+  cats.forEach((cat) => {
+    // Create a copy without children to avoid circular references, but preserve all other properties
+    const { children, ...catWithoutChildren } = cat;
+
+    // Normalize parentId - convert object to string if needed
+    let normalizedParentId: string | null = null;
+    if (catWithoutChildren.parentId) {
+      if (typeof catWithoutChildren.parentId === "string") {
+        normalizedParentId = catWithoutChildren.parentId;
+      } else if (
+        typeof catWithoutChildren.parentId === "object" &&
+        catWithoutChildren.parentId !== null
+      ) {
+        // It's populated, extract the _id
+        normalizedParentId =
+          (catWithoutChildren.parentId as { _id?: string })._id || null;
+      }
+    }
+
+    // Preserve childrenCount and other metadata
+    result.push({
+      ...catWithoutChildren,
+      parentId: normalizedParentId,
+      // Explicitly preserve childrenCount if it exists
+      childrenCount:
+        cat.childrenCount ||
+        (children && children.length > 0 ? children.length : 0),
+    } as Category);
+    if (children && children.length > 0) {
+      result.push(...flattenTree(children));
+    }
+  });
+  return result;
+};
 
 export default function AdminCategory() {
   const { isAuthenticated, token } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [categoryName, setCategoryName] = useState("");
-  const [categoryImageFile, setCategoryImageFile] = useState<File | null>(null);
-  const [categoryImagePreview, setCategoryImagePreview] = useState<string>("");
-  const [categoryImageUrl, setCategoryImageUrl] = useState<string>("");
-  const [isBestseller, setIsBestseller] = useState("No");
-  const [selectedGroupCategory, setSelectedGroupCategory] = useState("");
-  const [hasWarning, setHasWarning] = useState("No");
-  const [entriesPerPage, setEntriesPerPage] = useState(10);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"tree" | "list">("tree");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "All" | "Active" | "Inactive"
+  >("All");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<
+    "create" | "edit" | "create-subcategory"
+  >("create");
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [parentCategory, setParentCategory] = useState<Category | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [listPage, setListPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
-  // Fetch categories on component mount
+  // Fetch categories
   useEffect(() => {
     if (!isAuthenticated || !token) {
       setLoading(false);
       return;
     }
 
-    const fetchCategories = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await getCategories({ search: searchTerm });
-        if (response.success) {
-          setCategories(response.data);
-        }
-      } catch (err: any) {
-        console.error("Error fetching categories:", err);
-        setError(
-          err.response?.data?.message ||
-            "Failed to load categories. Please try again."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchCategories();
-  }, [isAuthenticated, token, searchTerm]);
+  }, [isAuthenticated, token]);
 
-  const mockCategories = [
-    {
-      id: 2,
-      name: "Pet Care",
-      image: "/api/placeholder/100/100",
-      totalSubcategory: 2,
-      groupCategory: "",
-      isBestseller: false,
-      hasWarning: false,
-    },
-    {
-      id: 3,
-      name: "Sweet Tooth",
-      image: "/api/placeholder/100/100",
-      totalSubcategory: 3,
-      groupCategory: "",
-      isBestseller: false,
-      hasWarning: false,
-    },
-    {
-      id: 4,
-      name: "Tea Coffee",
-      image: "/api/placeholder/100/100",
-      totalSubcategory: 3,
-      groupCategory: "",
-      isBestseller: false,
-      hasWarning: false,
-    },
-    {
-      id: 6,
-      name: "Instant Food",
-      image: "/api/placeholder/100/100",
-      totalSubcategory: 3,
-      groupCategory: "",
-      isBestseller: false,
-      hasWarning: false,
-    },
-    {
-      id: 7,
-      name: "Cleaning Essentials",
-      image: "/api/placeholder/100/100",
-      totalSubcategory: 2,
-      groupCategory: "",
-      isBestseller: false,
-      hasWarning: false,
-    },
-  ];
-
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-  };
-
-  // Backend handles filtering, so we just use the categories directly
-  const totalPages = Math.ceil(categories.length / entriesPerPage);
-  const startIndex = (currentPage - 1) * entriesPerPage;
-  const endIndex = startIndex + entriesPerPage;
-  const displayedCategories = categories.slice(startIndex, endIndex);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const validation = validateImageFile(file);
-    if (!validation.valid) {
-      setUploadError(validation.error || "Invalid image file");
-      return;
-    }
-
-    setCategoryImageFile(file);
-    setUploadError("");
-
+  const fetchCategories = async (preserveExpandedIds?: Set<string>) => {
     try {
-      const preview = await createImagePreview(file);
-      setCategoryImagePreview(preview);
-    } catch (error) {
-      setUploadError("Failed to create image preview");
-    }
-  };
-
-  const handleAddCategory = async () => {
-    if (!categoryName.trim()) {
-      setUploadError("Please enter a category name");
-      return;
-    }
-
-    if (!categoryImageFile && !editingId) {
-      setUploadError("Category image is required");
-      return;
-    }
-
-    setUploading(true);
-    setUploadError("");
-
-    try {
-      let imageUrl = categoryImageUrl;
-
-      // Upload category image if a new file is selected
-      if (categoryImageFile) {
-        const imageResult = await uploadImage(
-          categoryImageFile,
-          "speeup/categories"
-        );
-        imageUrl = imageResult.secureUrl;
-      }
-
-      const categoryData = {
-        name: categoryName.trim(),
-        image: imageUrl,
-        isBestseller: isBestseller === "Yes",
-        hasWarning: hasWarning === "Yes",
-        groupCategory: selectedGroupCategory || undefined,
-      };
-
-      if (editingId) {
-        // Update existing category
-        const response = await updateCategory(editingId, categoryData);
-        if (response.success) {
-          setCategories((prev) =>
-            prev.map((cat) => (cat._id === editingId ? response.data : cat))
-          );
-          alert("Category updated successfully!");
-          setEditingId(null);
-        }
-      } else {
-        // Create new category
-        const response = await createCategory(categoryData);
-        if (response.success) {
-          setCategories((prev) => [...prev, response.data]);
-          alert("Category added successfully!");
+      setLoading(true);
+      setError(null);
+      const response = await getCategories({
+        includeChildren: true,
+      });
+      if (response.success) {
+        setCategories(response.data);
+        // Preserve existing expanded IDs if provided, otherwise auto-expand all
+        if (preserveExpandedIds && preserveExpandedIds.size > 0) {
+          setExpandedIds(preserveExpandedIds);
+        } else {
+          // Auto-expand all categories by default
+          const allIds = new Set<string>();
+          const collectIds = (cats: Category[]) => {
+            cats.forEach((cat) => {
+              allIds.add(cat._id);
+              if (cat.children && cat.children.length > 0) {
+                collectIds(cat.children);
+              }
+            });
+          };
+          collectIds(response.data);
+          setExpandedIds(allIds);
         }
       }
-
-      // Reset form
-      setCategoryName("");
-      setCategoryImageFile(null);
-      setCategoryImagePreview("");
-      setCategoryImageUrl("");
-      setIsBestseller("No");
-      setSelectedGroupCategory("");
-      setHasWarning("No");
-    } catch (error: any) {
-      setUploadError(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to save category. Please try again."
-      );
+    } catch (err: unknown) {
+      console.error("Error fetching categories:", err);
+      const errorMessage =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { message?: string } } }).response
+              ?.data?.message
+          : "Failed to load categories. Please try again.";
+      setError(errorMessage || "Failed to load categories. Please try again.");
     } finally {
-      setUploading(false);
+      setLoading(false);
     }
   };
 
-  const handleEdit = (id: string) => {
-    const category = categories.find((cat) => cat._id === id);
-    if (category) {
-      setEditingId(id);
-      setCategoryName(category.name);
-      setCategoryImageUrl(category.image || "");
-      setIsBestseller(category.isBestseller ? "Yes" : "No");
-      setHasWarning(category.hasWarning ? "Yes" : "No");
-      setSelectedGroupCategory(category.groupCategory || "");
+  // Filter and search categories
+  const filteredCategories = useMemo(() => {
+    // Always flatten first to get a flat array for filtering
+    const flatCategories = flattenTree(categories);
+    let filtered = [...flatCategories];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      filtered = searchCategories(filtered, searchQuery);
+      // If searching, also include children of matching parents (even if children don't match)
+      const matchingParentIds = new Set(filtered.map((cat) => cat._id));
+      const childrenOfMatches = flatCategories.filter(
+        (cat) => cat.parentId && matchingParentIds.has(cat.parentId)
+      );
+      // Merge and deduplicate
+      const allFiltered = [...filtered, ...childrenOfMatches];
+      const uniqueFiltered = Array.from(
+        new Map(allFiltered.map((cat) => [cat._id, cat])).values()
+      );
+      filtered = uniqueFiltered;
+    }
+
+    // Apply status filter
+    filtered = filterCategoriesByStatus(filtered, statusFilter);
+
+    return filtered;
+  }, [categories, searchQuery, statusFilter]);
+
+  // Build tree for tree view
+  const categoryTree = useMemo(() => {
+    if (viewMode === "tree") {
+      return buildCategoryTree(filteredCategories);
+    }
+    return [];
+  }, [filteredCategories, viewMode]);
+
+  // Handle create category
+  const handleCreateCategory = () => {
+    setModalMode("create");
+    setEditingCategory(null);
+    setParentCategory(null);
+    setModalOpen(true);
+  };
+
+  // Handle create subcategory
+  const handleCreateSubcategory = (parent: Category) => {
+    setModalMode("create-subcategory");
+    setEditingCategory(null);
+    setParentCategory(parent);
+    setModalOpen(true);
+  };
+
+  // Handle edit category
+  const handleEdit = (category: Category) => {
+    setModalMode("edit");
+    setEditingCategory(category);
+    setParentCategory(null);
+    setModalOpen(true);
+  };
+
+  // Handle delete category
+  const handleDelete = async (category: Category) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete "${category.name}"? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await deleteCategory(category._id);
+      if (response.success) {
+        alert("Category deleted successfully!");
+        fetchCategories();
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error && typeof error === "object" && "response" in error
+          ? (error as { response?: { data?: { message?: string } } }).response
+              ?.data?.message
+          : "Failed to delete category. Please try again.";
+      alert(errorMessage || "Failed to delete category. Please try again.");
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this category?")) {
-      try {
-        const response = await deleteCategory(id);
-        if (response.success) {
-          setCategories((prev) => prev.filter((cat) => cat._id !== id));
-          alert("Category deleted successfully!");
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) {
+      alert("Please select at least one category to delete.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Are you sure you want to delete ${selectedIds.size} selected category(ies)? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await bulkDeleteCategories(Array.from(selectedIds));
+      if (response.success) {
+        const deletedCount = response.data.deleted.length;
+        const failedCount = response.data.failed.length;
+        if (failedCount > 0) {
+          alert(
+            `Deleted ${deletedCount} category(ies). ${failedCount} failed. Check console for details.`
+          );
+          console.log("Failed deletions:", response.data.failed);
+        } else {
+          alert(`Successfully deleted ${deletedCount} category(ies).`);
         }
-      } catch (error: any) {
-        alert(
-          error.response?.data?.message ||
-            "Failed to delete category. Please try again."
-        );
+        setSelectedIds(new Set());
+        fetchCategories();
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error && typeof error === "object" && "response" in error
+          ? (error as { response?: { data?: { message?: string } } }).response
+              ?.data?.message
+          : "Failed to delete categories. Please try again.";
+      alert(errorMessage || "Failed to delete categories. Please try again.");
+    }
+  };
+
+  // Handle toggle status
+  const handleToggleStatus = async (category: Category) => {
+    const newStatus = category.status === "Active" ? "Inactive" : "Active";
+    const cascade =
+      category.childrenCount && category.childrenCount > 0
+        ? window.confirm(
+            `This category has subcategories. Do you want to ${
+              newStatus === "Inactive" ? "deactivate" : "activate"
+            } all subcategories as well?`
+          )
+        : false;
+
+    try {
+      const response = await toggleCategoryStatus(
+        category._id,
+        newStatus,
+        cascade
+      );
+      if (response.success) {
+        alert(`Category status updated to ${newStatus}`);
+        fetchCategories();
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error && typeof error === "object" && "response" in error
+          ? (error as { response?: { data?: { message?: string } } }).response
+              ?.data?.message
+          : "Failed to update category status. Please try again.";
+      alert(
+        errorMessage || "Failed to update category status. Please try again."
+      );
+    }
+  };
+
+  // Handle form submit
+  const handleFormSubmit = async (
+    data: CreateCategoryData | UpdateCategoryData
+  ) => {
+    if (modalMode === "edit" && editingCategory) {
+      const response = await updateCategory(editingCategory._id, data);
+      if (response.success) {
+        alert("Category updated successfully!");
+        fetchCategories();
+      }
+    } else {
+      const response = await createCategory(data as CreateCategoryData);
+      if (response.success) {
+        alert("Category created successfully!");
+
+        // If creating a subcategory, expand the parent category after refresh
+        if (modalMode === "create-subcategory" && parentCategory) {
+          // Preserve current expanded IDs and add parent ID
+          const newExpandedIds = new Set(expandedIds);
+          newExpandedIds.add(parentCategory._id);
+          fetchCategories(newExpandedIds);
+        } else {
+          fetchCategories();
+        }
       }
     }
   };
 
+  // Handle export
   const handleExport = () => {
-    alert("Export functionality will be implemented here");
+    const headers = [
+      "ID",
+      "Name",
+      "Parent",
+      "Status",
+      "Order",
+      "Image",
+      "Created At",
+    ];
+    const csvContent = [
+      headers.join(","),
+      ...filteredCategories.map((category) =>
+        [
+          category._id,
+          `"${category.name}"`,
+          category.parent
+            ? typeof category.parent === "string"
+              ? category.parent
+              : category.parent.name
+            : category.parentId || "Root",
+          category.status,
+          category.order || 0,
+          category.image || "",
+          category.createdAt || "",
+        ].join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `categories_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Handle select/deselect
+  const handleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === filteredCategories.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredCategories.map((cat) => cat._id)));
+    }
+  };
+
+  // Handle expand/collapse
+  const handleToggleExpand = (id: string) => {
+    setExpandedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleExpandAll = () => {
+    const allIds = new Set<string>();
+    const collectIds = (cats: Category[]) => {
+      cats.forEach((cat) => {
+        allIds.add(cat._id);
+        if (cat.children && cat.children.length > 0) {
+          collectIds(cat.children);
+        }
+      });
+    };
+    collectIds(categoryTree);
+    setExpandedIds(allIds);
+  };
+
+  const handleCollapseAll = () => {
+    setExpandedIds(new Set());
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-        <h1 className="text-2xl font-semibold text-neutral-800">Category</h1>
-        <div className="text-sm text-blue-500">
-          <span className="text-blue-500 hover:underline cursor-pointer">
-            Home
-          </span>{" "}
-          <span className="text-neutral-400">/</span> Dashboard
+    <div className="space-y-4 sm:space-y-6 -mx-3 sm:-mx-4 md:-mx-6 -mt-3 sm:-mt-4 md:-mt-6">
+      {/* Header Section */}
+      <div className="bg-white border-b border-neutral-200 px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">
+            Manage Categories
+          </h1>
+          <div className="flex items-center gap-2 text-xs sm:text-sm">
+            <span className="text-neutral-500">Dashboard</span>
+            <span className="text-neutral-400">/</span>
+            <span className="text-neutral-700">Categories</span>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Left Panel - Add Category */}
+      {/* Main Content */}
+      <div className="px-3 sm:px-4 md:px-6">
         <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
-          <div className="bg-teal-600 text-white px-4 sm:px-6 py-3">
-            <h2 className="text-base sm:text-lg font-semibold">Add Category</h2>
-          </div>
-          <div className="p-4 sm:p-6 space-y-4">
-            {uploadError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                {uploadError}
-              </div>
-            )}
-            {/* Category Name */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Category Name:
-              </label>
-              <input
-                type="text"
-                value={categoryName}
-                onChange={(e) => setCategoryName(e.target.value)}
-                placeholder="Enter Category Name"
-                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
-                disabled={uploading}
-              />
-            </div>
-
-            {/* Category Image */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Category Image:
-              </label>
-              <label className="block border-2 border-dashed border-neutral-300 rounded-lg p-4 text-center cursor-pointer hover:border-teal-500 transition-colors">
-                {categoryImagePreview ? (
-                  <div className="space-y-2">
-                    <img
-                      src={categoryImagePreview}
-                      alt="Category preview"
-                      className="max-h-32 mx-auto rounded-lg object-cover"
-                    />
-                    <p className="text-xs text-neutral-600">
-                      {categoryImageFile?.name}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setCategoryImageFile(null);
-                        setCategoryImagePreview("");
-                      }}
-                      className="text-xs text-red-600 hover:text-red-700">
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <div>
-                    <svg
-                      width="32"
-                      height="32"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="mx-auto mb-2 text-neutral-400">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="17 8 12 3 7 8"></polyline>
-                      <line x1="12" y1="3" x2="12" y2="15"></line>
-                    </svg>
-                    <p className="text-xs text-neutral-600">Choose File</p>
-                    <p className="text-xs text-neutral-500 mt-1">Max 5MB</p>
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  disabled={uploading}
-                />
-              </label>
-            </div>
-
-            {/* Is Bestseller Category */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Is Bestseller Category?:
-              </label>
-              <select
-                value={isBestseller}
-                onChange={(e) => setIsBestseller(e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
-                <option value="No">No</option>
-                <option value="Yes">Yes</option>
-              </select>
-            </div>
-
-            {/* Select Group Category */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Select Group Category:
-              </label>
-              <select
-                value={selectedGroupCategory}
-                onChange={(e) => setSelectedGroupCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
-                <option value="">Select Group Category</option>
-                <option value="group1">Group 1</option>
-                <option value="group2">Group 2</option>
-                <option value="group3">Group 3</option>
-              </select>
-            </div>
-
-            {/* Is it have Warning */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Is it have Warning?:
-              </label>
-              <select
-                value={hasWarning}
-                onChange={(e) => setHasWarning(e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
-                <option value="No">No</option>
-                <option value="Yes">Yes</option>
-              </select>
-            </div>
-
-            {/* Add Category Button */}
-            <button
-              onClick={handleAddCategory}
-              disabled={uploading}
-              className={`w-full py-2.5 rounded text-sm font-medium transition-colors ${
-                uploading
-                  ? "bg-neutral-400 cursor-not-allowed text-white"
-                  : "bg-teal-600 hover:bg-teal-700 text-white"
-              }`}>
-              {uploading
-                ? "Saving..."
-                : editingId
-                ? "Update Category"
-                : "Add Category"}
-            </button>
-            {editingId && (
-              <button
-                onClick={() => {
-                  setEditingId(null);
-                  setCategoryName("");
-                  setCategoryImageFile(null);
-                  setCategoryImagePreview("");
-                  setCategoryImageUrl("");
-                  setIsBestseller("No");
-                  setSelectedGroupCategory("");
-                  setHasWarning("No");
-                }}
-                className="w-full py-2.5 rounded text-sm font-medium bg-neutral-200 hover:bg-neutral-300 text-neutral-700 transition-colors mt-2">
-                Cancel Edit
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Right Panel - View Category */}
-        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
-          <div className="bg-teal-600 text-white px-4 sm:px-6 py-3">
+          {/* Green Banner */}
+          <div className="bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3">
             <h2 className="text-base sm:text-lg font-semibold">
-              View Category
+              Category Management
             </h2>
           </div>
 
-          {/* Controls */}
-          <div className="p-4 sm:p-6 border-b border-neutral-200">
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-              {/* Entries Per Page */}
+          {/* Filter and Action Bar */}
+          <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-neutral-200 bg-neutral-50">
+            <div className="flex flex-col lg:flex-row flex-wrap items-start lg:items-center gap-3 sm:gap-4">
+              {/* Add Category Button */}
+              <button
+                onClick={handleCreateCategory}
+                className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm font-medium flex items-center gap-2 transition-colors w-full sm:w-auto">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Add Category
+              </button>
+
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-2 bg-white border border-neutral-300 rounded p-1">
+                <button
+                  onClick={() => setViewMode("tree")}
+                  className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+                    viewMode === "tree"
+                      ? "bg-teal-600 text-white"
+                      : "text-neutral-700 hover:bg-neutral-100"
+                  }`}>
+                  Tree View
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+                    viewMode === "list"
+                      ? "bg-teal-600 text-white"
+                      : "text-neutral-700 hover:bg-neutral-100"
+                  }`}>
+                  List View
+                </button>
+              </div>
+
+              {/* Status Filter */}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-neutral-700">Show</span>
+                <label className="text-sm font-medium text-neutral-700">
+                  Status:
+                </label>
                 <select
-                  value={entriesPerPage}
-                  onChange={(e) => {
-                    setEntriesPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  className="px-2 py-1 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500">
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
+                  value={statusFilter}
+                  onChange={(e) =>
+                    setStatusFilter(
+                      e.target.value as "All" | "Active" | "Inactive"
+                    )
+                  }
+                  className="px-3 py-2 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500">
+                  <option value="All">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
                 </select>
-                <span className="text-sm text-neutral-700">entries</span>
+              </div>
+
+              {/* Search */}
+              <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                <label className="text-sm font-medium text-neutral-700">
+                  Search:
+                </label>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setListPage(1);
+                  }}
+                  placeholder="Search by name..."
+                  className="flex-1 px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
               </div>
 
               {/* Export Button */}
               <button
                 onClick={handleExport}
-                className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-sm font-medium flex items-center gap-2 transition-colors">
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-medium flex items-center gap-2 transition-colors w-full sm:w-auto">
                 <svg
                   width="16"
                   height="16"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round">
+                  strokeWidth="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7 10 12 15 17 10"></polyline>
                   <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
                 Export
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
               </button>
 
-              {/* Search */}
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-neutral-700">Search:</label>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="Search..."
-                  className="px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 min-w-[150px]"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
-              <thead className="bg-neutral-50 border-b border-neutral-200">
-                <tr>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    ID
-                  </th>
-                  <th
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider cursor-pointer hover:bg-neutral-100"
-                    onClick={() => handleSort("name")}>
-                    <div className="flex items-center gap-2">
-                      Category Name
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        className="text-neutral-400">
-                        <path
-                          d="M7 10L12 5L17 10M7 14L12 19L17 14"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    Category Image
-                  </th>
-                  <th
-                    className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider cursor-pointer hover:bg-neutral-100"
-                    onClick={() => handleSort("totalSubcategory")}>
-                    <div className="flex items-center gap-2">
-                      Total Subcategory
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        className="text-neutral-400">
-                        <path
-                          d="M7 10L12 5L17 10M7 14L12 19L17 14"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    Group Category
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-neutral-200">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-4 sm:px-6 py-8 text-center text-sm text-neutral-500">
-                      Loading categories...
-                    </td>
-                  </tr>
-                ) : error ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-4 sm:px-6 py-8 text-center text-sm text-red-600">
-                      {error}
-                    </td>
-                  </tr>
-                ) : displayedCategories.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-4 sm:px-6 py-8 text-center text-sm text-neutral-500">
-                      No categories found
-                    </td>
-                  </tr>
-                ) : (
-                  displayedCategories.map((category) => (
-                    <tr key={category._id} className="hover:bg-neutral-50">
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900">
-                        {category._id.slice(-6)}
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900 font-medium">
-                        {category.name}
-                      </td>
-                      <td className="px-4 sm:px-6 py-3">
-                        <div className="w-16 h-16 bg-neutral-100 rounded overflow-hidden flex items-center justify-center">
-                          {category.image ? (
-                            <img
-                              src={category.image}
-                              alt={category.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src =
-                                  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect width="100" height="100" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%239ca3af" font-size="12"%3ENo Image%3C/text%3E%3C/svg%3E';
-                              }}
-                            />
-                          ) : (
-                            <div className="text-xs text-neutral-400">
-                              No Image
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900">
-                        {category.totalSubcategories || 0}
-                      </td>
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-500">
-                        {category.groupCategory || "-"}
-                      </td>
-                      <td className="px-4 sm:px-6 py-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEdit(category._id)}
-                            className="p-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors"
-                            title="Edit">
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(category._id)}
-                            className="p-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded transition-colors"
-                            title="Delete">
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round">
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination Footer */}
-          <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
-            <div className="text-xs sm:text-sm text-neutral-700">
-              Showing {startIndex + 1} to{" "}
-              {Math.min(endIndex, categories.length)} of {categories.length}{" "}
-              entries
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className={`p-2 border border-neutral-300 rounded ${
-                  currentPage === 1
-                    ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
-                    : "text-neutral-700 hover:bg-neutral-50"
-                }`}
-                aria-label="Previous page">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M15 18L9 12L15 6"
+              {/* Bulk Delete Button (List View) */}
+              {viewMode === "list" && selectedIds.size > 0 && (
+                <button
+                  onClick={handleBulkDelete}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium flex items-center gap-2 transition-colors">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 border border-neutral-300 rounded text-sm ${
-                      currentPage === page
-                        ? "bg-teal-600 text-white border-teal-600"
-                        : "text-neutral-700 hover:bg-neutral-50"
-                    }`}>
-                    {page}
-                  </button>
-                )
+                    strokeWidth="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  Delete Selected ({selectedIds.size})
+                </button>
               )}
-              <button
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                }
-                disabled={currentPage === totalPages || totalPages === 0}
-                className={`p-2 border border-neutral-300 rounded ${
-                  currentPage === totalPages || totalPages === 0
-                    ? "text-neutral-400 cursor-not-allowed bg-neutral-50"
-                    : "text-neutral-700 hover:bg-neutral-50"
-                }`}
-                aria-label="Next page">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M9 18L15 12L9 6"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
             </div>
+
+            {/* Tree View Controls */}
+            {viewMode === "tree" && (
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  onClick={handleExpandAll}
+                  className="px-3 py-1.5 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 rounded hover:bg-neutral-50 transition-colors">
+                  Expand All
+                </button>
+                <button
+                  onClick={handleCollapseAll}
+                  className="px-3 py-1.5 text-xs font-medium text-neutral-700 bg-white border border-neutral-300 rounded hover:bg-neutral-50 transition-colors">
+                  Collapse All
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Content Area */}
+          <div className="p-4 sm:p-6">
+            {loading ? (
+              <div className="text-center py-8 text-neutral-500">
+                Loading categories...
+              </div>
+            ) : error ? (
+              <div className="text-center py-8 text-red-600">{error}</div>
+            ) : viewMode === "tree" ? (
+              <CategoryTreeView
+                categories={categoryTree}
+                onAddSubcategory={handleCreateSubcategory}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onToggleStatus={handleToggleStatus}
+                expandedIds={expandedIds}
+                onToggleExpand={handleToggleExpand}
+              />
+            ) : (
+              <CategoryListView
+                categories={filteredCategories}
+                selectedIds={selectedIds}
+                onSelect={handleSelect}
+                onSelectAll={handleSelectAll}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                currentPage={listPage}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setListPage}
+              />
+            )}
           </div>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="text-center text-sm text-neutral-500 py-4">
+      <div className="text-center py-4 text-xs sm:text-sm text-neutral-600">
         Copyright © 2025. Developed By{" "}
-        <a href="#" className="text-teal-600 hover:text-teal-700">
+        <a href="#" className="text-blue-600 hover:text-blue-700">
           SpeeUp - 10 Minute App
         </a>
       </div>
+
+      {/* Category Form Modal */}
+      {isModalOpen && (
+        <CategoryFormModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setModalOpen(false);
+            setEditingCategory(null);
+            setParentCategory(null);
+          }}
+          onSubmit={handleFormSubmit}
+          category={editingCategory || undefined}
+          parentCategory={parentCategory || undefined}
+          mode={modalMode}
+          allCategories={categories}
+        />
+      )}
     </div>
   );
 }
