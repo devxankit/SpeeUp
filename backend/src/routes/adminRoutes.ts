@@ -98,7 +98,9 @@ router.post("/categories", productController.createCategory);
 router.get("/categories", productController.getCategories);
 router.put("/categories/:id", productController.updateCategory);
 router.delete("/categories/:id", productController.deleteCategory);
-router.put("/categories/order", productController.updateCategoryOrder);
+router.patch("/categories/:id/status", productController.toggleCategoryStatus);
+router.post("/categories/bulk-delete", productController.bulkDeleteCategories);
+router.put("/categories/reorder", productController.updateCategoryOrder);
 
 // ==================== SubCategory Routes ====================
 router.post("/subcategories", productController.createSubCategory);
@@ -151,20 +153,29 @@ router.get("/delivery", deliveryController.getAllDeliveryBoys);
 router.get("/delivery/:id", deliveryController.getDeliveryBoyById);
 router.put("/delivery/:id", deliveryController.updateDeliveryBoy);
 router.patch("/delivery/:id/status", deliveryController.updateDeliveryStatus);
-router.patch("/delivery/:id/availability", deliveryController.updateDeliveryBoyAvailability);
+router.patch(
+  "/delivery/:id/availability",
+  deliveryController.updateDeliveryBoyAvailability
+);
 router.delete("/delivery/:id", deliveryController.deleteDeliveryBoy);
 router.get(
   "/delivery/:id/assignments",
   deliveryController.getDeliveryAssignments
 );
 router.post("/delivery/:id/collect-cash", deliveryController.collectCash);
-router.get("/delivery/:id/cash-collections", deliveryController.getDeliveryBoyCashCollections);
+router.get(
+  "/delivery/:id/cash-collections",
+  deliveryController.getDeliveryBoyCashCollections
+);
 
 // ==================== Payment Routes ====================
 router.get("/payment-methods", paymentController.getPaymentMethods);
 router.get("/payment-methods/:id", paymentController.getPaymentMethodById);
 router.put("/payment-methods/:id", paymentController.updatePaymentMethod);
-router.patch("/payment-methods/:id/status", paymentController.updatePaymentMethodStatus);
+router.patch(
+  "/payment-methods/:id/status",
+  paymentController.updatePaymentMethodStatus
+);
 
 // ==================== Settings Routes ====================
 router.get("/settings", settingsController.getAppSettings);
@@ -196,8 +207,14 @@ router.put("/notifications/:id", notificationController.updateNotification);
 router.delete("/notifications/:id", notificationController.deleteNotification);
 router.post("/notifications/:id/send", notificationController.sendNotification);
 router.patch("/notifications/:id/read", notificationController.markAsRead);
-router.patch("/notifications/read-all", notificationController.markMultipleAsRead);
-router.patch("/notifications/mark-read", notificationController.markMultipleAsRead); // Legacy support
+router.patch(
+  "/notifications/read-all",
+  notificationController.markMultipleAsRead
+);
+router.patch(
+  "/notifications/mark-read",
+  notificationController.markMultipleAsRead
+); // Legacy support
 
 // ==================== Wallet Routes ====================
 router.get("/wallet/transactions", walletController.getWalletTransactions);
@@ -215,10 +232,19 @@ router.delete("/taxes/:id", taxController.deleteTax);
 
 // ==================== Cash Collection Routes ====================
 router.get("/cash-collections", cashCollectionController.getCashCollections);
-router.get("/cash-collections/:id", cashCollectionController.getCashCollectionById);
+router.get(
+  "/cash-collections/:id",
+  cashCollectionController.getCashCollectionById
+);
 router.post("/cash-collections", cashCollectionController.createCashCollection);
-router.put("/cash-collections/:id", cashCollectionController.updateCashCollection);
-router.delete("/cash-collections/:id", cashCollectionController.deleteCashCollection);
+router.put(
+  "/cash-collections/:id",
+  cashCollectionController.updateCashCollection
+);
+router.delete(
+  "/cash-collections/:id",
+  cashCollectionController.deleteCashCollection
+);
 
 // ==================== FAQ Routes ====================
 router.get("/faqs", faqController.getFAQs);

@@ -1,6 +1,5 @@
-import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
-
+import { motion } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
 
 interface CategoryTile {
   id: string;
@@ -9,8 +8,12 @@ interface CategoryTile {
   image?: string; // Support single image property
   productCount?: number;
   categoryId?: string;
+  subcategoryId?: string;
   productId?: string;
+  sellerId?: string;
   bgColor?: string;
+  slug?: string;
+  type?: "subcategory" | "product" | "category";
 }
 
 interface CategoryTileSectionProps {
@@ -20,10 +23,30 @@ interface CategoryTileSectionProps {
   showProductCount?: boolean; // Show product count only for bestsellers
 }
 
-export default function CategoryTileSection({ title, tiles, columns = 2, showProductCount = false }: CategoryTileSectionProps) {
+export default function CategoryTileSection({
+  title,
+  tiles,
+  columns = 2,
+  showProductCount = false,
+}: CategoryTileSectionProps) {
   const navigate = useNavigate();
 
   const handleTileClick = (tile: CategoryTile) => {
+    if (tile.subcategoryId || tile.type === "subcategory") {
+      // Navigate to subcategory page or category with subcategory filter
+      if (tile.categoryId) {
+        navigate(
+          `/category/${tile.categoryId}?subcategory=${
+            tile.subcategoryId || tile.id
+          }`
+        );
+      } else if (tile.slug) {
+        navigate(`/category/${tile.slug}`);
+      } else {
+        navigate(`/category/subcategory/${tile.subcategoryId || tile.id}`);
+      }
+      return;
+    }
     if (tile.categoryId) {
       navigate(`/category/${tile.categoryId}`);
       return;
@@ -32,20 +55,33 @@ export default function CategoryTileSection({ title, tiles, columns = 2, showPro
       navigate(`/product/${tile.productId}`);
       return;
     }
+    if ((tile as any).sellerId) {
+      // Navigate to seller's products page or category
+      navigate(`/seller/${(tile as any).sellerId}`);
+      return;
+    }
     // Otherwise just log for now
-    console.log('Clicked tile', tile.id);
+    console.log("Clicked tile", tile.id);
   };
 
-  const gridCols = columns === 4 ? 'grid-cols-4 md:grid-cols-6 lg:grid-cols-8' : columns === 3 ? 'grid-cols-3 md:grid-cols-4 lg:grid-cols-6' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4';
-  const gapClass = columns === 4 ? 'gap-2 md:gap-4' : 'gap-3 md:gap-4';
+  const gridCols =
+    columns === 4
+      ? "grid-cols-4 md:grid-cols-6 lg:grid-cols-8"
+      : columns === 3
+      ? "grid-cols-3 md:grid-cols-3 lg:grid-cols-3"
+      : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4";
+  const gapClass = columns === 4 ? "gap-2 md:gap-4" : "gap-3 md:gap-4";
 
   return (
     <div className="mb-6 md:mb-8 mt-0 overflow-visible">
-      <h2 className="text-lg md:text-2xl font-semibold text-neutral-900 mb-3 md:mb-6 px-4 md:px-6 lg:px-8 tracking-tight">{title}</h2>
+      <h2 className="text-lg md:text-2xl font-semibold text-neutral-900 mb-3 md:mb-6 px-4 md:px-6 lg:px-8 tracking-tight">
+        {title}
+      </h2>
       <div className="px-4 md:px-6 lg:px-8 overflow-visible">
         <div className={`grid ${gridCols} ${gapClass} overflow-visible`}>
           {tiles.map((tile) => {
-            const images = tile.productImages || (tile.image ? [tile.image] : []);
+            const images =
+              tile.productImages || (tile.image ? [tile.image] : []);
             const hasImages = images.filter(Boolean).length > 0;
 
             return (
@@ -56,25 +92,46 @@ export default function CategoryTileSection({ title, tiles, columns = 2, showPro
                 transition={{ duration: 0.2 }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="flex flex-col"
-              >
+                className="flex flex-col">
                 <Link
-                  to={tile.productId ? `/product/${tile.productId}` : tile.categoryId ? `/category/${tile.categoryId}` : '#'}
+                  to={
+                    tile.subcategoryId || tile.type === "subcategory"
+                      ? tile.categoryId
+                        ? `/category/${tile.categoryId}?subcategory=${
+                            tile.subcategoryId || tile.id
+                          }`
+                        : tile.slug
+                        ? `/category/${tile.slug}`
+                        : `/category/subcategory/${
+                            tile.subcategoryId || tile.id
+                          }`
+                      : tile.productId
+                      ? `/product/${tile.productId}`
+                      : tile.categoryId
+                      ? `/category/${tile.categoryId}`
+                      : (tile as any).sellerId
+                      ? `/seller/${(tile as any).sellerId}`
+                      : "#"
+                  }
                   onClick={(e) => {
-                    if (!tile.categoryId && !tile.productId) {
+                    if (
+                      !tile.categoryId &&
+                      !tile.productId &&
+                      !tile.subcategoryId &&
+                      !(tile as any).sellerId
+                    ) {
                       e.preventDefault();
                       handleTileClick(tile);
                     }
                   }}
-                  className={`block bg-white rounded-xl shadow-sm border border-neutral-200 hover:shadow-md transition-shadow ${showProductCount ? 'p-2.5' : 'p-2'
-                    }`}
-                >
+                  className={`block bg-white rounded-xl shadow-sm border border-neutral-200 hover:shadow-md transition-shadow ${
+                    showProductCount ? "p-2.5" : "p-1.5"
+                  }`}>
                   {/* Image - Single image for non-bestsellers, 2x2 grid for bestsellers */}
                   <div
-                    className={`w-full rounded-lg overflow-hidden ${showProductCount ? 'h-20 mb-2' : 'h-16 mb-1.5'
-                      } ${tile.bgColor || 'bg-cyan-50'
-                      }`}
-                  >
+                    className={`w-full rounded-lg overflow-hidden ${
+                      showProductCount ? "h-20 mb-2" : "aspect-[3/4]"
+                    } ${tile.bgColor || "bg-cyan-50"}`}>
                     {hasImages ? (
                       showProductCount ? (
                         // Bestsellers: 2x2 grid
@@ -90,19 +147,18 @@ export default function CategoryTileSection({ title, tiles, columns = 2, showPro
                             ) : (
                               <div
                                 key={idx}
-                                className="w-full h-full bg-neutral-200 rounded-sm flex items-center justify-center text-xs text-neutral-400"
-                              >
+                                className="w-full h-full bg-neutral-200 rounded-sm flex items-center justify-center text-xs text-neutral-400">
                                 {idx + 1}
                               </div>
                             )
                           )}
                         </div>
                       ) : (
-                        // Other sections: Single image
+                        // Other sections: Single image - use contain to show full image without cropping
                         <img
                           src={images[0]}
                           alt={tile.name}
-                          className="w-full h-full object-contain bg-white rounded-lg"
+                          className="w-full h-full object-contain rounded-lg"
                         />
                       )
                     ) : (
@@ -129,14 +185,7 @@ export default function CategoryTileSection({ title, tiles, columns = 2, showPro
                   )}
                 </Link>
 
-                {/* Tile name - outside card for all other sections */}
-                {!showProductCount && (
-                  <div className="mt-1.5 text-center">
-                    <span className="text-xs font-semibold text-neutral-900 line-clamp-2 leading-tight">
-                      {tile.name}
-                    </span>
-                  </div>
-                )}
+                {/* Text label removed - images already contain category names */}
               </motion.div>
             );
           })}
@@ -145,4 +194,3 @@ export default function CategoryTileSection({ title, tiles, columns = 2, showPro
     </div>
   );
 }
-
