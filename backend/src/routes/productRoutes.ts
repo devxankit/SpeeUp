@@ -9,6 +9,7 @@ import {
   updateProductStatus,
   bulkUpdateStock,
 } from "../modules/seller/controllers/productController";
+import { getBrands } from "../modules/admin/controllers/adminProductController";
 import { authenticate, requireUserType } from "../middleware/auth";
 
 const router = Router();
@@ -16,6 +17,9 @@ const router = Router();
 // All routes require authentication and seller user type
 router.use(authenticate);
 router.use(requireUserType("Seller"));
+
+// Get all brands - sellers need this for product creation
+router.get("/brands", getBrands);
 
 // Create product
 router.post("/", createProduct);

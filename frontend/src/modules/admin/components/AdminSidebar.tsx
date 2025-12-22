@@ -143,26 +143,6 @@ const menuSections: MenuSection[] = [
         ),
         submenuItems: [
           {
-            label: "Add new Product",
-            path: "/admin/product/add",
-            icon: (
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round">
-                <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z"></path>
-                <path d="M16 21V5C16 4.46957 15.7893 3.96086 15.4142 3.58579C15.0391 3.21071 14.5304 3 14 3H10C9.46957 3 8.96086 3.21071 8.58579 3.58579C8.21071 3.96086 8 4.46957 8 5V21"></path>
-                <line x1="12" y1="8" x2="12" y2="16"></line>
-                <line x1="8" y1="12" x2="16" y2="12"></line>
-              </svg>
-            ),
-          },
-          {
             label: "Product List",
             path: "/admin/product/list",
             icon: (
@@ -179,26 +159,6 @@ const menuSections: MenuSection[] = [
                 <path d="M14 2V8H20"></path>
                 <path d="M9 12L11 14L15 10"></path>
                 <path d="M9 16L11 18L15 14"></path>
-              </svg>
-            ),
-          },
-          {
-            label: "Product Request",
-            path: "/admin/product/request",
-            icon: (
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round">
-                <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z"></path>
-                <path d="M16 21V5C16 4.46957 15.7893 3.96086 15.4142 3.58579C15.0391 3.21071 14.5304 3 14 3H10C9.46957 3 8.96086 3.21071 8.58579 3.58579C8.21071 3.96086 8 4.46957 8 5V21"></path>
-                <circle cx="18" cy="9" r="2" fill="currentColor"></circle>
-                <path d="M17 8L19 10L17 12"></path>
               </svg>
             ),
           },
@@ -224,65 +184,7 @@ const menuSections: MenuSection[] = [
               </svg>
             ),
           },
-          {
-            label: "Product Order",
-            path: "/admin/product/order",
-            icon: (
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round">
-                <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z"></path>
-                <path d="M16 21V5C16 4.46957 15.7893 3.96086 15.4142 3.58579C15.0391 3.21071 14.5304 3 14 3H10C9.46957 3 8.96086 3.21071 8.58579 3.58579C8.21071 3.96086 8 4.46957 8 5V21"></path>
-                <path d="M8 12L12 8L16 12"></path>
-                <path d="M8 16L12 12L16 16"></path>
-                <circle cx="18" cy="9" r="1.5" fill="currentColor"></circle>
-              </svg>
-            ),
-          },
         ],
-      },
-      {
-        label: "Stock Management",
-        path: "/admin/stock-management",
-        icon: (
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round">
-            <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z"></path>
-            <path d="M16 21V5C16 4.46957 15.7893 3.96086 15.4142 3.58579C15.0391 3.21071 14.5304 3 14 3H10C9.46957 3 8.96086 3.21071 8.58579 3.58579C8.21071 3.96086 8 4.46957 8 5V21"></path>
-            <path d="M12 9V15M9 12H15"></path>
-          </svg>
-        ),
-      },
-      {
-        label: "Category Order",
-        path: "/admin/category-order",
-        icon: (
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round">
-            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"></path>
-            <path d="M8 6H21M8 12H21M8 18H21"></path>
-          </svg>
-        ),
       },
       {
         label: "Manage Seller",
@@ -306,26 +208,6 @@ const menuSections: MenuSection[] = [
           </svg>
         ),
         submenuItems: [
-          {
-            label: "Add Seller",
-            path: "/admin/manage-seller/add",
-            icon: (
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round">
-                <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z"></path>
-                <path d="M16 21V5C16 4.46957 15.7893 3.96086 15.4142 3.58579C15.0391 3.21071 14.5304 3 14 3H10C9.46957 3 8.96086 3.21071 8.58579 3.58579C8.21071 3.96086 8 4.46957 8 5V21"></path>
-                <line x1="12" y1="8" x2="12" y2="16"></line>
-                <line x1="8" y1="12" x2="16" y2="12"></line>
-              </svg>
-            ),
-          },
           {
             label: "Manage Seller List",
             path: "/admin/manage-seller/list",
@@ -1121,11 +1003,10 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
       <div className="px-4 py-2 border-b border-teal-600">
         <button
           onClick={() => handleNavigation("/admin")}
-          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors ${
-            isActive("/admin")
-              ? "bg-teal-600 text-white"
-              : "text-teal-100 hover:bg-teal-600/50 hover:text-white"
-          }`}>
+          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors ${isActive("/admin")
+            ? "bg-teal-600 text-white"
+            : "text-teal-100 hover:bg-teal-600/50 hover:text-white"
+            }`}>
           <svg
             width="18"
             height="18"
@@ -1176,11 +1057,10 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
                           handleNavigation(item.path);
                         }
                       }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${
-                        active
-                          ? "bg-teal-600 text-white"
-                          : "text-teal-100 hover:bg-teal-600/50 hover:text-white"
-                      }`}>
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${active
+                        ? "bg-teal-600 text-white"
+                        : "text-teal-100 hover:bg-teal-600/50 hover:text-white"
+                        }`}>
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <span className="flex-shrink-0">{item.icon}</span>
                         <span className="text-sm font-medium truncate">
@@ -1195,9 +1075,8 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
                           fill="none"
                           stroke="currentColor"
                           strokeWidth="2"
-                          className={`transition-transform flex-shrink-0 ml-2 ${
-                            expanded ? "rotate-90" : ""
-                          } ${active ? "text-white" : "text-teal-200"}`}>
+                          className={`transition-transform flex-shrink-0 ml-2 ${expanded ? "rotate-90" : ""
+                            } ${active ? "text-white" : "text-teal-200"}`}>
                           <path
                             d="M9 18L15 12L9 6"
                             strokeLinecap="round"
@@ -1216,11 +1095,10 @@ export default function AdminSidebar({ onClose }: AdminSidebarProps) {
                               <li key={subItem.path}>
                                 <button
                                   onClick={() => handleNavigation(subItem.path)}
-                                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-left transition-colors ${
-                                    subActive
-                                      ? "bg-teal-500 text-white"
-                                      : "text-teal-100 hover:bg-teal-600/50 hover:text-white"
-                                  }`}>
+                                  className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-left transition-colors ${subActive
+                                    ? "bg-teal-500 text-white"
+                                    : "text-teal-100 hover:bg-teal-600/50 hover:text-white"
+                                    }`}>
                                   <div className="flex items-center gap-2 flex-1 min-w-0">
                                     <span className="flex-shrink-0">
                                       {subItem.icon}

@@ -76,10 +76,6 @@ import AdminHeaderCategory from "./modules/admin/pages/AdminHeaderCategory";
 import AdminSubCategory from "./modules/admin/pages/AdminSubCategory";
 import AdminBrand from "./modules/admin/pages/AdminBrand";
 import AdminTaxes from "./modules/admin/pages/AdminTaxes";
-import AdminProductOrder from "./modules/admin/pages/AdminProductOrder";
-import AdminProductRequest from "./modules/admin/pages/AdminProductRequest";
-import AdminCategoryOrder from "./modules/admin/pages/AdminCategoryOrder";
-import AdminAddSeller from "./modules/admin/pages/AdminAddSeller";
 import AdminSellerTransaction from "./modules/admin/pages/AdminSellerTransaction";
 import AdminStockManagement from "./modules/admin/pages/AdminStockManagement";
 import AdminSubcategoryOrder from "./modules/admin/pages/AdminSubcategoryOrder";
@@ -207,17 +203,12 @@ function App() {
                             <Route path="brand" element={<AdminBrand />} />
                             <Route path="product/taxes" element={<AdminTaxes />} />
                             <Route path="product/list" element={<AdminStockManagement />} />
-                            <Route path="product/order" element={<AdminProductOrder />} />
-                            <Route path="product/request" element={<AdminProductRequest />} />
-                            <Route path="category-order" element={<AdminCategoryOrder />} />
-                            <Route path="manage-seller/add" element={<AdminAddSeller />} />
                             <Route path="manage-seller/list" element={<AdminManageSellerList />} />
                             <Route path="manage-seller/transaction" element={<AdminSellerTransaction />} />
                             <Route path="delivery-boy/add" element={<AdminAddDeliveryBoy />} />
                             <Route path="delivery-boy/manage" element={<AdminManageDeliveryBoy />} />
                             <Route path="delivery-boy/fund-transfer" element={<AdminFundTransfer />} />
                             <Route path="delivery-boy/cash-collection" element={<AdminCashCollection />} />
-                            <Route path="stock-management" element={<AdminStockManagement />} />
                             <Route path="manage-location/seller-location" element={<AdminSellerLocation />} />
                             <Route path="wallet" element={<AdminWallet />} />
                             <Route path="coupon" element={<AdminCoupon />} />
