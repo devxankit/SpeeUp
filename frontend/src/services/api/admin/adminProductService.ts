@@ -17,6 +17,12 @@ export interface Category {
   parent?: Category;
   children?: Category[];
   childrenCount?: number;
+  headerCategoryId?: string | null;
+  headerCategory?: {
+    _id: string;
+    name: string;
+    status: "Published" | "Unpublished";
+  };
   createdAt?: string;
   updatedAt?: string;
 }
@@ -29,6 +35,7 @@ export interface CreateCategoryData {
   hasWarning?: boolean;
   groupCategory?: string;
   parentId?: string | null;
+  headerCategoryId?: string | null;
   status?: "Active" | "Inactive";
 }
 

@@ -13,6 +13,10 @@ import {
   getAvailableParents,
   validateParentChange,
 } from "../../../utils/categoryUtils";
+import {
+  getHeaderCategoriesAdmin,
+  HeaderCategory,
+} from "../../../services/api/headerCategoryService";
 
 interface CategoryFormModalProps {
   isOpen: boolean;
@@ -38,6 +42,7 @@ export default function CategoryFormModal({
     image: "",
     order: 0,
     parentId: null as string | null,
+    headerCategoryId: null as string | null,
     status: "Active" as "Active" | "Inactive",
     isBestseller: false,
     hasWarning: false,
@@ -50,12 +55,40 @@ export default function CategoryFormModal({
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [headerCategories, setHeaderCategories] = useState<HeaderCategory[]>(
+    []
+  );
+  const [loadingHeaderCategories, setLoadingHeaderCategories] = useState(false);
 
   // Get available parent categories
   const availableParents = getAvailableParents(
     category?._id || null,
     allCategories
   );
+
+  // Fetch header categories when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchHeaderCategories();
+    }
+  }, [isOpen]);
+
+  const fetchHeaderCategories = async () => {
+    try {
+      setLoadingHeaderCategories(true);
+      const categories = await getHeaderCategoriesAdmin();
+      // Filter only Published header categories
+      const publishedCategories = categories.filter(
+        (cat) => cat.status === "Published"
+      );
+      setHeaderCategories(publishedCategories);
+    } catch (error) {
+      console.error("Error fetching header categories:", error);
+      setHeaderCategories([]);
+    } finally {
+      setLoadingHeaderCategories(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -66,6 +99,7 @@ export default function CategoryFormModal({
           image: category.image || "",
           order: category.order || 0,
           parentId: category.parentId || null,
+          headerCategoryId: category.headerCategoryId || null,
           status: category.status || "Active",
           isBestseller: category.isBestseller || false,
           hasWarning: category.hasWarning || false,
@@ -75,12 +109,38 @@ export default function CategoryFormModal({
           setImagePreview(category.image);
         }
       } else if (mode === "create-subcategory" && parentCategory) {
-        // Pre-fill parent for subcategory
+        // Pre-fill parent for subcategory and inherit header category
+        // Handle both populated object and string ID
+        let inheritedHeaderCategoryId: string | null = null;
+        if (parentCategory.headerCategoryId) {
+          if (typeof parentCategory.headerCategoryId === "string") {
+            inheritedHeaderCategoryId = parentCategory.headerCategoryId;
+          } else if (
+            typeof parentCategory.headerCategoryId === "object" &&
+            parentCategory.headerCategoryId !== null
+          ) {
+            // It's populated, extract the _id
+            inheritedHeaderCategoryId =
+              (parentCategory.headerCategoryId as { _id?: string })._id || null;
+          }
+        }
+        // Also check headerCategory field (if it exists as separate field)
+        if (!inheritedHeaderCategoryId && parentCategory.headerCategory) {
+          if (typeof parentCategory.headerCategory === "string") {
+            inheritedHeaderCategoryId = parentCategory.headerCategory;
+          } else if (
+            typeof parentCategory.headerCategory === "object" &&
+            parentCategory.headerCategory !== null
+          ) {
+            inheritedHeaderCategoryId = parentCategory.headerCategory._id;
+          }
+        }
         setFormData({
           name: "",
           image: "",
           order: 0,
           parentId: parentCategory._id,
+          headerCategoryId: inheritedHeaderCategoryId,
           status: "Active",
           isBestseller: false,
           hasWarning: false,
@@ -93,6 +153,7 @@ export default function CategoryFormModal({
           image: "",
           order: 0,
           parentId: null,
+          headerCategoryId: null,
           status: "Active",
           isBestseller: false,
           hasWarning: false,
@@ -176,6 +237,39 @@ export default function CategoryFormModal({
       newErrors.order = "Display order must be a positive number";
     }
 
+    // Validate header category (required for root categories, inherited for subcategories)
+    if (isSubcategoryMode) {
+      // For subcategories, header category should be inherited from parent
+      if (!formData.headerCategoryId) {
+        if (parentCategory) {
+          const parentHeaderCategoryId =
+            parentCategory.headerCategoryId ||
+            (parentCategory.headerCategory
+              ? typeof parentCategory.headerCategory === "string"
+                ? null
+                : parentCategory.headerCategory._id
+              : null);
+          if (!parentHeaderCategoryId) {
+            newErrors.headerCategoryId =
+              "Parent category does not have a header category assigned. Please assign a header category to the parent category first.";
+          }
+        } else {
+          newErrors.headerCategoryId =
+            "Header category is required for subcategories";
+        }
+      }
+    } else {
+      // For root categories or when editing, header category is required
+      if (!formData.headerCategoryId) {
+        if (mode === "edit" && category && !category.headerCategoryId) {
+          newErrors.headerCategoryId =
+            "Header category is required. Please assign a header category to this category.";
+        } else if (mode === "create") {
+          newErrors.headerCategoryId = "Header category is required";
+        }
+      }
+    }
+
     // Validate parent change if editing
     if (mode === "edit" && category) {
       const validation = validateParentChange(
@@ -216,6 +310,7 @@ export default function CategoryFormModal({
         image: imageUrl,
         order: formData.order,
         parentId: formData.parentId,
+        headerCategoryId: formData.headerCategoryId,
         status: formData.status,
         isBestseller: formData.isBestseller,
         hasWarning: formData.hasWarning,
@@ -321,6 +416,128 @@ export default function CategoryFormModal({
             />
             {errors.name && (
               <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+            )}
+          </div>
+
+          {/* Header Category */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-neutral-700 mb-2">
+              Header Category{" "}
+              {!isSubcategoryMode && <span className="text-red-500">*</span>}
+            </label>
+            {isSubcategoryMode ? (
+              <div>
+                <input
+                  type="text"
+                  value={(() => {
+                    // First, try to get name from parentCategory.headerCategory (if populated as separate field)
+                    if (parentCategory?.headerCategory) {
+                      return typeof parentCategory.headerCategory === "string"
+                        ? parentCategory.headerCategory
+                        : parentCategory.headerCategory.name;
+                    }
+
+                    // Second, check if headerCategoryId is populated (object from backend)
+                    if (parentCategory?.headerCategoryId) {
+                      if (
+                        typeof parentCategory.headerCategoryId === "object" &&
+                        parentCategory.headerCategoryId !== null
+                      ) {
+                        // It's populated, get the name
+                        return (
+                          (parentCategory.headerCategoryId as { name?: string })
+                            .name || "Unknown"
+                        );
+                      }
+                    }
+
+                    // Third, try to find in loaded headerCategories using formData.headerCategoryId
+                    if (
+                      formData.headerCategoryId &&
+                      headerCategories.length > 0
+                    ) {
+                      const found = headerCategories.find(
+                        (hc) => hc._id === formData.headerCategoryId
+                      );
+                      if (found) return found.name;
+                    }
+
+                    // If still loading and we have an ID, show loading
+                    if (loadingHeaderCategories && formData.headerCategoryId) {
+                      return "Loading...";
+                    }
+
+                    // Otherwise, show not assigned
+                    return "Not assigned";
+                  })()}
+                  readOnly
+                  disabled
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-neutral-50 text-neutral-600 cursor-not-allowed"
+                />
+                <p className="mt-1 text-xs text-blue-600">
+                  Inherited from parent category
+                </p>
+                {errors.headerCategoryId && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.headerCategoryId}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div>
+                {loadingHeaderCategories ? (
+                  <div className="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-neutral-50 text-neutral-500 text-sm">
+                    Loading header categories...
+                  </div>
+                ) : headerCategories.length === 0 ? (
+                  <div className="w-full px-3 py-2 border border-yellow-300 rounded-lg bg-yellow-50 text-yellow-800 text-sm">
+                    No Published header categories available. Please create a
+                    header category first.
+                  </div>
+                ) : (
+                  <>
+                    {mode === "edit" &&
+                      category &&
+                      !category.headerCategoryId && (
+                        <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                          This category does not have a header category
+                          assigned. Please select one.
+                        </div>
+                      )}
+                    <select
+                      name="headerCategoryId"
+                      value={formData.headerCategoryId || ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          headerCategoryId: e.target.value || null,
+                        }))
+                      }
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                        errors.headerCategoryId
+                          ? "border-red-300"
+                          : "border-neutral-300"
+                      }`}
+                      disabled={submitting}>
+                      <option value="">
+                        {mode === "edit" && !category?.headerCategoryId
+                          ? "-- Select Header Category (Required) --"
+                          : "-- Select Header Category --"}
+                      </option>
+                      {headerCategories.map((headerCat) => (
+                        <option key={headerCat._id} value={headerCat._id}>
+                          {headerCat.name}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.headerCategoryId && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.headerCategoryId}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             )}
           </div>
 

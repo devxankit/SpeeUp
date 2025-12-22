@@ -1,8 +1,8 @@
-import { useLayoutEffect, useRef, useState, useEffect } from 'react';
-import { gsap } from 'gsap';
-import { Link } from 'react-router-dom';
-import { getTheme } from '../../../utils/themes';
-import { getHomeContent } from '../../../services/api/customerHomeService';
+import { useLayoutEffect, useRef, useState, useEffect } from "react";
+import { gsap } from "gsap";
+import { Link } from "react-router-dom";
+import { getTheme } from "../../../utils/themes";
+import { getHomeContent } from "../../../services/api/customerHomeService";
 
 interface PromoCard {
   id: string;
@@ -10,32 +10,34 @@ interface PromoCard {
   title: string;
   imageUrl?: string;
   categoryId?: string;
+  slug?: string;
   bgColor?: string;
+  subcategoryImages?: string[]; // Array of subcategory image URLs
 }
 
 // Icon mappings for each category
 const getCategoryIcons = (categoryId: string) => {
   const iconMap: Record<string, string[]> = {
-    'personal-care': ['🧴', '💧', '🧼', '💄'],
-    'breakfast-instant': ['🍜', '☕', '🥛', '🍞'],
-    'atta-rice': ['🌾', '🍚', '🫘', '🫒'],
-    'household': ['🧹', '🧽', '🧼', '🧴'],
-    'home-office': ['🏠', '💼', '📦', '🎁'],
-    'fashion': ['👕', '👗', '👠', '👜'],
-    'electronics': ['📱', '💻', '⌚', '🎧'],
-    'fruits-veg': ['🥬', '🥕', '🍅', '🥒'],
-    'dairy-breakfast': ['🥛', '🧀', '🍞', '🥚'],
-    'snacks': ['🍿', '🍪', '🥨', '🍫'],
-    'sports': ['⚽', '🏀', '🏋️', '🎾'],
+    "personal-care": ["🧴", "💧", "🧼", "💄"],
+    "breakfast-instant": ["🍜", "☕", "🥛", "🍞"],
+    "atta-rice": ["🌾", "🍚", "🫘", "🫒"],
+    household: ["🧹", "🧽", "🧼", "🧴"],
+    "home-office": ["🏠", "💼", "📦", "🎁"],
+    fashion: ["👕", "👗", "👠", "👜"],
+    electronics: ["📱", "💻", "⌚", "🎧"],
+    "fruits-veg": ["🥬", "🥕", "🍅", "🥒"],
+    "dairy-breakfast": ["🥛", "🧀", "🍞", "🥚"],
+    snacks: ["🍿", "🍪", "🥨", "🍫"],
+    sports: ["⚽", "🏀", "🏋️", "🎾"],
   };
-  return iconMap[categoryId] || ['📦', '📦', '📦', '📦'];
+  return iconMap[categoryId] || ["📦", "📦", "📦", "📦"];
 };
 
 interface PromoStripProps {
   activeTab?: string;
 }
 
-export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
+export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
   const theme = getTheme(activeTab);
   const [categoryCards, setCategoryCards] = useState<PromoCard[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
@@ -66,24 +68,32 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
             fetchedCards = response.data.promoCards;
           }
           // 2. Fallback to categories if no promo cards
-          else if (response.data.categories && response.data.categories.length > 0) {
-            fetchedCards = response.data.categories.slice(0, 4).map((c: any) => ({
-              id: c._id || c.id,
-              badge: 'Up to 50% OFF',
-              title: c.name,
-              categoryId: c.slug || c._id,
-              bgColor: c.color || 'bg-yellow-50'
-            }));
+          else if (
+            response.data.categories &&
+            response.data.categories.length > 0
+          ) {
+            fetchedCards = response.data.categories
+              .slice(0, 4)
+              .map((c: any) => ({
+                id: c._id || c.id,
+                badge: "Up to 50% OFF",
+                title: c.name,
+                categoryId: c.slug || c._id,
+                bgColor: c.color || "bg-yellow-50",
+              }));
           }
 
           // Map bestsellers to FeaturedProducts
-          if (response.data.bestsellers && response.data.bestsellers.length > 0) {
+          if (
+            response.data.bestsellers &&
+            response.data.bestsellers.length > 0
+          ) {
             fetchedProducts = response.data.bestsellers.map((p: any) => ({
               id: p._id,
               name: p.productName || p.name,
               originalPrice: p.mrp || Math.round(p.price * 1.2),
               discountedPrice: p.price,
-              imageUrl: p.mainImage || p.image
+              imageUrl: p.mainImage || p.image,
             }));
           }
         }
@@ -91,7 +101,6 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
         setCategoryCards(fetchedCards);
         setFeaturedProducts(fetchedProducts);
         setHasData(fetchedCards.length > 0 || fetchedProducts.length > 0);
-
       } catch (error) {
         console.error("Error fetching home content for PromoStrip:", error);
         setCategoryCards([]);
@@ -115,7 +124,7 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
     if (!container) return;
 
     const ctx = gsap.context(() => {
-      const cards = container.querySelectorAll('.promo-card');
+      const cards = container.querySelectorAll(".promo-card");
       if (cards.length > 0) {
         gsap.fromTo(
           cards,
@@ -125,7 +134,7 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
             opacity: 1,
             duration: 0.5,
             stagger: 0.08,
-            ease: 'power3.out',
+            ease: "power3.out",
           }
         );
       }
@@ -140,7 +149,7 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
     const snowflakesContainer = snowflakesRef.current;
     if (!snowflakesContainer) return;
 
-    const snowflakes = snowflakesContainer.querySelectorAll('.snowflake');
+    const snowflakes = snowflakesContainer.querySelectorAll(".snowflake");
 
     snowflakes.forEach((snowflake, index) => {
       const delay = index * 0.3;
@@ -155,17 +164,17 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
       });
 
       gsap.to(snowflake, {
-        y: '+=200',
+        y: "+=200",
         x: `+=${xOffset}`,
         duration: duration,
         delay: delay,
-        ease: 'none',
+        ease: "none",
         repeat: -1,
       });
     });
 
     return () => {
-      snowflakes.forEach(snowflake => {
+      snowflakes.forEach((snowflake) => {
         gsap.killTweensOf(snowflake);
       });
     };
@@ -179,51 +188,57 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
     const dateText = dateRef.current;
     if (!housefullContainer) return;
 
-    const letters = housefullContainer.querySelectorAll('.housefull-letter');
+    const letters = housefullContainer.querySelectorAll(".housefull-letter");
 
     const animate = () => {
       const tl = gsap.timeline();
-      gsap.set([housefullContainer, saleText, dateText], { scale: 1, opacity: 1 });
+      gsap.set([housefullContainer, saleText, dateText], {
+        scale: 1,
+        opacity: 1,
+      });
 
       tl.to([housefullContainer, saleText, dateText], {
         scale: 0,
         opacity: 0,
         duration: 0.6,
-        ease: 'power2.in',
+        ease: "power2.in",
       })
         .to([housefullContainer, saleText, dateText], {
           scale: 1.2,
           opacity: 1,
           duration: 0.5,
-          ease: 'back.out(1.7)',
+          ease: "back.out(1.7)",
         })
         .to([housefullContainer, saleText, dateText], {
           scale: 1,
           duration: 0.4,
-          ease: 'power2.out',
+          ease: "power2.out",
         })
         .to({}, { duration: 0.4 })
         .to(letters, {
           y: -15,
           duration: 0.2,
           stagger: 0.06,
-          ease: 'power2.out',
+          ease: "power2.out",
         })
         .to(letters, {
           y: 0,
           duration: 0.2,
           stagger: 0.06,
-          ease: 'power2.in',
+          ease: "power2.in",
         })
-        .to({}, {
-          duration: 2,
-          onComplete: () => {
-            // Check if component is still mounted implicitly by closure not being killed, 
-            // but better to rely on cleanup. 
-            // However, for layoutEffect loop, it's fine.
-            setTimeout(animate, 1000);
+        .to(
+          {},
+          {
+            duration: 2,
+            onComplete: () => {
+              // Check if component is still mounted implicitly by closure not being killed,
+              // but better to rely on cleanup.
+              // However, for layoutEffect loop, it's fine.
+              setTimeout(animate, 1000);
+            },
           }
-        });
+        );
     };
 
     animate();
@@ -245,17 +260,25 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
 
   // Animate product change
   useEffect(() => {
-    const elements = [priceContainerRef.current, productNameRef.current, productImageRef.current];
-    if (elements.some(el => !el)) return;
+    const elements = [
+      priceContainerRef.current,
+      productNameRef.current,
+      productImageRef.current,
+    ];
+    if (elements.some((el) => !el)) return;
 
     const tween = gsap.to(elements, {
       opacity: 0,
       x: -30,
       duration: 0.3,
-      ease: 'power2.in',
+      ease: "power2.in",
       onComplete: () => {
-        const currentElements = [priceContainerRef.current, productNameRef.current, productImageRef.current];
-        if (currentElements.some(el => !el)) return;
+        const currentElements = [
+          priceContainerRef.current,
+          productNameRef.current,
+          productImageRef.current,
+        ];
+        if (currentElements.some((el) => !el)) return;
 
         gsap.set(currentElements, {
           x: 30,
@@ -266,7 +289,7 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
           opacity: 1,
           x: 0,
           duration: 0.4,
-          ease: 'power2.out',
+          ease: "power2.out",
         });
       },
     });
@@ -279,7 +302,9 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
   const currentProduct = featuredProducts[currentProductIndex];
 
   if (loading) {
-    return <div className="h-[200px] w-full bg-neutral-100 animate-pulse rounded-lg mx-0 mt-4" />;
+    return (
+      <div className="h-[200px] w-full bg-neutral-100 animate-pulse rounded-lg mx-0 mt-4" />
+    );
   }
 
   if (!hasData || !currentProduct) {
@@ -295,19 +320,19 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
       className="relative"
       style={{
         background: `linear-gradient(to bottom, ${theme.primary[0]}, ${theme.primary[1]}, ${theme.primary[2]}, ${theme.primary[3]}, ${theme.primary[3]})`,
-        paddingTop: '12px',
-        paddingBottom: '0px',
+        paddingTop: "12px",
+        paddingBottom: "0px",
         marginTop: 0,
-      }}
-    >
+      }}>
       {/* HOUSEFULL SALE Banner */}
-      <div className="px-4 mb-3 text-center relative" style={{ minHeight: '80px' }}>
+      <div
+        className="px-4 mb-3 text-center relative"
+        style={{ minHeight: "80px" }}>
         {/* Snowflakes Container */}
         <div
           ref={snowflakesRef}
           className="absolute inset-0 pointer-events-none overflow-hidden"
-          style={{ top: 0, bottom: 'auto', height: '100px' }}
-        >
+          style={{ top: 0, bottom: "auto", height: "100px" }}>
           {/* Left side snowflakes */}
           {[...Array(8)].map((_, i) => (
             <div
@@ -315,11 +340,23 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
               className="snowflake absolute"
               style={{
                 left: `${5 + (i % 4) * 12}%`,
-                top: `${(Math.floor(i / 4)) * 30}px`,
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.9))' }}>
-                <path d="M12 1V5M12 19V23M3 12H1M23 12H21M20.5 20.5L18.5 18.5M20.5 3.5L18.5 5.5M3.5 20.5L5.5 18.5M3.5 3.5L5.5 5.5M18.5 18.5L16.5 16.5M18.5 5.5L16.5 7.5M5.5 18.5L7.5 16.5M5.5 5.5L7.5 7.5" stroke="rgba(255, 255, 255, 1)" strokeWidth="1.2" strokeLinecap="round" />
+                top: `${Math.floor(i / 4) * 30}px`,
+              }}>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  filter: "drop-shadow(0 0 2px rgba(255, 255, 255, 0.9))",
+                }}>
+                <path
+                  d="M12 1V5M12 19V23M3 12H1M23 12H21M20.5 20.5L18.5 18.5M20.5 3.5L18.5 5.5M3.5 20.5L5.5 18.5M3.5 3.5L5.5 5.5M18.5 18.5L16.5 16.5M18.5 5.5L16.5 7.5M5.5 18.5L7.5 16.5M5.5 5.5L7.5 7.5"
+                  stroke="rgba(255, 255, 255, 1)"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                />
                 <circle cx="12" cy="12" r="1.8" fill="rgba(255, 255, 255, 1)" />
               </svg>
             </div>
@@ -331,11 +368,23 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
               className="snowflake absolute"
               style={{
                 right: `${5 + (i % 4) * 12}%`,
-                top: `${(Math.floor(i / 4)) * 30}px`,
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.9))' }}>
-                <path d="M12 1V5M12 19V23M3 12H1M23 12H21M20.5 20.5L18.5 18.5M20.5 3.5L18.5 5.5M3.5 20.5L5.5 18.5M3.5 3.5L5.5 5.5M18.5 18.5L16.5 16.5M18.5 5.5L16.5 7.5M5.5 18.5L7.5 16.5M5.5 5.5L7.5 7.5" stroke="rgba(255, 255, 255, 1)" strokeWidth="1.2" strokeLinecap="round" />
+                top: `${Math.floor(i / 4) * 30}px`,
+              }}>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{
+                  filter: "drop-shadow(0 0 2px rgba(255, 255, 255, 0.9))",
+                }}>
+                <path
+                  d="M12 1V5M12 19V23M3 12H1M23 12H21M20.5 20.5L18.5 18.5M20.5 3.5L18.5 5.5M3.5 20.5L5.5 18.5M3.5 3.5L5.5 5.5M18.5 18.5L16.5 16.5M18.5 5.5L16.5 7.5M5.5 18.5L7.5 16.5M5.5 5.5L7.5 7.5"
+                  stroke="rgba(255, 255, 255, 1)"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                />
                 <circle cx="12" cy="12" r="1.8" fill="rgba(255, 255, 255, 1)" />
               </svg>
             </div>
@@ -345,7 +394,13 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
         <div className="relative z-10">
           <div className="flex items-center justify-center gap-3 mb-0">
             {/* Left Lightning Bolt */}
-            <svg width="28" height="36" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
+            <svg
+              width="28"
+              height="36"
+              viewBox="0 0 24 30"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="flex-shrink-0">
               <path
                 d="M13 2L3 14H12L11 22L21 10H12L13 2Z"
                 fill="#FFD700"
@@ -358,31 +413,36 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
             <h1
               ref={housefullRef}
               className="text-3xl font-black text-white"
-              style={{
-                fontFamily: '"Poppins", sans-serif',
-                letterSpacing: '1.5px',
-                lineHeight: '1.1',
-                textShadow:
-                  `-2px -2px 0 ${theme.accentColor}, 2px -2px 0 ${theme.accentColor}, -2px 2px 0 ${theme.accentColor}, 2px 2px 0 ${theme.accentColor}, ` +
-                  `-2px 0px 0 ${theme.accentColor}, 2px 0px 0 ${theme.accentColor}, 0px -2px 0 ${theme.accentColor}, 0px 2px 0 ${theme.accentColor}, ` +
-                  `-1px -1px 0 ${theme.accentColor}, 1px -1px 0 ${theme.accentColor}, -1px 1px 0 ${theme.accentColor}, 1px 1px 0 ${theme.accentColor}, ` +
-                  '0px 2px 0px rgba(0, 0, 0, 0.8), 0px 4px 0px rgba(0, 0, 0, 0.6), ' +
-                  '0px 6px 0px rgba(0, 0, 0, 0.4), 0px 8px 8px rgba(0, 0, 0, 0.3), ' +
-                  '2px 2px 2px rgba(0, 0, 0, 0.5)',
-              } as React.CSSProperties}
-            >
-              {theme.bannerText.split('').map((letter, index) => (
-                <span
-                  key={index}
-                  className="housefull-letter inline-block"
-                >
+              style={
+                {
+                  fontFamily: '"Poppins", sans-serif',
+                  letterSpacing: "1.5px",
+                  lineHeight: "1.1",
+                  textShadow:
+                    `-2px -2px 0 ${theme.accentColor}, 2px -2px 0 ${theme.accentColor}, -2px 2px 0 ${theme.accentColor}, 2px 2px 0 ${theme.accentColor}, ` +
+                    `-2px 0px 0 ${theme.accentColor}, 2px 0px 0 ${theme.accentColor}, 0px -2px 0 ${theme.accentColor}, 0px 2px 0 ${theme.accentColor}, ` +
+                    `-1px -1px 0 ${theme.accentColor}, 1px -1px 0 ${theme.accentColor}, -1px 1px 0 ${theme.accentColor}, 1px 1px 0 ${theme.accentColor}, ` +
+                    "0px 2px 0px rgba(0, 0, 0, 0.8), 0px 4px 0px rgba(0, 0, 0, 0.6), " +
+                    "0px 6px 0px rgba(0, 0, 0, 0.4), 0px 8px 8px rgba(0, 0, 0, 0.3), " +
+                    "2px 2px 2px rgba(0, 0, 0, 0.5)",
+                } as React.CSSProperties
+              }>
+              {theme.bannerText.split("").map((letter, index) => (
+                <span key={index} className="housefull-letter inline-block">
                   {letter}
                 </span>
               ))}
             </h1>
 
             {/* Right Lightning Bolt */}
-            <svg width="28" height="36" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0" style={{ transform: 'scaleX(-1)' }}>
+            <svg
+              width="28"
+              height="36"
+              viewBox="0 0 24 30"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="flex-shrink-0"
+              style={{ transform: "scaleX(-1)" }}>
               <path
                 d="M13 2L3 14H12L11 22L21 10H12L13 2Z"
                 fill="#FFD700"
@@ -393,28 +453,34 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
           </div>
 
           {/* SALE Text */}
-          <div className="flex justify-center mb-0.5" style={{ marginTop: '-3px' }}>
+          <div
+            className="flex justify-center mb-0.5"
+            style={{ marginTop: "-3px" }}>
             <h2
               ref={saleRef}
               className="text-xl font-black text-white"
-              style={{
-                fontFamily: '"Poppins", sans-serif',
-                letterSpacing: '1.5px',
-                textShadow:
-                  `-1.5px -1.5px 0 ${theme.accentColor}, 1.5px -1.5px 0 ${theme.accentColor}, -1.5px 1.5px 0 ${theme.accentColor}, 1.5px 1.5px 0 ${theme.accentColor}, ` +
-                  `-1.5px 0px 0 ${theme.accentColor}, 1.5px 0px 0 ${theme.accentColor}, 0px -1.5px 0 ${theme.accentColor}, 0px 1.5px 0 ${theme.accentColor}, ` +
-                  `-1px -1px 0 ${theme.accentColor}, 1px -1px 0 ${theme.accentColor}, -1px 1px 0 ${theme.accentColor}, 1px 1px 0 ${theme.accentColor}, ` +
-                  '0px 2px 0px rgba(0, 0, 0, 0.8), 0px 4px 0px rgba(0, 0, 0, 0.6), ' +
-                  '0px 6px 0px rgba(0, 0, 0, 0.4), 0px 8px 8px rgba(0, 0, 0, 0.3), ' +
-                  '2px 2px 2px rgba(0, 0, 0, 0.5)',
-              } as React.CSSProperties}
-            >
+              style={
+                {
+                  fontFamily: '"Poppins", sans-serif',
+                  letterSpacing: "1.5px",
+                  textShadow:
+                    `-1.5px -1.5px 0 ${theme.accentColor}, 1.5px -1.5px 0 ${theme.accentColor}, -1.5px 1.5px 0 ${theme.accentColor}, 1.5px 1.5px 0 ${theme.accentColor}, ` +
+                    `-1.5px 0px 0 ${theme.accentColor}, 1.5px 0px 0 ${theme.accentColor}, 0px -1.5px 0 ${theme.accentColor}, 0px 1.5px 0 ${theme.accentColor}, ` +
+                    `-1px -1px 0 ${theme.accentColor}, 1px -1px 0 ${theme.accentColor}, -1px 1px 0 ${theme.accentColor}, 1px 1px 0 ${theme.accentColor}, ` +
+                    "0px 2px 0px rgba(0, 0, 0, 0.8), 0px 4px 0px rgba(0, 0, 0, 0.6), " +
+                    "0px 6px 0px rgba(0, 0, 0, 0.4), 0px 8px 8px rgba(0, 0, 0, 0.3), " +
+                    "2px 2px 2px rgba(0, 0, 0, 0.5)",
+                } as React.CSSProperties
+              }>
               {theme.saleText}
             </h2>
           </div>
 
           {/* Dates */}
-          <div ref={dateRef} className="font-bold text-xs text-center mt-1" style={{ color: theme.textColor }}>
+          <div
+            ref={dateRef}
+            className="font-bold text-xs text-center mt-1"
+            style={{ color: theme.textColor }}>
             30TH NOV, 2025 - 7TH DEC, 2025
           </div>
         </div>
@@ -429,53 +495,79 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
               className="h-full rounded-lg p-1 flex flex-col items-center justify-between relative overflow-hidden"
               style={{
                 background: `radial-gradient(circle at center, rgba(255, 255, 255, 0.15), transparent 60%), linear-gradient(to bottom, ${theme.primary[0]}, ${theme.primary[1]}, ${theme.primary[2]})`,
-                minHeight: '110px',
-              }}
-            >
+                minHeight: "110px",
+              }}>
               {/* CRAZY DEALS - Two lines, bigger */}
-              <div className="text-center mb-1.5" style={{ marginTop: '4px' }}>
+              <div className="text-center mb-1.5" style={{ marginTop: "4px" }}>
                 <div
                   className="text-white font-black leading-tight"
                   style={{
-                    fontSize: '13px',
-                    fontFamily: 'sans-serif',
-                    textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), 1px 1px 2px rgba(0, 0, 0, 0.9)',
-                    letterSpacing: '0.5px',
-                  }}
-                >
+                    fontSize: "13px",
+                    fontFamily: "sans-serif",
+                    textShadow:
+                      "2px 2px 4px rgba(0, 0, 0, 0.8), 1px 1px 2px rgba(0, 0, 0, 0.9)",
+                    letterSpacing: "0.5px",
+                  }}>
                   <div>CRAZY</div>
                   <div>DEALS</div>
                 </div>
               </div>
 
               {/* Price Banners - Compact */}
-              <div ref={priceContainerRef} className="flex flex-col items-center mb-0.5 relative">
+              <div
+                ref={priceContainerRef}
+                className="flex flex-col items-center mb-0.5 relative">
                 {/* Original Price - Darker Gray, Smaller Banner */}
-                <div className="bg-neutral-600 rounded px-1.5 inline-block relative z-10" style={{ height: 'fit-content', lineHeight: '1', paddingTop: '2px', paddingBottom: '2px' }}>
-                  <span className="text-white text-[8px] font-medium line-through leading-none">₹{currentProduct.originalPrice}</span>
+                <div
+                  className="bg-neutral-600 rounded px-1.5 inline-block relative z-10"
+                  style={{
+                    height: "fit-content",
+                    lineHeight: "1",
+                    paddingTop: "2px",
+                    paddingBottom: "2px",
+                  }}>
+                  <span className="text-white text-[8px] font-medium line-through leading-none">
+                    ₹{currentProduct.originalPrice}
+                  </span>
                 </div>
                 {/* Discounted Price - Bright Green Banner */}
-                <div className="bg-green-500 rounded px-2 inline-block relative -mt-0.5 z-20" style={{ height: 'fit-content', lineHeight: '1', paddingTop: '2px', paddingBottom: '2px' }}>
-                  <span className="text-white text-[9px] font-bold leading-none">₹{currentProduct.discountedPrice}</span>
+                <div
+                  className="bg-green-500 rounded px-2 inline-block relative -mt-0.5 z-20"
+                  style={{
+                    height: "fit-content",
+                    lineHeight: "1",
+                    paddingTop: "2px",
+                    paddingBottom: "2px",
+                  }}>
+                  <span className="text-white text-[9px] font-bold leading-none">
+                    ₹{currentProduct.discountedPrice}
+                  </span>
                 </div>
               </div>
 
               {/* Product Name - Compact */}
-              <div ref={productNameRef} className="text-neutral-900 font-black text-[9px] text-center mb-0.5">
+              <div
+                ref={productNameRef}
+                className="text-neutral-900 font-black text-[9px] text-center mb-0.5">
                 {currentProduct.name}
               </div>
 
               {/* Product Thumbnail - Bottom Center, sized to container */}
-              <div ref={productImageRef} className="flex-1 flex items-end justify-center w-full" style={{ minHeight: '50px', maxHeight: '65px' }}>
-                <div className="w-12 h-16 rounded flex items-center justify-center overflow-visible" style={{ background: 'transparent' }}>
+              <div
+                ref={productImageRef}
+                className="flex-1 flex items-end justify-center w-full"
+                style={{ minHeight: "50px", maxHeight: "65px" }}>
+                <div
+                  className="w-12 h-16 rounded flex items-center justify-center overflow-visible"
+                  style={{ background: "transparent" }}>
                   {currentProduct.imageUrl ? (
                     <img
                       src={currentProduct.imageUrl}
                       alt={currentProduct.name}
                       className="w-full h-full object-contain"
                       style={{
-                        mixBlendMode: 'normal',
-                        backgroundColor: 'transparent',
+                        mixBlendMode: "normal",
+                        backgroundColor: "transparent",
                       }}
                     />
                   ) : (
@@ -488,51 +580,97 @@ export default function PromoStrip({ activeTab = 'all' }: PromoStripProps) {
                   )}
                 </div>
               </div>
-
             </div>
           </div>
 
           {/* Category Cards Grid - Right */}
           <div className="flex-1 grid grid-cols-2 gap-2">
             {categoryCards.map((card) => {
-              const categoryIcons = getCategoryIcons(card.categoryId || '');
+              // Use subcategory images if available, otherwise fallback to emoji icons
+              const hasSubcategoryImages =
+                card.subcategoryImages && card.subcategoryImages.length > 0;
+              const categoryIcons = getCategoryIcons(card.categoryId || "");
+
               return (
-                <div
-                  key={card.id}
-                  className="promo-card"
-                >
+                <div key={card.id} className="promo-card">
                   <Link
-                    to={card.categoryId ? `/category/${card.categoryId}` : '#'}
-                    className="group block rounded-lg transition-all duration-300 hover:shadow-md active:scale-[0.98] h-full flex flex-col overflow-hidden relative"
+                    to={card.categoryId ? `/category/${card.categoryId}` : "#"}
+                    className="group rounded-lg transition-all duration-300 hover:shadow-md active:scale-[0.98] h-full flex flex-col overflow-hidden relative"
                     style={{
-                      minHeight: '90px',
-                      background: 'rgba(255, 247, 237, 0.9)', // Very light orange
-                    }}
-                  >
+                      minHeight: "90px",
+                      background: "rgba(255, 247, 237, 0.9)", // Very light orange
+                    }}>
                     {/* Green Discount Banner - Only around text, centered at top */}
-                    <div className="w-full flex justify-center" style={{ paddingTop: '0', paddingBottom: '2px' }}>
+                    <div
+                      className="w-full flex justify-center"
+                      style={{ paddingTop: "0", paddingBottom: "2px" }}>
                       <div className="bg-green-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded tracking-tight text-center inline-block">
                         {card.badge}
                       </div>
                     </div>
 
-                    <div className="px-1 pb-1 flex flex-col flex-1 justify-between" style={{ paddingTop: '2px' }}>
+                    <div
+                      className="px-1 pb-1 flex flex-col flex-1 justify-between"
+                      style={{ paddingTop: "2px" }}>
                       {/* Category Title */}
-                      <div className="text-neutral-900 font-bold text-center" style={{ fontSize: '13px', lineHeight: '1.2', marginBottom: '6px' }}>
+                      <div
+                        className="text-neutral-900 font-bold text-center"
+                        style={{
+                          fontSize: "13px",
+                          lineHeight: "1.2",
+                          marginBottom: "6px",
+                        }}>
                         {card.title}
                       </div>
 
-                      {/* Product Icons - Horizontal Layout */}
-                      <div className="flex items-center justify-center gap-1 overflow-hidden" style={{ marginTop: 'auto' }}>
-                        {categoryIcons.slice(0, 4).map((icon, idx) => (
-                          <div
-                            key={idx}
-                            className="flex-shrink-0 bg-transparent rounded flex items-center justify-center overflow-hidden"
-                            style={{ width: '24px', height: '24px', fontSize: '18px' }}
-                          >
-                            {icon}
-                          </div>
-                        ))}
+                      {/* Subcategory Images or Emoji Icons - Horizontal Layout */}
+                      <div
+                        className="flex items-center justify-center gap-1 overflow-hidden"
+                        style={{ marginTop: "auto" }}>
+                        {hasSubcategoryImages
+                          ? // Display subcategory images as small icons
+                            card
+                              .subcategoryImages!.slice(0, 4)
+                              .map((imageUrl, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex-shrink-0 bg-white rounded flex items-center justify-center overflow-hidden border border-neutral-200"
+                                  style={{ width: "24px", height: "24px" }}>
+                                  <img
+                                    src={imageUrl}
+                                    alt={`Subcategory ${idx + 1}`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      // Fallback to emoji if image fails to load
+                                      const target =
+                                        e.target as HTMLImageElement;
+                                      target.style.display = "none";
+                                      const parent = target.parentElement;
+                                      if (parent) {
+                                        parent.innerHTML =
+                                          categoryIcons[idx] || "📦";
+                                        parent.style.fontSize = "18px";
+                                        parent.style.display = "flex";
+                                        parent.style.alignItems = "center";
+                                        parent.style.justifyContent = "center";
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              ))
+                          : // Fallback to emoji icons if no subcategory images
+                            categoryIcons.slice(0, 4).map((icon, idx) => (
+                              <div
+                                key={idx}
+                                className="flex-shrink-0 bg-transparent rounded flex items-center justify-center overflow-hidden"
+                                style={{
+                                  width: "24px",
+                                  height: "24px",
+                                  fontSize: "18px",
+                                }}>
+                                {icon}
+                              </div>
+                            ))}
                       </div>
                     </div>
                   </Link>

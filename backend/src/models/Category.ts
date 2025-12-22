@@ -11,6 +11,7 @@ export interface ICategory extends Document {
   totalSubcategories?: number;
   status: "Active" | "Inactive";
   parentId?: mongoose.Types.ObjectId;
+  headerCategoryId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +66,11 @@ const CategorySchema = new Schema<ICategory>(
       ref: "Category",
       default: null,
     },
+    headerCategoryId: {
+      type: Schema.Types.ObjectId,
+      ref: "HeaderCategory",
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -77,6 +83,7 @@ CategorySchema.index({ name: 1 });
 CategorySchema.index({ slug: 1 });
 CategorySchema.index({ parentId: 1 });
 CategorySchema.index({ status: 1 });
+CategorySchema.index({ headerCategoryId: 1 });
 
 // Virtual for children count
 CategorySchema.virtual("childrenCount", {

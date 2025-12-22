@@ -12,7 +12,8 @@
     "test:integration": "tsx src/scripts/test-frontend-backend-auth.ts",
     "test:vendor-approval": "tsx src/scripts/test-vendor-approval.ts",
     "seed:grocery-kitchen": "tsx src/scripts/seedGroceryKitchen.ts",
-    "seed:personal-care": "tsx src/scripts/seedPersonalCare.ts"
+    "seed:personal-care": "tsx src/scripts/seedPersonalCare.ts",
+    "migrate:subcategories": "tsx src/scripts/migrateSubCategoriesToCategories.ts"
   },
   "keywords": [
     "express",

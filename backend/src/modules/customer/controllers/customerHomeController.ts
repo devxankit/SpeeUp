@@ -135,7 +135,7 @@ export const getHomeContent = async (_req: Request, res: Response) => {
 
     // 3. Shop By Store - Fetch from database
     const shopDocuments = await Shop.find({ isActive: true })
-      .populate('category', 'name slug')
+      .populate("category", "name slug")
       .sort({ order: 1, createdAt: -1 })
       .lean();
 
@@ -319,39 +319,86 @@ export const getHomeContent = async (_req: Request, res: Response) => {
       productId: p._id,
     }));
 
-    // 8. Promo Cards (Curated collections for PromoStrip)
-    // These match the frontend "PromoCard" interface
-    // Added specifically to restore missing frontend section via API
-    const promoCards = [
-      {
-        id: "self-care",
-        badge: "Up to 55% OFF",
-        title: "Self Care & Wellness",
-        categoryId: "personal-care",
-        bgColor: "bg-yellow-50",
-      },
-      {
-        id: "hot-meals",
-        badge: "Up to 55% OFF",
-        title: "Hot Meals & Drinks",
-        categoryId: "breakfast-instant",
-        bgColor: "bg-yellow-50",
-      },
-      {
-        id: "kitchen-essentials",
-        badge: "Up to 55% OFF",
-        title: "Kitchen Essentials",
-        categoryId: "atta-rice",
-        bgColor: "bg-yellow-50",
-      },
-      {
-        id: "cleaning-home",
-        badge: "Up to 75% OFF",
-        title: "Cleaning & Home Needs",
-        categoryId: "household",
-        bgColor: "bg-yellow-50",
-      },
-    ];
+    // 8. Promo Cards (Dynamic - Categories with headerCategoryId)
+    // Fetch root categories (parentId: null) that have a headerCategoryId assigned and are Active
+    // Include their child categories (subcategories) with images
+    const categoriesWithHeaderCategory = await Category.find({
+      headerCategoryId: { $exists: true, $ne: null },
+      status: "Active",
+      parentId: null, // Only root categories (not subcategories themselves)
+    })
+      .populate("headerCategoryId", "name status")
+      .sort({ order: 1 })
+      .limit(4) // Limit to 4 promo cards
+      .lean();
+
+    const promoCards = await Promise.all(
+      categoriesWithHeaderCategory.map(async (category: any) => {
+        // Get child categories (subcategories) for this category
+        const childCategories = await Category.find({
+          parentId: category._id,
+          status: "Active",
+        })
+          .select("name image _id")
+          .sort({ order: 1 })
+          .limit(4) // Limit to 4 subcategory images
+          .lean();
+
+        // Extract subcategory images
+        const subcategoryImages = childCategories
+          .map((child: any) => child.image)
+          .filter((img: string) => img && img.trim() !== "");
+
+        return {
+          id: category._id.toString(),
+          badge: "Up to 55% OFF", // Default badge, can be customized later
+          title: category.name,
+          categoryId: category._id.toString(),
+          slug: category.slug || category._id.toString(),
+          bgColor: "bg-yellow-50",
+          subcategoryImages: subcategoryImages.slice(0, 4), // Max 4 images
+        };
+      })
+    );
+
+    // Fallback to hardcoded cards if no categories with headerCategoryId exist
+    const finalPromoCards =
+      promoCards.length > 0
+        ? promoCards
+        : [
+            {
+              id: "self-care",
+              badge: "Up to 55% OFF",
+              title: "Self Care & Wellness",
+              categoryId: "personal-care",
+              bgColor: "bg-yellow-50",
+              subcategoryImages: [],
+            },
+            {
+              id: "hot-meals",
+              badge: "Up to 55% OFF",
+              title: "Hot Meals & Drinks",
+              categoryId: "breakfast-instant",
+              bgColor: "bg-yellow-50",
+              subcategoryImages: [],
+            },
+            {
+              id: "kitchen-essentials",
+              badge: "Up to 55% OFF",
+              title: "Kitchen Essentials",
+              categoryId: "atta-rice",
+              bgColor: "bg-yellow-50",
+              subcategoryImages: [],
+            },
+            {
+              id: "cleaning-home",
+              badge: "Up to 75% OFF",
+              title: "Cleaning & Home Needs",
+              categoryId: "household",
+              bgColor: "bg-yellow-50",
+              subcategoryImages: [],
+            },
+          ];
 
     res.status(200).json({
       success: true,
@@ -377,7 +424,7 @@ export const getHomeContent = async (_req: Request, res: Response) => {
         ],
         trending,
         cookingIdeas,
-        promoCards, // Return the curated cards
+        promoCards: finalPromoCards, // Return dynamic or fallback cards
       },
     });
   } catch (error: any) {
@@ -396,58 +443,54 @@ export const getStoreProducts = async (req: Request, res: Response) => {
     const { storeId } = req.params;
     let query: any = { status: "Active", publish: true };
 
-        // Find the shop by storeId
-        const shop = await Shop.findOne({ 
-            $or: [
-                { storeId: storeId },
-                { _id: storeId }
-            ],
-            isActive: true
-        })
-        .populate('category', '_id')
-        .populate('subCategory', '_id');
+    // Find the shop by storeId
+    const shop = await Shop.findOne({
+      $or: [{ storeId: storeId }, { _id: storeId }],
+      isActive: true,
+    })
+      .populate("category", "_id")
+      .populate("subCategory", "_id");
 
-        if (shop) {
-            // If shop has specific products assigned, use those
-            if (shop.products && shop.products.length > 0) {
-                query._id = { $in: shop.products };
-            } 
-            // Otherwise, filter by category/subcategory
-            else if (shop.category) {
-                query.category = shop.category._id;
-                
-                // If subcategory is also specified, filter by both
-                if (shop.subCategory) {
-                    query.$or = [
-                        { category: shop.category._id },
-                        { subcategory: shop.subCategory._id }
-                    ];
-                }
-            }
-        } else {
-            // Fallback: try to match by category name (legacy support)
-            const categoryId = await getCategoryIdByName(storeId);
-            if (categoryId) {
-                query.category = categoryId;
-            } else {
-                // No matching shop or category found
-                return res.status(200).json({ success: true, data: [] });
-            }
+    if (shop) {
+      // If shop has specific products assigned, use those
+      if (shop.products && shop.products.length > 0) {
+        query._id = { $in: shop.products };
+      }
+      // Otherwise, filter by category/subcategory
+      else if (shop.category) {
+        query.category = shop.category._id;
+
+        // If subcategory is also specified, filter by both
+        if (shop.subCategory) {
+          query.$or = [
+            { category: shop.category._id },
+            { subcategory: shop.subCategory._id },
+          ];
         }
-
-        const products = await Product.find(query)
-            .populate('category', 'name slug')
-            .limit(50);
-            
-        return res.status(200).json({ success: true, data: products });
-
-    } catch (error: any) {
-        return res.status(500).json({
-            success: false,
-            message: "Error fetching store products",
-            error: error.message,
-        });
+      }
+    } else {
+      // Fallback: try to match by category name (legacy support)
+      const categoryId = await getCategoryIdByName(storeId);
+      if (categoryId) {
+        query.category = categoryId;
+      } else {
+        // No matching shop or category found
+        return res.status(200).json({ success: true, data: [] });
+      }
     }
+
+    const products = await Product.find(query)
+      .populate("category", "name slug")
+      .limit(50);
+
+    return res.status(200).json({ success: true, data: products });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching store products",
+      error: error.message,
+    });
+  }
 };
 
 // Helper

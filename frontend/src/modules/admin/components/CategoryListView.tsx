@@ -71,6 +71,9 @@ export default function CategoryListView({
                 Parent
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
+                Header Category
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
                 Status
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">
@@ -125,6 +128,29 @@ export default function CategoryListView({
                       : category.parentId
                       ? "Unknown"
                       : "Root"}
+                  </div>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <div className="text-sm text-neutral-600">
+                    {category.headerCategory ? (
+                      typeof category.headerCategory === "string" ? (
+                        category.headerCategory
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                          {category.headerCategory.name}
+                        </span>
+                      )
+                    ) : category.headerCategoryId ? (
+                      <span className="text-xs text-neutral-400">
+                        {typeof category.headerCategoryId === "string"
+                          ? category.headerCategoryId.slice(-6)
+                          : String(category.headerCategoryId).slice(-6)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-yellow-600">
+                        Not Assigned
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">

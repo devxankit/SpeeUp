@@ -20,6 +20,44 @@ import {
   filterCategoriesByStatus,
 } from "../../../utils/categoryUtils";
 
+// Flatten tree structure for filtering (works for both tree and list view)
+const flattenTree = (cats: Category[]): Category[] => {
+  const result: Category[] = [];
+  cats.forEach((cat) => {
+    // Create a copy without children to avoid circular references, but preserve all other properties
+    const { children, ...catWithoutChildren } = cat;
+
+    // Normalize parentId - convert object to string if needed
+    let normalizedParentId: string | null = null;
+    if (catWithoutChildren.parentId) {
+      if (typeof catWithoutChildren.parentId === "string") {
+        normalizedParentId = catWithoutChildren.parentId;
+      } else if (
+        typeof catWithoutChildren.parentId === "object" &&
+        catWithoutChildren.parentId !== null
+      ) {
+        // It's populated, extract the _id
+        normalizedParentId =
+          (catWithoutChildren.parentId as { _id?: string })._id || null;
+      }
+    }
+
+    // Preserve childrenCount and other metadata
+    result.push({
+      ...catWithoutChildren,
+      parentId: normalizedParentId,
+      // Explicitly preserve childrenCount if it exists
+      childrenCount:
+        cat.childrenCount ||
+        (children && children.length > 0 ? children.length : 0),
+    } as Category);
+    if (children && children.length > 0) {
+      result.push(...flattenTree(children));
+    }
+  });
+  return result;
+};
+
 export default function AdminCategory() {
   const { isAuthenticated, token } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -51,7 +89,7 @@ export default function AdminCategory() {
     fetchCategories();
   }, [isAuthenticated, token]);
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (preserveExpandedIds?: Set<string>) => {
     try {
       setLoading(true);
       setError(null);
@@ -60,18 +98,23 @@ export default function AdminCategory() {
       });
       if (response.success) {
         setCategories(response.data);
-        // Auto-expand all categories by default
-        const allIds = new Set<string>();
-        const collectIds = (cats: Category[]) => {
-          cats.forEach((cat) => {
-            allIds.add(cat._id);
-            if (cat.children && cat.children.length > 0) {
-              collectIds(cat.children);
-            }
-          });
-        };
-        collectIds(response.data);
-        setExpandedIds(allIds);
+        // Preserve existing expanded IDs if provided, otherwise auto-expand all
+        if (preserveExpandedIds && preserveExpandedIds.size > 0) {
+          setExpandedIds(preserveExpandedIds);
+        } else {
+          // Auto-expand all categories by default
+          const allIds = new Set<string>();
+          const collectIds = (cats: Category[]) => {
+            cats.forEach((cat) => {
+              allIds.add(cat._id);
+              if (cat.children && cat.children.length > 0) {
+                collectIds(cat.children);
+              }
+            });
+          };
+          collectIds(response.data);
+          setExpandedIds(allIds);
+        }
       }
     } catch (err: unknown) {
       console.error("Error fetching categories:", err);
@@ -88,33 +131,31 @@ export default function AdminCategory() {
 
   // Filter and search categories
   const filteredCategories = useMemo(() => {
-    let filtered = [...categories];
-
-    // Flatten tree if needed for list view
-    if (viewMode === "list") {
-      const flatten = (cats: Category[]): Category[] => {
-        const result: Category[] = [];
-        cats.forEach((cat) => {
-          result.push(cat);
-          if (cat.children && cat.children.length > 0) {
-            result.push(...flatten(cat.children));
-          }
-        });
-        return result;
-      };
-      filtered = flatten(filtered);
-    }
+    // Always flatten first to get a flat array for filtering
+    const flatCategories = flattenTree(categories);
+    let filtered = [...flatCategories];
 
     // Apply search filter
     if (searchQuery.trim()) {
       filtered = searchCategories(filtered, searchQuery);
+      // If searching, also include children of matching parents (even if children don't match)
+      const matchingParentIds = new Set(filtered.map((cat) => cat._id));
+      const childrenOfMatches = flatCategories.filter(
+        (cat) => cat.parentId && matchingParentIds.has(cat.parentId)
+      );
+      // Merge and deduplicate
+      const allFiltered = [...filtered, ...childrenOfMatches];
+      const uniqueFiltered = Array.from(
+        new Map(allFiltered.map((cat) => [cat._id, cat])).values()
+      );
+      filtered = uniqueFiltered;
     }
 
     // Apply status filter
     filtered = filterCategoriesByStatus(filtered, statusFilter);
 
     return filtered;
-  }, [categories, searchQuery, statusFilter, viewMode]);
+  }, [categories, searchQuery, statusFilter]);
 
   // Build tree for tree view
   const categoryTree = useMemo(() => {
@@ -263,7 +304,16 @@ export default function AdminCategory() {
       const response = await createCategory(data as CreateCategoryData);
       if (response.success) {
         alert("Category created successfully!");
-        fetchCategories();
+
+        // If creating a subcategory, expand the parent category after refresh
+        if (modalMode === "create-subcategory" && parentCategory) {
+          // Preserve current expanded IDs and add parent ID
+          const newExpandedIds = new Set(expandedIds);
+          newExpandedIds.add(parentCategory._id);
+          fetchCategories(newExpandedIds);
+        } else {
+          fetchCategories();
+        }
       }
     }
   };

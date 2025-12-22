@@ -9,8 +9,21 @@ export function buildCategoryTree(
 ): Category[] {
   return categories
     .filter((cat) => {
-      const catParentId = cat.parentId || null;
-      return catParentId === parentId;
+      // Normalize parentId - handle both string and object (populated) cases
+      let catParentId: string | null = null;
+      if (cat.parentId) {
+        if (typeof cat.parentId === "string") {
+          catParentId = cat.parentId;
+        } else if (typeof cat.parentId === "object" && cat.parentId !== null) {
+          // It's populated, extract the _id
+          catParentId = (cat.parentId as { _id?: string })._id || null;
+        }
+      }
+
+      // Compare normalized parentId with the target parentId
+      const parentIdStr = parentId ? parentId.toString() : null;
+      const catParentIdStr = catParentId ? catParentId.toString() : null;
+      return catParentIdStr === parentIdStr;
     })
     .map((category) => ({
       ...category,
@@ -203,4 +216,56 @@ export function filterCategoriesByStatus(
     return categories;
   }
   return categories.filter((cat) => cat.status === status);
+}
+
+/**
+ * Get all categories under a specific header category
+ */
+export function getCategoriesByHeaderCategory(
+  headerCategoryId: string,
+  categories: Category[]
+): Category[] {
+  const result: Category[] = [];
+
+  function collectCategories(cats: Category[]) {
+    for (const cat of cats) {
+      if (cat.headerCategoryId === headerCategoryId) {
+        result.push(cat);
+      }
+      if (cat.children && cat.children.length > 0) {
+        collectCategories(cat.children);
+      }
+    }
+  }
+
+  collectCategories(categories);
+  return result;
+}
+
+/**
+ * Get header category ID for a category (including inherited from parent)
+ */
+export function getHeaderCategoryForCategory(
+  categoryId: string,
+  categories: Category[]
+): string | null {
+  const category = categories.find((cat) => cat._id === categoryId);
+  if (!category) {
+    return null;
+  }
+
+  // If category has headerCategoryId, return it
+  if (category.headerCategoryId) {
+    return category.headerCategoryId;
+  }
+
+  // If category has parent, get header category from parent recursively
+  if (category.parentId) {
+    const parent = categories.find((cat) => cat._id === category.parentId);
+    if (parent) {
+      return getHeaderCategoryForCategory(parent._id, categories);
+    }
+  }
+
+  return null;
 }

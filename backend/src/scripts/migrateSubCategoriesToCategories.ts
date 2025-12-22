@@ -38,11 +38,38 @@ async function migrateSubCategoriesToCategories() {
     // Migrate each SubCategory
     for (const subCategory of subCategories) {
       try {
-        // Check if category already exists with same name and parent
+        // Get parent category ID
         const parentId = subCategory.category
           ? (subCategory.category as any)._id || subCategory.category
           : null;
 
+        if (!parentId) {
+          console.log(
+            `SubCategory "${subCategory.name}" has no parent category. Skipping.`
+          );
+          results.failed++;
+          results.errors.push({
+            subcategoryId: subCategory._id.toString(),
+            error: "No parent category found",
+          });
+          continue;
+        }
+
+        // Get parent category to inherit headerCategoryId
+        const parentCategory = await Category.findById(parentId);
+        if (!parentCategory) {
+          console.log(
+            `Parent category not found for subcategory "${subCategory.name}". Skipping.`
+          );
+          results.failed++;
+          results.errors.push({
+            subcategoryId: subCategory._id.toString(),
+            error: "Parent category not found",
+          });
+          continue;
+        }
+
+        // Check if category already exists with same name and parent
         const existingCategory = await Category.findOne({
           name: subCategory.name,
           parentId: parentId,
@@ -50,16 +77,22 @@ async function migrateSubCategoriesToCategories() {
 
         if (existingCategory) {
           console.log(
-            `Category "${subCategory.name}" already exists. Skipping migration.`
+            `Category "${subCategory.name}" already exists under parent "${parentCategory.name}". Skipping migration.`
           );
-          // Update products to use existing category
+          // Update products to use existing category and clear subcategory reference
           const productUpdateResult = await Product.updateMany(
             { subcategory: subCategory._id },
-            { $set: { category: existingCategory._id } }
+            {
+              $set: { category: existingCategory._id },
+              $unset: { subcategory: "" },
+            }
           );
           results.productUpdates += productUpdateResult.modifiedCount || 0;
           continue;
         }
+
+        // Inherit headerCategoryId from parent if parent has one
+        const headerCategoryId = parentCategory.headerCategoryId || null;
 
         // Create new Category from SubCategory
         const newCategory = await Category.create({
@@ -67,19 +100,28 @@ async function migrateSubCategoriesToCategories() {
           image: subCategory.image,
           order: subCategory.order || 0,
           parentId: parentId,
+          headerCategoryId: headerCategoryId, // Inherit from parent
           status: "Active",
           isBestseller: false,
           hasWarning: false,
         });
 
         console.log(
-          `Migrated subcategory "${subCategory.name}" to category with ID: ${newCategory._id}`
+          `Migrated subcategory "${subCategory.name}" to category with ID: ${
+            newCategory._id
+          } (parent: ${parentCategory.name}, headerCategory: ${
+            headerCategoryId ? "inherited" : "none"
+          })`
         );
 
         // Update all products that reference this SubCategory
+        // Set category to new category and clear subcategory field
         const productUpdateResult = await Product.updateMany(
           { subcategory: subCategory._id },
-          { $set: { category: newCategory._id } }
+          {
+            $set: { category: newCategory._id },
+            $unset: { subcategory: "" },
+          }
         );
         results.productUpdates += productUpdateResult.modifiedCount || 0;
 
