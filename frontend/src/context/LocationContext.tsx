@@ -88,114 +88,18 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const isRequestingRef = useRef(false);
 
-  // Load saved location - OPTIMIZED: localStorage first (instant), then backend in parallel
+  // Initialize location state - DO NOT auto-load from localStorage
+  // Location must be explicitly requested by user on every app open
   useEffect(() => {
-    const loadSavedLocation = async () => {
-      setIsLocationLoading(true);
+    // Reset location state on app load to force modal
+    setLocation(null);
+    setIsLocationEnabled(false);
+    setIsLocationLoading(false);
 
-
-      // STEP 1: Load from localStorage FIRST (instant, no network delay)
-      const saved = localStorage.getItem('userLocation');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.latitude && parsed.longitude) {
-            // Immediately set location from localStorage for instant display
-            setLocation(parsed);
-            setIsLocationEnabled(true);
-            setIsLocationLoading(false); // Set loading false early for instant UI
-
-
-            // Continue to check backend in background (non-blocking)
-            if (isAuthenticated && user && user.userType === 'Customer') {
-              checkBackendLocation(parsed);
-            }
-            return; // Exit early, location already loaded
-          } else {
-            localStorage.removeItem('userLocation');
-          }
-        } catch (e) {
-          localStorage.removeItem('userLocation');
-        }
-      }
-
-
-      // STEP 2: If no localStorage, check backend (only if authenticated AND user is a customer)
-      if (isAuthenticated && user && user.userType === 'Customer') {
-        try {
-          const response = await api.get('/customer/location');
-          if (response.data.success && response.data.data) {
-            const backendLocation = response.data.data;
-            if (backendLocation.latitude && backendLocation.longitude) {
-              const locationData: Location = {
-                latitude: backendLocation.latitude,
-                longitude: backendLocation.longitude,
-                address: backendLocation.address || '',
-                city: backendLocation.city,
-                state: backendLocation.state,
-                pincode: backendLocation.pincode,
-              };
-              setLocation(locationData);
-              setIsLocationEnabled(true);
-              localStorage.setItem('userLocation', JSON.stringify(locationData));
-              setIsLocationLoading(false);
-              return;
-            }
-          }
-        } catch (err: unknown) {
-          // 404 is OK - user hasn't set location yet
-          const error = err as { response?: { status?: number } };
-          if (error.response?.status !== 404) {
-            console.error('Failed to load location from backend:', err);
-          }
-        }
-      }
-
-      // STEP 3: No location found anywhere
-      setLocation(null);
-      setIsLocationEnabled(false);
-      setIsLocationLoading(false);
-    };
-
-    // Helper function to check backend location (non-blocking)
-    const checkBackendLocation = async (localStorageLocation: Location) => {
-      if (!isAuthenticated || !user || user.storeName) return;
-      try {
-        const response = await api.get('/customer/location');
-        if (response.data.success && response.data.data) {
-          const backendLocation = response.data.data;
-          if (backendLocation.latitude && backendLocation.longitude) {
-            // Only update if backend location is different (more recent)
-            const latDiff = Math.abs(backendLocation.latitude - localStorageLocation.latitude);
-            const lngDiff = Math.abs(backendLocation.longitude - localStorageLocation.longitude);
-
-
-            // Update if coordinates differ significantly (> 0.001 degrees ≈ 100m)
-            if (latDiff > 0.001 || lngDiff > 0.001) {
-              const locationData: Location = {
-                latitude: backendLocation.latitude,
-                longitude: backendLocation.longitude,
-                address: backendLocation.address || localStorageLocation.address,
-                city: backendLocation.city || localStorageLocation.city,
-                state: backendLocation.state || localStorageLocation.state,
-                pincode: backendLocation.pincode || localStorageLocation.pincode,
-              };
-              setLocation(locationData);
-              localStorage.setItem('userLocation', JSON.stringify(locationData));
-            }
-          }
-        }
-      } catch (err: unknown) {
-        // Silently fail - localStorage location is already set
-        const error = err as { response?: { status?: number } };
-        if (error.response?.status !== 404) {
-          console.error('Background location sync failed:', err);
-        }
-      }
-    };
-
-    loadSavedLocation();
-  }, [isAuthenticated, user]);
+    // Clear any previous location flags to ensure modal shows
+    // We use sessionStorage to track if user has confirmed in THIS session only
+    // This ensures modal shows on every app open (new session)
+  }, []);
 
   // Request user's current location - OPTIMIZED for speed and accuracy
   const requestLocation = useCallback(async (): Promise<void> => {
@@ -215,18 +119,23 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       abortControllerRef.current.abort();
     }
 
+    // Clear any cached geocode results to ensure fresh reverse geocoding
+    geocodeCache.clear();
+
     isRequestingRef.current = true;
     setIsLocationLoading(true);
     setLocationError(null);
     abortControllerRef.current = new AbortController();
 
     return new Promise((resolve, reject) => {
-      // Optimized geolocation options for faster and more accurate results
+      // Optimized geolocation options - force fresh, high-accuracy location
       const geoOptions = {
-        enableHighAccuracy: true, // Use GPS if available for better accuracy
-        timeout: 8000, // Reduced timeout for faster failure (was 10000)
-        maximumAge: 60000, // Accept cached position up to 1 minute old (faster response)
+        enableHighAccuracy: true, // Use GPS if available for better accuracy (forces GPS, not network location)
+        timeout: 30000, // 30 seconds timeout - gives enough time for GPS to acquire signal
+        maximumAge: 0, // Don't use cached position - always get fresh location (0 = no cache)
       };
+
+      console.log('📍 Requesting fresh GPS location (maximumAge: 0, enableHighAccuracy: true)...');
 
       navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -237,23 +146,41 @@ export function LocationProvider({ children }: { children: ReactNode }) {
           }
 
           try {
-            const { latitude, longitude, accuracy } = position.coords;
+            const { latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed } = position.coords;
 
             // Validate coordinates
             if (!latitude || !longitude || isNaN(latitude) || isNaN(longitude)) {
               throw new Error('Invalid coordinates received');
             }
 
+            // Validate coordinate ranges (sanity check)
+            if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+              throw new Error('Coordinates out of valid range');
+            }
+
+            // Log received coordinates for debugging
+            const locationAge = Date.now() - position.timestamp;
+            console.log('📍 Location received from GPS:', {
+              latitude: latitude.toFixed(6),
+              longitude: longitude.toFixed(6),
+              accuracy: `${accuracy}m`,
+              timestamp: new Date(position.timestamp).toISOString(),
+              age: `${(locationAge / 1000).toFixed(1)}s ago`,
+              isFresh: locationAge < 5000 ? '✅ Yes' : '⚠️ May be stale'
+            });
+
             // Check accuracy (warn if accuracy is poor but don't fail)
             if (accuracy > 1000) {
-              console.warn(`Location accuracy is ${accuracy}m - may not be precise`);
+              console.warn(`⚠️ Location accuracy is ${accuracy}m - may not be precise`);
+            } else {
+              console.log(`✅ Location accuracy: ${accuracy}m (good)`);
             }
 
             // Set coordinates immediately for instant UI update
             const tempLocation: Location = {
               latitude,
               longitude,
-              address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, // Temporary
+              address: `Getting address for ${latitude.toFixed(6)}, ${longitude.toFixed(6)}...`, // More descriptive temporary
               city: undefined,
               state: undefined,
               pincode: undefined,
@@ -263,8 +190,11 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             setIsLocationLoading(false); // Set loading false early
 
             // Reverse geocode in background (non-blocking)
+            // IMPORTANT: Use the exact coordinates received, skip cache to ensure fresh geocoding
             try {
-              const address = await reverseGeocode(latitude, longitude, abortControllerRef.current?.signal);
+              console.log('🔄 Starting reverse geocoding for:', latitude, longitude);
+              const address = await reverseGeocode(latitude, longitude, abortControllerRef.current?.signal, true); // skipCache = true
+              console.log('✅ Reverse geocoding result:', address);
 
 
               // Check if request was cancelled during geocoding
@@ -274,7 +204,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
               }
 
               // Address is already cleaned from reverseGeocode function
-              const cleanedAddress = address.formatted_address || `${latitude}, ${longitude}`;
+              const cleanedAddress = address.formatted_address || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
 
               const newLocation: Location = {
                 latitude,
@@ -284,6 +214,12 @@ export function LocationProvider({ children }: { children: ReactNode }) {
                 state: address.state,
                 pincode: address.pincode,
               };
+
+              // Verify coordinates match before saving
+              console.log('💾 Saving location:', {
+                coordinates: `${newLocation.latitude.toFixed(6)}, ${newLocation.longitude.toFixed(6)}`,
+                address: newLocation.address
+              });
 
               setLocation(newLocation);
               localStorage.setItem('userLocation', JSON.stringify(newLocation));
@@ -343,7 +279,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             reject(error);
           }
         },
-        (error: any) => {
+        (error: GeolocationPositionError) => {
           if (abortControllerRef.current?.signal.aborted) {
             isRequestingRef.current = false;
             return;
@@ -352,14 +288,16 @@ export function LocationProvider({ children }: { children: ReactNode }) {
           let errorMessage = 'Failed to get your location';
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              errorMessage = 'Location permission denied. Please enable location access.';
+              errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
               break;
             case error.POSITION_UNAVAILABLE:
-              errorMessage = 'Location information unavailable.';
+              errorMessage = 'Location information unavailable. Please check your device location settings.';
               break;
             case error.TIMEOUT:
-              errorMessage = 'Location request timed out. Please try again.';
+              errorMessage = 'Location request timed out. Please ensure GPS/location is enabled and try again, or enter location manually.';
               break;
+            default:
+              errorMessage = 'Unable to get your location. Please try again or enter location manually.';
           }
           setLocationError(errorMessage);
           setIsLocationLoading(false);
@@ -384,17 +322,32 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   };
 
   // Reverse geocode coordinates to address - OPTIMIZED with caching and retry logic
-  const reverseGeocode = async (lat: number, lng: number, signal?: AbortSignal): Promise<GeocodeResult> => {
+  const reverseGeocode = async (lat: number, lng: number, signal?: AbortSignal, skipCache: boolean = false): Promise<GeocodeResult> => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
-      return { formatted_address: `${lat}, ${lng}` };
+      console.warn('⚠️ Google Maps API key not found, using coordinates only');
+      return { formatted_address: `${lat.toFixed(6)}, ${lng.toFixed(6)}` };
     }
 
-    // Check cache first (fast path)
+    // Validate input coordinates
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      console.error('❌ Invalid coordinates for geocoding:', lat, lng);
+      return { formatted_address: `${lat.toFixed(6)}, ${lng.toFixed(6)}` };
+    }
+
+    // Generate cache key (needed for both cache lookup and storage)
     const cacheKey = getCacheKey(lat, lng);
-    const cached = geocodeCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      return cached.data;
+
+    // Skip cache for fresh location requests (when skipCache is true)
+    // This ensures we always get the correct address for current coordinates
+    if (!skipCache) {
+      const cached = geocodeCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        console.log('📦 Using cached geocode result');
+        return cached.data;
+      }
+    } else {
+      console.log('🔄 Skipping cache - fetching fresh geocode');
     }
 
     // Retry logic for robustness
@@ -412,12 +365,18 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&result_type=street_address|route|locality|administrative_area_level_1|postal_code`,
-          {
-            signal: signal || controller.signal,
-          }
-        );
+        // Use precise coordinates (6 decimal places = ~10cm accuracy)
+        const preciseLat = lat.toFixed(6);
+        const preciseLng = lng.toFixed(6);
+
+        // Use more precise result types and location_type to get better address match
+        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${preciseLat},${preciseLng}&key=${apiKey}&result_type=street_address|premise|route|sublocality|locality|administrative_area_level_1|postal_code&location_type=ROOFTOP|RANGE_INTERPOLATED&language=en`;
+        
+        console.log('🌐 Geocoding coordinates:', `${preciseLat}, ${preciseLng}`);
+
+        const response = await fetch(geocodeUrl, {
+          signal: signal || controller.signal,
+        });
 
         clearTimeout(timeoutId);
 
@@ -440,30 +399,85 @@ export function LocationProvider({ children }: { children: ReactNode }) {
           return { formatted_address: `${lat}, ${lng}` };
         }
 
-        const result = data.results[0];
+        // Find the result that best matches the input coordinates
+        // Filter results and find the one closest to input coordinates
+        let bestResult = data.results[0];
+        let minDistance = Infinity;
+
+        for (const result of data.results) {
+          const resultLocation = result.geometry?.location;
+          if (resultLocation) {
+            const latDiff = Math.abs(resultLocation.lat - lat);
+            const lngDiff = Math.abs(resultLocation.lng - lng);
+            const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
+            
+            if (distance < minDistance) {
+              minDistance = distance;
+              bestResult = result;
+            }
+          }
+        }
+
+        const result = bestResult;
         const addressComponents = result.address_components || [];
+
+        // Verify the geocoded location matches input coordinates
+        const geocodedLocation = result.geometry?.location;
+        if (geocodedLocation) {
+          const latDiff = Math.abs(geocodedLocation.lat - lat);
+          const lngDiff = Math.abs(geocodedLocation.lng - lng);
+          const distanceMeters = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111000;
+          
+          // Warn if geocoded location is more than 100m away
+          if (distanceMeters > 100) {
+            console.warn('⚠️ Geocoded location differs from input:', {
+              input: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+              geocoded: `${geocodedLocation.lat.toFixed(6)}, ${geocodedLocation.lng.toFixed(6)}`,
+              distance: `${distanceMeters.toFixed(0)}m`
+            });
+          } else {
+            console.log(`✅ Geocoded location matches input (within ${distanceMeters.toFixed(0)}m)`);
+          }
+        }
 
         let city = '';
         let state = '';
         let pincode = '';
 
-        // Improved address component parsing
-        addressComponents.forEach((component: { types?: string[]; long_name?: string }) => {
+        // Improved address component parsing - prioritize more specific types
+        addressComponents.forEach((component: { types?: string[]; long_name?: string; short_name?: string }) => {
           const types = component.types || [];
-          if (!city && (types.includes('locality') || types.includes('administrative_area_level_2') || types.includes('sublocality'))) {
-            city = component.long_name || '';
+          // City: prefer locality, then sublocality, then administrative_area_level_2
+          if (!city) {
+            if (types.includes('locality')) {
+              city = component.long_name || '';
+            } else if (types.includes('sublocality') || types.includes('sublocality_level_1')) {
+              city = component.long_name || city;
+            } else if (types.includes('administrative_area_level_2') && !city) {
+              city = component.long_name || city;
+            }
           }
+          // State: administrative_area_level_1
           if (!state && types.includes('administrative_area_level_1')) {
             state = component.long_name || '';
           }
+          // Pincode: postal_code
           if (!pincode && types.includes('postal_code')) {
             pincode = component.long_name || '';
           }
         });
 
         // Clean the formatted address to remove Plus Codes
-        const rawAddress = result.formatted_address || `${lat}, ${lng}`;
+        const rawAddress = result.formatted_address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         const cleanedAddress = cleanAddress(rawAddress);
+
+        console.log('✅ Geocoded address:', {
+          raw: rawAddress,
+          cleaned: cleanedAddress,
+          city,
+          state,
+          pincode
+        });
 
         const geocodeResult = {
           formatted_address: cleanedAddress,
@@ -558,10 +572,10 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     }
     isRequestingRef.current = false;
 
-
     setLocation(null);
     setIsLocationEnabled(false);
     localStorage.removeItem('userLocation');
+    // Modal will automatically show again on next check since isLocationEnabled is false
   }, []);
 
   // Cleanup on unmount

@@ -2,7 +2,63 @@ import { Request, Response } from "express";
 import Product from "../../../models/Product";
 import Category from "../../../models/Category";
 import SubCategory from "../../../models/SubCategory";
+import Seller from "../../../models/Seller";
 import mongoose from "mongoose";
+
+// Helper function to calculate distance between two coordinates (Haversine formula)
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Earth radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+// Helper function to find sellers within user's location range
+async function findSellersWithinRange(userLat: number, userLng: number): Promise<mongoose.Types.ObjectId[]> {
+    if (!userLat || !userLng || isNaN(userLat) || isNaN(userLng)) {
+        // If no location provided, return empty array (no sellers)
+        return [];
+    }
+
+    // Validate coordinates
+    if (userLat < -90 || userLat > 90 || userLng < -180 || userLng > 180) {
+        return [];
+    }
+
+    try {
+        // Fetch all approved sellers with location
+        const sellers = await Seller.find({
+            status: "Approved",
+            location: { $exists: true, $ne: null },
+            serviceRadiusKm: { $exists: true, $gt: 0 },
+        }).select("_id location serviceRadiusKm");
+
+        // Filter sellers where user is within their service radius
+        const nearbySellerIds: mongoose.Types.ObjectId[] = [];
+        
+        for (const seller of sellers) {
+            if (seller.location && seller.location.coordinates) {
+                const sellerLng = seller.location.coordinates[0];
+                const sellerLat = seller.location.coordinates[1];
+                const distance = calculateDistance(userLat, userLng, sellerLat, sellerLng);
+                const serviceRadius = seller.serviceRadiusKm || 10;
+
+                if (distance <= serviceRadius) {
+                    nearbySellerIds.push(seller._id);
+                }
+            }
+        }
+
+        return nearbySellerIds;
+    } catch (error) {
+        console.error("Error finding nearby sellers:", error);
+        return [];
+    }
+}
 
 // Get products with filtering options (public)
 export const getProducts = async (req: Request, res: Response) => {
@@ -18,13 +74,54 @@ export const getProducts = async (req: Request, res: Response) => {
             maxPrice,
             brand,
             minDiscount,
+            latitude, // User location latitude
+            longitude, // User location longitude
         } = req.query;
-
 
         const query: any = {
             status: "Active",
             publish: true,
         };
+
+        // Location-based filtering: Only show products from sellers within user's range
+        const userLat = latitude ? parseFloat(latitude as string) : null;
+        const userLng = longitude ? parseFloat(longitude as string) : null;
+
+        if (userLat && userLng && !isNaN(userLat) && !isNaN(userLng)) {
+            // Find sellers within user's location range
+            const nearbySellerIds = await findSellersWithinRange(userLat, userLng);
+            
+            if (nearbySellerIds.length === 0) {
+                // No sellers within range, return empty result
+                return res.status(200).json({
+                    success: true,
+                    data: [],
+                    pagination: {
+                        page: Number(page),
+                        limit: Number(limit),
+                        total: 0,
+                        pages: 0,
+                    },
+                    message: "No sellers available in your area. Please update your location.",
+                });
+            }
+
+            // Filter products by sellers within range
+            query.seller = { $in: nearbySellerIds };
+        } else {
+            // If no location provided, return empty (require location for marketplace)
+            return res.status(200).json({
+                success: true,
+                data: [],
+                pagination: {
+                    page: Number(page),
+                    limit: Number(limit),
+                    total: 0,
+                    pages: 0,
+                },
+                message: "Location is required to view products. Please enable location access.",
+            });
+        }
 
         // Helper to resolve category/subcategory ID from slug or ID
         const resolveId = async (model: any, value: string) => {
@@ -108,6 +205,7 @@ export const getProducts = async (req: Request, res: Response) => {
 export const getProductById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
+        const { latitude, longitude } = req.query; // User location
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
@@ -124,12 +222,32 @@ export const getProductById = async (req: Request, res: Response) => {
             .populate("category", "name")
             .populate("subcategory", "name")
             .populate("brand", "name")
-            .populate("seller", "storeName city fssaiLicNo address");
+            .populate("seller", "storeName city fssaiLicNo address location serviceRadiusKm");
 
         if (!product) {
             return res.status(404).json({
                 success: false,
                 message: "Product not found or unavailable",
+            });
+        }
+
+        // Verify user is within seller's service radius
+        const userLat = latitude ? parseFloat(latitude as string) : null;
+        const userLng = longitude ? parseFloat(longitude as string) : null;
+        const seller = product.seller as any;
+
+        if (userLat && userLng && !isNaN(userLat) && !isNaN(userLng) && seller?.location) {
+            const nearbySellerIds = await findSellersWithinRange(userLat, userLng);
+            if (!nearbySellerIds.includes(seller._id)) {
+                return res.status(403).json({
+                    success: false,
+                    message: "This product is not available in your location. Please check sellers within your area.",
+                });
+            }
+        } else if (!userLat || !userLng) {
+            return res.status(400).json({
+                success: false,
+                message: "Location is required to view product details",
             });
         }
 

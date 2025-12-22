@@ -3,6 +3,7 @@ import Order from "../../../models/Order";
 import Product from "../../../models/Product";
 import OrderItem from "../../../models/OrderItem";
 import Customer from "../../../models/Customer";
+import Seller from "../../../models/Seller";
 import mongoose from "mongoose";
 
 // Create a new order
@@ -48,6 +49,27 @@ export const createOrder = async (req: Request, res: Response) => {
             });
         }
 
+        // Validate delivery address location
+        const deliveryLat = address.latitude ? parseFloat(address.latitude) : null;
+        const deliveryLng = address.longitude ? parseFloat(address.longitude) : null;
+
+        if (!deliveryLat || !deliveryLng || isNaN(deliveryLat) || isNaN(deliveryLng)) {
+            if (session) await session.abortTransaction();
+            return res.status(400).json({
+                success: false,
+                message: "Delivery address location (latitude/longitude) is required",
+            });
+        }
+
+        // Validate coordinates
+        if (deliveryLat < -90 || deliveryLat > 90 || deliveryLng < -180 || deliveryLng > 180) {
+            if (session) await session.abortTransaction();
+            return res.status(400).json({
+                success: false,
+                message: "Invalid delivery address coordinates",
+            });
+        }
+
         // Initialize Order first to get an ID
         const newOrder = new Order({
             customer: new mongoose.Types.ObjectId(userId),
@@ -60,8 +82,8 @@ export const createOrder = async (req: Request, res: Response) => {
                 state: address.state || '',
                 pincode: address.pincode || '000000',
                 landmark: address.landmark || '',
-                latitude: address.latitude,
-                longitude: address.longitude,
+                latitude: deliveryLat,
+                longitude: deliveryLng,
             },
             paymentMethod: paymentMethod || 'COD',
             paymentStatus: 'Pending',
@@ -77,6 +99,7 @@ export const createOrder = async (req: Request, res: Response) => {
 
         let calculatedSubtotal = 0;
         const orderItemIds: mongoose.Types.ObjectId[] = [];
+        const sellerIds = new Set<string>(); // Track unique sellers
 
         for (const item of items) {
             if (!item.product || !item.product.id) {
@@ -93,6 +116,11 @@ export const createOrder = async (req: Request, res: Response) => {
 
             if (product.stock < item.quantity) {
                 throw new Error(`Insufficient stock for ${product.productName}. Available: ${product.stock}, Requested: ${item.quantity}`);
+            }
+
+            // Track seller IDs to validate location
+            if (product.seller) {
+                sellerIds.add(product.seller.toString());
             }
 
             const itemPrice = product.price;
@@ -129,6 +157,54 @@ export const createOrder = async (req: Request, res: Response) => {
                 { $inc: { stock: -item.quantity } },
                 updateOptions
             );
+        }
+
+        // Validate all sellers can deliver to user's location
+        if (sellerIds.size > 0) {
+            const uniqueSellerIds = Array.from(sellerIds).map(id => new mongoose.Types.ObjectId(id));
+            
+            // Find sellers and check if user is within their service radius
+            const sellers = await Seller.find({
+                _id: { $in: uniqueSellerIds },
+                status: "Approved",
+                location: { $exists: true, $ne: null },
+            });
+
+            // Helper function to calculate distance between two coordinates (Haversine formula)
+            function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+                const R = 6371; // Earth radius in kilometers
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return R * c;
+            }
+
+            // Check each seller can deliver to user's location
+            for (const seller of sellers) {
+                if (!seller.location || !seller.location.coordinates) {
+                    if (session) await session.abortTransaction();
+                    return res.status(403).json({
+                        success: false,
+                        message: `Seller ${seller.storeName} does not have a valid location. Order cannot be placed.`,
+                    });
+                }
+
+                const sellerLng = seller.location.coordinates[0];
+                const sellerLat = seller.location.coordinates[1];
+                const distance = calculateDistance(deliveryLat, deliveryLng, sellerLat, sellerLng);
+                const serviceRadius = seller.serviceRadiusKm || 10;
+
+                if (distance > serviceRadius) {
+                    if (session) await session.abortTransaction();
+                    return res.status(403).json({
+                        success: false,
+                        message: `Your delivery address is ${distance.toFixed(2)} km away from ${seller.storeName}. They only deliver within ${serviceRadius} km. Please select products from sellers in your area.`,
+                    });
+                }
+            }
         }
 
         // Apply fees

@@ -35,6 +35,13 @@ export interface ISeller extends Document {
   searchLocation?: string;
   latitude?: string;
   longitude?: string;
+  // GeoJSON location for geospatial queries
+  location?: {
+    type: 'Point';
+    coordinates: [number, number]; // [longitude, latitude]
+  };
+  // Service radius in kilometers
+  serviceRadiusKm?: number;
 
   // Payment Details
   accountName?: string;
@@ -74,7 +81,7 @@ const SellerSchema = new Schema<ISeller>(
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      required: false, // Password not required during signup
       minlength: [6, 'Password must be at least 6 characters'],
       select: false, // Don't return password by default
     },
@@ -177,6 +184,25 @@ const SellerSchema = new Schema<ISeller>(
       type: String,
       trim: true,
     },
+    // GeoJSON location for geospatial queries
+    location: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        index: '2dsphere',
+      },
+    },
+    // Service radius in kilometers (default: 10km if not specified)
+    serviceRadiusKm: {
+      type: Number,
+      default: 10,
+      min: [0.1, 'Service radius must be at least 0.1 km'],
+      max: [100, 'Service radius cannot exceed 100 km'],
+    },
 
     // Payment Details
     accountName: {
@@ -255,9 +281,10 @@ const SellerSchema = new Schema<ISeller>(
   }
 );
 
-// Hash password before saving
+// Hash password before saving (only if password is provided)
 SellerSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
+  // Skip password hashing if password is not provided or not modified
+  if (!this.isModified('password') || !this.password) {
     return next();
   }
 
@@ -276,6 +303,10 @@ SellerSchema.methods.comparePassword = async function (
 ): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };
+
+// Create geospatial index on location field for efficient queries
+SellerSchema.index({ location: '2dsphere' });
+SellerSchema.index({ status: 1 }); // Compound index for status + location queries
 
 const Seller = mongoose.model<ISeller>('Seller', SellerSchema);
 
