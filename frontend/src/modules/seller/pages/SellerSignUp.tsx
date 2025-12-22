@@ -4,7 +4,7 @@ import { register, sendOTP, verifyOTP } from '../../../services/api/auth/sellerA
 import OTPInput from '../../../components/OTPInput';
 import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import { useAuth } from '../../../context/AuthContext';
-import { getCategories, Category } from '../../../services/api/categoryService';
+import { getCategories as getCustomerCategories } from '../../../services/api/customerProductService';
 import { useEffect } from 'react';
 
 export default function SellerSignUp() {
@@ -35,13 +35,15 @@ export default function SellerSignUp() {
   const [showOTP, setShowOTP] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchCats = async () => {
       try {
-        const res = await getCategories();
-        if (res.success) setCategories(res.data);
+        const res = await getCustomerCategories();
+        if (res.success && res.data) {
+          setCategories(res.data);
+        }
       } catch (err) {
         console.error('Error fetching categories:', err);
       }
@@ -299,24 +301,30 @@ export default function SellerSignUp() {
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Categories <span className="text-red-500">*</span>
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {categories.map((cat) => {
-                      const checked = formData.categories.includes(cat.name);
-                      return (
-                        <label key={cat._id} className="flex items-center gap-2 text-sm text-neutral-700">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleCategory(cat.name)}
-                            disabled={loading}
-                            className="h-4 w-4 text-teal-600 border-neutral-300 rounded focus:ring-teal-500"
-                          />
-                          <span>{cat.name}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  {formData.categories.length === 0 && (
+                  {categories.length === 0 ? (
+                    <div className="text-sm text-neutral-500 py-2">
+                      Loading categories...
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      {categories.map((cat) => {
+                        const checked = formData.categories.includes(cat.name);
+                        return (
+                          <label key={cat._id} className="flex items-center gap-2 text-sm text-neutral-700">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleCategory(cat.name)}
+                              disabled={loading}
+                              className="h-4 w-4 text-teal-600 border-neutral-300 rounded focus:ring-teal-500"
+                            />
+                            <span>{cat.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {formData.categories.length === 0 && categories.length > 0 && (
                     <p className="text-xs text-red-600 mt-1">Select at least one category</p>
                   )}
                 </div>

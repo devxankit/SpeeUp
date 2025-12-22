@@ -13,13 +13,14 @@ import Orders from "./modules/user/Orders";
 import OrderDetail from "./modules/user/OrderDetail";
 import OrderAgain from "./modules/user/OrderAgain";
 import Account from "./modules/user/Account";
-import Wallet from "./modules/user/Wallet"; // Customer Wallet
+import Wallet from "./modules/user/Wallet";
 import Categories from "./modules/user/Categories";
 import Category from "./modules/user/Category";
 import Cart from "./modules/user/Cart";
 import Checkout from "./modules/user/Checkout";
 import CheckoutAddress from "./modules/user/CheckoutAddress";
 import ProductDetail from "./modules/user/ProductDetail";
+import Invoice from "./modules/user/Invoice";
 import Login from "./modules/user/Login";
 import SignUp from "./modules/user/SignUp";
 import AboutUs from "./modules/user/AboutUs";
@@ -50,6 +51,7 @@ import DeliverySettings from "./modules/delivery/pages/DeliverySettings";
 import DeliveryHelp from "./modules/delivery/pages/DeliveryHelp";
 import DeliveryAbout from "./modules/delivery/pages/DeliveryAbout";
 import DeliveryLogin from "./modules/delivery/pages/DeliveryLogin";
+import DeliverySignUp from "./modules/delivery/pages/DeliverySignUp";
 import SellerLayout from "./modules/seller/components/SellerLayout";
 import SellerDashboard from "./modules/seller/pages/SellerDashboard";
 import SellerOrders from "./modules/seller/pages/SellerOrders";
@@ -66,18 +68,14 @@ import SellerReturnRequest from "./modules/seller/pages/SellerReturnRequest";
 import SellerAccountSettings from "./modules/seller/pages/SellerAccountSettings";
 import SellerLogin from "./modules/seller/pages/SellerLogin";
 import SellerSignUp from "./modules/seller/pages/SellerSignUp";
-import DeliverySignUp from "./modules/delivery/pages/DeliverySignUp";
 import AdminLayout from "./modules/admin/components/AdminLayout";
 import AdminDashboard from "./modules/admin/pages/AdminDashboard";
 import AdminLogin from "./modules/admin/pages/AdminLogin";
-
 import AdminCategory from "./modules/admin/pages/AdminCategory";
 import AdminHeaderCategory from "./modules/admin/pages/AdminHeaderCategory";
 import AdminSubCategory from "./modules/admin/pages/AdminSubCategory";
 import AdminBrand from "./modules/admin/pages/AdminBrand";
 import AdminAddProduct from "./modules/admin/pages/AdminAddProduct";
-import AdminBulkImport from "./modules/admin/pages/AdminBulkImport";
-import AdminBulkUpdate from "./modules/admin/pages/AdminBulkUpdate";
 import AdminTaxes from "./modules/admin/pages/AdminTaxes";
 import AdminProductOrder from "./modules/admin/pages/AdminProductOrder";
 import AdminProductRequest from "./modules/admin/pages/AdminProductRequest";
@@ -115,7 +113,6 @@ import AdminCancelledOrders from "./modules/admin/pages/AdminCancelledOrders";
 import AdminCustomerAppPolicy from "./modules/admin/pages/AdminCustomerAppPolicy";
 import AdminDeliveryAppPolicy from "./modules/admin/pages/AdminDeliveryAppPolicy";
 import AdminOrders from "./modules/admin/pages/AdminOrders";
-import AdminSettings from "./modules/admin/pages/AdminSettings";
 import AdminManageCustomer from "./modules/admin/pages/AdminManageCustomer";
 import AdminProfile from "./modules/admin/pages/AdminProfile";
 
@@ -130,8 +127,7 @@ function App() {
                 future={{
                   v7_startTransition: true,
                   v7_relativeSplatPath: true,
-                }}
-              >
+                }}>
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
@@ -212,8 +208,6 @@ function App() {
                             <Route path="brand" element={<AdminBrand />} />
                             <Route path="product/add" element={<AdminAddProduct />} />
                             <Route path="product/edit/:id" element={<AdminAddProduct />} />
-                            <Route path="product/bulk-import" element={<AdminBulkImport />} />
-                            <Route path="product/bulk-update" element={<AdminBulkUpdate />} />
                             <Route path="product/taxes" element={<AdminTaxes />} />
                             <Route path="product/list" element={<AdminStockManagement />} />
                             <Route path="product/order" element={<AdminProductOrder />} />
@@ -233,7 +227,6 @@ function App() {
                             <Route path="return" element={<AdminReturnRequest />} />
                             <Route path="notification" element={<AdminNotification />} />
                             <Route path="orders" element={<AdminOrders />} />
-                            <Route path="settings" element={<AdminSettings />} />
                             <Route path="customers" element={<AdminManageCustomer />} />
                             <Route path="collect-cash" element={<AdminCashCollection />} />
                             <Route path="payment-list" element={<AdminPaymentList />} />
@@ -281,15 +274,19 @@ function App() {
                           <Route path="/wallet" element={<Wallet />} />
                           <Route path="/checkout" element={<Checkout />} />
                           <Route path="/checkout/address" element={<CheckoutAddress />} />
+                          <Route path="/product/:id" element={<ProductDetail />} />
+                          <Route path="/invoice/:id" element={<Invoice />} />
+                          <Route path="/cart" element={<Cart />} />
+                          <Route path="/addresses" element={<Addresses />} />
                           <Route path="/store/:slug" element={<StorePage />} />
-                          <Route path="/store/spiritual" element={<StorePage />} />
-                          <Route path="/store/pharma" element={<StorePage />} />
-                          <Route path="/store/e-gifts" element={<StorePage />} />
-                          <Route path="/store/pet" element={<StorePage />} />
-                          <Route path="/store/sports" element={<StorePage />} />
-                          <Route path="/store/fashion-basics" element={<StorePage />} />
-                          <Route path="/store/toy" element={<StorePage />} />
-                          <Route path="/store/hobby" element={<StorePage />} />
+                          <Route path="/store/spiritual" element={<SpiritualStore />} />
+                          <Route path="/store/pharma" element={<PharmaStore />} />
+                          <Route path="/store/e-gifts" element={<EGiftStore />} />
+                          <Route path="/store/pet" element={<PetStore />} />
+                          <Route path="/store/sports" element={<SportsStore />} />
+                          <Route path="/store/fashion-basics" element={<FashionStore />} />
+                          <Route path="/store/toy" element={<ToyStore />} />
+                          <Route path="/store/hobby" element={<HobbyStore />} />
                         </Routes>
                       </AppLayout>
                     }

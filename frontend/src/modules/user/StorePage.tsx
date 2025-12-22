@@ -100,7 +100,7 @@ export default function StorePage() {
                 ) : products.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {products.map((product) => {
-                            const cartItem = cart.items.find((item) => item.product.id === product.id || item.product._id === product.id);
+                            const cartItem = cart.items.find((item) => item?.product && (item.product.id === product.id || item.product._id === product.id));
                             const inCartQty = cartItem?.quantity || 0;
                             const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
 

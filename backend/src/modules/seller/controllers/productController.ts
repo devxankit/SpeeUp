@@ -221,8 +221,37 @@ export const updateProduct = asyncHandler(
     const { id } = req.params;
     const updateData = req.body;
 
+    console.log('DEBUG updateProduct: sellerId from token:', sellerId);
+    console.log('DEBUG updateProduct: productId:', id);
+
     // Remove sellerId from update data if present (cannot change owner)
     delete updateData.sellerId;
+
+    // Map frontend field names to model field names (same as createProduct)
+    if (updateData.categoryId) {
+      updateData.category = updateData.categoryId;
+      delete updateData.categoryId;
+    }
+    if (updateData.subcategoryId) {
+      updateData.subcategory = updateData.subcategoryId;
+      delete updateData.subcategoryId;
+    }
+    if (updateData.brandId) {
+      updateData.brand = updateData.brandId;
+      delete updateData.brandId;
+    }
+    if (updateData.taxId) {
+      updateData.tax = updateData.taxId;
+      delete updateData.taxId;
+    }
+    if (updateData.mainImageUrl) {
+      updateData.mainImage = updateData.mainImageUrl;
+      delete updateData.mainImageUrl;
+    }
+    if (updateData.galleryImageUrls) {
+      updateData.galleryImages = updateData.galleryImageUrls;
+      delete updateData.galleryImageUrls;
+    }
 
     // Validate variations if provided
     if (updateData.variations) {
@@ -233,15 +262,29 @@ export const updateProduct = asyncHandler(
         });
       }
 
-      // Validate variation prices
+      // Map variations and validate prices
+      updateData.variations = updateData.variations.map((v: any) => ({
+        ...v,
+        value: v.value || v.title,
+        name: v.name || "Variation",
+        discPrice: v.discPrice || 0,
+        status: v.status || "Available",
+      }));
+
       for (const variation of updateData.variations) {
-        if (variation.discPrice > variation.price) {
+        if (Number(variation.discPrice) > Number(variation.price)) {
           return res.status(400).json({
             success: false,
-            message: `Discounted price cannot be greater than price for variation ${variation.title}`,
+            message: `Discounted price cannot be greater than price for variation ${variation.title || variation.value}`,
           });
         }
       }
+
+      // Sync top-level price and stock from variations (same as createProduct)
+      updateData.price = updateData.variations[0].price;
+      updateData.stock = updateData.variations.reduce(
+        (acc: number, curr: any) => acc + (parseInt(curr.stock) || 0), 0
+      );
     }
 
     const product = await Product.findOneAndUpdate(
@@ -254,7 +297,14 @@ export const updateProduct = asyncHandler(
       .populate("brand", "name")
       .populate("tax", "name rate");
 
+    console.log('DEBUG updateProduct: product found?', product ? 'Yes' : 'No');
+
     if (!product) {
+      // Check if product exists at all
+      const existingProduct = await Product.findById(id).select('seller');
+      if (existingProduct) {
+        console.log('DEBUG updateProduct: product exists but owned by:', existingProduct.seller);
+      }
       return res.status(404).json({
         success: false,
         message: "Product not found",
@@ -276,6 +326,9 @@ export const deleteProduct = asyncHandler(
   async (req: Request, res: Response) => {
     const sellerId = (req as any).user.userId;
     const { id } = req.params;
+
+    console.log('DEBUG deleteProduct: sellerId from token:', sellerId);
+    console.log('DEBUG deleteProduct: productId:', id);
 
     const product = await Product.findOneAndDelete({ _id: id, seller: sellerId });
 

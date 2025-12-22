@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { getWishlist, removeFromWishlist } from '../../services/api/customerWishlistService';
 import { Product } from '../../types/domain';
 import { useCart } from '../../context/CartContext';
@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Wishlist() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { addToCart } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +36,7 @@ export default function Wishlist() {
 
   useEffect(() => {
     fetchWishlist();
-  }, []);
+  }, [location.pathname]); // Re-fetch when navigating to this page
 
   const handleRemove = async (productId: string) => {
     try {

@@ -84,6 +84,14 @@ router.get(
   "/dashboard/sales-by-location",
   dashboardController.getSalesByLocationController
 );
+router.get(
+  "/dashboard/today-sales",
+  dashboardController.getTodaySalesController
+);
+router.get(
+  "/dashboard/order-analytics",
+  dashboardController.getOrderAnalyticsController
+);
 
 // ==================== Category Routes ====================
 router.post("/categories", productController.createCategory);
@@ -240,12 +248,18 @@ router.delete("/policies/:id", policyController.deletePolicy);
 router.get("/sellers", sellerController.getAllSellers);
 
 // ==================== Shop Management ====================
-
-
+// Legacy routes (keep for backward compatibility)
 router.post("/shop/create", createShop);
 router.get("/shops", getAllShops);
 router.get("/shop/:id", getShopById);
 router.put("/shop/:id", updateShop);
 router.delete("/shop/:id", deleteShop);
+
+// Shop by Store routes (matching frontend API expectations)
+router.post("/shop-by-stores", createShop);
+router.get("/shop-by-stores", getAllShops);
+router.get("/shop-by-stores/:id", getShopById);
+router.put("/shop-by-stores/:id", updateShop);
+router.delete("/shop-by-stores/:id", deleteShop);
 
 export default router;

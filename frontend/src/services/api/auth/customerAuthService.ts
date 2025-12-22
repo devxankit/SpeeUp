@@ -65,7 +65,12 @@ export const verifyOTP = async (mobile: string, otp: string, sessionId?: string)
 
   if (response.data.success && response.data.data.token) {
     setAuthToken(response.data.data.token);
-    localStorage.setItem('userData', JSON.stringify(response.data.data.user));
+    // Add userType to user data for proper identification
+    const userData = {
+      ...response.data.data.user,
+      userType: 'Customer'
+    };
+    localStorage.setItem('userData', JSON.stringify(userData));
   }
 
   return response.data;
@@ -84,7 +89,12 @@ export const register = async (data: RegisterData): Promise<RegisterResponse> =>
 
   if (response.data.success && response.data.data.token) {
     setAuthToken(response.data.data.token);
-    localStorage.setItem('userData', JSON.stringify(response.data.data.user));
+    // Add userType to user data for proper identification
+    const userData = {
+      ...response.data.data.user,
+      userType: 'Customer'
+    };
+    localStorage.setItem('userData', JSON.stringify(userData));
   }
 
   return response.data;

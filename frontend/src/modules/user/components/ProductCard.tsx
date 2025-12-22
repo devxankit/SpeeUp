@@ -73,7 +73,7 @@ export default function ProductCard({
     }
   };
 
-  const cartItem = cart.items.find((item) => (item.product.id === (product as any).id || item.product._id === (product as any).id || item.product.id === product._id));
+  const cartItem = cart.items.find((item) => item?.product && (item.product.id === (product as any).id || item.product._id === (product as any).id || item.product.id === product._id));
   const inCartQty = cartItem?.quantity || 0;
 
   const discount = product.mrp && product.mrp > product.price

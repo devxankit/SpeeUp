@@ -40,7 +40,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem(CART_STORAGE_KEY);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Filter out items with null/undefined products (corrupted localStorage data)
+        return Array.isArray(parsed) ? parsed.filter((item: any) => item?.product) : [];
       } catch (e) {
         console.error("Failed to parse saved cart", e);
       }
@@ -113,9 +115,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated, user?.userType]);
 
   const cart: Cart = useMemo(() => {
-    const total = items.reduce((sum, item) => sum + item.product.price * (item.quantity || 0), 0);
-    const itemCount = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
-    return { items, total, itemCount };
+    // Filter out any items with null products before computing totals
+    const validItems = items.filter(item => item?.product);
+    const total = validItems.reduce((sum, item) => sum + item.product.price * (item.quantity || 0), 0);
+    const itemCount = validItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    return { items: validItems, total, itemCount };
   }, [items]);
 
   const addToCart = async (product: Product, sourceElement?: HTMLElement | null) => {
@@ -135,15 +139,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // Optimistically update state
     const previousItems = [...items];
     setItems((prevItems) => {
-      const existingItem = prevItems.find((item) => item.product.id === product.id);
+      // Filter out null products and find existing item
+      const validItems = prevItems.filter(item => item?.product);
+      const existingItem = validItems.find((item) => item.product.id === product.id);
       if (existingItem) {
-        return prevItems.map((item) =>
+        return validItems.map((item) =>
           item.product.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-      return [...prevItems, { product, quantity: 1 }];
+      return [...validItems, { product, quantity: 1 }];
     });
 
     try {
@@ -160,7 +166,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const removeFromCart = async (productId: string) => {
-    const itemToRemove = items.find(item => item.product.id === productId);
+    const itemToRemove = items.find(item => item?.product && item.product.id === productId);
     if (!itemToRemove || !itemToRemove.id) {
       console.warn("Cannot remove item without CartItemID");
       await fetchCart();
@@ -168,7 +174,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     const previousItems = [...items];
-    setItems((prevItems) => prevItems.filter((item) => item.product.id !== productId));
+    setItems((prevItems) => prevItems.filter((item) => item?.product && item.product.id !== productId));
 
     try {
       const response = await apiRemoveFromCart(itemToRemove.id);
@@ -187,7 +193,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const itemToUpdate = items.find(item => item.product.id === productId);
+    const itemToUpdate = items.find(item => item?.product && item.product.id === productId);
     if (!itemToUpdate || !itemToUpdate.id) {
       await fetchCart();
       return;
@@ -195,7 +201,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const previousItems = [...items];
     setItems((prevItems) =>
-      prevItems.map((item) =>
+      prevItems.filter(item => item?.product).map((item) =>
         item.product.id === productId ? { ...item, quantity } : item
       )
     );

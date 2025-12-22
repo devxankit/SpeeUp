@@ -31,8 +31,10 @@ api.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+  (error: any) => {
+    // Only handle 401 (Unauthorized) for auto-logout
+    // 403 (Forbidden) means user is authenticated but doesn't have permission - DO NOT LOGOUT
+    if (error.response?.status === 401) {
       // Check if this is an authentication endpoint (OTP verification, etc.)
       // Don't redirect for auth endpoints - let the component handle the error
       const isAuthEndpoint = error.config?.url?.includes("/auth/");
@@ -41,7 +43,7 @@ api.interceptors.response.use(
         const currentPath = window.location.pathname;
 
         // Skip redirect if already on public auth pages (login/signup)
-        if (currentPath.includes('/login') || currentPath.includes('/signup')) {
+        if (currentPath.includes("/login") || currentPath.includes("/signup")) {
           return Promise.reject(error);
         }
 
@@ -52,9 +54,16 @@ api.interceptors.response.use(
 
         if (currentPath.includes("/admin/") || apiUrl.includes("/admin/")) {
           redirectPath = "/admin/login";
-        } else if (currentPath.includes("/seller/") || apiUrl.includes("/seller/") || apiUrl.includes("/sellers")) {
+        } else if (
+          currentPath.includes("/seller/") ||
+          apiUrl.includes("/seller/") ||
+          apiUrl.includes("/sellers")
+        ) {
           redirectPath = "/seller/login";
-        } else if (currentPath.includes("/delivery/") || apiUrl.includes("/delivery/")) {
+        } else if (
+          currentPath.includes("/delivery/") ||
+          apiUrl.includes("/delivery/")
+        ) {
           redirectPath = "/delivery/login";
         }
 
@@ -63,6 +72,7 @@ api.interceptors.response.use(
         window.location.href = redirectPath;
       }
     }
+    // For 403 and other errors, just reject the promise so the UI can handle it
     return Promise.reject(error);
   }
 );

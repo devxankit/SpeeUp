@@ -1,9 +1,19 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { getAuthToken, removeAuthToken, setAuthToken } from '../services/api/config';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import {
+  getAuthToken,
+  removeAuthToken,
+  setAuthToken,
+} from "../services/api/config";
 
 interface User {
   id: string;
-  userType?: 'Admin' | 'Seller' | 'Customer' | 'Delivery';
+  userType?: "Admin" | "Seller" | "Customer" | "Delivery";
   [key: string]: any;
 }
 
@@ -30,7 +40,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = localStorage.getItem("userData");
     if (storedUser) {
       try {
-        return JSON.parse(storedUser);
+        const userData = JSON.parse(storedUser);
+        // Ensure userType is set for backward compatibility
+        // If user is authenticated but userType is missing, we'll infer it from context
+        // For now, we'll set it when needed in OrdersContext
+        return userData;
       } catch (error) {
         return null;
       }
@@ -50,6 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedToken && storedUser) {
       try {
         const userData = JSON.parse(storedUser);
+        // Ensure userType is set for backward compatibility
+        // If missing, we'll let OrdersContext handle it based on context
         // Only update if state doesn't match to avoid loops
         if (!isAuthenticated || token !== storedToken) {
           setToken(storedToken);
@@ -75,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
     setIsAuthenticated(true);
     setAuthToken(newToken);
-    localStorage.setItem('userData', JSON.stringify(userData));
+    localStorage.setItem("userData", JSON.stringify(userData));
   };
 
   const logout = () => {
