@@ -13,6 +13,9 @@
     "test:vendor-approval": "tsx src/scripts/test-vendor-approval.ts",
     "seed:grocery-kitchen": "tsx src/scripts/seedGroceryKitchen.ts",
     "seed:personal-care": "tsx src/scripts/seedPersonalCare.ts",
+    "seed:categories-under-headers": "tsx src/scripts/seedCategoriesUnderHeaderCategories.ts",
+    "update:category-names": "tsx src/scripts/updateCategoriesWithActualNames.ts",
+    "remove:all-categories": "tsx src/scripts/removeAllCategories.ts",
     "migrate:subcategories": "tsx src/scripts/migrateSubCategoriesToCategories.ts"
   },
   "keywords": [
