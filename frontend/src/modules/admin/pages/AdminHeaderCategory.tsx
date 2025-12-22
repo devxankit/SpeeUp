@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   getHeaderCategoriesAdmin,
   createHeaderCategory,
@@ -7,6 +7,7 @@ import {
   HeaderCategory
 } from '../../../services/api/headerCategoryService';
 import { themes } from '../../../utils/themes';
+import { ICON_LIBRARY, getIconByName, IconDef } from '../../../utils/iconLibrary';
 
 export default function AdminHeaderCategory() {
   const [headerCategories, setHeaderCategories] = useState<HeaderCategory[]>([]);
@@ -14,12 +15,15 @@ export default function AdminHeaderCategory() {
 
   // Form states
   const [headerCategoryName, setHeaderCategoryName] = useState('');
-  const [selectedIconLibrary, setSelectedIconLibrary] = useState('');
+  const [selectedIconLibrary, setSelectedIconLibrary] = useState('Custom'); // Default to Custom for SVG
   const [headerCategoryIcon, setHeaderCategoryIcon] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(''); // This maps to relatedCategory
   const [selectedTheme, setSelectedTheme] = useState('all'); // This maps to slug
   const [selectedStatus, setSelectedStatus] = useState<'Published' | 'Unpublished'>('Published');
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Icon search state
+  const [iconSearchTerm, setIconSearchTerm] = useState('');
 
   // Table states
   const [entriesPerPage, setEntriesPerPage] = useState(10);
@@ -47,6 +51,35 @@ export default function AdminHeaderCategory() {
     }
   };
 
+  // Smart Icon Suggestions
+  useEffect(() => {
+    if (headerCategoryName && !editingId) {
+      // Logic handled in useMemo
+    }
+  }, [headerCategoryName]);
+
+  const filteredIcons = useMemo(() => {
+    const term = iconSearchTerm || headerCategoryName || '';
+    if (!term.trim()) return ICON_LIBRARY;
+
+    const lowerTerm = term.toLowerCase();
+
+    return [...ICON_LIBRARY].sort((a, b) => {
+      const aScore = getMatchScore(a, lowerTerm);
+      const bScore = getMatchScore(b, lowerTerm);
+      return bScore - aScore;
+    });
+  }, [iconSearchTerm, headerCategoryName]);
+
+  function getMatchScore(icon: IconDef, term: string) {
+    let score = 0;
+    if (icon.name.includes(term)) score += 10;
+    if (icon.label.toLowerCase().includes(term)) score += 10;
+    if (icon.tags.some(t => t.includes(term))) score += 5;
+    if (icon.tags.some(t => term.includes(t))) score += 5;
+    return score;
+  }
+
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -69,20 +102,19 @@ export default function AdminHeaderCategory() {
 
   const resetForm = () => {
     setHeaderCategoryName('');
-    setSelectedIconLibrary('');
+    setSelectedIconLibrary('Custom');
     setHeaderCategoryIcon('');
     setSelectedCategory('');
     setSelectedTheme('all');
     setSelectedStatus('Published');
     setEditingId(null);
+    setIconSearchTerm('');
   };
 
   const handleAddOrUpdate = async () => {
     if (!headerCategoryName.trim()) return alert('Please enter a header category name');
-    if (!selectedIconLibrary) return alert('Please select an icon library');
-    if (!headerCategoryIcon.trim()) return alert('Please enter an icon name');
+    if (!headerCategoryIcon.trim()) return alert('Please select an icon. If your category is unique, try searching for a generic icon.');
     if (!selectedTheme) return alert('Please select a theme');
-    // relatedCategory is optional but encouraged if mapping to products
 
     try {
       const payload = {
@@ -118,6 +150,7 @@ export default function AdminHeaderCategory() {
     setSelectedCategory(category.relatedCategory || '');
     setSelectedTheme(category.slug);
     setSelectedStatus(category.status);
+    setIconSearchTerm('');
   };
 
   const handleDelete = async (id: string) => {
@@ -166,43 +199,59 @@ export default function AdminHeaderCategory() {
                 type="text"
                 value={headerCategoryName}
                 onChange={(e) => setHeaderCategoryName(e.target.value)}
-                placeholder="Enter Category Name"
+                placeholder="Enter Category Name (e.g. Dairy, Books)"
                 className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
               />
             </div>
 
-            {/* Select Icon Library */}
+            {/* Select Icon Visual Grid */}
             <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Select Icon Library:
-              </label>
-              <select
-                value={selectedIconLibrary}
-                onChange={(e) => setSelectedIconLibrary(e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
-              >
-                <option value="">Select Icon Library</option>
-                <option value="IonIcons">IonIcons</option>
-                <option value="MaterialIcons">MaterialIcons</option>
-                <option value="FontAwesome">FontAwesome</option>
-                <option value="Feather">Feather</option>
-              </select>
-            </div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-neutral-700">
+                  Select Icon:
+                </label>
+                <input
+                  type="text"
+                  placeholder="Auto-match or type..."
+                  value={iconSearchTerm}
+                  onChange={(e) => setIconSearchTerm(e.target.value)}
+                  className="px-2 py-1 text-xs border rounded border-neutral-300 w-32 focus:ring-1 focus:ring-teal-500 outline-none"
+                />
+              </div>
 
-            {/* Header Category Icon */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Header Category Icon Name:
-              </label>
-              <input
-                type="text"
-                value={headerCategoryIcon}
-                onChange={(e) => setHeaderCategoryIcon(e.target.value)}
-                placeholder="Enter Icon Name (e.g. fast-food)"
-                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
-              />
-              <p className="mt-1 text-xs text-red-600">
-                Enter correct icon name from selected library.
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 bg-neutral-50 p-3 rounded border border-neutral-200 h-64 overflow-y-auto custom-scrollbar">
+                {filteredIcons.length > 0 ? filteredIcons.map((option) => {
+                  const isSelected = headerCategoryIcon === option.name;
+                  return (
+                    <div
+                      key={option.name}
+                      onClick={() => {
+                        setHeaderCategoryIcon(option.name);
+                        setSelectedIconLibrary('Custom');
+                      }}
+                      className={`
+                        cursor-pointer flex flex-col items-center justify-center gap-2 p-3 rounded-lg border transition-all
+                        ${isSelected
+                          ? 'bg-teal-50 border-teal-500 ring-1 ring-teal-500 text-teal-700'
+                          : 'bg-white border-neutral-200 hover:border-teal-300 hover:shadow-sm text-neutral-600'}
+                      `}
+                    >
+                      <div className={`${isSelected ? 'text-teal-600' : 'text-neutral-500'}`}>
+                        {option.svg}
+                      </div>
+                      <span className="text-[10px] font-medium text-center leading-tight truncate w-full">
+                        {option.label}
+                      </span>
+                    </div>
+                  );
+                }) : (
+                  <div className="col-span-full py-8 text-center text-neutral-500 text-sm">
+                    No icons found matching "{iconSearchTerm || headerCategoryName}"
+                  </div>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-neutral-500">
+                Icons are automatically suggested based on category name.
               </p>
             </div>
 
@@ -226,7 +275,13 @@ export default function AdminHeaderCategory() {
                     beauty: 'Pink',
                     grocery: 'Light Green',
                     fashion: 'Purple',
-                    sports: 'Blue'
+                    sports: 'Blue',
+                    orange: 'Orange',
+                    violet: 'Violet',
+                    teal: 'Teal',
+                    dark: 'Dark',
+                    hotpink: 'Hot Pink',
+                    gold: 'Gold'
                   };
 
                   const displayColor = colorNames[themeKey] || themeKey;
@@ -252,57 +307,55 @@ export default function AdminHeaderCategory() {
                   );
                 })}
               </div>
-              <p className="text-xs text-neutral-500 mt-1">This defines the header background color on the homepage.</p>
             </div>
 
-
-            {/* Select Related Product Category */}
+            {/* Related Category */}
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Diff Category (Optional, for Product Filtering):
+                Related Category (Slug):
               </label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
               >
                 <option value="">Select Category</option>
-                <option value="Instant Food">Instant Food</option>
-                <option value="Pet Care">Pet Care</option>
-                <option value="Cleaning Essentials">Cleaning Essentials</option>
-                <option value="Bakery Biscuits">Bakery Biscuits</option>
-                <option value="Sweet Tooth">Sweet Tooth</option>
-                <option value="Tea Coffee">Tea Coffee</option>
+                <option value="fashion">Fashion</option>
+                <option value="electronics">Electronics</option>
+                <option value="home">Home</option>
+                <option value="beauty">Beauty</option>
+                <option value="mobiles">Mobiles</option>
+                <option value="grocery">Grocery</option>
               </select>
             </div>
 
-            {/* Status Selection */}
+            {/* Status */}
             <div>
               <label className="block text-sm font-medium text-neutral-700 mb-2">
                 Status:
               </label>
               <select
                 value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value as 'Published' | 'Unpublished')}
-                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+                onChange={(e) => setSelectedStatus(e.target.value as any)}
+                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
               >
                 <option value="Published">Published</option>
                 <option value="Unpublished">Unpublished</option>
               </select>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-2">
+            {/* Buttons */}
+            <div className="flex gap-3 pt-2">
               <button
                 onClick={handleAddOrUpdate}
-                className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded text-sm font-medium transition-colors"
+                className="flex-1 bg-teal-600 text-white py-2 rounded text-sm font-medium hover:bg-teal-700 transition"
               >
                 {editingId ? 'Update Category' : 'Add Category'}
               </button>
               {editingId && (
                 <button
                   onClick={handleCancelEdit}
-                  className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2.5 rounded text-sm font-medium transition-colors"
+                  className="flex-1 bg-neutral-200 text-neutral-700 py-2 rounded text-sm font-medium hover:bg-neutral-300 transition"
                 >
                   Cancel
                 </button>
@@ -311,153 +364,145 @@ export default function AdminHeaderCategory() {
           </div>
         </div>
 
-        {/* Right Panel - View Header Category */}
-        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 overflow-hidden">
-          <div className="bg-teal-600 text-white px-4 sm:px-6 py-3">
-            <h2 className="text-base sm:text-lg font-semibold">View Header Category</h2>
-          </div>
+        {/* Right Panel - List & Search */}
+        <div className="bg-white rounded-lg shadow-sm border border-neutral-200 flex flex-col h-full">
+          <div className="p-4 border-b border-neutral-200 flex justify-between items-center bg-neutral-50">
+            <h3 className="font-semibold text-neutral-700">Category List</h3>
 
-          {/* Controls */}
-          <div className="p-4 sm:p-6 border-b border-neutral-200">
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-              {/* Entries Per Page */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-neutral-700">Show</span>
-                <select
-                  value={entriesPerPage}
-                  onChange={(e) => {
-                    setEntriesPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  className="px-2 py-1 border border-neutral-300 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
-                >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-                <span className="text-sm text-neutral-700">entries</span>
-              </div>
-
-              {/* Search */}
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-neutral-700">Search:</label>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="Search..."
-                  className="px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500 min-w-[150px]"
-                />
-              </div>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search category..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 pr-3 py-1.5 text-sm border border-neutral-300 rounded-full w-48 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              />
+              <svg
+                className="w-4 h-4 text-neutral-400 absolute left-2.5 top-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
-              <thead className="bg-neutral-50 border-b border-neutral-200">
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-neutral-50 sticky top-0 z-10">
                 <tr>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    Icon
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    Theme
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    Product Cat
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wider">
-                    Action
-                  </th>
+                  {['Name', 'Icon', 'Theme', 'Status', 'Actions'].map((header) => (
+                    <th
+                      key={header}
+                      onClick={() => handleSort(header.toLowerCase())}
+                      className="px-4 py-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider cursor-pointer hover:bg-neutral-100 transition-colors border-b border-neutral-200"
+                    >
+                      {header} {sortColumn === header.toLowerCase() && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-neutral-200">
-                {displayedCategories.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 sm:px-6 py-8 text-center text-sm text-neutral-500">
-                      {loading ? 'Loading...' : 'No header categories found'}
-                    </td>
-                  </tr>
-                ) : (
+              <tbody className="divide-y divide-neutral-100">
+                {displayedCategories.length > 0 ? (
                   displayedCategories.map((category) => (
-                    <tr key={category._id} className="hover:bg-neutral-50">
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-900 font-medium">{category.name}</td>
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">
-                        {category.iconName} ({category.iconLibrary})
+                    <tr key={category._id} className="hover:bg-neutral-50 transition-colors group">
+                      <td className="px-4 py-3 text-sm font-medium text-neutral-800">
+                        {category.name}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">
-                        <span className="inline-block px-2 py-0.5 rounded text-xs border border-gray-300 bg-gray-50 capitalize">
+                      <td className="px-4 py-3 text-sm text-neutral-600">
+                        <div className="flex items-center gap-2">
+                          <div className="text-teal-600 w-5 h-5 flex items-center justify-center">
+                            {getIconByName(category.iconName)}
+                          </div>
+                          <span className="text-xs text-neutral-400 font-mono hidden xl:inline">
+                            {category.iconName}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-neutral-600">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-neutral-100 text-neutral-800 capitalize border border-neutral-200">
+                          <div
+                            className="w-2 h-2 rounded-full mr-1.5"
+                            style={{ background: themes[category.slug]?.primary[0] || '#ccc' }}
+                          />
                           {category.slug}
                         </span>
                       </td>
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">{category.relatedCategory || '-'}</td>
-                      <td className="px-4 sm:px-6 py-3 text-sm text-neutral-600">
-                        <span className={`px-2 py-1 rounded text-xs ${category.status === 'Published' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      <td className="px-4 py-3 text-sm">
+                        <span
+                          className={`
+                            px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
+                            ${category.status === 'Published'
+                              ? 'bg-green-100 text-green-800 border border-green-200'
+                              : 'bg-red-100 text-red-800 border border-red-200'}
+                          `}
+                        >
                           {category.status}
                         </span>
                       </td>
-                      <td className="px-4 sm:px-6 py-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEdit(category)}
-                            className="p-1.5 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors"
-                            title="Edit"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(category._id)}
-                            className="p-1.5 bg-red-100 hover:bg-red-200 text-red-700 rounded transition-colors"
-                            title="Delete"
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                          </button>
-                        </div>
+                      <td className="px-4 py-3 text-sm flex gap-2">
+                        <button
+                          onClick={() => handleEdit(category)}
+                          className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 p-1.5 rounded transition-colors"
+                          title="Edit"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(category._id)}
+                          className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 p-1.5 rounded transition-colors"
+                          title="Delete"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </td>
                     </tr>
                   ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-10 text-center text-neutral-500">
+                      <div className="flex flex-col items-center justify-center">
+                        <svg className="w-10 h-10 text-neutral-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                        <p>No categories found</p>
+                      </div>
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
 
-          {/* Pagination Footer */}
-          {/* (Kept minimal for brevity but logic is straightforward) */}
-          <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
-            <div className="text-xs sm:text-sm text-neutral-700">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredCategories.length)} of {filteredCategories.length} entries
-            </div>
-            {/* Simple Pagination Buttons */}
-            <div className="flex gap-2">
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-3 py-1 border rounded text-sm disabled:opacity-50">Prev</button>
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="px-3 py-1 border rounded text-sm disabled:opacity-50">Next</button>
+          <div className="p-4 border-t border-neutral-200 bg-neutral-50">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-neutral-600 hidden sm:block">
+                Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(endIndex, filteredCategories.length)}</span> of <span className="font-medium">{filteredCategories.length}</span> results
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 border border-neutral-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white transition"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className="px-3 py-1 border border-neutral-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white transition"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="text-center text-sm text-neutral-500 py-4">
-        Copyright © 2025. Developed By{' '}
-        <a href="#" className="text-teal-600 hover:text-teal-700">
-          SpeeUp - 10 Minute App
-        </a>
       </div>
     </div>
   );
