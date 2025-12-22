@@ -4,9 +4,11 @@ import Category from "../../../models/Category";
 import SubCategory from "../../../models/SubCategory";
 import Shop from "../../../models/Shop";
 import Seller from "../../../models/Seller";
+import HeaderCategory from "../../../models/HeaderCategory";
 
 // Get Home Page Content
-export const getHomeContent = async (_req: Request, res: Response) => {
+export const getHomeContent = async (req: Request, res: Response) => {
+  const { headerCategorySlug } = req.query; // Get header category slug from query params
   try {
     // 1. Featured / Bestsellers - Get 6 sellers with their top 4 products each
     // First, get approved sellers
@@ -321,12 +323,35 @@ export const getHomeContent = async (_req: Request, res: Response) => {
 
     // 8. Promo Cards (Dynamic - Categories with headerCategoryId)
     // Fetch root categories (parentId: null) that have a headerCategoryId assigned and are Active
+    // If headerCategorySlug is provided, filter by that specific header category
     // Include their child categories (subcategories) with images
-    const categoriesWithHeaderCategory = await Category.find({
+
+    // Build query for categories
+    const categoryQuery: any = {
       headerCategoryId: { $exists: true, $ne: null },
       status: "Active",
       parentId: null, // Only root categories (not subcategories themselves)
-    })
+    };
+
+    // If headerCategorySlug is provided, find the header category and filter by it
+    if (headerCategorySlug && headerCategorySlug !== "all") {
+      const headerCategory = await HeaderCategory.findOne({
+        slug: headerCategorySlug,
+        status: "Published",
+      }).lean();
+
+      if (headerCategory) {
+        categoryQuery.headerCategoryId = headerCategory._id;
+      } else {
+        // If header category not found, return empty promo cards for this header category
+        // The query will still work but won't match any categories
+        console.log(
+          `Header category with slug "${headerCategorySlug}" not found`
+        );
+      }
+    }
+
+    const categoriesWithHeaderCategory = await Category.find(categoryQuery)
       .populate("headerCategoryId", "name status")
       .sort({ order: 1 })
       .limit(4) // Limit to 4 promo cards
