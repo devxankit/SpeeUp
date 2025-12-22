@@ -180,25 +180,22 @@ export default function AdminBrand() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this brand?")) {
-      try {
-        const response = await deleteBrand(id);
-        if (response.success) {
-          setBrands((prev) => prev.filter((brand) => brand._id !== id));
-          alert("Brand deleted successfully!");
-        }
-      } catch (error) {
-        if (error && typeof error === "object" && "response" in error) {
-          const axiosError = error as {
-            response?: { data?: { message?: string } };
-          };
-          alert(
-            axiosError.response?.data?.message ||
-            "Failed to delete brand. Please try again."
-          );
-        } else {
-          alert("Failed to delete brand. Please try again.");
-        }
+    try {
+      const response = await deleteBrand(id);
+      if (response.success) {
+        setBrands((prev) => prev.filter((brand) => brand._id !== id));
+      }
+    } catch (error) {
+      if (error && typeof error === "object" && "response" in error) {
+        const axiosError = error as {
+          response?: { data?: { message?: string } };
+        };
+        alert(
+          axiosError.response?.data?.message ||
+          "Failed to delete brand. Please try again."
+        );
+      } else {
+        alert("Failed to delete brand. Please try again.");
       }
     }
   };

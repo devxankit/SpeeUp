@@ -138,20 +138,25 @@ export default function AdminStockManagement() {
     const variations: ProductVariation[] = [];
 
     products.forEach((product) => {
-      const categoryName =
-        typeof product.category === "object"
-          ? product.category.name
-          : categories.find((c) => c._id === product.category)?.name ||
-          "Unknown";
-      const categoryId =
-        typeof product.category === "object"
-          ? product.category._id
-          : product.category;
+      // Handle null/undefined category
+      let categoryName = "Unknown";
+      let categoryId = "";
+
+      if (product.category) {
+        if (typeof product.category === "object" && product.category !== null) {
+          categoryName = product.category.name || "Unknown";
+          categoryId = product.category._id || "";
+        } else if (typeof product.category === "string") {
+          categoryId = product.category;
+          categoryName = categories.find((c) => c._id === product.category)?.name || "Unknown";
+        }
+      }
+
       const sellerName =
-        typeof product.seller === "object"
+        typeof product.seller === "object" && product.seller !== null
           ? product.seller.storeName || product.seller.sellerName
           : "Unknown Seller";
-      const sellerId = typeof product.seller === "object" ? "" : product.seller;
+      const sellerId = typeof product.seller === "object" ? "" : product.seller || "";
 
       // If product has variations, create a row for each variation
       if (product.variations && product.variations.length > 0) {

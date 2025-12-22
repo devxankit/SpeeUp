@@ -118,11 +118,13 @@ router.delete("/brands/:id", productController.deleteBrand);
 // Admin cannot create products - only sellers can add products
 // router.post("/products", productController.createProduct);
 router.get("/products", productController.getProducts);
-router.put("/products/order", productController.updateProductOrder);
+// Product order functionality removed
+// router.put("/products/order", productController.updateProductOrder);
 router.get("/products/:id", productController.getProductById);
 router.put("/products/:id", productController.updateProduct);
 router.delete("/products/:id", productController.deleteProduct);
-router.patch("/products/:id/approve", productController.approveProductRequest);
+// Product approval no longer needed - products show directly in list
+// router.patch("/products/:id/approve", productController.approveProductRequest);
 router.post("/products/bulk-import", productController.bulkImportProducts);
 router.put("/products/bulk-update", productController.bulkUpdateProducts);
 

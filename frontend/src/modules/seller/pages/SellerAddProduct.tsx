@@ -8,6 +8,7 @@ import {
 import { createProduct, updateProduct, getProductById, ProductVariation } from "../../../services/api/productService";
 import { getCategories, getSubcategories, Category, SubCategory } from "../../../services/api/categoryService";
 import { getActiveTaxes, Tax } from "../../../services/api/taxService";
+import { getBrands, Brand } from "../../../services/api/brandService";
 
 export default function SellerAddProduct() {
   const navigate = useNavigate();
@@ -60,16 +61,19 @@ export default function SellerAddProduct() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<SubCategory[]>([]);
   const [taxes, setTaxes] = useState<Tax[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [catRes, taxRes] = await Promise.all([
+        const [catRes, taxRes, brandRes] = await Promise.all([
           getCategories(),
-          getActiveTaxes()
+          getActiveTaxes(),
+          getBrands()
         ]);
         if (catRes.success) setCategories(catRes.data);
         if (taxRes.success) setTaxes(taxRes.data);
+        if (brandRes.success) setBrands(brandRes.data);
       } catch (err) {
         console.error("Error fetching form data:", err);
       }
@@ -502,6 +506,11 @@ export default function SellerAddProduct() {
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 bg-white">
                     <option value="">Select Brand</option>
+                    {brands.map((brand) => (
+                      <option key={brand._id} value={brand._id}>
+                        {brand.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>

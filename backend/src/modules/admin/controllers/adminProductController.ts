@@ -908,6 +908,8 @@ export const createProduct = asyncHandler(
 
 /**
  * Get all products
+ * Returns all products regardless of status (no approval workflow)
+ * Use status query param to filter by specific status if needed
  */
 export const getProducts = asyncHandler(async (req: Request, res: Response) => {
   const {
@@ -934,7 +936,13 @@ export const getProducts = asyncHandler(async (req: Request, res: Response) => {
   if (subcategory) query.subcategory = subcategory;
   if (brand) query.brand = brand;
   if (seller) query.seller = seller;
-  if (status) query.status = status;
+
+  // Only filter by status if explicitly provided
+  // All products show by default (no approval workflow)
+  if (status) {
+    query.status = status;
+  }
+
   if (publish !== undefined) query.publish = publish === "true";
 
   const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
@@ -1105,9 +1113,8 @@ export const approveProductRequest = asyncHandler(
 
     return res.status(200).json({
       success: true,
-      message: `Product ${
-        status === "Active" ? "approved" : "rejected"
-      } successfully`,
+      message: `Product ${status === "Active" ? "approved" : "rejected"
+        } successfully`,
       data: product,
     });
   }
