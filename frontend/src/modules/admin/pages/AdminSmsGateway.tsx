@@ -12,52 +12,11 @@ interface SmsGateway {
 export default function AdminSmsGateway() {
   const [gateways, setGateways] = useState<SmsGateway[]>([
     {
-      id: 'twilio',
-      name: 'Twilio SMS',
-      fields: {
-        accountSid: '',
-        authToken: '',
-        twilioNumber: '',
-        message: 'Your otp is #OTP#.',
-      },
-      status: 'Active',
-    },
-    {
-      id: 'nexmo',
-      name: 'Nexmo SMS',
-      fields: {
-        vonageApiKey: '',
-        vonageApiSecret: '',
-        smsSenderId: '',
-        messageText: 'Your otp is #OTP#.',
-      },
-      status: 'InActive',
-    },
-    {
       id: '2factor',
       name: '2Factor SMS',
       fields: {
         apiKey: '',
         otpTemplateName: '',
-      },
-      status: 'InActive',
-    },
-    {
-      id: 'msg91',
-      name: 'MSG91 SMS',
-      fields: {
-        otpTemplateId: '',
-        authKey: '',
-      },
-      status: 'InActive',
-    },
-    {
-      id: 'fast2sms',
-      name: 'Fast2SMS',
-      fields: {
-        apiKey: '',
-        senderId: '',
-        messageId: '',
       },
       status: 'InActive',
     },

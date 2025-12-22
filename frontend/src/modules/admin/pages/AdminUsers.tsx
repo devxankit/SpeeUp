@@ -26,6 +26,8 @@ export default function AdminUsers() {
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalUsers, setTotalUsers] = useState(0);
 
     // Fetch users on component mount
     useEffect(() => {
@@ -52,10 +54,21 @@ export default function AdminUsers() {
                     params.search = searchTerm;
                 }
 
+                // Add sorting parameters
+                if (sortColumn) {
+                    params.sortBy = sortColumn;
+                    params.sortOrder = sortDirection;
+                }
+
                 const response = await getUsers(params);
 
                 if (response.success) {
                     setUsers(response.data);
+                    // Update pagination info from backend
+                    if (response.pagination) {
+                        setTotalPages(response.pagination.pages);
+                        setTotalUsers(response.pagination.total);
+                    }
                 } else {
                     setError('Failed to load users');
                 }
@@ -68,15 +81,30 @@ export default function AdminUsers() {
         };
 
         fetchUsers();
-    }, [isAuthenticated, token, currentPage, entriesPerPage, statusFilter, searchTerm]);
+    }, [isAuthenticated, token, currentPage, entriesPerPage, statusFilter, searchTerm, sortColumn, sortDirection]);
 
     const handleSort = (column: string) => {
-        if (sortColumn === column) {
+        // Map frontend column names to backend field names
+        const columnMap: Record<string, string> = {
+            'id': '_id',
+            'name': 'name',
+            '_id': '_id',
+            'registrationDate': 'registrationDate',
+            'status': 'status',
+            'refCode': 'refCode',
+            'walletAmount': 'walletAmount',
+            'totalOrders': 'totalOrders',
+            'totalSpent': 'totalSpent',
+        };
+        const backendColumn = columnMap[column] || column;
+        
+        if (sortColumn === backendColumn) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
         } else {
-            setSortColumn(column);
+            setSortColumn(backendColumn);
             setSortDirection('asc');
         }
+        setCurrentPage(1); // Reset to first page when sorting changes
     };
 
     const handleExport = () => {
@@ -106,11 +134,9 @@ export default function AdminUsers() {
         document.body.removeChild(link);
     };
 
-    // Calculate pagination
-    const totalPages = Math.ceil(users.length / entriesPerPage);
+    // Use backend data directly (already paginated)
+    const displayedUsers = users;
     const startIndex = (currentPage - 1) * entriesPerPage;
-    const endIndex = startIndex + entriesPerPage;
-    const displayedUsers = users.slice(startIndex, endIndex);
 
     const handleStatusChange = async (userId: string, newStatus: 'Active' | 'Suspended') => {
         try {
@@ -121,7 +147,11 @@ export default function AdminUsers() {
                 setUsers(users.map(user =>
                     user._id === userId ? { ...user, status: newStatus } : user
                 ));
-                alert(`User status updated to ${newStatus} successfully!`);
+                // Show success message (can be replaced with toast notification)
+                setError('');
+                setTimeout(() => {
+                    alert(`User status updated to ${newStatus} successfully!`);
+                }, 100);
             } else {
                 alert('Failed to update user status: ' + (response.message || 'Unknown error'));
             }
@@ -131,11 +161,27 @@ export default function AdminUsers() {
         }
     };
 
-    const SortIcon = ({ column }: { column: string }) => (
-        <span className="text-neutral-400 text-xs ml-1">
-            {sortColumn === column ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}
-        </span>
-    );
+    const SortIcon = ({ column }: { column: string }) => {
+        // Map frontend column names to backend field names for comparison
+        const columnMap: Record<string, string> = {
+            'id': '_id',
+            'name': 'name',
+            '_id': '_id',
+            'registrationDate': 'registrationDate',
+            'status': 'status',
+            'refCode': 'refCode',
+            'walletAmount': 'walletAmount',
+            'totalOrders': 'totalOrders',
+            'totalSpent': 'totalSpent',
+        };
+        const backendColumn = columnMap[column] || column;
+        
+        return (
+            <span className="text-neutral-400 text-xs ml-1">
+                {sortColumn === backendColumn ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}
+            </span>
+        );
+    };
 
     return (
         <div className="flex flex-col h-full bg-gray-50">
@@ -181,13 +227,8 @@ export default function AdminUsers() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-neutral-50 text-xs font-bold text-neutral-800 border-b border-neutral-200">
-                                    <th
-                                        className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                                        onClick={() => handleSort('id')}
-                                    >
-                                        <div className="flex items-center">
-                                            Sr No <SortIcon column="id" />
-                                        </div>
+                                    <th className="p-4">
+                                        Sr No
                                     </th>
                                     <th
                                         className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
@@ -336,7 +377,7 @@ export default function AdminUsers() {
                     {/* Pagination Footer */}
                     <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
                         <div className="text-xs sm:text-sm text-neutral-700">
-                            Showing {startIndex + 1} to {Math.min(endIndex, users.length)} of {users.length} entries
+                            Showing {displayedUsers.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + displayedUsers.length, totalUsers)} of {totalUsers} entries
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -364,8 +405,17 @@ export default function AdminUsers() {
                                     />
                                 </svg>
                             </button>
-                            {Array.from({ length: Math.min(totalPages, 4) }, (_, i) => {
-                                const pageNum = i + 1;
+                            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                } else if (currentPage <= 3) {
+                                    pageNum = i + 1;
+                                } else if (currentPage >= totalPages - 2) {
+                                    pageNum = totalPages - 4 + i;
+                                } else {
+                                    pageNum = currentPage - 2 + i;
+                                }
                                 return (
                                     <button
                                         key={pageNum}
@@ -379,7 +429,7 @@ export default function AdminUsers() {
                                     </button>
                                 );
                             })}
-                            {totalPages > 4 && (
+                            {totalPages > 5 && currentPage < totalPages - 2 && (
                                 <span className="px-2 text-neutral-400">...</span>
                             )}
                             <button

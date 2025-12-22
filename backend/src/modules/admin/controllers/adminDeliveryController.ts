@@ -71,6 +71,7 @@ export const getAllDeliveryBoys = asyncHandler(
       page = 1,
       limit = 10,
       status,
+      available,
       search,
       sortBy = "createdAt",
       sortOrder = "desc",
@@ -79,11 +80,13 @@ export const getAllDeliveryBoys = asyncHandler(
     const query: any = {};
 
     if (status) query.status = status;
+    if (available) query.available = available;
     if (search) {
       query.$or = [
         { name: { $regex: search as string, $options: "i" } },
         { mobile: { $regex: search as string, $options: "i" } },
         { email: { $regex: search as string, $options: "i" } },
+        { address: { $regex: search as string, $options: "i" } },
       ];
     }
 

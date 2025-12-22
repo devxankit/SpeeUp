@@ -9,7 +9,14 @@ export const getPaymentMethods = asyncHandler(
     async (req: Request, res: Response) => {
         const { status } = req.query;
 
-        const query: any = {};
+        const query: any = {
+            // Only show COD and Razorpay payment methods
+            $or: [
+                { type: "COD" },
+                { provider: { $regex: /razorpay/i } },
+                { name: { $regex: /razorpay/i } }
+            ]
+        };
         if (status) {
             query.isActive = status === "Active";
         }

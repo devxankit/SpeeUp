@@ -21,8 +21,11 @@ export default function AdminManageDeliveryBoy() {
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalDeliveryBoys, setTotalDeliveryBoys] = useState(0);
+    const [successMessage, setSuccessMessage] = useState('');
 
-    // Fetch delivery boys on component mount and when filters change
+    // Debounce search term and fetch delivery boys
     useEffect(() => {
         if (!isAuthenticated || !token) {
             setLoading(false);
@@ -37,7 +40,7 @@ export default function AdminManageDeliveryBoy() {
                 const params: any = {
                     page: currentPage,
                     limit: rowsPerPage,
-                    search: searchTerm,
+                    search: searchTerm || undefined,
                     sortBy: sortColumn || undefined,
                     sortOrder: sortDirection,
                 };
@@ -54,6 +57,11 @@ export default function AdminManageDeliveryBoy() {
 
                 if (response.success) {
                     setDeliveryBoys(response.data);
+                    // Update pagination info from backend
+                    if (response.pagination) {
+                        setTotalPages(response.pagination.pages);
+                        setTotalDeliveryBoys(response.pagination.total);
+                    }
                 } else {
                     setError('Failed to load delivery boys');
                 }
@@ -65,16 +73,37 @@ export default function AdminManageDeliveryBoy() {
             }
         };
 
-        fetchDeliveryBoys();
+        // Debounce search term
+        const timer = setTimeout(() => {
+            fetchDeliveryBoys();
+        }, searchTerm ? 500 : 0); // Immediate fetch if search is empty, debounce if typing
+
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated, token, currentPage, rowsPerPage, searchTerm, statusFilter, availabilityFilter, sortColumn, sortDirection]);
 
     const handleSort = (column: string) => {
-        if (sortColumn === column) {
+        // Map frontend column names to backend field names
+        const columnMap: Record<string, string> = {
+            'id': '_id',
+            '_id': '_id',
+            'name': 'name',
+            'mobile': 'mobile',
+            'city': 'city',
+            'balance': 'balance',
+            'cashCollected': 'cashCollected',
+            'status': 'status',
+            'available': 'available',
+        };
+        const backendColumn = columnMap[column] || column;
+        
+        if (sortColumn === backendColumn) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
         } else {
-            setSortColumn(column);
+            setSortColumn(backendColumn);
             setSortDirection('asc');
         }
+        setCurrentPage(1); // Reset to first page when sorting changes
     };
 
     const handleStatusChange = async (deliveryBoyId: string, newStatus: 'Active' | 'Inactive') => {
@@ -87,13 +116,34 @@ export default function AdminManageDeliveryBoy() {
                 setDeliveryBoys(deliveryBoys.map(deliveryBoy =>
                     deliveryBoy._id === deliveryBoyId ? { ...deliveryBoy, status: newStatus } : deliveryBoy
                 ));
-                alert(`Delivery boy status updated to ${newStatus} successfully!`);
+                setSuccessMessage(`Delivery boy status updated to ${newStatus} successfully!`);
+                setError('');
+                // Refresh list to get updated data
+                const params: any = {
+                    page: currentPage,
+                    limit: rowsPerPage,
+                    search: searchTerm,
+                    sortBy: sortColumn || undefined,
+                    sortOrder: sortDirection,
+                };
+                if (statusFilter !== 'All') params.status = statusFilter;
+                if (availabilityFilter !== 'All') params.available = availabilityFilter;
+                const refreshResponse = await getDeliveryBoys(params);
+                if (refreshResponse.success && refreshResponse.data) {
+                    setDeliveryBoys(refreshResponse.data);
+                    if (refreshResponse.pagination) {
+                        setTotalPages(refreshResponse.pagination.pages);
+                        setTotalDeliveryBoys(refreshResponse.pagination.total);
+                    }
+                }
             } else {
-                alert('Failed to update delivery boy status: ' + (response.message || 'Unknown error'));
+                setError('Failed to update delivery boy status: ' + (response.message || 'Unknown error'));
+                setSuccessMessage('');
             }
         } catch (err: any) {
             console.error('Error updating delivery boy status:', err);
-            alert('Failed to update delivery boy status: ' + (err.response?.data?.message || 'Please try again.'));
+            setError('Failed to update delivery boy status: ' + (err.response?.data?.message || 'Please try again.'));
+            setSuccessMessage('');
         } finally {
             setProcessing(null);
         }
@@ -109,13 +159,34 @@ export default function AdminManageDeliveryBoy() {
                 setDeliveryBoys(deliveryBoys.map(deliveryBoy =>
                     deliveryBoy._id === deliveryBoyId ? { ...deliveryBoy, available: newAvailability } : deliveryBoy
                 ));
-                alert(`Delivery boy availability updated to ${newAvailability} successfully!`);
+                setSuccessMessage(`Delivery boy availability updated to ${newAvailability} successfully!`);
+                setError('');
+                // Refresh list to get updated data
+                const params: any = {
+                    page: currentPage,
+                    limit: rowsPerPage,
+                    search: searchTerm,
+                    sortBy: sortColumn || undefined,
+                    sortOrder: sortDirection,
+                };
+                if (statusFilter !== 'All') params.status = statusFilter;
+                if (availabilityFilter !== 'All') params.available = availabilityFilter;
+                const refreshResponse = await getDeliveryBoys(params);
+                if (refreshResponse.success && refreshResponse.data) {
+                    setDeliveryBoys(refreshResponse.data);
+                    if (refreshResponse.pagination) {
+                        setTotalPages(refreshResponse.pagination.pages);
+                        setTotalDeliveryBoys(refreshResponse.pagination.total);
+                    }
+                }
             } else {
-                alert('Failed to update delivery boy availability: ' + (response.message || 'Unknown error'));
+                setError('Failed to update delivery boy availability: ' + (response.message || 'Unknown error'));
+                setSuccessMessage('');
             }
         } catch (err: any) {
             console.error('Error updating delivery boy availability:', err);
-            alert('Failed to update delivery boy availability: ' + (err.response?.data?.message || 'Please try again.'));
+            setError('Failed to update delivery boy availability: ' + (err.response?.data?.message || 'Please try again.'));
+            setSuccessMessage('');
         } finally {
             setProcessing(null);
         }
@@ -131,15 +202,34 @@ export default function AdminManageDeliveryBoy() {
             const response = await deleteDeliveryBoy(deliveryBoyId);
 
             if (response.success) {
-                // Remove from local state
-                setDeliveryBoys(deliveryBoys.filter(deliveryBoy => deliveryBoy._id !== deliveryBoyId));
-                alert('Delivery boy deleted successfully!');
+                setSuccessMessage('Delivery boy deleted successfully!');
+                setError('');
+                // Refresh list
+                const params: any = {
+                    page: currentPage,
+                    limit: rowsPerPage,
+                    search: searchTerm,
+                    sortBy: sortColumn || undefined,
+                    sortOrder: sortDirection,
+                };
+                if (statusFilter !== 'All') params.status = statusFilter;
+                if (availabilityFilter !== 'All') params.available = availabilityFilter;
+                const refreshResponse = await getDeliveryBoys(params);
+                if (refreshResponse.success && refreshResponse.data) {
+                    setDeliveryBoys(refreshResponse.data);
+                    if (refreshResponse.pagination) {
+                        setTotalPages(refreshResponse.pagination.pages);
+                        setTotalDeliveryBoys(refreshResponse.pagination.total);
+                    }
+                }
             } else {
-                alert('Failed to delete delivery boy: ' + (response.message || 'Unknown error'));
+                setError('Failed to delete delivery boy: ' + (response.message || 'Unknown error'));
+                setSuccessMessage('');
             }
         } catch (err: any) {
             console.error('Error deleting delivery boy:', err);
-            alert('Failed to delete delivery boy: ' + (err.response?.data?.message || 'Please try again.'));
+            setError('Failed to delete delivery boy: ' + (err.response?.data?.message || 'Please try again.'));
+            setSuccessMessage('');
         } finally {
             setProcessing(null);
         }
@@ -175,19 +265,31 @@ export default function AdminManageDeliveryBoy() {
         document.body.removeChild(link);
     };
 
-    const SortIcon = ({ column }: { column: string }) => (
-        <span className="text-neutral-400 text-xs ml-1">
-            {sortColumn === column ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}
-        </span>
-    );
+    const SortIcon = ({ column }: { column: string }) => {
+        // Map frontend column names to backend field names for comparison
+        const columnMap: Record<string, string> = {
+            'id': '_id',
+            '_id': '_id',
+            'name': 'name',
+            'mobile': 'mobile',
+            'city': 'city',
+            'balance': 'balance',
+            'cashCollected': 'cashCollected',
+            'status': 'status',
+            'available': 'available',
+        };
+        const backendColumn = columnMap[column] || column;
+        
+        return (
+            <span className="text-neutral-400 text-xs ml-1">
+                {sortColumn === backendColumn ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}
+            </span>
+        );
+    };
 
-    // Note: Filtering and sorting is done server-side, so we just use the deliveryBoys as is
+    // Use backend data directly (already paginated, filtered, and sorted)
     const displayedDeliveryBoys = deliveryBoys;
-
-    // For pagination display (simplified - in real app, this would come from API)
-    const totalPages = Math.ceil(displayedDeliveryBoys.length / rowsPerPage);
     const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
 
     return (
         <div className="flex flex-col h-full bg-gray-50">
@@ -199,6 +301,34 @@ export default function AdminManageDeliveryBoy() {
                     <div className="bg-teal-600 text-white px-6 py-4 rounded-t-lg">
                         <h2 className="text-lg font-semibold">View Delivery Boy List</h2>
                     </div>
+
+                    {/* Error Message */}
+                    {error && (
+                        <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 flex items-center justify-between">
+                            <p className="text-sm">{error}</p>
+                            <button
+                                onClick={() => setError('')}
+                                className="text-red-700 hover:text-red-900 ml-4 text-lg font-bold"
+                                type="button"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Success Message */}
+                    {successMessage && (
+                        <div className="p-4 bg-green-50 border-l-4 border-green-500 text-green-700 flex items-center justify-between">
+                            <p className="text-sm">{successMessage}</p>
+                            <button
+                                onClick={() => setSuccessMessage('')}
+                                className="text-green-700 hover:text-green-900 ml-4 text-lg font-bold"
+                                type="button"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    )}
 
                     {/* Controls */}
                     <div className="p-4 border-b border-neutral-200 flex flex-col gap-4">
@@ -488,7 +618,7 @@ export default function AdminManageDeliveryBoy() {
                     {/* Pagination Footer */}
                     <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
                         <div className="text-xs sm:text-sm text-neutral-700">
-                            Showing {startIndex + 1} to {Math.min(endIndex, deliveryBoys.length)} of {deliveryBoys.length} entries
+                            Showing {displayedDeliveryBoys.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + displayedDeliveryBoys.length, totalDeliveryBoys)} of {totalDeliveryBoys} entries
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -516,8 +646,17 @@ export default function AdminManageDeliveryBoy() {
                                     />
                                 </svg>
                             </button>
-                            {Array.from({ length: Math.min(totalPages, 4) }, (_, i) => {
-                                const pageNum = i + 1;
+                            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                } else if (currentPage <= 3) {
+                                    pageNum = i + 1;
+                                } else if (currentPage >= totalPages - 2) {
+                                    pageNum = totalPages - 4 + i;
+                                } else {
+                                    pageNum = currentPage - 2 + i;
+                                }
                                 return (
                                     <button
                                         key={pageNum}
@@ -531,7 +670,7 @@ export default function AdminManageDeliveryBoy() {
                                     </button>
                                 );
                             })}
-                            {totalPages > 4 && (
+                            {totalPages > 5 && currentPage < totalPages - 2 && (
                                 <span className="px-2 text-neutral-400">...</span>
                             )}
                             <button
