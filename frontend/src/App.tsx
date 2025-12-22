@@ -75,7 +75,6 @@ import AdminCategory from "./modules/admin/pages/AdminCategory";
 import AdminHeaderCategory from "./modules/admin/pages/AdminHeaderCategory";
 import AdminSubCategory from "./modules/admin/pages/AdminSubCategory";
 import AdminBrand from "./modules/admin/pages/AdminBrand";
-import AdminAddProduct from "./modules/admin/pages/AdminAddProduct";
 import AdminTaxes from "./modules/admin/pages/AdminTaxes";
 import AdminProductOrder from "./modules/admin/pages/AdminProductOrder";
 import AdminProductRequest from "./modules/admin/pages/AdminProductRequest";
@@ -206,8 +205,6 @@ function App() {
                             <Route path="subcategory" element={<AdminSubCategory />} />
                             <Route path="subcategory-order" element={<AdminSubcategoryOrder />} />
                             <Route path="brand" element={<AdminBrand />} />
-                            <Route path="product/add" element={<AdminAddProduct />} />
-                            <Route path="product/edit/:id" element={<AdminAddProduct />} />
                             <Route path="product/taxes" element={<AdminTaxes />} />
                             <Route path="product/list" element={<AdminStockManagement />} />
                             <Route path="product/order" element={<AdminProductOrder />} />

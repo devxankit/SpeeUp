@@ -37,12 +37,25 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return true;
   };
 
-  // Show location request if needed - check on every route change
+  // ALWAYS show location request modal on app load if location is not enabled
+  // This ensures modal appears on every app open, regardless of browser permission state
   useEffect(() => {
-    // Wait for location loading to complete, then check if location is required and not enabled
-    if (!isLocationLoading && requiresLocation() && !isLocationEnabled) {
+    // Wait for initial loading to complete
+    if (isLocationLoading) {
+      return;
+    }
+
+    // If location is enabled, hide modal
+    if (isLocationEnabled) {
+      setShowLocationRequest(false);
+      return;
+    }
+
+    // If location is NOT enabled and route requires location, ALWAYS show modal
+    // This will trigger on every app open until user explicitly confirms location
+    if (!isLocationEnabled && requiresLocation()) {
       setShowLocationRequest(true);
-    } else if (isLocationEnabled) {
+    } else {
       setShowLocationRequest(false);
     }
   }, [isLocationLoading, isLocationEnabled, location.pathname]);

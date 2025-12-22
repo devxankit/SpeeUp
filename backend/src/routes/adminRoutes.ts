@@ -115,7 +115,8 @@ router.put("/brands/:id", productController.updateBrand);
 router.delete("/brands/:id", productController.deleteBrand);
 
 // ==================== Product Routes ====================
-router.post("/products", productController.createProduct);
+// Admin cannot create products - only sellers can add products
+// router.post("/products", productController.createProduct);
 router.get("/products", productController.getProducts);
 router.put("/products/order", productController.updateProductOrder);
 router.get("/products/:id", productController.getProductById);

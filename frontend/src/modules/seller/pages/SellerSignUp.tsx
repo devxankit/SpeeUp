@@ -14,7 +14,6 @@ export default function SellerSignUp() {
     sellerName: '',
     mobile: '',
     email: '',
-    password: '',
     storeName: '',
     category: '',
     categories: [] as string[],
@@ -26,6 +25,7 @@ export default function SellerSignUp() {
     searchLocation: '',
     latitude: '',
     longitude: '',
+    serviceRadiusKm: '10', // Default 10km
     accountName: '',
     bankName: '',
     branch: '',
@@ -84,8 +84,8 @@ export default function SellerSignUp() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate required fields
-    if (!formData.sellerName || !formData.mobile || !formData.email || !formData.password ||
+    // Validate required fields (password removed - not needed during signup)
+    if (!formData.sellerName || !formData.mobile || !formData.email ||
       !formData.storeName || formData.categories.length === 0 || !formData.address || !formData.city) {
       setError('Please fill all required fields (select at least one category)');
       return;
@@ -106,11 +106,17 @@ export default function SellerSignUp() {
         return;
       }
 
+      // Validate service radius
+      const radius = parseFloat(formData.serviceRadiusKm);
+      if (isNaN(radius) || radius < 0.1 || radius > 100) {
+        setError('Service radius must be between 0.1 and 100 kilometers');
+        return;
+      }
+
       const response = await register({
         sellerName: formData.sellerName,
         mobile: formData.mobile,
         email: formData.email,
-        password: formData.password,
         storeName: formData.storeName,
         category: formData.categories[0], // primary
         categories: formData.categories,
@@ -119,6 +125,7 @@ export default function SellerSignUp() {
         searchLocation: formData.searchLocation,
         latitude: formData.latitude,
         longitude: formData.longitude,
+        serviceRadiusKm: formData.serviceRadiusKm,
       });
 
       if (response.success) {
@@ -266,23 +273,6 @@ export default function SellerSignUp() {
 
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    Password <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="Enter password (min 6 characters)"
-                    required
-                    minLength={4}
-                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-                    disabled={loading}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Store Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -306,22 +296,24 @@ export default function SellerSignUp() {
                       Loading categories...
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      {categories.map((cat) => {
-                        const checked = formData.categories.includes(cat.name);
-                        return (
-                          <label key={cat._id} className="flex items-center gap-2 text-sm text-neutral-700">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleCategory(cat.name)}
-                              disabled={loading}
-                              className="h-4 w-4 text-teal-600 border-neutral-300 rounded focus:ring-teal-500"
-                            />
-                            <span>{cat.name}</span>
-                          </label>
-                        );
-                      })}
+                    <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto p-2 border border-neutral-200 rounded-lg">
+                      {categories
+                        .filter((cat) => !cat.parent || cat.parent === null) // Only show parent categories
+                        .map((cat) => {
+                          const checked = formData.categories.includes(cat.name);
+                          return (
+                            <label key={cat._id} className="flex items-center gap-2 text-sm text-neutral-700">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleCategory(cat.name)}
+                                disabled={loading}
+                                className="h-4 w-4 text-teal-600 border-neutral-300 rounded focus:ring-teal-500"
+                              />
+                              <span>{cat.name}</span>
+                            </label>
+                          );
+                        })}
                     </div>
                   )}
                   {formData.categories.length === 0 && categories.length > 0 && (
@@ -354,6 +346,34 @@ export default function SellerSignUp() {
                       Location: {formData.latitude}, {formData.longitude}
                     </p>
                   )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Delivery/Service Radius (KM) <span className="text-red-500">*</span>
+                    <span className="text-xs font-normal text-neutral-500 ml-1">(Distance you can deliver)</span>
+                  </label>
+                  <select
+                    name="serviceRadiusKm"
+                    value={formData.serviceRadiusKm}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                    disabled={loading}
+                  >
+                    <option value="1">1 km</option>
+                    <option value="2">2 km</option>
+                    <option value="5">5 km</option>
+                    <option value="10">10 km</option>
+                    <option value="15">15 km</option>
+                    <option value="20">20 km</option>
+                    <option value="25">25 km</option>
+                    <option value="30">30 km</option>
+                    <option value="50">50 km</option>
+                  </select>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Only customers within this radius can see and order your products
+                  </p>
                 </div>
 
                 <div>

@@ -23,6 +23,8 @@ export interface GetProductsParams {
     sort?: 'price_asc' | 'price_desc' | 'popular' | 'discount';
     page?: number;
     limit?: number;
+    latitude?: number; // User location latitude
+    longitude?: number; // User location longitude
 }
 
 export interface ProductListResponse {
@@ -48,6 +50,7 @@ export interface CategoryListResponse {
 
 /**
  * Get products with filters (Public)
+ * Location (latitude/longitude) is required to filter products by seller's service radius
  */
 export const getProducts = async (params?: GetProductsParams): Promise<ProductListResponse> => {
     const response = await api.get<ProductListResponse>('/customer/products', { params });
@@ -56,9 +59,15 @@ export const getProducts = async (params?: GetProductsParams): Promise<ProductLi
 
 /**
  * Get product details by ID (Public)
+ * Location (latitude/longitude) is required to verify product availability
  */
-export const getProductById = async (id: string): Promise<ProductDetailResponse> => {
-    const response = await api.get<ProductDetailResponse>(`/customer/products/${id}`);
+export const getProductById = async (id: string, latitude?: number, longitude?: number): Promise<ProductDetailResponse> => {
+    const params: any = {};
+    if (latitude !== undefined && longitude !== undefined) {
+        params.latitude = latitude;
+        params.longitude = longitude;
+    }
+    const response = await api.get<ProductDetailResponse>(`/customer/products/${id}`, { params });
     return response.data;
 };
 

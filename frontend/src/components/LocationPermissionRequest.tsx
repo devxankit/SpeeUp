@@ -28,10 +28,20 @@ export default function LocationPermissionRequest({
   }, [isLocationEnabled, onLocationGranted]);
 
   const handleAllowLocation = async () => {
+    // Clear any previous errors before retrying
+    setManualAddress('');
+    setManualLat(0);
+    setManualLng(0);
+    setShowManualInput(false);
+    
     try {
+      // ONLY call location API when user explicitly clicks the button
+      // This ensures we don't auto-request location on app load
       await requestLocation();
     } catch (error) {
-      // Error is handled by context
+      // Error is handled by context and displayed in the error box
+      // Location will remain disabled, modal will stay visible
+      // User can retry or use manual location entry
     }
   };
 
@@ -48,11 +58,13 @@ export default function LocationPermissionRequest({
     }
 
     try {
+      // Save manual location - this will set isLocationEnabled to true
       await updateLocation({
         latitude: manualLat,
         longitude: manualLng,
         address: manualAddress,
       });
+      // Modal will automatically hide when isLocationEnabled becomes true
       onLocationGranted();
     } catch (error) {
       console.error('Failed to save manual location:', error);
@@ -98,7 +110,12 @@ export default function LocationPermissionRequest({
           <>
             {locationError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{locationError}</p>
+                <p className="text-sm text-red-600 mb-2 font-medium">{locationError}</p>
+                <p className="text-xs text-red-500">
+                  {locationError.includes('timeout') 
+                    ? 'Please ensure your location/GPS is enabled and try again, or enter location manually.'
+                    : 'You can try again or enter your location manually below.'}
+                </p>
               </div>
             )}
 
@@ -106,9 +123,19 @@ export default function LocationPermissionRequest({
               <button
                 onClick={handleAllowLocation}
                 disabled={isLocationLoading}
-                className="w-full py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isLocationLoading ? 'Getting your location...' : 'Allow Location Access'}
+                {isLocationLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Getting your location...</span>
+                  </>
+                ) : (
+                  locationError ? 'Retry Location Access' : 'Allow Location Access'
+                )}
               </button>
 
               <button
