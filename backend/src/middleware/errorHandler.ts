@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { setCorsHeaders } from '../utils/corsHelper';
 
 export interface CustomError extends Error {
   statusCode?: number;
@@ -41,9 +40,6 @@ export const errorHandler = (
     statusCode = 400;
     // content of message is usually sufficient
   }
-
-  // Preserve CORS headers if origin is present
-  setCorsHeaders(res, req.headers.origin);
 
   res.status(statusCode).json({
     success: false,
