@@ -1,27 +1,7 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
+import { useState, useEffect, ReactNode, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import api from '../services/api/config';
-
-interface Location {
-  latitude: number;
-  longitude: number;
-  address: string;
-  city?: string;
-  state?: string;
-  pincode?: string;
-}
-
-interface LocationContextType {
-  location: Location | null;
-  isLocationEnabled: boolean;
-  isLocationLoading: boolean;
-  locationError: string | null;
-  requestLocation: () => Promise<void>;
-  updateLocation: (location: Location) => Promise<void>;
-  clearLocation: () => void;
-}
-
-const LocationContext = createContext<LocationContextType | undefined>(undefined);
+import { LocationContext, Location } from './locationContext.types';
 
 // Geocoding result interface
 interface GeocodeResult {
@@ -605,13 +585,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useLocation() {
-  const context = useContext(LocationContext);
-  if (context === undefined) {
-    throw new Error('useLocation must be used within a LocationProvider');
-  }
-  return context;
-}
+// Hook moved to hooks/useLocation.ts to fix Fast Refresh warning
 
 
 

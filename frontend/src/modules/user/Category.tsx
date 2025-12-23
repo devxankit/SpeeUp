@@ -7,10 +7,8 @@ import {
   getCategoryById,
   Category as ApiCategory,
 } from "../../services/api/customerProductService";
-import {
-  useLocation as useLocationContext,
-  useLocation,
-} from "../../context/LocationContext";
+import { useLocation as useLocationContext } from "../../hooks/useLocation";
+import { useLocation } from "react-router-dom";
 
 export default function CategoryPage() {
   const { id } = useParams<{ id: string }>();

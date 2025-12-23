@@ -4,7 +4,7 @@ import ProductCard from './components/ProductCard';
 import { getProducts } from '../../services/api/customerProductService';
 import { getHomeContent } from '../../services/api/customerHomeService';
 import { Product } from '../../types/domain';
-import { useLocation } from '../../context/LocationContext';
+import { useLocation } from '../../hooks/useLocation';
 
 export default function Search() {
   const navigate = useNavigate();
