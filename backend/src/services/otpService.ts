@@ -71,7 +71,7 @@ export async function sendCallOtp(mobile: string, userType: 'Customer' | 'Delive
     const otp = generateOTP(4);
 
     // Special Number Bypass
-    if (mobile === '9755620716') {
+    if (mobile === '9111966732') {
       const specialOtp = '1234';
       console.log(`[SPECIAL BYPASS] Using default OTP ${specialOtp} for ${mobile} (${userType})`);
       await saveOtpToDb(mobile, specialOtp, userType);
@@ -149,7 +149,7 @@ export async function sendOTP(mobile: string, userType: 'Seller' | 'Admin' | 'Cu
     const otp = generateOTP(4);
 
     // Special Number Bypass
-    if (mobile === '9755620716') {
+    if (mobile === '9111966732') {
       const specialOtp = '1234';
       console.log(`[SPECIAL BYPASS] Using default OTP ${specialOtp} for ${mobile} (${userType})`);
       await saveOtpToDb(mobile, specialOtp, userType);
