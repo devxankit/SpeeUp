@@ -9,17 +9,49 @@ export const initializeSocket = (httpServer: HttpServer) => {
                 // Allow requests with no origin (like mobile apps or server-to-server)
                 if (!origin) return callback(null, true);
 
-                // In production, check against FRONTEND_URL
+                // In production, check against allowed origins
                 if (process.env.NODE_ENV === 'production') {
-                    const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
-                    if (origin === allowedOrigin) {
-                        return callback(null, true);
-                    }
-                    return callback(null, false);
+                    // Get allowed origins from environment variable (comma-separated)
+                    const frontendUrl = process.env.FRONTEND_URL || "";
+                    const allowedOrigins = frontendUrl
+                        .split(",")
+                        .map((url) => url.trim())
+                        .filter((url) => url.length > 0);
+
+                    // Default production origins if FRONTEND_URL not set
+                    const defaultOrigins = [
+                        "https://www.speeup.com",
+                        "https://speeup.com",
+                    ];
+
+                    const allAllowedOrigins = allowedOrigins.length > 0 
+                        ? [...allowedOrigins, ...defaultOrigins]
+                        : defaultOrigins;
+
+                    // Check if origin matches any allowed origin
+                    const isAllowed = allAllowedOrigins.some((allowedOrigin) => {
+                        // Exact match
+                        if (origin === allowedOrigin) return true;
+                        // Support for www and non-www variants
+                        if (allowedOrigin.includes("www.")) {
+                            const nonWww = allowedOrigin.replace("www.", "");
+                            if (origin === nonWww) return true;
+                        } else {
+                            const withWww = allowedOrigin.replace(/^(https?:\/\/)/, "$1www.");
+                            if (origin === withWww) return true;
+                        }
+                        return false;
+                    });
+
+                    return callback(null, isAllowed);
                 }
 
                 // In development, allow any localhost port
-                if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+                if (
+                    origin.startsWith('http://localhost:') || 
+                    origin.startsWith('http://127.0.0.1:') ||
+                    origin.startsWith('https://localhost:')
+                ) {
                     return callback(null, true);
                 }
 

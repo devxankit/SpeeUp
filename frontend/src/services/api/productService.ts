@@ -1,9 +1,15 @@
-import api from './config';
+import api from "./config";
 
 export interface ApiResponse<T> {
   success: boolean;
   message: string;
   data: T;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
 }
 
 export interface ProductVariation {
@@ -14,7 +20,7 @@ export interface ProductVariation {
   price: number;
   discPrice: number;
   stock: number;
-  status: 'Available' | 'Sold out' | 'In stock'; // Added In stock
+  status: "Available" | "Sold out" | "In stock"; // Added In stock
   sku?: string;
 }
 
@@ -22,6 +28,7 @@ export interface Product {
   _id: string;
   productName: string;
   seller: string | any; // Updated to allow populated object
+  headerCategoryId?: string | any; // Updated to allow populated object
   category?: string | any; // Updated to allow populated object
   subcategory?: string | any; // Updated
   brand?: string | any; // Updated
@@ -58,6 +65,7 @@ export interface Product {
 
 export interface CreateProductData {
   productName: string;
+  headerCategoryId?: string;
   categoryId?: string;
   subcategoryId?: string;
   brandId?: string;
@@ -83,17 +91,17 @@ export interface CreateProductData {
   variationType?: string;
 }
 
-export interface UpdateProductData extends Partial<CreateProductData> { }
+export interface UpdateProductData extends Partial<CreateProductData> {}
 
 export interface GetProductsParams {
   search?: string;
   category?: string;
-  status?: 'published' | 'unpublished' | 'popular' | 'dealOfDay';
-  stock?: 'inStock' | 'outOfStock';
+  status?: "published" | "unpublished" | "popular" | "dealOfDay";
+  stock?: "inStock" | "outOfStock";
   page?: number;
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface ProductsResponse {
@@ -106,27 +114,34 @@ export interface ProductsResponse {
   };
 }
 
-
 /**
  * Create a new product
  */
-export const createProduct = async (data: CreateProductData): Promise<ApiResponse<Product>> => {
-  const response = await api.post<ApiResponse<Product>>('/products', data);
+export const createProduct = async (
+  data: CreateProductData
+): Promise<ApiResponse<Product>> => {
+  const response = await api.post<ApiResponse<Product>>("/products", data);
   return response.data;
 };
 
 /**
  * Get seller's products with filters
  */
-export const getProducts = async (params?: GetProductsParams): Promise<ApiResponse<Product[]>> => {
-  const response = await api.get<ApiResponse<Product[]>>('/products', { params });
+export const getProducts = async (
+  params?: GetProductsParams
+): Promise<ApiResponse<Product[]>> => {
+  const response = await api.get<ApiResponse<Product[]>>("/products", {
+    params,
+  });
   return response.data;
 };
 
 /**
  * Get product by ID
  */
-export const getProductById = async (id: string): Promise<ApiResponse<Product>> => {
+export const getProductById = async (
+  id: string
+): Promise<ApiResponse<Product>> => {
   const response = await api.get<ApiResponse<Product>>(`/products/${id}`);
   return response.data;
 };
@@ -134,7 +149,10 @@ export const getProductById = async (id: string): Promise<ApiResponse<Product>> 
 /**
  * Update product
  */
-export const updateProduct = async (id: string, data: UpdateProductData): Promise<ApiResponse<Product>> => {
+export const updateProduct = async (
+  id: string,
+  data: UpdateProductData
+): Promise<ApiResponse<Product>> => {
   const response = await api.put<ApiResponse<Product>>(`/products/${id}`, data);
   return response.data;
 };
@@ -146,7 +164,7 @@ export const updateStock = async (
   productId: string,
   variationId: string,
   stock: number,
-  status?: 'Available' | 'Sold out'
+  status?: "Available" | "Sold out"
 ): Promise<ApiResponse<Product>> => {
   const response = await api.patch<ApiResponse<Product>>(
     `/products/${productId}/variations/${variationId}/stock`,
@@ -158,8 +176,10 @@ export const updateStock = async (
 /**
  * Bulk update stock for multiple variations
  */
-export const bulkUpdateStock = async (updates: { productId: string, variationId: string, stock: number }[]): Promise<any> => {
-  const response = await api.patch('/products/bulk-stock-update', { updates });
+export const bulkUpdateStock = async (
+  updates: { productId: string; variationId: string; stock: number }[]
+): Promise<any> => {
+  const response = await api.patch("/products/bulk-stock-update", { updates });
   return response.data;
 };
 
@@ -178,6 +198,9 @@ export const updateProductStatus = async (
   id: string,
   status: { publish?: boolean; popular?: boolean; dealOfDay?: boolean }
 ): Promise<ApiResponse<Product>> => {
-  const response = await api.patch<ApiResponse<Product>>(`/products/${id}/status`, status);
+  const response = await api.patch<ApiResponse<Product>>(
+    `/products/${id}/status`,
+    status
+  );
   return response.data;
 };

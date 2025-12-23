@@ -92,3 +92,4 @@ All categories and subcategories will have meaningful names that are:
 - Visible on the admin category page
 - Usable by sellers when adding products
 - Displayed correctly on the user app
+

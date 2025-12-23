@@ -22,6 +22,7 @@ export const createProduct = asyncHandler(
     const newProductData: any = {
       ...productData,
       seller: sellerId, // Map sellerId to seller
+      headerCategoryId: productData.headerCategoryId, // Map headerCategoryId
       category: productData.categoryId, // Map categoryId to category
       subcategory: productData.subcategoryId,
       brand: productData.brandId,
@@ -47,10 +48,11 @@ export const createProduct = asyncHandler(
       newProductData.price = newProductData.variations[0].price;
 
       // Calculate total stock (sum of all variations)
-      // Note: If any variation has stock 0 (unlimited), how should we handle top level? 
+      // Note: If any variation has stock 0 (unlimited), how should we handle top level?
       // For now, let's sum them up. If purely unlimited, logic might differ.
       newProductData.stock = newProductData.variations.reduce(
-        (acc: number, curr: any) => acc + (parseInt(curr.stock) || 0), 0
+        (acc: number, curr: any) => acc + (parseInt(curr.stock) || 0),
+        0
       );
     }
 
@@ -63,10 +65,12 @@ export const createProduct = asyncHandler(
     }
 
     // 5. Clean up undefined fields
+    if (!newProductData.headerCategoryId)
+      delete newProductData.headerCategoryId;
     if (!newProductData.subcategory) delete newProductData.subcategory;
     if (!newProductData.brand) delete newProductData.brand;
 
-    // Handle Tax: Frontend sends taxId, Model expects 'tax' (string) or something else? 
+    // Handle Tax: Frontend sends taxId, Model expects 'tax' (string) or something else?
     // Checking SellerAddProduct.tsx sending taxId -> formData.tax
     // Model Product.ts -> tax: { type: String }
     // Ideally we should store the Tax ID or Name. Since frontend sends ID, let's map it.
@@ -97,91 +101,89 @@ export const createProduct = asyncHandler(
 /**
  * Get seller's products with filters
  */
-export const getProducts = asyncHandler(
-  async (req: Request, res: Response) => {
-    const sellerId = (req as any).user.userId;
-    const {
-      search,
-      category,
-      status,
-      stock,
-      page = "1",
-      limit = "10",
-      sortBy = "createdAt",
-      sortOrder = "desc",
-    } = req.query;
+export const getProducts = asyncHandler(async (req: Request, res: Response) => {
+  const sellerId = (req as any).user.userId;
+  const {
+    search,
+    category,
+    status,
+    stock,
+    page = "1",
+    limit = "10",
+    sortBy = "createdAt",
+    sortOrder = "desc",
+  } = req.query;
 
-    // Build query
-    const query: any = { seller: sellerId };
+  // Build query
+  const query: any = { seller: sellerId };
 
-    // Search filter
-    if (search) {
-      query.$or = [
-        { productName: { $regex: search, $options: "i" } },
-        { smallDescription: { $regex: search, $options: "i" } },
-        { tags: { $in: [new RegExp(search as string, "i")] } },
-      ];
-    }
-
-    // Category filter
-    if (category) {
-      query.category = category;
-    }
-
-    // Status filter (publish, popular, dealOfDay)
-    if (status) {
-      if (status === "published") {
-        query.publish = true;
-      } else if (status === "unpublished") {
-        query.publish = false;
-      } else if (status === "popular") {
-        query.popular = true;
-      } else if (status === "dealOfDay") {
-        query.dealOfDay = true;
-      }
-    }
-
-    // Stock filter
-    if (stock === "inStock") {
-      query["variations.stock"] = { $gt: 0 };
-    } else if (stock === "outOfStock") {
-      query["variations.stock"] = 0;
-      query["variations.status"] = "Sold out";
-    }
-
-    // Pagination
-    const pageNum = parseInt(page as string);
-    const limitNum = parseInt(limit as string);
-    const skip = (pageNum - 1) * limitNum;
-
-    // Sort
-    const sort: any = {};
-    sort[sortBy as string] = sortOrder === "asc" ? 1 : -1;
-
-    const products = await Product.find(query)
-      .populate("category", "name")
-      .populate("subcategory", "name")
-      .populate("brand", "name")
-      .populate("tax", "name rate")
-      .sort(sort)
-      .skip(skip)
-      .limit(limitNum);
-
-    const total = await Product.countDocuments(query);
-
-    return res.status(200).json({
-      success: true,
-      message: "Products fetched successfully",
-      data: products,
-      pagination: {
-        page: pageNum,
-        limit: limitNum,
-        total,
-        pages: Math.ceil(total / limitNum),
-      },
-    });
+  // Search filter
+  if (search) {
+    query.$or = [
+      { productName: { $regex: search, $options: "i" } },
+      { smallDescription: { $regex: search, $options: "i" } },
+      { tags: { $in: [new RegExp(search as string, "i")] } },
+    ];
   }
-);
+
+  // Category filter
+  if (category) {
+    query.category = category;
+  }
+
+  // Status filter (publish, popular, dealOfDay)
+  if (status) {
+    if (status === "published") {
+      query.publish = true;
+    } else if (status === "unpublished") {
+      query.publish = false;
+    } else if (status === "popular") {
+      query.popular = true;
+    } else if (status === "dealOfDay") {
+      query.dealOfDay = true;
+    }
+  }
+
+  // Stock filter
+  if (stock === "inStock") {
+    query["variations.stock"] = { $gt: 0 };
+  } else if (stock === "outOfStock") {
+    query["variations.stock"] = 0;
+    query["variations.status"] = "Sold out";
+  }
+
+  // Pagination
+  const pageNum = parseInt(page as string);
+  const limitNum = parseInt(limit as string);
+  const skip = (pageNum - 1) * limitNum;
+
+  // Sort
+  const sort: any = {};
+  sort[sortBy as string] = sortOrder === "asc" ? 1 : -1;
+
+  const products = await Product.find(query)
+    .populate("category", "name")
+    .populate("subcategory", "name")
+    .populate("brand", "name")
+    .populate("tax", "name rate")
+    .sort(sort)
+    .skip(skip)
+    .limit(limitNum);
+
+  const total = await Product.countDocuments(query);
+
+  return res.status(200).json({
+    success: true,
+    message: "Products fetched successfully",
+    data: products,
+    pagination: {
+      page: pageNum,
+      limit: limitNum,
+      total,
+      pages: Math.ceil(total / limitNum),
+    },
+  });
+});
 
 /**
  * Get product by ID
@@ -194,6 +196,7 @@ export const getProductById = asyncHandler(
     const product = await Product.findOne({ _id: id, seller: sellerId })
       .populate("category", "name")
       .populate("subcategory", "subcategoryName")
+      .populate("headerCategoryId", "name slug")
       .populate("brand", "name")
       .populate("tax", "name rate");
 
@@ -221,13 +224,17 @@ export const updateProduct = asyncHandler(
     const { id } = req.params;
     const updateData = req.body;
 
-    console.log('DEBUG updateProduct: sellerId from token:', sellerId);
-    console.log('DEBUG updateProduct: productId:', id);
+    console.log("DEBUG updateProduct: sellerId from token:", sellerId);
+    console.log("DEBUG updateProduct: productId:", id);
 
     // Remove sellerId from update data if present (cannot change owner)
     delete updateData.sellerId;
 
     // Map frontend field names to model field names (same as createProduct)
+    if (updateData.headerCategoryId !== undefined) {
+      // Allow null/empty to clear header category
+      updateData.headerCategoryId = updateData.headerCategoryId || null;
+    }
     if (updateData.categoryId) {
       updateData.category = updateData.categoryId;
       delete updateData.categoryId;
@@ -275,7 +282,9 @@ export const updateProduct = asyncHandler(
         if (Number(variation.discPrice) > Number(variation.price)) {
           return res.status(400).json({
             success: false,
-            message: `Discounted price cannot be greater than price for variation ${variation.title || variation.value}`,
+            message: `Discounted price cannot be greater than price for variation ${
+              variation.title || variation.value
+            }`,
           });
         }
       }
@@ -283,7 +292,8 @@ export const updateProduct = asyncHandler(
       // Sync top-level price and stock from variations (same as createProduct)
       updateData.price = updateData.variations[0].price;
       updateData.stock = updateData.variations.reduce(
-        (acc: number, curr: any) => acc + (parseInt(curr.stock) || 0), 0
+        (acc: number, curr: any) => acc + (parseInt(curr.stock) || 0),
+        0
       );
     }
 
@@ -294,16 +304,20 @@ export const updateProduct = asyncHandler(
     )
       .populate("category", "name")
       .populate("subcategory", "subcategoryName")
+      .populate("headerCategoryId", "name slug")
       .populate("brand", "name")
       .populate("tax", "name rate");
 
-    console.log('DEBUG updateProduct: product found?', product ? 'Yes' : 'No');
+    console.log("DEBUG updateProduct: product found?", product ? "Yes" : "No");
 
     if (!product) {
       // Check if product exists at all
-      const existingProduct = await Product.findById(id).select('seller');
+      const existingProduct = await Product.findById(id).select("seller");
       if (existingProduct) {
-        console.log('DEBUG updateProduct: product exists but owned by:', existingProduct.seller);
+        console.log(
+          "DEBUG updateProduct: product exists but owned by:",
+          existingProduct.seller
+        );
       }
       return res.status(404).json({
         success: false,
@@ -327,10 +341,13 @@ export const deleteProduct = asyncHandler(
     const sellerId = (req as any).user.userId;
     const { id } = req.params;
 
-    console.log('DEBUG deleteProduct: sellerId from token:', sellerId);
-    console.log('DEBUG deleteProduct: productId:', id);
+    console.log("DEBUG deleteProduct: sellerId from token:", sellerId);
+    console.log("DEBUG deleteProduct: productId:", id);
 
-    const product = await Product.findOneAndDelete({ _id: id, seller: sellerId });
+    const product = await Product.findOneAndDelete({
+      _id: id,
+      seller: sellerId,
+    });
 
     if (!product) {
       return res.status(404).json({
@@ -349,45 +366,45 @@ export const deleteProduct = asyncHandler(
 /**
  * Update stock for a product variation
  */
-export const updateStock = asyncHandler(
-  async (req: Request, res: Response) => {
-    const sellerId = (req as any).user.userId;
-    const { id, variationId } = req.params;
-    const { stock, status } = req.body;
+export const updateStock = asyncHandler(async (req: Request, res: Response) => {
+  const sellerId = (req as any).user.userId;
+  const { id, variationId } = req.params;
+  const { stock, status } = req.body;
 
-    const product = await Product.findOne({ _id: id, seller: sellerId });
+  const product = await Product.findOne({ _id: id, seller: sellerId });
 
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
-    }
-
-    const variation: any = product.variations?.find((v: any) => v._id?.toString() === variationId);
-    if (!variation) {
-      return res.status(404).json({
-        success: false,
-        message: "Variation not found",
-      });
-    }
-
-    if (stock !== undefined) {
-      variation.stock = stock;
-    }
-    if (status) {
-      variation.status = status;
-    }
-
-    await product.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "Stock updated successfully",
-      data: product,
+  if (!product) {
+    return res.status(404).json({
+      success: false,
+      message: "Product not found",
     });
   }
-);
+
+  const variation: any = product.variations?.find(
+    (v: any) => v._id?.toString() === variationId
+  );
+  if (!variation) {
+    return res.status(404).json({
+      success: false,
+      message: "Variation not found",
+    });
+  }
+
+  if (stock !== undefined) {
+    variation.stock = stock;
+  }
+  if (status) {
+    variation.status = status;
+  }
+
+  await product.save();
+
+  return res.status(200).json({
+    success: true,
+    message: "Stock updated successfully",
+    data: product,
+  });
+});
 
 /**
  * Update product status (publish, popular, dealOfDay)
@@ -443,21 +460,37 @@ export const bulkUpdateStock = asyncHandler(
     for (const update of updates) {
       const { productId, variationId, stock } = update;
 
-      const product = await Product.findOne({ _id: productId, seller: sellerId });
+      const product = await Product.findOne({
+        _id: productId,
+        seller: sellerId,
+      });
       if (product) {
-        const variation: any = product.variations?.find((v: any) => v._id?.toString() === variationId);
+        const variation: any = product.variations?.find(
+          (v: any) => v._id?.toString() === variationId
+        );
         if (variation) {
           variation.stock = stock;
           if (stock === 0) variation.status = "Sold out";
-          else if (stock > 0 && variation.status === "Sold out") variation.status = "In stock";
+          else if (stock > 0 && variation.status === "Sold out")
+            variation.status = "In stock";
 
           await product.save();
           results.push({ productId, variationId, success: true });
         } else {
-          results.push({ productId, variationId, success: false, message: "Variation not found" });
+          results.push({
+            productId,
+            variationId,
+            success: false,
+            message: "Variation not found",
+          });
         }
       } else {
-        results.push({ productId, variationId, success: false, message: "Product not found" });
+        results.push({
+          productId,
+          variationId,
+          success: false,
+          message: "Product not found",
+        });
       }
     }
 
@@ -468,4 +501,3 @@ export const bulkUpdateStock = asyncHandler(
     });
   }
 );
-

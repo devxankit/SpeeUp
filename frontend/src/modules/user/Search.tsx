@@ -4,10 +4,12 @@ import ProductCard from './components/ProductCard';
 import { getProducts } from '../../services/api/customerProductService';
 import { getHomeContent } from '../../services/api/customerHomeService';
 import { Product } from '../../types/domain';
+import { useLocation } from '../../context/LocationContext';
 
 export default function Search() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { location } = useLocation();
   const searchQuery = searchParams.get('q') || '';
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [trendingItems, setTrendingItems] = useState<any[]>([]);
@@ -25,7 +27,13 @@ export default function Search() {
 
       setLoading(true);
       try {
-        const response = await getProducts({ search: searchQuery });
+        const params: any = { search: searchQuery };
+        // Include user location for seller service radius filtering
+        if (location?.latitude && location?.longitude) {
+          params.latitude = location.latitude;
+          params.longitude = location.longitude;
+        }
+        const response = await getProducts(params);
         setSearchResults(response.data as unknown as Product[]);
       } catch (error) {
         console.error('Error searching products:', error);
@@ -36,7 +44,7 @@ export default function Search() {
     };
 
     fetchProducts();
-  }, [searchQuery]);
+  }, [searchQuery, location]);
 
   // Fetch trending/home content for initial view
   useEffect(() => {

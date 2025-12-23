@@ -123,6 +123,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items]);
 
   const addToCart = async (product: Product, sourceElement?: HTMLElement | null) => {
+    // Get consistent product ID - MongoDB returns _id, frontend expects id
+    const productId = product._id || product.id;
+
+    // Normalize product to always have 'id' property for consistency
+    const normalizedProduct: Product = {
+      ...product,
+      id: productId,
+      name: product.name || product.productName || 'Product',
+      imageUrl: product.imageUrl || product.mainImage,
+    };
+
     // Optimistic Update
     // Get source position if element is provided
     let sourcePosition: { x: number; y: number } | undefined;
@@ -133,7 +144,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         y: rect.top + rect.height / 2,
       };
     }
-    setLastAddEvent({ product, sourcePosition });
+    setLastAddEvent({ product: normalizedProduct, sourcePosition });
     setTimeout(() => setLastAddEvent(null), 800);
 
     // Optimistically update state
@@ -141,19 +152,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems((prevItems) => {
       // Filter out null products and find existing item
       const validItems = prevItems.filter(item => item?.product);
-      const existingItem = validItems.find((item) => item.product.id === product.id);
+      const existingItem = validItems.find((item) => item.product.id === productId || item.product._id === productId);
       if (existingItem) {
         return validItems.map((item) =>
-          item.product.id === product.id
+          (item.product.id === productId || item.product._id === productId)
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-      return [...validItems, { product, quantity: 1 }];
+      return [...validItems, { product: normalizedProduct, quantity: 1 }];
     });
 
     try {
-      const response = await apiAddToCart(product.id);
+      const response = await apiAddToCart(productId);
       if (response && response.data && response.data.items) {
         // Atomic update from server response
         setItems(mapApiItemsToState(response.data.items));
@@ -166,7 +177,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const removeFromCart = async (productId: string) => {
-    const itemToRemove = items.find(item => item?.product && item.product.id === productId);
+    // Find item matching either id or _id
+    const itemToRemove = items.find(item => item?.product && (item.product.id === productId || item.product._id === productId));
     if (!itemToRemove || !itemToRemove.id) {
       console.warn("Cannot remove item without CartItemID");
       await fetchCart();
@@ -174,7 +186,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     const previousItems = [...items];
-    setItems((prevItems) => prevItems.filter((item) => item?.product && item.product.id !== productId));
+    setItems((prevItems) => prevItems.filter((item) => item?.product && item.product.id !== productId && item.product._id !== productId));
 
     try {
       const response = await apiRemoveFromCart(itemToRemove.id);
@@ -193,7 +205,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const itemToUpdate = items.find(item => item?.product && item.product.id === productId);
+    // Find item matching either id or _id
+    const itemToUpdate = items.find(item => item?.product && (item.product.id === productId || item.product._id === productId));
     if (!itemToUpdate || !itemToUpdate.id) {
       await fetchCart();
       return;
@@ -202,7 +215,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const previousItems = [...items];
     setItems((prevItems) =>
       prevItems.filter(item => item?.product).map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
+        (item.product.id === productId || item.product._id === productId) ? { ...item, quantity } : item
       )
     );
 
@@ -216,6 +229,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setItems(previousItems);
     }
   };
+
 
   const clearCart = async () => {
     setItems([]);

@@ -140,7 +140,23 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   // Validate location is provided
   const latitude = req.body.latitude ? parseFloat(req.body.latitude) : null;
   const longitude = req.body.longitude ? parseFloat(req.body.longitude) : null;
-  const serviceRadiusKm = req.body.serviceRadiusKm ? parseFloat(req.body.serviceRadiusKm) : 10; // Default 10km
+  
+  // Parse and validate service radius
+  let serviceRadiusKm = 10; // Default 10km
+  if (req.body.serviceRadiusKm !== undefined && req.body.serviceRadiusKm !== null && req.body.serviceRadiusKm !== '') {
+    const parsedRadius = typeof req.body.serviceRadiusKm === 'string' 
+      ? parseFloat(req.body.serviceRadiusKm) 
+      : Number(req.body.serviceRadiusKm);
+    
+    if (!isNaN(parsedRadius) && parsedRadius >= 0.1 && parsedRadius <= 100) {
+      serviceRadiusKm = parsedRadius;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Service radius must be between 0.1 and 100 kilometers",
+      });
+    }
+  }
 
   if (!latitude || !longitude || isNaN(latitude) || isNaN(longitude)) {
     return res.status(400).json({
@@ -154,14 +170,6 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     return res.status(400).json({
       success: false,
       message: "Invalid location coordinates",
-    });
-  }
-
-  // Validate service radius
-  if (serviceRadiusKm < 0.1 || serviceRadiusKm > 100) {
-    return res.status(400).json({
-      success: false,
-      message: "Service radius must be between 0.1 and 100 kilometers",
     });
   }
 
@@ -259,6 +267,38 @@ export const updateProfile = asyncHandler(async (req: Request, res: Response) =>
   // Prevent updating sensitive fields directly
   const restrictedFields = ["password", "mobile", "email", "status", "balance"];
   restrictedFields.forEach((field) => delete updates[field]);
+
+  // Handle location update (convert lat/lng to GeoJSON)
+  if (updates.latitude && updates.longitude) {
+    const latitude = parseFloat(updates.latitude);
+    const longitude = parseFloat(updates.longitude);
+
+    if (!isNaN(latitude) && !isNaN(longitude)) {
+      updates.location = {
+        type: 'Point',
+        coordinates: [longitude, latitude], // MongoDB GeoJSON: [longitude, latitude]
+      };
+    }
+  }
+
+  // Handle serviceRadiusKm update
+  if (updates.serviceRadiusKm !== undefined && updates.serviceRadiusKm !== null && updates.serviceRadiusKm !== '') {
+    const radius = typeof updates.serviceRadiusKm === 'string' 
+      ? parseFloat(updates.serviceRadiusKm) 
+      : Number(updates.serviceRadiusKm);
+    
+    if (!isNaN(radius) && radius >= 0.1 && radius <= 100) {
+      updates.serviceRadiusKm = radius; // Ensure it's saved as a number
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Service radius must be between 0.1 and 100 kilometers",
+      });
+    }
+  } else if (updates.serviceRadiusKm === '' || updates.serviceRadiusKm === null) {
+    // If empty string or null is sent, remove it from updates to keep existing value
+    delete updates.serviceRadiusKm;
+  }
 
   const seller = await Seller.findByIdAndUpdate(sellerId, updates, {
     new: true,

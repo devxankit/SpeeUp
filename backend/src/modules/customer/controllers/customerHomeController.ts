@@ -5,6 +5,61 @@ import SubCategory from "../../../models/SubCategory";
 import Shop from "../../../models/Shop";
 import Seller from "../../../models/Seller";
 import HeaderCategory from "../../../models/HeaderCategory";
+import mongoose from "mongoose";
+
+// Helper function to calculate distance between two coordinates (Haversine formula)
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth radius in kilometers
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Helper function to find sellers within user's location range
+async function findSellersWithinRange(userLat: number, userLng: number): Promise<mongoose.Types.ObjectId[]> {
+  if (!userLat || !userLng || isNaN(userLat) || isNaN(userLng)) {
+    return [];
+  }
+
+  // Validate coordinates
+  if (userLat < -90 || userLat > 90 || userLng < -180 || userLng > 180) {
+    return [];
+  }
+
+  try {
+    // Fetch all approved sellers with location
+    const sellers = await Seller.find({
+      status: "Approved",
+      location: { $exists: true, $ne: null },
+      serviceRadiusKm: { $exists: true, $gt: 0 },
+    }).select("_id location serviceRadiusKm");
+
+    // Filter sellers where user is within their service radius
+    const nearbySellerIds: mongoose.Types.ObjectId[] = [];
+
+    for (const seller of sellers) {
+      if (seller.location && seller.location.coordinates) {
+        const sellerLng = seller.location.coordinates[0];
+        const sellerLat = seller.location.coordinates[1];
+        const distance = calculateDistance(userLat, userLng, sellerLat, sellerLng);
+        const serviceRadius = seller.serviceRadiusKm || 10;
+
+        if (distance <= serviceRadius) {
+          nearbySellerIds.push(seller._id);
+        }
+      }
+    }
+
+    return nearbySellerIds;
+  } catch (error) {
+    console.error("Error finding nearby sellers:", error);
+    return [];
+  }
+}
 
 // Get Home Page Content
 export const getHomeContent = async (req: Request, res: Response) => {
@@ -391,39 +446,39 @@ export const getHomeContent = async (req: Request, res: Response) => {
       promoCards.length > 0
         ? promoCards
         : [
-            {
-              id: "self-care",
-              badge: "Up to 55% OFF",
-              title: "Self Care & Wellness",
-              categoryId: "personal-care",
-              bgColor: "bg-yellow-50",
-              subcategoryImages: [],
-            },
-            {
-              id: "hot-meals",
-              badge: "Up to 55% OFF",
-              title: "Hot Meals & Drinks",
-              categoryId: "breakfast-instant",
-              bgColor: "bg-yellow-50",
-              subcategoryImages: [],
-            },
-            {
-              id: "kitchen-essentials",
-              badge: "Up to 55% OFF",
-              title: "Kitchen Essentials",
-              categoryId: "atta-rice",
-              bgColor: "bg-yellow-50",
-              subcategoryImages: [],
-            },
-            {
-              id: "cleaning-home",
-              badge: "Up to 75% OFF",
-              title: "Cleaning & Home Needs",
-              categoryId: "household",
-              bgColor: "bg-yellow-50",
-              subcategoryImages: [],
-            },
-          ];
+          {
+            id: "self-care",
+            badge: "Up to 55% OFF",
+            title: "Self Care & Wellness",
+            categoryId: "personal-care",
+            bgColor: "bg-yellow-50",
+            subcategoryImages: [],
+          },
+          {
+            id: "hot-meals",
+            badge: "Up to 55% OFF",
+            title: "Hot Meals & Drinks",
+            categoryId: "breakfast-instant",
+            bgColor: "bg-yellow-50",
+            subcategoryImages: [],
+          },
+          {
+            id: "kitchen-essentials",
+            badge: "Up to 55% OFF",
+            title: "Kitchen Essentials",
+            categoryId: "atta-rice",
+            bgColor: "bg-yellow-50",
+            subcategoryImages: [],
+          },
+          {
+            id: "cleaning-home",
+            badge: "Up to 75% OFF",
+            title: "Cleaning & Home Needs",
+            categoryId: "household",
+            bgColor: "bg-yellow-50",
+            subcategoryImages: [],
+          },
+        ];
 
     res.status(200).json({
       success: true,
@@ -466,49 +521,177 @@ export const getHomeContent = async (req: Request, res: Response) => {
 export const getStoreProducts = async (req: Request, res: Response) => {
   try {
     const { storeId } = req.params;
+    const { latitude, longitude } = req.query; // User location for filtering
     let query: any = { status: "Active", publish: true };
 
-    // Find the shop by storeId
-    const shop = await Shop.findOne({
-      $or: [{ storeId: storeId }, { _id: storeId }],
-      isActive: true,
-    })
-      .populate("category", "_id")
-      .populate("subCategory", "_id");
+    console.log(`[getStoreProducts] Looking for shop with storeId: ${storeId}`);
+
+    // Build shop query - only include _id if storeId is a valid ObjectId
+    const shopQuery: any = { isActive: true };
+    if (mongoose.Types.ObjectId.isValid(storeId)) {
+      shopQuery.$or = [
+        { storeId: storeId.toLowerCase() },
+        { _id: new mongoose.Types.ObjectId(storeId) }
+      ];
+    } else {
+      shopQuery.storeId = storeId.toLowerCase();
+    }
+
+    // Find the shop by storeId or _id
+    const shop = await Shop.findOne(shopQuery)
+      .populate("category", "_id name slug image")
+      .populate("subCategory", "_id name")
+      .lean();
+
+    console.log(`[getStoreProducts] Shop found:`, shop ? { name: shop.name, productsCount: shop.products?.length || 0, category: shop.category, image: shop.image } : 'NOT FOUND');
+
+    let shopData: any = null;
 
     if (shop) {
-      // If shop has specific products assigned, use those
+      shopData = {
+        name: shop.name,
+        image: shop.image,
+        description: shop.description || '',
+        category: shop.category,
+      };
+
+      // Convert products array to ObjectIds if needed
+      // When using .lean(), products array contains ObjectIds directly
+      let productIds: mongoose.Types.ObjectId[] = [];
       if (shop.products && shop.products.length > 0) {
-        query._id = { $in: shop.products };
+        productIds = shop.products.map((p: any) => {
+          // Handle different formats: ObjectId, string, or object with _id
+          if (mongoose.Types.ObjectId.isValid(p)) {
+            return typeof p === 'string' ? new mongoose.Types.ObjectId(p) : p;
+          }
+          return p._id ? (typeof p._id === 'string' ? new mongoose.Types.ObjectId(p._id) : p._id) : p;
+        }).filter(Boolean);
+      }
+
+      console.log(`[getStoreProducts] Shop has ${productIds.length} products assigned`);
+
+      // If shop has specific products assigned, use those
+      if (productIds.length > 0) {
+        query._id = { $in: productIds };
+        console.log(`[getStoreProducts] Filtering by product IDs: ${productIds.length} products`);
       }
       // Otherwise, filter by category/subcategory
       else if (shop.category) {
-        query.category = shop.category._id;
+        const categoryId = (shop.category as any)._id || (shop.category as any);
+        query.category = categoryId;
+        console.log(`[getStoreProducts] Filtering by category: ${categoryId}`);
 
         // If subcategory is also specified, filter by both
         if (shop.subCategory) {
+          const subCategoryId = (shop.subCategory as any)._id || (shop.subCategory as any);
           query.$or = [
-            { category: shop.category._id },
-            { subcategory: shop.subCategory._id },
+            { category: categoryId },
+            { subcategory: subCategoryId },
           ];
+          console.log(`[getStoreProducts] Also filtering by subcategory: ${subCategoryId}`);
         }
+      } else {
+        console.log(`[getStoreProducts] Shop has no products or category, cannot build query`);
       }
     } else {
       // Fallback: try to match by category name (legacy support)
       const categoryId = await getCategoryIdByName(storeId);
       if (categoryId) {
         query.category = categoryId;
+        // Try to get category details for shop data
+        const category = await Category.findById(categoryId).select("name slug image").lean();
+        if (category) {
+          shopData = {
+            name: category.name,
+            image: category.image || '',
+            description: '',
+            category: category,
+          };
+        }
       } else {
         // No matching shop or category found
-        return res.status(200).json({ success: true, data: [] });
+        return res.status(200).json({
+          success: true,
+          data: [],
+          shop: null,
+          message: "Store not found"
+        });
       }
     }
 
-    const products = await Product.find(query)
-      .populate("category", "name slug")
-      .limit(50);
+    // Location-based filtering: Only show products from sellers within user's range
+    const userLat = latitude ? parseFloat(latitude as string) : null;
+    const userLng = longitude ? parseFloat(longitude as string) : null;
 
-    return res.status(200).json({ success: true, data: products });
+    console.log(`[getStoreProducts] User location: lat=${userLat}, lng=${userLng}`);
+
+    if (userLat && userLng && !isNaN(userLat) && !isNaN(userLng)) {
+      const nearbySellerIds = await findSellersWithinRange(userLat, userLng);
+      console.log(`[getStoreProducts] Found ${nearbySellerIds.length} sellers within range`);
+
+      if (nearbySellerIds.length === 0) {
+        // No sellers within range, return shop data but empty products
+        console.log(`[getStoreProducts] No sellers in range, returning empty products`);
+        return res.status(200).json({
+          success: true,
+          data: [],
+          shop: shopData,
+          pagination: {
+            page: 1,
+            limit: 50,
+            total: 0,
+            pages: 0,
+          },
+          message: "No sellers available in your area. Please update your location.",
+        });
+      }
+
+      // Filter products by sellers within range
+      query.seller = { $in: nearbySellerIds };
+      console.log(`[getStoreProducts] Added seller filter to query`);
+    } else {
+      // If no location provided, return empty (require location for marketplace)
+      console.log(`[getStoreProducts] No location provided, returning empty products`);
+      return res.status(200).json({
+        success: true,
+        data: [],
+        shop: shopData,
+        pagination: {
+          page: 1,
+          limit: 50,
+          total: 0,
+          pages: 0,
+        },
+        message: "Location is required to view products. Please enable location access.",
+      });
+    }
+
+    console.log(`[getStoreProducts] Final query:`, JSON.stringify(query, null, 2));
+
+    const products = await Product.find(query)
+      .populate("category", "name icon image")
+      .populate("subcategory", "name")
+      .populate("brand", "name")
+      .populate("seller", "storeName")
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    const total = await Product.countDocuments(query);
+
+    console.log(`[getStoreProducts] Found ${total} products matching query, returning ${products.length}`);
+
+    return res.status(200).json({
+      success: true,
+      data: products,
+      shop: shopData,
+      pagination: {
+        page: 1,
+        limit: 50,
+        total,
+        pages: Math.ceil(total / 50),
+      },
+    });
   } catch (error: any) {
     return res.status(500).json({
       success: false,

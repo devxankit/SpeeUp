@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { getSellerProfile, updateSellerProfile } from '../../../services/api/auth/sellerAuthService';
 import { useAuth } from '../../../context/AuthContext';
 import { getCategories, Category } from '../../../services/api/categoryService';
+import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 
 const SellerAccountSettings = () => {
   const { user, updateUser } = useAuth();
@@ -22,7 +23,10 @@ const SellerAccountSettings = () => {
     category: '',
     address: '',
     city: '',
-    serviceableArea: '',
+    searchLocation: '',
+    latitude: '',
+    longitude: '',
+    serviceRadiusKm: '10',
     panCard: '',
     taxName: '',
     taxNumber: '',
@@ -58,7 +62,16 @@ const SellerAccountSettings = () => {
       setLoading(true);
       const response = await getSellerProfile();
       if (response.success) {
-        setSellerData(response.data);
+        const data = response.data;
+        // Map location data to state
+        const locationCoords = data.location?.coordinates || [];
+        setSellerData({
+          ...data,
+          latitude: data.latitude || (locationCoords[1]?.toString() || ''),
+          longitude: data.longitude || (locationCoords[0]?.toString() || ''),
+          searchLocation: data.searchLocation || data.address || '',
+          serviceRadiusKm: (data.serviceRadiusKm || 10).toString(),
+        });
       } else {
         setError(response.message || 'Failed to fetch profile');
       }
@@ -81,18 +94,48 @@ const SellerAccountSettings = () => {
     e.preventDefault();
     try {
       setSaveLoading(true);
-      const response = await updateSellerProfile(sellerData);
+      setError('');
+      
+      // Validate location if address is being updated
+      if (sellerData.searchLocation && (!sellerData.latitude || !sellerData.longitude)) {
+        setError('Please select a valid location using the map picker');
+        setSaveLoading(false);
+        return;
+      }
+
+      // Validate service radius
+      const radius = parseFloat(sellerData.serviceRadiusKm);
+      if (isNaN(radius) || radius < 0.1 || radius > 100) {
+        setError('Service radius must be between 0.1 and 100 kilometers');
+        setSaveLoading(false);
+        return;
+      }
+
+      const updateData = {
+        ...sellerData,
+        serviceRadiusKm: radius,
+      };
+
+      const response = await updateSellerProfile(updateData);
       if (response.success) {
         setIsEditing(false);
-        setSellerData(response.data);
+        const data = response.data;
+        const locationCoords = data.location?.coordinates || [];
+        setSellerData({
+          ...data,
+          latitude: data.latitude || (locationCoords[1]?.toString() || ''),
+          longitude: data.longitude || (locationCoords[0]?.toString() || ''),
+          searchLocation: data.searchLocation || data.address || '',
+          serviceRadiusKm: (data.serviceRadiusKm || 10).toString(),
+        });
         if (updateUser) {
           updateUser({
             ...user,
-            ...response.data,
-            id: response.data._id || user?.id
+            ...data,
+            id: data._id || user?.id
           });
         }
-        // Could add a toast notification here
+        setError('');
       } else {
         setError(response.message || 'Failed to update profile');
       }
@@ -353,19 +396,69 @@ const SellerAccountSettings = () => {
                           </div>
 
                           <div className="md:col-span-2 space-y-1.5">
-                            <label className="text-sm font-semibold text-gray-700 ml-1">Store Address</label>
-                            <textarea
-                              name="address"
-                              value={sellerData.address}
-                              onChange={handleInputChange}
-                              disabled={!isEditing}
-                              rows={3}
-                              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none disabled:bg-gray-50/50 disabled:text-gray-500 transition-all resize-none"
-                            />
+                            <label className="text-sm font-semibold text-gray-700 ml-1">
+                              Store Location <span className="text-red-500">*</span>
+                            </label>
+                            {isEditing ? (
+                              <GoogleMapsAutocomplete
+                                value={sellerData.searchLocation || sellerData.address || ''}
+                                onChange={(address: string, lat: number, lng: number, placeName: string, components?: { city?: string; state?: string }) => {
+                                  setSellerData(prev => ({
+                                    ...prev,
+                                    searchLocation: address,
+                                    latitude: lat.toString(),
+                                    longitude: lng.toString(),
+                                    address: address,
+                                    city: components?.city || prev.city,
+                                  }));
+                                }}
+                                placeholder="Search and select your store location..."
+                                disabled={!isEditing}
+                                required
+                              />
+                            ) : (
+                              <textarea
+                                name="address"
+                                value={sellerData.address || sellerData.searchLocation || ''}
+                                disabled={true}
+                                rows={3}
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 bg-gray-50/50 text-gray-500 resize-none"
+                              />
+                            )}
+                            {sellerData.latitude && sellerData.longitude && isEditing && (
+                              <p className="mt-1 text-xs text-gray-500">
+                                Coordinates: {sellerData.latitude}, {sellerData.longitude}
+                              </p>
+                            )}
                           </div>
 
                           <InputGroup label="City" name="city" value={sellerData.city} onChange={handleInputChange} disabled={!isEditing} />
-                          <InputGroup label="Serviceable Area" name="serviceableArea" value={sellerData.serviceableArea} onChange={handleInputChange} disabled={!isEditing} />
+                          
+                          <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-gray-700 ml-1">
+                              Service Radius (KM) <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              name="serviceRadiusKm"
+                              value={sellerData.serviceRadiusKm}
+                              onChange={handleInputChange}
+                              disabled={!isEditing}
+                              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none disabled:bg-gray-50/50 disabled:text-gray-500 transition-all appearance-none bg-white"
+                            >
+                              <option value="1">1 km</option>
+                              <option value="2">2 km</option>
+                              <option value="5">5 km</option>
+                              <option value="10">10 km</option>
+                              <option value="20">20 km</option>
+                              <option value="50">50 km</option>
+                            </select>
+                            {isEditing && (
+                              <p className="mt-1 text-xs text-gray-500">
+                                Products will be shown to users within this radius from your store location
+                              </p>
+                            )}
+                          </div>
+                          
                         </div>
                       </div>
                     )}

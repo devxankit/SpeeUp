@@ -61,6 +61,15 @@ export default function Categories() {
                                   src={category.image}
                                   alt={category.name}
                                   className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    // Hide broken image and show fallback
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    const parent = target.parentElement;
+                                    if (parent) {
+                                      parent.innerHTML = `<div class="w-full h-full rounded-lg bg-cyan-50 flex items-center justify-center text-xl">${category.name?.charAt(0) || '?'}</div>`;
+                                    }
+                                  }}
                                 />
                               </div>
                             ) : (

@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema, Model } from "mongoose";
 
 export interface ICategory extends Document {
   name: string;
@@ -14,6 +14,14 @@ export interface ICategory extends Document {
   headerCategoryId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  getAllDescendants(): Promise<ICategory[]>;
+}
+
+export interface ICategoryModel extends Model<ICategory> {
+  validateParentChange(
+    categoryId: string,
+    newParentId: string | null
+  ): Promise<{ valid: boolean; error?: string }>;
 }
 
 const CategorySchema = new Schema<ICategory>(
@@ -123,14 +131,17 @@ CategorySchema.methods.getAllDescendants = async function () {
 
   for (const child of children) {
     descendants.push(child);
-    const childDescendants = await child.getAllDescendants();
+    const childDescendants = await (child as ICategory).getAllDescendants();
     descendants.push(...childDescendants);
   }
 
   return descendants;
 };
 
-const Category = mongoose.model<ICategory>("Category", CategorySchema);
+const Category = mongoose.model<ICategory, ICategoryModel>(
+  "Category",
+  CategorySchema
+);
 
 // Static method to validate parent change (prevent circular references)
 Category.validateParentChange = async function (

@@ -11,18 +11,18 @@ interface AddToCartAnimationProps {
    * Default: 96px
    */
   bottomOffset?: number;
-  
+
   /**
    * Custom className for the cart pill button
    */
   pillClassName?: string;
-  
+
   /**
    * Whether to hide the pill on specific pages
    * Default: true (hides on checkout, orders, account pages)
    */
   hideOnPages?: boolean;
-  
+
   /**
    * Custom link destination
    * Default: '/checkout'
@@ -76,14 +76,14 @@ export default function AddToCartAnimation({
 
       if (removed) {
         setRemovedProduct(removed.product);
-        
+
         // Animate the removed thumbnail bouncing out
         setTimeout(() => {
           if (removedThumbnailRef.current) {
             const pillRect = linkRef.current?.getBoundingClientRect();
             if (pillRect) {
               const thumbnail = removedThumbnailRef.current;
-              
+
               // Position it at the pill location initially (at the first thumbnail position)
               gsap.set(thumbnail, {
                 position: 'fixed',
@@ -112,14 +112,14 @@ export default function AddToCartAnimation({
                 duration: 0.4,
                 ease: 'power2.in',
               })
-              // STEP 2: Pop/explode at the top (no particles, just scale and fade)
-              .to(thumbnail, {
-                scale: 2.5,
-                opacity: 0,
-                rotation: -45,
-                duration: 0.15,
-                ease: 'power4.in',
-              });
+                // STEP 2: Pop/explode at the top (no particles, just scale and fade)
+                .to(thumbnail, {
+                  scale: 2.5,
+                  opacity: 0,
+                  rotation: -45,
+                  duration: 0.15,
+                  ease: 'power4.in',
+                });
             }
           }
         }, 10);
@@ -148,7 +148,7 @@ export default function AddToCartAnimation({
 
           // Calculate thumbnail center offset (16px = half of 32px thumbnail)
           const thumbnailCenterOffset = 16;
-          
+
           // Position at source (center of button)
           // Set initial position so the center of thumbnail is at sourcePosition
           gsap.set(thumbnail, {
@@ -184,36 +184,36 @@ export default function AddToCartAnimation({
             duration: 0.15,
             ease: 'power2.out',
           })
-          // Step 2: Fly towards cart with rotation (no Y overshoot to prevent going below)
-          .to(thumbnail, {
-            x: deltaX * 0.98, // Slight X overshoot for bounce
-            y: deltaY, // No overshoot on Y to prevent going below pill
-            rotation: 360,
-            scale: 1.1,
-            duration: 0.4,
-            ease: 'power2.inOut',
-          })
-          // Step 3: Bounce back slightly on X only (overshoot correction)
-          .to(thumbnail, {
-            x: deltaX,
-            y: deltaY, // Keep Y at exact target
-            scale: 0.9,
-            duration: 0.15,
-            ease: 'power2.out',
-          })
-          // Step 4: Final bounce into position
-          .to(thumbnail, {
-            scale: 0.85,
-            duration: 0.1,
-            ease: 'power2.in',
-          })
-          // Step 5: Fade out smoothly
-          .to(thumbnail, {
-            scale: 0.7,
-            opacity: 0,
-            duration: 0.15,
-            ease: 'power2.in',
-          });
+            // Step 2: Fly towards cart with rotation (no Y overshoot to prevent going below)
+            .to(thumbnail, {
+              x: deltaX * 0.98, // Slight X overshoot for bounce
+              y: deltaY, // No overshoot on Y to prevent going below pill
+              rotation: 360,
+              scale: 1.1,
+              duration: 0.4,
+              ease: 'power2.inOut',
+            })
+            // Step 3: Bounce back slightly on X only (overshoot correction)
+            .to(thumbnail, {
+              x: deltaX,
+              y: deltaY, // Keep Y at exact target
+              scale: 0.9,
+              duration: 0.15,
+              ease: 'power2.out',
+            })
+            // Step 4: Final bounce into position
+            .to(thumbnail, {
+              scale: 0.85,
+              duration: 0.1,
+              ease: 'power2.in',
+            })
+            // Step 5: Fade out smoothly
+            .to(thumbnail, {
+              scale: 0.7,
+              opacity: 0,
+              duration: 0.15,
+              ease: 'power2.in',
+            });
         }
       }, 150); // Increased delay to ensure pill animation completes
     }
@@ -224,10 +224,10 @@ export default function AddToCartAnimation({
     if (cart.itemCount > 0 && linkRef.current && !removedProduct && !flyingProduct) {
       // Kill any existing animations first
       gsap.killTweensOf(linkRef.current);
-      
+
       // Enhanced pulse animation with glow effect
       const tl = gsap.timeline();
-      
+
       // Step 1: Scale up with glow
       tl.to(linkRef.current, {
         scale: 1.08,
@@ -237,24 +237,24 @@ export default function AddToCartAnimation({
         transformOrigin: 'center center',
         force3D: true,
       })
-      // Step 2: Bounce back
-      .to(linkRef.current, {
-        scale: 1.0,
-        boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)',
-        duration: 0.2,
-        ease: 'power2.inOut',
-      })
-      // Step 3: Subtle second pulse
-      .to(linkRef.current, {
-        scale: 1.04,
-        duration: 0.1,
-        ease: 'power1.out',
-      })
-      .to(linkRef.current, {
-        scale: 1.0,
-        duration: 0.15,
-        ease: 'power1.in',
-      });
+        // Step 2: Bounce back
+        .to(linkRef.current, {
+          scale: 1.0,
+          boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)',
+          duration: 0.2,
+          ease: 'power2.inOut',
+        })
+        // Step 3: Subtle second pulse
+        .to(linkRef.current, {
+          scale: 1.04,
+          duration: 0.1,
+          ease: 'power1.out',
+        })
+        .to(linkRef.current, {
+          scale: 1.0,
+          duration: 0.15,
+          ease: 'power1.in',
+        });
     }
   }, [cart.itemCount, cart.total, removedProduct, flyingProduct]);
 
@@ -270,15 +270,15 @@ export default function AddToCartAnimation({
           ref={removedThumbnailRef}
           className="w-8 h-8 rounded-full border-2 border-white overflow-hidden bg-white flex-shrink-0 shadow-lg"
         >
-          {removedProduct.imageUrl ? (
+          {removedProduct.imageUrl || removedProduct.mainImage ? (
             <img
-              src={removedProduct.imageUrl}
-              alt={removedProduct.name}
+              src={removedProduct.imageUrl || removedProduct.mainImage}
+              alt={removedProduct.name || removedProduct.productName || 'Product'}
               className="w-full h-full object-cover"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-neutral-200 text-neutral-400 text-xs font-semibold">
-              {removedProduct.name.charAt(0).toUpperCase()}
+              {(removedProduct.name || removedProduct.productName || 'P').charAt(0).toUpperCase()}
             </div>
           )}
         </div>
@@ -294,15 +294,15 @@ export default function AddToCartAnimation({
             objectFit: 'cover',
           }}
         >
-          {flyingProduct.product.imageUrl ? (
+          {flyingProduct.product.imageUrl || flyingProduct.product.mainImage ? (
             <img
-              src={flyingProduct.product.imageUrl}
-              alt={flyingProduct.product.name}
+              src={flyingProduct.product.imageUrl || flyingProduct.product.mainImage}
+              alt={flyingProduct.product.name || flyingProduct.product.productName || 'Product'}
               className="w-full h-full object-cover rounded-full"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-neutral-200 text-neutral-400 text-xs font-semibold rounded-full">
-              {flyingProduct.product.name.charAt(0).toUpperCase()}
+              {(flyingProduct.product.name || flyingProduct.product.productName || 'P').charAt(0).toUpperCase()}
             </div>
           )}
         </div>
@@ -336,7 +336,7 @@ export default function AddToCartAnimation({
               <div className="flex items-center -space-x-4">
                 {thumbnailItems.map((item, idx) => (
                   <motion.div
-                    key={item.product.id}
+                    key={item.product._id || item.product.id || `item-${idx}`}
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{
@@ -347,15 +347,15 @@ export default function AddToCartAnimation({
                     }}
                     className="w-7 h-7 rounded-full border-2 border-white/90 overflow-hidden bg-white flex-shrink-0 shadow-md"
                   >
-                    {item.product.imageUrl ? (
+                    {item.product.imageUrl || item.product.mainImage ? (
                       <img
-                        src={item.product.imageUrl}
-                        alt={item.product.name}
+                        src={item.product.imageUrl || item.product.mainImage}
+                        alt={item.product.name || item.product.productName || 'Product'}
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-neutral-200 text-neutral-400 text-xs font-semibold">
-                        {item.product.name.charAt(0).toUpperCase()}
+                        {(item.product.name || item.product.productName || 'P').charAt(0).toUpperCase()}
                       </div>
                     )}
                   </motion.div>
@@ -363,7 +363,7 @@ export default function AddToCartAnimation({
               </div>
 
               {/* Middle: Text */}
-              <motion.div 
+              <motion.div
                 className="flex flex-col"
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -376,7 +376,7 @@ export default function AddToCartAnimation({
               </motion.div>
 
               {/* Right: Arrow icon */}
-              <motion.div 
+              <motion.div
                 className="ml-auto bg-white/25 rounded-full p-1 backdrop-blur-sm"
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}

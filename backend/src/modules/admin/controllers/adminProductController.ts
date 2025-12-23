@@ -436,7 +436,6 @@ export const toggleCategoryStatus = asyncHandler(
 
     // Optionally cascade to children
     if (cascadeToChildren === true) {
-      const children = await Category.find({ parentId: id });
       await Category.updateMany(
         { parentId: id },
         { status, updatedAt: new Date() }
@@ -1113,8 +1112,9 @@ export const approveProductRequest = asyncHandler(
 
     return res.status(200).json({
       success: true,
-      message: `Product ${status === "Active" ? "approved" : "rejected"
-        } successfully`,
+      message: `Product ${
+        status === "Active" ? "approved" : "rejected"
+      } successfully`,
       data: product,
     });
   }

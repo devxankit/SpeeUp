@@ -45,16 +45,41 @@ export default function GoogleMapsAutocomplete({
   const autocompleteRef = useRef<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string>('');
+  const [inputValue, setInputValue] = useState(value);
 
-  // Initialize autocomplete function
+  // Update local input value when prop changes
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  // Initialize autocomplete using the legacy Autocomplete API
+  // Note: The new PlaceAutocompleteElement is recommended for new customers from March 2025,
+  // but it requires a different implementation pattern (Web Component).
+  // For now, we continue using the legacy Autocomplete which still works for existing customers.
   const initializeAutocomplete = useCallback(() => {
     if (!inputRef.current || !window.google?.maps?.places) return;
 
+    // Clean up any existing autocomplete
+    if (autocompleteRef.current) {
+      try {
+        window.google?.maps?.event?.clearInstanceListeners?.(autocompleteRef.current);
+      } catch {
+        // Ignore cleanup errors
+      }
+      autocompleteRef.current = null;
+    }
+
     try {
-      const Autocomplete = (window.google.maps.places as any).Autocomplete;
-      const autocomplete = new Autocomplete(inputRef.current, {
+      const places = window.google.maps.places as any;
+
+      if (!places.Autocomplete) {
+        setError('Google Maps Places Autocomplete not available');
+        return;
+      }
+
+      const autocomplete = new places.Autocomplete(inputRef.current, {
         types: ['establishment', 'geocode'],
-        componentRestrictions: { country: 'in' }, // Restrict to India
+        componentRestrictions: { country: 'in' },
         fields: ['address_components', 'formatted_address', 'geometry', 'name', 'place_id'],
       });
 
@@ -74,7 +99,6 @@ export default function GoogleMapsAutocomplete({
         const address = cleanAddress(rawAddress);
         const placeName = place.name || address;
 
-        // Extract city (locality) and state (administrative_area_level_1)
         let city = '';
         let state = '';
 
@@ -90,16 +114,18 @@ export default function GoogleMapsAutocomplete({
           }
         }
 
+        setInputValue(address);
         onChange(address, lat, lng, placeName, { city, state });
         setError('');
       });
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Autocomplete initialization error:', err);
       setError(`Failed to initialize autocomplete: ${errorMessage}`);
     }
   }, [onChange, value]);
 
-  // Load Google Maps API script
+  // Load Google Maps API script with async loading
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -108,12 +134,14 @@ export default function GoogleMapsAutocomplete({
       return;
     }
 
+    // Check if API is already loaded
     if (window.google && window.google.maps && window.google.maps.places) {
       setIsLoaded(true);
       initializeAutocomplete();
       return;
     }
 
+    // Check if script is already loading
     if (document.querySelector(`script[src*="maps.googleapis.com"]`)) {
       const checkInterval = setInterval(() => {
         if (window.google && window.google.maps && window.google.maps.places) {
@@ -125,8 +153,9 @@ export default function GoogleMapsAutocomplete({
       return () => clearInterval(checkInterval);
     }
 
+    // Load the script with async loading as recommended by Google
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
     script.async = true;
     script.defer = true;
     script.onload = () => {
@@ -140,7 +169,11 @@ export default function GoogleMapsAutocomplete({
 
     return () => {
       if (autocompleteRef.current) {
-        window.google?.maps?.event?.clearInstanceListeners?.(autocompleteRef.current);
+        try {
+          window.google?.maps?.event?.clearInstanceListeners?.(autocompleteRef.current);
+        } catch {
+          // Ignore cleanup errors
+        }
       }
     };
   }, [initializeAutocomplete]);
@@ -156,8 +189,9 @@ export default function GoogleMapsAutocomplete({
       <input
         ref={inputRef}
         type="text"
-        value={value}
+        value={inputValue}
         onChange={(e) => {
+          setInputValue(e.target.value);
           onChange(e.target.value, 0, 0, e.target.value);
         }}
         placeholder={placeholder}

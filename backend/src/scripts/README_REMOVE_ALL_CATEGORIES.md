@@ -54,3 +54,4 @@ All categories and subcategories will be removed. You can then:
 
 1. Run the seed script to add new categories: `npm run seed:categories-under-headers`
 2. Or manually add categories through the admin panel
+

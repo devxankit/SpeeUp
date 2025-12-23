@@ -1,4 +1,4 @@
-import api from './config';
+import api from "./config";
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -11,6 +11,7 @@ export interface Category {
   name: string;
   image?: string;
   parentId?: string;
+  headerCategoryId?: string | any; // Can be string ID or populated object
   isBestseller: boolean;
   hasWarning: boolean;
   groupCategory?: string;
@@ -44,7 +45,7 @@ export interface GetSubcategoriesParams {
   page?: number;
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface PaginatedResponse<T> {
@@ -60,15 +61,21 @@ export interface PaginatedResponse<T> {
 /**
  * Get all categories (parent categories only by default)
  */
-export const getCategories = async (params?: GetCategoriesParams): Promise<ApiResponse<Category[]>> => {
-  const response = await api.get<ApiResponse<Category[]>>('/categories', { params });
+export const getCategories = async (
+  params?: GetCategoriesParams
+): Promise<ApiResponse<Category[]>> => {
+  const response = await api.get<ApiResponse<Category[]>>("/categories", {
+    params,
+  });
   return response.data;
 };
 
 /**
  * Get category by ID
  */
-export const getCategoryById = async (id: string): Promise<ApiResponse<Category>> => {
+export const getCategoryById = async (
+  id: string
+): Promise<ApiResponse<Category>> => {
   const response = await api.get<ApiResponse<Category>>(`/categories/${id}`);
   return response.data;
 };
@@ -80,23 +87,34 @@ export const getSubcategories = async (
   categoryId: string,
   params?: GetSubcategoriesParams
 ): Promise<ApiResponse<SubCategory[]>> => {
-  const response = await api.get<ApiResponse<SubCategory[]>>(`/categories/${categoryId}/subcategories`, { params });
+  const response = await api.get<ApiResponse<SubCategory[]>>(
+    `/categories/${categoryId}/subcategories`,
+    { params }
+  );
   return response.data;
 };
 
 /**
  * Get all subcategories (across all categories)
  */
-export const getAllSubcategories = async (params?: GetSubcategoriesParams): Promise<ApiResponse<SubCategory[]>> => {
-  const response = await api.get<ApiResponse<SubCategory[]>>('/categories/subcategories', { params });
+export const getAllSubcategories = async (
+  params?: GetSubcategoriesParams
+): Promise<ApiResponse<SubCategory[]>> => {
+  const response = await api.get<ApiResponse<SubCategory[]>>(
+    "/categories/subcategories",
+    { params }
+  );
   return response.data;
 };
 
 /**
  * Get all categories with nested subcategories
  */
-export const getAllCategoriesWithSubcategories = async (): Promise<ApiResponse<CategoryWithSubcategories[]>> => {
-  const response = await api.get<ApiResponse<CategoryWithSubcategories[]>>('/categories/all-with-subcategories');
+export const getAllCategoriesWithSubcategories = async (): Promise<
+  ApiResponse<CategoryWithSubcategories[]>
+> => {
+  const response = await api.get<ApiResponse<CategoryWithSubcategories[]>>(
+    "/categories/all-with-subcategories"
+  );
   return response.data;
 };
-

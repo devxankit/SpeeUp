@@ -105,6 +105,15 @@ export default function CategoryListView({
                       src={category.image}
                       alt={category.name}
                       className="w-12 h-12 rounded-lg object-cover"
+                      onError={(e) => {
+                        // Hide broken image and show fallback
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `<div class="w-12 h-12 rounded-lg bg-neutral-100 flex items-center justify-center"><span class="text-lg font-semibold text-neutral-400">${category.name.charAt(0).toUpperCase()}</span></div>`;
+                        }
+                      }}
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-lg bg-neutral-100 flex items-center justify-center">

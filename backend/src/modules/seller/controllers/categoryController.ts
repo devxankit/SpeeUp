@@ -9,7 +9,7 @@ import { asyncHandler } from "../../../utils/asyncHandler";
  */
 export const getCategories = asyncHandler(
   async (req: Request, res: Response) => {
-    const { includeSubcategories, search, headerCategoryId } = req.query;
+    const { includeSubcategories, search } = req.query;
 
     // Build query - by default, get only parent categories (no parentId)
     const query: any = { parentId: null };
@@ -19,18 +19,13 @@ export const getCategories = asyncHandler(
       delete query.parentId;
     }
 
-    // Filter by header category if provided
-    if (headerCategoryId) {
-      query.headerCategoryId = headerCategoryId;
-    }
-
     // Search filter
     if (search) {
       query.name = { $regex: search, $options: "i" };
     }
 
     const categories = await Category.find(query)
-      .populate("headerCategoryId", "name status")
+      .populate("headerCategoryId", "name slug")
       .sort({ name: 1 });
 
     // Get subcategory and product counts for each category
@@ -203,8 +198,8 @@ export const getSubcategories = asyncHandler(
 
     // Sort combined results
     uniqueSubcategories.sort((a, b) => {
-      const aValue = a[sortField] || "";
-      const bValue = b[sortField] || "";
+      const aValue = (a as any)[sortField] || "";
+      const bValue = (b as any)[sortField] || "";
       if (sortOrder === "asc") {
         return aValue > bValue ? 1 : -1;
       } else {

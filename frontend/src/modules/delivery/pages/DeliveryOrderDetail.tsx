@@ -104,7 +104,7 @@ export default function DeliveryOrderDetail() {
 
         if (!document.querySelector(`script[src*="maps.googleapis.com"]`)) {
             const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry`;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&loading=async`;
             script.async = true;
             script.defer = true;
             script.onload = () => setIsMapLoaded(true);
