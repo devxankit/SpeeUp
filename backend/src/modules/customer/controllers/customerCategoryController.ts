@@ -76,14 +76,27 @@ export const getCategoryById = async (req: Request, res: Response) => {
         
         // If not found by ID, try by slug (case-insensitive, only active categories)
         if (!category) {
+            // Try exact slug match first
             category = await Category.findOne({ 
-                $or: [
-                    { slug: id.toLowerCase() },
-                    { slug: id },
-                    { name: { $regex: new RegExp(`^${id}$`, 'i') } } // Fallback: match by name case-insensitive
-                ],
+                slug: id,
                 status: "Active"
             }).lean();
+            
+            // Try case-insensitive slug match
+            if (!category) {
+                category = await Category.findOne({ 
+                    slug: { $regex: new RegExp(`^${id}$`, 'i') },
+                    status: "Active"
+                }).lean();
+            }
+            
+            // Try name match as fallback (case-insensitive)
+            if (!category) {
+                category = await Category.findOne({ 
+                    name: { $regex: new RegExp(`^${id.replace(/[-_]/g, ' ')}$`, 'i') },
+                    status: "Active"
+                }).lean();
+            }
         }
 
         if (!category) {

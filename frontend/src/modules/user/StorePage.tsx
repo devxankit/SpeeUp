@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../../components/ui/button';
 import { Product } from '../../types/domain';
 import { useEffect, useState } from 'react';
-import { getProducts, getCategoryById } from '../../services/api/customerProductService';
+import { getStoreProducts } from '../../services/api/customerHomeService';
 import { useLocation } from '../../context/LocationContext';
 
 export default function StorePage() {
@@ -13,7 +13,7 @@ export default function StorePage() {
     const { cart, addToCart, updateQuantity } = useCart();
     const { location } = useLocation();
     const [products, setProducts] = useState<Product[]>([]);
-    const [category, setCategory] = useState<any>(null);
+    const [shopData, setShopData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -22,23 +22,30 @@ export default function StorePage() {
             try {
                 setLoading(true);
 
-                // 1. Fetch products for this category (using slug as category ID/filter)
-                const params: any = { category: slug };
-                // Include user location for seller service radius filtering
-                if (location?.latitude && location?.longitude) {
-                  params.latitude = location.latitude;
-                  params.longitude = location.longitude;
+                // Fetch shop data and products using the shop API endpoint
+                const response = await getStoreProducts(
+                    slug,
+                    location?.latitude,
+                    location?.longitude
+                );
+                console.log(`[StorePage] Response for slug "${slug}":`, {
+                    success: response.success,
+                    productsCount: response.data?.length || 0,
+                    shop: response.shop ? { name: response.shop.name, image: response.shop.image } : null,
+                    message: response.message
+                });
+                if (response.success) {
+                    setProducts(response.data || []);
+                    setShopData(response.shop || null);
+                } else {
+                    setProducts([]);
+                    setShopData(null);
                 }
-                const response = await getProducts(params);
-                setProducts(response.data as unknown as Product[]);
-
-                // 2. Fetch category details to get the banner/name
-                const catRes = await getCategoryById(slug);
-                if (catRes.success) {
-                    setCategory(catRes.data.category);
-                }
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Failed to fetch store data:', error);
+                console.error('Error details:', error.response?.data || error.message);
+                setProducts([]);
+                setShopData(null);
             } finally {
                 setLoading(false);
             }
@@ -47,8 +54,8 @@ export default function StorePage() {
         fetchData();
     }, [slug, location]);
 
-    const storeName = category?.name || (slug ? slug.charAt(0).toUpperCase() + slug.slice(1).replace('-', ' ') : 'Store');
-    const bannerImage = category?.image || `/assets/shopbystore/${slug}/${slug}header.png`;
+    const storeName = shopData?.name || (slug ? slug.charAt(0).toUpperCase() + slug.slice(1).replace('-', ' ') : 'Store');
+    const bannerImage = shopData?.image || `/assets/shopbystore/${slug}/${slug}header.png`;
 
     return (
         <div className="min-h-screen bg-white">
@@ -59,8 +66,16 @@ export default function StorePage() {
                     alt={storeName}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                        // Fallback if component-specific image doesn't exist
-                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1000';
+                        // Hide broken image and show gradient fallback
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent && !parent.querySelector('.banner-fallback')) {
+                            const fallback = document.createElement('div');
+                            fallback.className = 'banner-fallback w-full h-full bg-gradient-to-br from-cyan-50 to-teal-100 flex items-center justify-center';
+                            fallback.innerHTML = `<div class="text-4xl font-bold text-neutral-400">${storeName.charAt(0).toUpperCase()}</div>`;
+                            parent.appendChild(fallback);
+                        }
                     }}
                 />
 
@@ -108,16 +123,18 @@ export default function StorePage() {
                 ) : products.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {products.map((product) => {
-                            const cartItem = cart.items.find((item) => item?.product && (item.product.id === product.id || item.product._id === product.id));
+                            // Ensure consistent product ID - MongoDB returns _id, frontend expects id
+                            const productId = product._id || product.id;
+                            const cartItem = cart.items.find((item) => item?.product && (item.product.id === productId || item.product._id === productId));
                             const inCartQty = cartItem?.quantity || 0;
                             const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
 
                             return (
                                 <motion.div
-                                    key={product.id}
+                                    key={productId}
                                     className="bg-white rounded-xl border border-neutral-100 shadow-sm overflow-hidden flex flex-col"
                                 >
-                                    <Link to={`/product/${product.id}`} className="relative bg-neutral-50 aspect-square flex items-center justify-center p-4">
+                                    <Link to={`/product/${productId}`} className="relative bg-neutral-50 aspect-square flex items-center justify-center p-4">
                                         {product.imageUrl || product.mainImage ? (
                                             <img src={product.imageUrl || product.mainImage} alt={product.name} className="w-full h-full object-contain" />
                                         ) : (
@@ -132,7 +149,7 @@ export default function StorePage() {
 
                                     <div className="p-3 flex-1 flex flex-col">
                                         <div className="text-[10px] text-neutral-500 mb-1">{product.pack}</div>
-                                        <h4 className="text-sm font-bold text-neutral-900 line-clamp-2 mb-2">{product.name}</h4>
+                                        <h4 className="text-sm font-bold text-neutral-900 line-clamp-2 mb-2">{product.name || product.productName}</h4>
 
                                         <div className="mt-auto flex items-center justify-between">
                                             <div className="flex flex-col">
@@ -154,9 +171,9 @@ export default function StorePage() {
                                                     </Button>
                                                 ) : (
                                                     <div className="flex items-center justify-between bg-green-600 text-white rounded-lg h-8 px-1">
-                                                        <button onClick={() => updateQuantity(product.id, inCartQty - 1)} className="w-6 h-6 flex items-center justify-center font-bold">−</button>
+                                                        <button onClick={() => updateQuantity(productId, inCartQty - 1)} className="w-6 h-6 flex items-center justify-center font-bold">−</button>
                                                         <span className="text-xs font-bold">{inCartQty}</span>
-                                                        <button onClick={() => updateQuantity(product.id, inCartQty + 1)} className="w-6 h-6 flex items-center justify-center font-bold">+</button>
+                                                        <button onClick={() => updateQuantity(productId, inCartQty + 1)} className="w-6 h-6 flex items-center justify-center font-bold">+</button>
                                                     </div>
                                                 )}
                                             </div>

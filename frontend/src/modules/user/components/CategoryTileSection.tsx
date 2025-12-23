@@ -143,6 +143,11 @@ export default function CategoryTileSection({
                                 src={img}
                                 alt=""
                                 className="w-full h-full object-contain bg-white rounded-sm"
+                                onError={(e) => {
+                                  // Hide broken image
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
                               />
                             ) : (
                               <div
@@ -159,6 +164,15 @@ export default function CategoryTileSection({
                           src={images[0]}
                           alt={tile.name}
                           className="w-full h-full object-contain rounded-lg"
+                          onError={(e) => {
+                            // Hide broken image and show fallback
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-3xl text-neutral-300">${tile.name.charAt(0)}</div>`;
+                            }
+                          }}
                         />
                       )
                     ) : (

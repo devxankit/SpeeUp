@@ -243,7 +243,21 @@ export default function CategoryPage() {
                     }`}
                 >
                   {subcat.image ? (
-                    <img src={subcat.image} alt={subcat.name} className="w-full h-full object-cover" />
+                    <img 
+                      src={subcat.image} 
+                      alt={subcat.name} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Hide broken image and show fallback icon
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.textContent = subcat.icon || subcat.name?.charAt(0) || '📦';
+                          parent.style.fontSize = '16px';
+                        }
+                      }}
+                    />
                   ) : (
                     subcat.icon || '📦'
                   )}
