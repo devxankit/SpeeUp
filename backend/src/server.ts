@@ -17,13 +17,32 @@ const app: Application = express();
 const httpServer = createServer(app);
 
 // CORS configuration - Allow multiple origins in production
+const getAllowedOrigins = (): string[] => {
+  // Get allowed origins from environment variable (comma-separated)
+  const frontendUrl = process.env.FRONTEND_URL || "";
+  const allowedOrigins = frontendUrl
+    .split(",")
+    .map((url) => url.trim())
+    .filter((url) => url.length > 0);
+
+  // Default production origins
+  const defaultOrigins = [
+    "https://www.speeup.com",
+    "https://speeup.com",
+  ];
+
+  return allowedOrigins.length > 0
+    ? [...allowedOrigins, ...defaultOrigins]
+    : defaultOrigins;
+};
+
 const corsOptions = {
   origin: (
     origin: string | undefined,
     callback: (err: Error | null, allow?: boolean | string) => void
   ) => {
     console.log(
-      `🔍 CORS check - Origin: ${origin}, NODE_ENV: ${process.env.NODE_ENV}`
+      `🔍 CORS check - Origin: ${origin || 'no origin'}, NODE_ENV: ${process.env.NODE_ENV || 'development'}`
     );
 
     // Allow requests with no origin (like mobile apps, Postman, or server-to-server)
@@ -34,22 +53,7 @@ const corsOptions = {
 
     // In production, check against allowed origins
     if (process.env.NODE_ENV === "production") {
-      // Get allowed origins from environment variable (comma-separated)
-      const frontendUrl = process.env.FRONTEND_URL || "";
-      const allowedOrigins = frontendUrl
-        .split(",")
-        .map((url) => url.trim())
-        .filter((url) => url.length > 0);
-
-      // Default production origins if FRONTEND_URL not set
-      const defaultOrigins = [
-        "https://www.speeup.com",
-        "https://speeup.com",
-      ];
-
-      const allAllowedOrigins = allowedOrigins.length > 0 
-        ? [...allowedOrigins, ...defaultOrigins]
-        : defaultOrigins;
+      const allAllowedOrigins = getAllowedOrigins();
 
       // Check if origin matches any allowed origin
       const isAllowed = allAllowedOrigins.some((allowedOrigin) => {
@@ -70,7 +74,7 @@ const corsOptions = {
         console.log(`✅ CORS: Allowing production origin: ${origin}`);
         return callback(null, origin);
       }
-      
+
       console.log(`❌ CORS: Rejecting origin in production: ${origin}`);
       console.log(`   Allowed origins: ${allAllowedOrigins.join(", ")}`);
       return callback(new Error("Not allowed by CORS"));
@@ -97,13 +101,21 @@ const corsOptions = {
     "X-Requested-With",
     "Accept",
     "Origin",
+    "Access-Control-Request-Method",
+    "Access-Control-Request-Headers",
   ],
   exposedHeaders: ["Content-Length", "Content-Type"],
   maxAge: 86400, // 24 hours - cache preflight requests
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
 };
 
 // Middleware
 app.use(cors(corsOptions));
+
+// Explicit OPTIONS handler for preflight requests
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
