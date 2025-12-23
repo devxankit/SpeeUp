@@ -1,5 +1,3 @@
-
-
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface IProduct extends Document {
@@ -11,6 +9,7 @@ export interface IProduct extends Document {
   // Categorization
   category: mongoose.Types.ObjectId;
   subcategory?: mongoose.Types.ObjectId;
+  headerCategoryId?: mongoose.Types.ObjectId;
   brand?: mongoose.Types.ObjectId;
 
   // Seller Info
@@ -70,7 +69,6 @@ export interface IProduct extends Document {
   reviewsCount: number;
   discount: number; // Calculated percentage
 
-
   returnPolicyText?: string;
 
   // Tags
@@ -114,6 +112,10 @@ const ProductSchema = new Schema<IProduct>(
     subcategory: {
       type: Schema.Types.ObjectId,
       ref: "SubCategory",
+    },
+    headerCategoryId: {
+      type: Schema.Types.ObjectId,
+      ref: "HeaderCategory",
     },
     brand: {
       type: Schema.Types.ObjectId,
@@ -177,7 +179,11 @@ const ProductSchema = new Schema<IProduct>(
           price: Number,
           discPrice: { type: Number, default: 0 },
           stock: Number,
-          status: { type: String, enum: ['Available', 'Sold out', 'In stock'], default: 'Available' },
+          status: {
+            type: String,
+            enum: ["Available", "Sold out", "In stock"],
+            default: "Available",
+          },
           sku: String,
         },
       ],
@@ -263,7 +269,6 @@ const ProductSchema = new Schema<IProduct>(
     reviewsCount: { type: Number, default: 0, min: 0 },
     discount: { type: Number, default: 0, min: 0, max: 100 },
 
-
     returnPolicyText: { type: String, trim: true },
 
     // Tags
@@ -299,20 +304,21 @@ const ProductSchema = new Schema<IProduct>(
 );
 
 // Virtual for mrp (alias for compareAtPrice to match frontend)
-ProductSchema.virtual('mrp').get(function () {
+ProductSchema.virtual("mrp").get(function () {
   return this.compareAtPrice;
 });
 
 // Calculate discount before saving
-ProductSchema.pre('save', function (next) {
+ProductSchema.pre("save", function (next) {
   if (this.compareAtPrice && this.compareAtPrice > this.price) {
-    this.discount = Math.round(((this.compareAtPrice - this.price) / this.compareAtPrice) * 100);
+    this.discount = Math.round(
+      ((this.compareAtPrice - this.price) / this.compareAtPrice) * 100
+    );
   } else {
     this.discount = 0;
   }
   next();
 });
-
 
 // Indexes for faster queries
 ProductSchema.index({ seller: 1, status: 1 });

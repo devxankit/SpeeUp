@@ -57,7 +57,8 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await getHomeContent();
+        // Pass activeTab (header category slug) to filter categories
+        const response = await getHomeContent(activeTab);
 
         let fetchedCards: PromoCard[] = [];
         let fetchedProducts: any[] = [];

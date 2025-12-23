@@ -121,3 +121,4 @@ All categories will be visible on the admin category page at `http://localhost:5
 - Delete categories
 - Toggle category status
 - Category navigation menus
+
