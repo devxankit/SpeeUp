@@ -259,6 +259,13 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
     return () => clearInterval(interval);
   }, [featuredProducts.length]);
 
+  // Reset product index when featuredProducts change
+  useEffect(() => {
+    if (featuredProducts.length > 0 && currentProductIndex >= featuredProducts.length) {
+      setCurrentProductIndex(0);
+    }
+  }, [featuredProducts.length, currentProductIndex]);
+
   // Animate product change
   useEffect(() => {
     const elements = [
@@ -300,7 +307,7 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
     };
   }, [currentProductIndex]);
 
-  const currentProduct = featuredProducts[currentProductIndex];
+  const currentProduct = featuredProducts.length > 0 ? featuredProducts[currentProductIndex] : null;
 
   if (loading) {
     return (
@@ -308,13 +315,23 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
     );
   }
 
-  if (!hasData || !currentProduct) {
+  // Show "No active promotions" only if there are no cards AND no products
+  if (!hasData || (categoryCards.length === 0 && featuredProducts.length === 0)) {
     return (
       <div className="text-center py-6 text-neutral-400 text-sm">
         No active promotions
       </div>
     );
   }
+
+  // If no featured products but we have category cards, use a fallback product
+  const displayProduct = currentProduct || {
+    id: 'fallback',
+    name: 'Special Offers',
+    originalPrice: 999,
+    discountedPrice: 499,
+    imageUrl: undefined,
+  };
 
   return (
     <div
@@ -528,7 +545,7 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                     paddingBottom: "2px",
                   }}>
                   <span className="text-white text-[8px] font-medium line-through leading-none">
-                    ₹{currentProduct.originalPrice}
+                    ₹{displayProduct.originalPrice}
                   </span>
                 </div>
                 {/* Discounted Price - Bright Green Banner */}
@@ -541,7 +558,7 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                     paddingBottom: "2px",
                   }}>
                   <span className="text-white text-[9px] font-bold leading-none">
-                    ₹{currentProduct.discountedPrice}
+                    ₹{displayProduct.discountedPrice}
                   </span>
                 </div>
               </div>
@@ -550,7 +567,7 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
               <div
                 ref={productNameRef}
                 className="text-neutral-900 font-black text-[9px] text-center mb-0.5">
-                {currentProduct.name}
+                {displayProduct.name}
               </div>
 
               {/* Product Thumbnail - Bottom Center, sized to container */}
@@ -561,10 +578,10 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                 <div
                   className="w-12 h-16 rounded flex items-center justify-center overflow-visible"
                   style={{ background: "transparent" }}>
-                  {currentProduct.imageUrl ? (
+                  {displayProduct.imageUrl ? (
                     <img
-                      src={currentProduct.imageUrl}
-                      alt={currentProduct.name}
+                      src={displayProduct.imageUrl}
+                      alt={displayProduct.name}
                       className="w-full h-full object-contain"
                       style={{
                         mixBlendMode: "normal",

@@ -22,21 +22,12 @@ export default function Categories() {
 
         setHeaderCategories(headerRes || []);
 
-        const filtered = (categoryRes.data || [])
-          .map((cat) => ({
-            ...cat,
-            // Keep subcategories that have a name; image is optional
-            subcategories:
-              cat.subcategories?.filter((sub) => sub && sub.name)?.slice() || [],
-          }))
-          .filter((cat) => {
-            const hasSubs = (cat.subcategories?.length || 0) > 0;
-            const hasProducts =
-              typeof cat.totalProducts === "number"
-                ? cat.totalProducts > 0
-                : hasSubs; // tree endpoint already filters by products
-            return hasProducts && hasSubs;
-          });
+        // Backend already filters to categories that have products (and subcategories with products).
+        const filtered = (categoryRes.data || []).map((cat) => ({
+          ...cat,
+          subcategories:
+            cat.subcategories?.filter((sub) => sub && sub.name)?.slice() || [],
+        }));
 
         setCategories(filtered);
       } catch (error) {
