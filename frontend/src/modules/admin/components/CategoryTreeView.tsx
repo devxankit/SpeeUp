@@ -116,6 +116,16 @@ export default function CategoryTreeView({
                       className={`${
                         isSubcategory ? "w-12 h-12" : "w-16 h-16"
                       } rounded-lg object-cover`}
+                      onError={(e) => {
+                        // Hide broken image and show fallback
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          const size = isSubcategory ? "w-12 h-12" : "w-16 h-16";
+                          parent.innerHTML = `<div class="${size} rounded-lg bg-neutral-100 flex items-center justify-center"><span class="text-lg font-semibold text-neutral-400">${category.name.charAt(0).toUpperCase()}</span></div>`;
+                        }
+                      }}
                     />
                   ) : (
                     <div

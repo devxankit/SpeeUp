@@ -84,7 +84,6 @@ import AdminCoupon from "./modules/admin/pages/AdminCoupon";
 import AdminNotification from "./modules/admin/pages/AdminNotification";
 import AdminSellerLocation from "./modules/admin/pages/AdminSellerLocation";
 import AdminWallet from "./modules/admin/pages/AdminWallet";
-import AdminAddDeliveryBoy from "./modules/admin/pages/AdminAddDeliveryBoy";
 import AdminManageDeliveryBoy from "./modules/admin/pages/AdminManageDeliveryBoy";
 import AdminFundTransfer from "./modules/admin/pages/AdminFundTransfer";
 import AdminCashCollection from "./modules/admin/pages/AdminCashCollection";
@@ -92,7 +91,6 @@ import AdminReturnRequest from "./modules/admin/pages/AdminReturnRequest";
 import AdminPaymentList from "./modules/admin/pages/AdminPaymentList";
 import AdminSmsGateway from "./modules/admin/pages/AdminSmsGateway";
 import AdminSystemUser from "./modules/admin/pages/AdminSystemUser";
-import AdminManageRoles from "./modules/admin/pages/AdminManageRoles";
 import AdminUsers from "./modules/admin/pages/AdminUsers";
 import AdminFAQ from "./modules/admin/pages/AdminFAQ";
 import AdminHomeSection from "./modules/admin/pages/AdminHomeSection";
@@ -205,7 +203,6 @@ function App() {
                             <Route path="product/list" element={<AdminStockManagement />} />
                             <Route path="manage-seller/list" element={<AdminManageSellerList />} />
                             <Route path="manage-seller/transaction" element={<AdminSellerTransaction />} />
-                            <Route path="delivery-boy/add" element={<AdminAddDeliveryBoy />} />
                             <Route path="delivery-boy/manage" element={<AdminManageDeliveryBoy />} />
                             <Route path="delivery-boy/fund-transfer" element={<AdminFundTransfer />} />
                             <Route path="delivery-boy/cash-collection" element={<AdminCashCollection />} />
@@ -220,7 +217,6 @@ function App() {
                             <Route path="payment-list" element={<AdminPaymentList />} />
                             <Route path="sms-gateway" element={<AdminSmsGateway />} />
                             <Route path="system-user" element={<AdminSystemUser />} />
-                            <Route path="manage-roles" element={<AdminManageRoles />} />
                             <Route path="customer-app-policy" element={<AdminCustomerAppPolicy />} />
                             <Route path="delivery-app-policy" element={<AdminDeliveryAppPolicy />} />
                             <Route path="users" element={<AdminUsers />} />

@@ -30,6 +30,15 @@ export const getHomeContent = async (
 /**
  * Get products for a specific "shop" (e.g. Spiritual Store)
  */
+export const getStoreProducts = async (storeId: string, latitude?: number, longitude?: number): Promise<any> => {
+    const params: any = {};
+    if (latitude !== undefined && longitude !== undefined) {
+        params.latitude = latitude;
+        params.longitude = longitude;
+    }
+    const response = await api.get(`/customer/home/store/${storeId}`, { params });
+    return response.data;
+}
 export const getStoreProducts = async (storeId: string): Promise<any> => {
   const response = await api.get(`/customer/home/store/${storeId}`);
   return response.data;

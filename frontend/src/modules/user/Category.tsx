@@ -1,3 +1,9 @@
+import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import ProductCard from './components/ProductCard';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getProducts, getCategoryById, Category as ApiCategory } from '../../services/api/customerProductService';
+import { useLocation as useLocationContext } from '../../context/LocationContext';
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useMemo, useEffect } from "react";
 import ProductCard from "./components/ProductCard";
@@ -12,6 +18,7 @@ import { useLocation } from "../../context/LocationContext";
 export default function CategoryPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { location } = useLocationContext();
   const { location: userLocation } = useLocation();
 
   const [category, setCategory] = useState<ApiCategory | null>(null);
@@ -78,6 +85,11 @@ export default function CategoryPage() {
         if (selectedSubcategory !== "all") {
           params.subcategory = selectedSubcategory;
         }
+        // Include user location for seller service radius filtering
+        if (location?.latitude && location?.longitude) {
+          params.latitude = location.latitude;
+          params.longitude = location.longitude;
+        }
 
         // Add location if available (required by backend)
         if (userLocation?.latitude && userLocation?.longitude) {
@@ -107,6 +119,7 @@ export default function CategoryPage() {
     if (id) {
       fetchProducts();
     }
+  }, [id, selectedSubcategory, category, location]);
   }, [id, selectedSubcategory, category?._id, userLocation]);
 
   // Client-side filtering removed in favor of backend subcategory filtering
@@ -268,6 +281,21 @@ export default function CategoryPage() {
                       : "bg-white border border-neutral-300"
                   }`}>
                   {subcat.image ? (
+                    <img 
+                      src={subcat.image} 
+                      alt={subcat.name} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Hide broken image and show fallback icon
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.textContent = subcat.icon || subcat.name?.charAt(0) || '📦';
+                          parent.style.fontSize = '16px';
+                        }
+                      }}
+                    />
                     <img
                       src={subcat.image}
                       alt={subcat.name}

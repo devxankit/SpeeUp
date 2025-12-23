@@ -11,6 +11,8 @@ export interface PaymentMethodConfig {
   hasApiKeys: boolean;
   apiKey?: string;
   secretKey?: string;
+  type?: string;
+  provider?: string;
 }
 
 export interface UpdatePaymentMethodData {

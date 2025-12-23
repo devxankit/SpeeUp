@@ -53,7 +53,7 @@ async function uploadToCloudinary(
 
   if (!fs.existsSync(fullPath)) {
     log(`Warning: File not found: ${fullPath}, using placeholder`);
-    return "https://via.placeholder.com/300x300?text=Category";
+    return "https://placehold.co/300x300/f5f5f5/737373?text=Category";
   }
 
   try {
@@ -65,7 +65,7 @@ async function uploadToCloudinary(
     return result.secure_url;
   } catch (error: any) {
     log(`Cloudinary upload failed: ${error.message}, using placeholder`);
-    return "https://via.placeholder.com/300x300?text=Category";
+    return "https://placehold.co/300x300/f5f5f5/737373?text=Category";
   }
 }
 
@@ -87,7 +87,7 @@ async function getPlaceholderImage(): Promise<string> {
   }
 
   // Fallback to placeholder service
-  return "https://via.placeholder.com/300x300?text=Category";
+  return "https://placehold.co/300x300/f5f5f5/737373?text=Category";
 }
 
 async function seed() {
@@ -217,8 +217,7 @@ async function seed() {
     log(`- Categories created: ${totalCategoriesCreated}`);
     log(`- Subcategories created: ${totalSubcategoriesCreated}`);
     log(
-      `\nTotal items created: ${
-        totalCategoriesCreated + totalSubcategoriesCreated
+      `\nTotal items created: ${totalCategoriesCreated + totalSubcategoriesCreated
       }`
     );
 

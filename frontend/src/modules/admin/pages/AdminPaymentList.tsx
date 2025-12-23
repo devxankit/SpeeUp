@@ -14,9 +14,34 @@ export default function AdminPaymentList() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Default payment methods - COD and Razorpay only
+  const defaultPaymentMethods: PaymentMethod[] = [
+    {
+      _id: 'cod',
+      name: 'Cash On Delivery (COD)',
+      description: 'Pay when you receive your order',
+      status: 'Active',
+      hasApiKeys: false,
+      type: 'cod',
+    },
+    {
+      _id: 'razorpay',
+      name: 'Razorpay',
+      description: 'Pay securely with Razorpay',
+      status: 'Active',
+      hasApiKeys: true,
+      apiKey: '',
+      secretKey: '',
+      provider: 'razorpay',
+      type: 'gateway',
+    },
+  ];
+
   // Fetch payment methods on component mount
   useEffect(() => {
     if (!isAuthenticated || !token) {
+      // Use default payment methods when not authenticated
+      setPaymentMethods(defaultPaymentMethods);
       setLoading(false);
       return;
     }
@@ -27,17 +52,16 @@ export default function AdminPaymentList() {
         setError(null);
         const response = await getPaymentMethods();
 
-        if (response.success) {
+        if (response.success && response.data.length > 0) {
           setPaymentMethods(response.data);
         } else {
-          setError("Failed to load payment methods");
+          // Use default payment methods if API returns empty
+          setPaymentMethods(defaultPaymentMethods);
         }
       } catch (err: any) {
         console.error("Error fetching payment methods:", err);
-        setError(
-          err.response?.data?.message ||
-          "Failed to load payment methods. Please try again."
-        );
+        // Use default payment methods on error
+        setPaymentMethods(defaultPaymentMethods);
       } finally {
         setLoading(false);
       }

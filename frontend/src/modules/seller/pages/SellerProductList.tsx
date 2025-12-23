@@ -15,6 +15,23 @@ import { useAuth } from "../../../context/AuthContext";
 // ... (interfaces remain same)
 
 export default function SellerProductList() {
+    const navigate = useNavigate();
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string>('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('All Category');
+    const [statusFilter, setStatusFilter] = useState('All Products');
+    const [stockFilter, setStockFilter] = useState('All Products');
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
+    const [sortColumn, setSortColumn] = useState<string | null>(null);
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalProducts, setTotalProducts] = useState(0);
+    const [allCategories, setAllCategories] = useState<apiCategory[]>([]);
+    const { user } = useAuth();
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,6 +88,27 @@ export default function SellerProductList() {
         params.stock = "outOfStock";
       }
 
+            const response = await getProducts(params);
+            if (response.success && response.data) {
+                setProducts(response.data);
+                // Extract pagination info if available
+                if (response.pagination) {
+                    setTotalPages(response.pagination.pages);
+                    setTotalProducts(response.pagination.total);
+                } else {
+                    // Fallback: if no pagination info, calculate from data length
+                    setTotalPages(1);
+                    setTotalProducts(response.data.length);
+                }
+            } else {
+                setError(response.message || 'Failed to fetch products');
+            }
+        } catch (err: any) {
+            setError(err.response?.data?.message || err.message || 'Failed to fetch products');
+        } finally {
+            setLoading(false);
+        }
+    };
       const response = await getProducts(params);
       if (response.success && response.data) {
         setProducts(response.data);
@@ -183,6 +221,9 @@ export default function SellerProductList() {
     });
   }
 
+    // Show all variations from the current page's products (server-side pagination)
+    // No client-side pagination - pagination is handled by fetching different product pages
+    const displayedVariations = filteredVariations;
   // When using API pagination, don't do client-side pagination on already-paginated results
   // The API already returns the correct page of products, so we use all filtered variations
   // Only do client-side pagination if we don't have server-side pagination info
@@ -626,6 +667,79 @@ export default function SellerProductList() {
           </table>
         </div>
 
+                {/* Pagination Footer */}
+                <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+                    <div className="text-xs sm:text-sm text-neutral-700">
+                        Page {currentPage} of {totalPages} | Showing {products.length} products ({filteredVariations.length} variations) | Total: {totalProducts} products
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className={`p-2 border border-teal-600 rounded ${currentPage === 1
+                                ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                : 'text-teal-600 hover:bg-teal-50'
+                                }`}
+                            aria-label="Previous page"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    d="M15 18L9 12L15 6"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            <button
+                                key={page}
+                                onClick={() => setCurrentPage(page)}
+                                className={`px-3 py-1.5 border border-teal-600 rounded font-medium text-sm ${currentPage === page
+                                    ? 'bg-teal-600 text-white'
+                                    : 'text-teal-600 hover:bg-teal-50'
+                                    }`}
+                            >
+                                {page}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className={`p-2 border border-teal-600 rounded ${currentPage === totalPages
+                                ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                                : 'text-teal-600 hover:bg-teal-50'
+                                }`}
+                            aria-label="Next page"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                            >
+                                <path
+                                    d="M9 18L15 12L9 6"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
         {/* Pagination Footer */}
         <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
           <div className="text-xs sm:text-sm text-neutral-700">

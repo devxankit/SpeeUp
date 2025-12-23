@@ -37,8 +37,8 @@ import * as cashCollectionController from "../modules/admin/controllers/adminCas
 // FAQ Controllers
 import * as faqController from "../modules/admin/controllers/adminFAQController";
 
-// Role Controllers
-import * as roleController from "../modules/admin/controllers/adminRoleController";
+// Role Controllers - Manage Roles functionality removed
+// import * as roleController from "../modules/admin/controllers/adminRoleController";
 
 import * as paymentController from "../modules/admin/controllers/adminPaymentController";
 import * as policyController from "../modules/admin/controllers/adminPolicyController";
@@ -55,6 +55,9 @@ import {
   updateShop,
   deleteShop,
 } from "../modules/admin/controllers/adminShopController";
+
+// System User Controllers
+import * as systemUserController from "../modules/admin/controllers/adminSystemUserController";
 
 const router = Router();
 
@@ -259,13 +262,13 @@ router.delete("/faqs/:id", faqController.deleteFAQ);
 router.put("/faqs/order", faqController.updateFAQOrder);
 
 // ==================== Role Routes ====================
-// Note: /permissions must come before /:id to avoid collision
-router.get("/roles/permissions", roleController.getPermissions);
-router.get("/roles", roleController.getRoles);
-router.get("/roles/:id", roleController.getRoleById);
-router.post("/roles", roleController.createRole);
-router.put("/roles/:id", roleController.updateRole);
-router.delete("/roles/:id", roleController.deleteRole);
+// Manage Roles functionality removed from admin panel
+// router.get("/roles/permissions", roleController.getPermissions);
+// router.get("/roles", roleController.getRoles);
+// router.get("/roles/:id", roleController.getRoleById);
+// router.post("/roles", roleController.createRole);
+// router.put("/roles/:id", roleController.updateRole);
+// router.delete("/roles/:id", roleController.deleteRole);
 
 // ==================== Policy Routes ====================
 router.post("/policies", policyController.createPolicy);
@@ -290,5 +293,12 @@ router.get("/shop-by-stores", getAllShops);
 router.get("/shop-by-stores/:id", getShopById);
 router.put("/shop-by-stores/:id", updateShop);
 router.delete("/shop-by-stores/:id", deleteShop);
+
+// ==================== System User Routes ====================
+router.get("/system-users", systemUserController.getAllSystemUsers);
+router.get("/system-users/:id", systemUserController.getSystemUserById);
+router.post("/system-users", systemUserController.createSystemUser);
+router.put("/system-users/:id", systemUserController.updateSystemUser);
+router.delete("/system-users/:id", systemUserController.deleteSystemUser);
 
 export default router;

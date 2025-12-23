@@ -1,121 +1,150 @@
-import { useState } from 'react';
-
-interface Notification {
-  id: number;
-  users: string;
-  title: string;
-  description: string;
-  date: string;
-  isSystemGenerated: boolean;
-}
-
-// Mock data matching the image
-const INITIAL_NOTIFICATIONS: Notification[] = [
-  {
-    id: 1,
-    users: 'All Users',
-    title: 'Hi Groc',
-    description: 'Testing',
-    date: '02-May-2025 12:39:31',
-    isSystemGenerated: false,
-  },
-  {
-    id: 2,
-    users: 'All Users',
-    title: 'Hi Groc',
-    description: 'Testing',
-    date: '02-May-2025 12:39:04',
-    isSystemGenerated: false,
-  },
-  {
-    id: 3,
-    users: 'All Users',
-    title: 'Hi Groc',
-    description: 'Testing',
-    date: '02-May-2025 12:38:37',
-    isSystemGenerated: false,
-  },
-  {
-    id: 4,
-    users: 'All Users',
-    title: 'Hi Groc',
-    description: 'Testing',
-    date: '02-May-2025 12:38:09',
-    isSystemGenerated: false,
-  },
-  {
-    id: 5,
-    users: 'Lorem Ipsum',
-    title: 'Lorem Ipsum',
-    description: 'Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry\'s standard dummy text ever since the 1500s',
-    date: '13-Mar-2025 12:48:16',
-    isSystemGenerated: false,
-  },
-];
+import { useState, useEffect } from 'react';
+import {
+  getNotifications,
+  createNotification,
+  deleteNotification,
+  Notification as NotificationType,
+  CreateNotificationData,
+} from '../../../services/api/admin/adminNotificationService';
 
 export default function AdminNotification() {
   const [formData, setFormData] = useState({
-    userType: 'For All User',
+    recipientType: 'All' as 'All' | 'Admin' | 'Seller' | 'Customer' | 'Delivery',
     title: '',
-    description: '',
+    message: '',
   });
 
-  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
-  const [showSystemGenerated, setShowSystemGenerated] = useState('No');
+  const [notifications, setNotifications] = useState<NotificationType[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [error, setError] = useState('');
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortColumn, setSortColumn] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalNotifications, setTotalNotifications] = useState(0);
+  const [filterRecipientType, setFilterRecipientType] = useState<string>('All');
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1); // Reset to first page when search changes
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch notifications on component mount and when filters change
+  useEffect(() => {
+    fetchNotifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, rowsPerPage, filterRecipientType]);
+
+  const fetchNotifications = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const params: any = {
+        page: currentPage,
+        limit: rowsPerPage,
+      };
+
+      if (filterRecipientType !== 'All') {
+        params.recipientType = filterRecipientType;
+      }
+
+      const response = await getNotifications(params);
+
+      if (response.success && response.data) {
+        setNotifications(response.data);
+        if (response.pagination) {
+          setTotalPages(response.pagination.pages);
+          setTotalNotifications(response.pagination.total);
+        }
+      } else {
+        setError(response.message || 'Failed to fetch notifications');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error fetching notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const formatDate = (date: Date): string => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = months[date.getMonth()];
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
-  };
-
-  const handleSendNotification = (e: React.FormEvent) => {
+  const handleSendNotification = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setError('');
+    setSuccessMessage('');
+
     if (!formData.title.trim()) {
-      alert('Please enter a title');
+      setError('Please enter a title');
       return;
     }
 
-    const newNotification: Notification = {
-      id: notifications.length > 0 ? Math.max(...notifications.map(n => n.id)) + 1 : 1,
-      users: formData.userType === 'For All User' ? 'All Users' : formData.userType,
-      title: formData.title,
-      description: formData.description,
-      date: formatDate(new Date()),
-      isSystemGenerated: false,
-    };
+    if (!formData.message.trim()) {
+      setError('Please enter a message');
+      return;
+    }
 
-    setNotifications([newNotification, ...notifications]);
-    
-    // Reset form
-    setFormData({
-      userType: 'For All User',
-      title: '',
-      description: '',
-    });
-    
-    alert('Notification sent successfully!');
+    setLoading(true);
+    try {
+      const notificationData: CreateNotificationData = {
+        recipientType: formData.recipientType,
+        title: formData.title.trim(),
+        message: formData.message.trim(),
+        type: 'Info',
+        priority: 'Medium',
+      };
+
+      const response = await createNotification(notificationData);
+
+      if (response.success) {
+        setSuccessMessage('Notification sent successfully!');
+        // Reset form
+        setFormData({
+          recipientType: 'All',
+          title: '',
+          message: '',
+        });
+        // Refresh notifications list
+        fetchNotifications();
+      } else {
+        setError(response.message || 'Failed to send notification');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error sending notification');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('Are you sure you want to delete this notification?')) {
-      setNotifications(notifications.filter(notification => notification.id !== id));
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this notification?')) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccessMessage('');
+    try {
+      const response = await deleteNotification(id);
+      if (response.success) {
+        setSuccessMessage('Notification deleted successfully!');
+        fetchNotifications();
+      } else {
+        setError(response.message || 'Failed to delete notification');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error deleting notification');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -126,6 +155,7 @@ export default function AdminNotification() {
       setSortColumn(column);
       setSortDirection('asc');
     }
+    setCurrentPage(1);
   };
 
   const SortIcon = ({ column }: { column: string }) => (
@@ -134,48 +164,42 @@ export default function AdminNotification() {
     </span>
   );
 
-  // Filter notifications
-  let filteredNotifications = notifications.filter(notification => {
-    // Filter by system generated
-    if (showSystemGenerated === 'Yes' && !notification.isSystemGenerated) return false;
-    if (showSystemGenerated === 'No' && notification.isSystemGenerated) return false;
-    
-    // Filter by search term
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      return (
-        notification.title.toLowerCase().includes(searchLower) ||
-        notification.description.toLowerCase().includes(searchLower) ||
-        notification.users.toLowerCase().includes(searchLower) ||
-        notification.date.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    return true;
-  });
+  // Client-side filtering and sorting
+  let filteredNotifications = notifications;
 
-  // Sort notifications
+  // Client-side search filter
+  if (searchTerm) {
+    const searchLower = searchTerm.toLowerCase();
+    filteredNotifications = filteredNotifications.filter((notification) =>
+      notification.title.toLowerCase().includes(searchLower) ||
+      notification.message.toLowerCase().includes(searchLower) ||
+      notification.recipientType.toLowerCase().includes(searchLower)
+    );
+  }
+
+  // Client-side sorting (since backend sorting might not support all columns)
+  let sortedNotifications = [...filteredNotifications];
   if (sortColumn) {
-    filteredNotifications = [...filteredNotifications].sort((a, b) => {
+    sortedNotifications = [...filteredNotifications].sort((a, b) => {
       let aValue: any;
       let bValue: any;
 
       switch (sortColumn) {
-        case 'users':
-          aValue = a.users;
-          bValue = b.users;
+        case 'recipientType':
+          aValue = a.recipientType;
+          bValue = b.recipientType;
           break;
         case 'title':
           aValue = a.title;
           bValue = b.title;
           break;
-        case 'description':
-          aValue = a.description;
-          bValue = b.description;
+        case 'message':
+          aValue = a.message;
+          bValue = b.message;
           break;
-        case 'date':
-          aValue = new Date(a.date).getTime();
-          bValue = new Date(b.date).getTime();
+        case 'createdAt':
+          aValue = new Date(a.createdAt || '').getTime();
+          bValue = new Date(b.createdAt || '').getTime();
           break;
         default:
           return 0;
@@ -187,32 +211,25 @@ export default function AdminNotification() {
     });
   }
 
-  const totalPages = Math.ceil(filteredNotifications.length / rowsPerPage);
+  const displayedNotifications = sortedNotifications;
   const startIndex = (currentPage - 1) * rowsPerPage;
-  const endIndex = startIndex + rowsPerPage;
-  const displayedNotifications = filteredNotifications.slice(startIndex, endIndex);
 
-  const handleExport = () => {
-    const headers = ['Sr No', 'Users', 'Title', 'Description', 'Date'];
-    const csvContent = [
-      headers.join(','),
-      ...filteredNotifications.map((notification, index) => [
-        index + 1,
-        `"${notification.users}"`,
-        `"${notification.title}"`,
-        `"${notification.description}"`,
-        notification.date
-      ].join(','))
-    ].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `notifications_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+  };
+
+  const getRecipientDisplayName = (recipientType: string): string => {
+    if (recipientType === 'All') return 'All Users';
+    return recipientType;
   };
 
   return (
@@ -235,6 +252,35 @@ export default function AdminNotification() {
             <div className="bg-green-600 text-white px-6 py-4 rounded-t-lg">
               <h2 className="text-lg font-semibold">Send Notification</h2>
             </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="p-4 bg-red-50 border-l-4 border-red-500 text-red-700 flex items-center justify-between">
+                <p className="text-sm">{error}</p>
+                <button
+                  onClick={() => setError('')}
+                  className="text-red-700 hover:text-red-900 ml-4 text-lg font-bold"
+                  type="button"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {successMessage && (
+              <div className="p-4 bg-green-50 border-l-4 border-green-500 text-green-700 flex items-center justify-between">
+                <p className="text-sm">{successMessage}</p>
+                <button
+                  onClick={() => setSuccessMessage('')}
+                  className="text-green-700 hover:text-green-900 ml-4 text-lg font-bold"
+                  type="button"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
             <div className="p-6 flex-1 flex flex-col">
               <form onSubmit={handleSendNotification} className="space-y-4 flex-1 flex flex-col">
                 <div>
@@ -242,16 +288,20 @@ export default function AdminNotification() {
                     Select User Type
                   </label>
                   <select
-                    name="userType"
-                    value={formData.userType}
+                    name="recipientType"
+                    value={formData.recipientType}
                     onChange={handleInputChange}
+                    disabled={loading}
                     className="w-full px-3 py-2 border border-neutral-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none bg-white"
                   >
-                    <option value="For All User">For All User</option>
-                    <option value="Specific User">Specific User</option>
+                    <option value="All">All Users</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Seller">Seller</option>
+                    <option value="Customer">Customer</option>
+                    <option value="Delivery">Delivery</option>
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
                     Title <span className="text-red-500">*</span>
@@ -262,31 +312,35 @@ export default function AdminNotification() {
                     value={formData.title}
                     onChange={handleInputChange}
                     required
+                    disabled={loading}
                     placeholder="Enter Title"
                     className="w-full px-3 py-2 border border-neutral-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                   />
                 </div>
-                
+
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    Description
+                    Message <span className="text-red-500">*</span>
                   </label>
                   <textarea
-                    name="description"
-                    value={formData.description}
+                    name="message"
+                    value={formData.message}
                     onChange={handleInputChange}
-                    placeholder="Enter Description"
+                    required
+                    disabled={loading}
+                    placeholder="Enter Message"
                     rows={6}
                     className="w-full px-3 py-2 border border-neutral-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none resize-none"
                   />
                 </div>
-                
+
                 <div className="mt-auto">
                   <button
                     type="submit"
-                    className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium transition-colors"
+                    disabled={loading}
+                    className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors"
                   >
-                    Send Notification
+                    {loading ? 'Sending...' : 'Send Notification'}
                   </button>
                 </div>
               </form>
@@ -302,17 +356,21 @@ export default function AdminNotification() {
             {/* Controls */}
             <div className="p-4 border-b border-neutral-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-neutral-600">Show System Generated</span>
+                <span className="text-sm text-neutral-600">Filter by Type:</span>
                 <select
-                  value={showSystemGenerated}
+                  value={filterRecipientType}
                   onChange={(e) => {
-                    setShowSystemGenerated(e.target.value);
+                    setFilterRecipientType(e.target.value);
                     setCurrentPage(1);
                   }}
+                  disabled={loading}
                   className="bg-white border border-neutral-300 rounded py-1.5 px-3 text-sm focus:ring-1 focus:ring-green-500 focus:outline-none cursor-pointer"
                 >
-                  <option value="No">No</option>
-                  <option value="Yes">Yes</option>
+                  <option value="All">All</option>
+                  <option value="Admin">Admin</option>
+                  <option value="Seller">Seller</option>
+                  <option value="Customer">Customer</option>
+                  <option value="Delivery">Delivery</option>
                 </select>
                 <select
                   value={rowsPerPage}
@@ -320,6 +378,7 @@ export default function AdminNotification() {
                     setRowsPerPage(Number(e.target.value));
                     setCurrentPage(1);
                   }}
+                  disabled={loading}
                   className="bg-white border border-neutral-300 rounded py-1.5 px-3 text-sm focus:ring-1 focus:ring-green-500 focus:outline-none cursor-pointer"
                 >
                   <option value={10}>10</option>
@@ -329,15 +388,6 @@ export default function AdminNotification() {
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={handleExport}
-                  className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-sm font-medium flex items-center gap-1 transition-colors"
-                >
-                  Export
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </button>
                 <div className="relative">
                   <span className="absolute left-2 top-1/2 -translate-y-1/2 text-neutral-400 text-xs">Search:</span>
                   <input
@@ -349,171 +399,203 @@ export default function AdminNotification() {
                       setCurrentPage(1);
                     }}
                     placeholder=""
+                    disabled={loading}
                   />
                 </div>
               </div>
             </div>
 
+            {/* Loading State */}
+            {loading && (
+              <div className="flex-1 flex items-center justify-center p-8">
+                <div className="text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                  <p className="mt-2 text-sm text-neutral-600">Loading...</p>
+                </div>
+              </div>
+            )}
+
             {/* Table */}
-            <div className="overflow-x-auto flex-1">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-neutral-50 text-xs font-bold text-neutral-800 border-b border-neutral-200">
-                    <th
-                      className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                      onClick={() => handleSort('id')}
-                    >
-                      <div className="flex items-center">
-                        Sr No <SortIcon column="id" />
-                      </div>
-                    </th>
-                    <th
-                      className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                      onClick={() => handleSort('users')}
-                    >
-                      <div className="flex items-center">
-                        Users <SortIcon column="users" />
-                      </div>
-                    </th>
-                    <th
-                      className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                      onClick={() => handleSort('title')}
-                    >
-                      <div className="flex items-center">
-                        Title <SortIcon column="title" />
-                      </div>
-                    </th>
-                    <th
-                      className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                      onClick={() => handleSort('description')}
-                    >
-                      <div className="flex items-center">
-                        Description <SortIcon column="description" />
-                      </div>
-                    </th>
-                    <th
-                      className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
-                      onClick={() => handleSort('date')}
-                    >
-                      <div className="flex items-center">
-                        Date <SortIcon column="date" />
-                      </div>
-                    </th>
-                    <th className="p-4">
-                      <div className="flex items-center">
-                        Action <SortIcon column="action" />
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayedNotifications.map((notification, index) => (
-                    <tr
-                      key={notification.id}
-                      className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200"
-                    >
-                      <td className="p-4 align-middle">{startIndex + index + 1}</td>
-                      <td className="p-4 align-middle">{notification.users}</td>
-                      <td className="p-4 align-middle">{notification.title}</td>
-                      <td className="p-4 align-middle max-w-md">{notification.description}</td>
-                      <td className="p-4 align-middle">{notification.date}</td>
-                      <td className="p-4 align-middle">
-                        <button
-                          onClick={() => handleDelete(notification.id)}
-                          className="p-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
-                          title="Delete"
+            {!loading && (
+              <div className="overflow-x-auto flex-1">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-neutral-50 text-xs font-bold text-neutral-800 border-b border-neutral-200">
+                      <th className="p-4">Sr No</th>
+                      <th
+                        className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
+                        onClick={() => handleSort('recipientType')}
+                      >
+                        <div className="flex items-center">
+                          Users <SortIcon column="recipientType" />
+                        </div>
+                      </th>
+                      <th
+                        className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
+                        onClick={() => handleSort('title')}
+                      >
+                        <div className="flex items-center">
+                          Title <SortIcon column="title" />
+                        </div>
+                      </th>
+                      <th
+                        className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
+                        onClick={() => handleSort('message')}
+                      >
+                        <div className="flex items-center">
+                          Message <SortIcon column="message" />
+                        </div>
+                      </th>
+                      <th
+                        className="p-4 cursor-pointer hover:bg-neutral-100 transition-colors"
+                        onClick={() => handleSort('createdAt')}
+                      >
+                        <div className="flex items-center">
+                          Date <SortIcon column="createdAt" />
+                        </div>
+                      </th>
+                      <th className="p-4">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayedNotifications.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-neutral-400">
+                          No notifications found.
+                        </td>
+                      </tr>
+                    ) : (
+                      displayedNotifications.map((notification, index) => (
+                        <tr
+                          key={notification._id}
+                          className="hover:bg-neutral-50 transition-colors text-sm text-neutral-700 border-b border-neutral-200"
                         >
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {displayedNotifications.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="p-8 text-center text-neutral-400">
-                        No notifications found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                          <td className="p-4 align-middle">{startIndex + index + 1}</td>
+                          <td className="p-4 align-middle">{getRecipientDisplayName(notification.recipientType)}</td>
+                          <td className="p-4 align-middle">{notification.title}</td>
+                          <td className="p-4 align-middle max-w-md">{notification.message}</td>
+                          <td className="p-4 align-middle">{formatDate(notification.createdAt)}</td>
+                          <td className="p-4 align-middle">
+                            <button
+                              onClick={() => handleDelete(notification._id)}
+                              disabled={loading}
+                              className="p-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded transition-colors"
+                              title="Delete"
+                            >
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {/* Pagination Footer */}
-            <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
-              <div className="text-xs sm:text-sm text-neutral-700">
-                Showing {startIndex + 1} to {Math.min(endIndex, filteredNotifications.length)} of {filteredNotifications.length} entries
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className={`p-2 border border-green-600 rounded ${
-                    currentPage === 1
-                      ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                      : 'text-green-600 hover:bg-green-50'
-                  }`}
-                  aria-label="Previous page"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
+            {!loading && totalPages > 1 && (
+              <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+                <div className="text-xs sm:text-sm text-neutral-700">
+                  Showing {displayedNotifications.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + displayedNotifications.length, totalNotifications)} of {totalNotifications} entries
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1 || loading}
+                    className={`p-2 border border-green-600 rounded ${
+                      currentPage === 1
+                        ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                        : 'text-green-600 hover:bg-green-50'
+                    }`}
+                    aria-label="Previous page"
                   >
-                    <path
-                      d="M15 18L9 12L15 6"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-                <button className="px-3 py-1.5 border border-green-600 bg-green-600 text-white rounded font-medium text-sm">
-                  {currentPage}
-                </button>
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className={`p-2 border border-green-600 rounded ${
-                    currentPage === totalPages
-                      ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
-                      : 'text-green-600 hover:bg-green-50'
-                  }`}
-                  aria-label="Next page"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M15 18L9 12L15 6"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        disabled={loading}
+                        className={`px-3 py-1.5 border border-green-600 rounded font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
+                          currentPage === pageNum
+                            ? 'bg-green-600 text-white'
+                            : 'text-green-600 hover:bg-green-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                  {totalPages > 5 && currentPage < totalPages - 2 && (
+                    <span className="px-2 text-neutral-400">...</span>
+                  )}
+                  <button
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages || loading}
+                    className={`p-2 border border-green-600 rounded ${
+                      currentPage === totalPages
+                        ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
+                        : 'text-green-600 hover:bg-green-50'
+                    }`}
+                    aria-label="Next page"
                   >
-                    <path
-                      d="M9 18L15 12L9 6"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M9 18L15 12L9 6"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -528,4 +610,3 @@ export default function AdminNotification() {
     </div>
   );
 }
-
