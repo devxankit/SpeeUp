@@ -9,7 +9,7 @@ export interface CustomError extends Error {
 
 export const errorHandler = (
   err: CustomError,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ): void => {
@@ -50,8 +50,6 @@ export const errorHandler = (
     }
   });
 };
-
-
 
 
 

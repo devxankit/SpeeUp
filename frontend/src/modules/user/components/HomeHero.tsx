@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef, useState, useEffect, useMemo } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getTheme } from '../../../utils/themes';
-import { useLocation } from '../../../context/LocationContext';
+import { useLocation } from '../../../hooks/useLocation';
 import { appConfig } from '../../../services/configService';
 import { getCategories } from '../../../services/api/categoryService';
 import { Category } from '../../../types/domain';
@@ -343,10 +343,10 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
         className="sticky top-0 z-50"
         style={{
           ...(scrollProgress >= 0.1 && {
-            background: `linear-gradient(to bottom right, 
-              ${rgbToRgba(theme.primary[0], 1 - scrollProgress)}, 
-              ${rgbToRgba(theme.primary[1], 1 - scrollProgress)}, 
-              ${rgbToRgba(theme.primary[2], 1 - scrollProgress)}), 
+            background: `linear-gradient(to bottom right,
+              ${rgbToRgba(theme.primary[0], 1 - scrollProgress)},
+              ${rgbToRgba(theme.primary[1], 1 - scrollProgress)},
+              ${rgbToRgba(theme.primary[2], 1 - scrollProgress)}),
               rgba(255, 255, 255, ${scrollProgress})`,
             boxShadow: `0 4px 6px -1px rgba(0, 0, 0, ${scrollProgress * 0.1})`,
             transition: 'background 0.1s ease-out, box-shadow 0.1s ease-out',

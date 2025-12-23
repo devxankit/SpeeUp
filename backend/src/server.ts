@@ -16,94 +16,54 @@ dotenv.config();
 const app: Application = express();
 const httpServer = createServer(app);
 
-// CORS configuration - Allow multiple origins in production
-const corsOptions = {
-  origin: (
-    origin: string | undefined,
-    callback: (err: Error | null, allow?: boolean | string) => void
-  ) => {
-    console.log(
-      `🔍 CORS check - Origin: ${origin}, NODE_ENV: ${process.env.NODE_ENV}`
-    );
+// Simple CORS configuration - Standard and reliable
+const allowedOrigins = [
+  "https://www.speeup.com",
+  "https://speeup.com",
+  // Add more origins from environment variable if needed
+  ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(",").map(url => url.trim()) : [])
+];
 
-    // Allow requests with no origin (like mobile apps, Postman, or server-to-server)
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) {
-      console.log("✅ CORS: Allowing request with no origin");
       return callback(null, true);
     }
 
-    // In production, check against allowed origins
-    if (process.env.NODE_ENV === "production") {
-      // Get allowed origins from environment variable (comma-separated)
-      const frontendUrl = process.env.FRONTEND_URL || "";
-      const allowedOrigins = frontendUrl
-        .split(",")
-        .map((url) => url.trim())
-        .filter((url) => url.length > 0);
-
-      // Default production origins if FRONTEND_URL not set
-      const defaultOrigins = [
-        "https://www.speeup.com",
-        "https://speeup.com",
-      ];
-
-      const allAllowedOrigins = allowedOrigins.length > 0 
-        ? [...allowedOrigins, ...defaultOrigins]
-        : defaultOrigins;
-
-      // Check if origin matches any allowed origin
-      const isAllowed = allAllowedOrigins.some((allowedOrigin) => {
-        // Exact match
-        if (origin === allowedOrigin) return true;
-        // Support for www and non-www variants
-        if (allowedOrigin.includes("www.")) {
-          const nonWww = allowedOrigin.replace("www.", "");
-          if (origin === nonWww) return true;
-        } else {
-          const withWww = allowedOrigin.replace(/^(https?:\/\/)/, "$1www.");
-          if (origin === withWww) return true;
-        }
-        return false;
-      });
-
-      if (isAllowed) {
-        console.log(`✅ CORS: Allowing production origin: ${origin}`);
-        return callback(null, origin);
+    // In development, allow localhost
+    if (process.env.NODE_ENV !== "production") {
+      if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
+        return callback(null, true);
       }
-      
-      console.log(`❌ CORS: Rejecting origin in production: ${origin}`);
-      console.log(`   Allowed origins: ${allAllowedOrigins.join(", ")}`);
-      return callback(new Error("Not allowed by CORS"));
     }
 
-    // In development, allow any localhost port
-    if (
-      origin.startsWith("http://localhost:") ||
-      origin.startsWith("http://127.0.0.1:") ||
-      origin.startsWith("https://localhost:")
-    ) {
-      console.log(`✅ CORS: Allowing localhost origin: ${origin}`);
-      return callback(null, origin);
+    // Normalize origin (remove trailing slash)
+    const normalizedOrigin = origin.replace(/\/$/, '');
+
+    // Check if origin is in allowed list (exact match or normalized)
+    const isAllowed = allowedOrigins.some(allowed => {
+      const normalizedAllowed = allowed.replace(/\/$/, '');
+      return origin === allowed || normalizedOrigin === normalizedAllowed || origin === normalizedAllowed || normalizedOrigin === allowed;
+    });
+
+    if (isAllowed) {
+      return callback(null, true);
     }
 
-    console.log(`❌ CORS: Rejecting origin: ${origin}`);
-    return callback(new Error("Not allowed by CORS"));
+    // Reject if not allowed - return false instead of error for better handling
+    return callback(null, false);
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Requested-With",
-    "Accept",
-    "Origin",
-  ],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
   exposedHeaders: ["Content-Length", "Content-Type"],
-  maxAge: 86400, // 24 hours - cache preflight requests
+  maxAge: 86400,
 };
 
-// Middleware
+// Apply CORS middleware - This handles everything including preflight
 app.use(cors(corsOptions));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from '../context/LocationContext';
+import { useLocation } from '../hooks/useLocation';
 import GoogleMapsAutocomplete from './GoogleMapsAutocomplete';
 
 interface LocationPermissionRequestProps {
@@ -33,7 +33,7 @@ export default function LocationPermissionRequest({
     setManualLat(0);
     setManualLng(0);
     setShowManualInput(false);
-    
+
     try {
       // ONLY call location API when user explicitly clicks the button
       // This ensures we don't auto-request location on app load
@@ -112,7 +112,7 @@ export default function LocationPermissionRequest({
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-600 mb-2 font-medium">{locationError}</p>
                 <p className="text-xs text-red-500">
-                  {locationError.includes('timeout') 
+                  {locationError.includes('timeout')
                     ? 'Please ensure your location/GPS is enabled and try again, or enter location manually.'
                     : 'You can try again or enter your location manually below.'}
                 </p>
@@ -190,7 +190,6 @@ export default function LocationPermissionRequest({
     </div>
   );
 }
-
 
 
 

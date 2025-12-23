@@ -7,6 +7,11 @@ import { useRef, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 // import { products } from '../../data/products'; // REMOVED
 // import { categories } from '../../data/categories'; // REMOVED
+import { useCart } from '../../context/CartContext';
+import { useLocation } from '../../hooks/useLocation';
+import Button from '../../components/ui/button';
+import Badge from '../../components/ui/badge';
+import { getProductById } from '../../services/api/customerProductService';
 import { useCart } from "../../context/CartContext";
 import { useLocation } from "../../context/LocationContext";
 import Button from "../../components/ui/button";

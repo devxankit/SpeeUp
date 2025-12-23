@@ -7,16 +7,12 @@ import {
   getCategoryById,
   Category as ApiCategory,
 } from "../../services/api/customerProductService";
-import {
-  useLocation as useLocationContext,
-  useLocation,
-} from "../../context/LocationContext";
+import { useLocation as useLocationContext } from "../../hooks/useLocation";
 
 export default function CategoryPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { location } = useLocationContext();
-  const { location: userLocation } = useLocation();
+  const { location: userLocation } = useLocationContext();
 
   const [category, setCategory] = useState<ApiCategory | null>(null);
   const [subcategories, setSubcategories] = useState<ApiCategory[]>([]);
@@ -83,12 +79,6 @@ export default function CategoryPage() {
           params.subcategory = selectedSubcategory;
         }
         // Include user location for seller service radius filtering
-        if (location?.latitude && location?.longitude) {
-          params.latitude = location.latitude;
-          params.longitude = location.longitude;
-        }
-
-        // Add location if available (required by backend)
         if (userLocation?.latitude && userLocation?.longitude) {
           params.latitude = userLocation.latitude;
           params.longitude = userLocation.longitude;

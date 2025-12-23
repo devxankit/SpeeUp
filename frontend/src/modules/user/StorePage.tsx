@@ -5,7 +5,7 @@ import Button from '../../components/ui/button';
 import { Product } from '../../types/domain';
 import { useEffect, useState } from 'react';
 import { getStoreProducts } from '../../services/api/customerHomeService';
-import { useLocation } from '../../context/LocationContext';
+import { useLocation } from '../../hooks/useLocation';
 
 export default function StorePage() {
     const { slug } = useParams<{ slug: string }>();
