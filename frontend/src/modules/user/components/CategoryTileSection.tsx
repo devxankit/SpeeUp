@@ -19,14 +19,14 @@ interface CategoryTile {
 interface CategoryTileSectionProps {
   title: string;
   tiles: CategoryTile[];
-  columns?: 2 | 3 | 4; // Allow 2, 3, or 4 columns
+  columns?: 2 | 3 | 4 | 6 | 8; // Support all column options
   showProductCount?: boolean; // Show product count only for bestsellers
 }
 
 export default function CategoryTileSection({
   title,
   tiles,
-  columns = 2,
+  columns = 4,
   showProductCount = false,
 }: CategoryTileSectionProps) {
   const navigate = useNavigate();
@@ -36,8 +36,7 @@ export default function CategoryTileSection({
       // Navigate to subcategory page or category with subcategory filter
       if (tile.categoryId) {
         navigate(
-          `/category/${tile.categoryId}?subcategory=${
-            tile.subcategoryId || tile.id
+          `/category/${tile.categoryId}?subcategory=${tile.subcategoryId || tile.id
           }`
         );
       } else if (tile.slug) {
@@ -64,13 +63,26 @@ export default function CategoryTileSection({
     console.log("Clicked tile", tile.id);
   };
 
-  const gridCols =
-    columns === 4
-      ? "grid-cols-4 md:grid-cols-6 lg:grid-cols-8"
-      : columns === 3
-      ? "grid-cols-3 md:grid-cols-3 lg:grid-cols-3"
-      : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4";
-  const gapClass = columns === 4 ? "gap-2 md:gap-4" : "gap-3 md:gap-4";
+  // Dynamic grid classes based on column count
+  const getGridCols = () => {
+    switch (columns) {
+      case 2:
+        return "grid-cols-2";
+      case 3:
+        return "grid-cols-3";
+      case 4:
+        return "grid-cols-4";
+      case 6:
+        return "grid-cols-6";
+      case 8:
+        return "grid-cols-8";
+      default:
+        return "grid-cols-4";
+    }
+  };
+
+  const gridCols = getGridCols();
+  const gapClass = columns >= 6 ? "gap-1 md:gap-2" : "gap-2 md:gap-3";
 
   return (
     <div className="mb-6 md:mb-8 mt-0 overflow-visible">
@@ -97,21 +109,19 @@ export default function CategoryTileSection({
                   to={
                     tile.subcategoryId || tile.type === "subcategory"
                       ? tile.categoryId
-                        ? `/category/${tile.categoryId}?subcategory=${
-                            tile.subcategoryId || tile.id
-                          }`
+                        ? `/category/${tile.categoryId}?subcategory=${tile.subcategoryId || tile.id
+                        }`
                         : tile.slug
-                        ? `/category/${tile.slug}`
-                        : `/category/subcategory/${
-                            tile.subcategoryId || tile.id
+                          ? `/category/${tile.slug}`
+                          : `/category/subcategory/${tile.subcategoryId || tile.id
                           }`
                       : tile.productId
-                      ? `/product/${tile.productId}`
-                      : tile.categoryId
-                      ? `/category/${tile.categoryId}`
-                      : (tile as any).sellerId
-                      ? `/seller/${(tile as any).sellerId}`
-                      : "#"
+                        ? `/product/${tile.productId}`
+                        : tile.categoryId
+                          ? `/category/${tile.categoryId}`
+                          : (tile as any).sellerId
+                            ? `/seller/${(tile as any).sellerId}`
+                            : "#"
                   }
                   onClick={(e) => {
                     if (
@@ -124,14 +134,12 @@ export default function CategoryTileSection({
                       handleTileClick(tile);
                     }
                   }}
-                  className={`block bg-white rounded-xl shadow-sm border border-neutral-200 hover:shadow-md transition-shadow ${
-                    showProductCount ? "p-2.5" : "p-1.5"
-                  }`}>
+                  className={`block bg-white rounded-xl shadow-sm border border-neutral-200 hover:shadow-md transition-shadow ${showProductCount ? "p-2.5" : "p-1.5"
+                    }`}>
                   {/* Image - Single image for non-bestsellers, 2x2 grid for bestsellers */}
                   <div
-                    className={`w-full rounded-lg overflow-hidden ${
-                      showProductCount ? "h-20 mb-2" : "aspect-[3/4]"
-                    } ${tile.bgColor || "bg-cyan-50"}`}>
+                    className={`w-full rounded-lg overflow-hidden ${showProductCount ? "h-20 mb-2" : "aspect-[3/4]"
+                      } ${tile.bgColor || "bg-cyan-50"}`}>
                     {hasImages ? (
                       showProductCount ? (
                         // Bestsellers: 2x2 grid

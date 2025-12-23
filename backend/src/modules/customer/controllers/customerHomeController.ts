@@ -5,6 +5,7 @@ import SubCategory from "../../../models/SubCategory";
 import Shop from "../../../models/Shop";
 import Seller from "../../../models/Seller";
 import HeaderCategory from "../../../models/HeaderCategory";
+import HomeSection from "../../../models/HomeSection";
 import mongoose from "mongoose";
 
 // Helper function to calculate distance between two coordinates (Haversine formula)
@@ -57,6 +58,112 @@ async function findSellersWithinRange(userLat: number, userLng: number): Promise
     return nearbySellerIds;
   } catch (error) {
     console.error("Error finding nearby sellers:", error);
+    return [];
+  }
+}
+
+// Helper function to fetch data for a home section based on its configuration
+async function fetchSectionData(section: any): Promise<any[]> {
+  try {
+    const { categories, subCategories, displayType, limit } = section;
+
+    // If displayType is "subcategories", fetch subcategories
+    if (displayType === "subcategories" && categories && categories.length > 0) {
+      const categoryIds = categories.map((cat: any) => cat._id || cat);
+
+      const subcategories = await SubCategory.find({
+        category: { $in: categoryIds },
+      })
+        .select("name image order category")
+        .sort({ order: 1 })
+        .limit(limit || 10)
+        .lean();
+
+      return subcategories.map((sub: any) => ({
+        id: sub._id.toString(),
+        subcategoryId: sub._id.toString(),
+        categoryId: sub.category?.toString() || "",
+        name: sub.name,
+        image: sub.image || "",
+        slug: sub.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        type: "subcategory",
+      }));
+    }
+
+    // If displayType is "products", fetch products
+    if (displayType === "products") {
+      const query: any = {
+        status: "Active",
+        publish: true,
+      };
+
+      if (categories && categories.length > 0) {
+        const categoryIds = categories.map((cat: any) => cat._id || cat);
+        query.category = { $in: categoryIds };
+      }
+
+      if (subCategories && subCategories.length > 0) {
+        const subCategoryIds = subCategories.map((sub: any) => sub._id || sub);
+        query.subcategory = { $in: subCategoryIds };
+      }
+
+      const products = await Product.find(query)
+        .limit(limit || 8)
+        .select("productName mainImage price mrp discount")
+        .lean();
+
+      return products.map((p: any) => ({
+        id: p._id.toString(),
+        productId: p._id.toString(),
+        name: p.productName,
+        productName: p.productName,
+        image: p.mainImage,
+        mainImage: p.mainImage,
+        price: p.price,
+        discount:
+          p.discount ||
+          (p.mrp && p.price
+            ? Math.round(((p.mrp - p.price) / p.mrp) * 100)
+            : 0),
+        productImages: p.mainImage ? [p.mainImage] : [],
+        type: "product",
+      }));
+    }
+
+    // If displayType is "categories", fetch categories
+    if (displayType === "categories") {
+      const query: any = {
+        status: "Active",
+      };
+
+      // If parent categories are specified, fetch their child categories
+      if (categories && categories.length > 0) {
+        const categoryIds = categories.map((cat: any) => cat._id || cat);
+        query.parentId = { $in: categoryIds };
+      } else {
+        // Otherwise fetch root categories
+        query.parentId = null;
+      }
+
+      const categories = await Category.find(query)
+        .select("name image slug")
+        .sort({ order: 1 })
+        .limit(limit || 8)
+        .lean();
+
+      return categories.map((c: any) => ({
+        id: c._id.toString(),
+        categoryId: c.slug || c._id.toString(),
+        name: c.name,
+        image: c.image,
+        slug: c.slug,
+        type: "category",
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error("Error fetching section data:", error);
     return [];
   }
 }
@@ -221,150 +328,16 @@ export const getHomeContent = async (req: Request, res: Response) => {
       type: "category",
     }));
 
-    // 5. Grocery & Kitchen Subcategories - Fetch subcategories from "Grocery & Kitchen" category
-    const groceryKitchenCategory = await Category.findOne({
-      slug: "grocery-kitchen",
-      status: "Active",
-    }).lean();
-
-    let groceryKitchenTiles: any[] = [];
-
-    if (groceryKitchenCategory) {
-      // Fetch subcategories for Grocery & Kitchen category
-      const subcategories = await SubCategory.find({
-        category: groceryKitchenCategory._id,
-      })
-        .select("name image order")
-        .sort({ order: 1 })
-        .limit(10)
-        .lean();
-
-      groceryKitchenTiles = subcategories.map((sub: any) => ({
-        id: sub._id.toString(),
-        subcategoryId: sub._id.toString(),
-        categoryId: groceryKitchenCategory._id.toString(),
-        name: sub.name,
-        image: sub.image || groceryKitchenCategory.image,
-        slug: sub.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-        type: "subcategory",
-      }));
-    } else {
-      // Fallback: If category doesn't exist, fetch products from grocery/kitchen categories
-      const groceryKitchenCategories = await Category.find({
-        status: "Active",
-        $or: [
-          { slug: { $regex: /grocery|kitchen|atta|rice|dal|spices|oil/i } },
-          { name: { $regex: /grocery|kitchen|atta|rice|dal|spices|oil/i } },
-        ],
-      })
-        .select("_id")
-        .lean();
-
-      const groceryKitchenCategoryIds = groceryKitchenCategories.map(
-        (c) => c._id
-      );
-
-      const groceryKitchenProducts = await Product.find({
-        status: "Active",
-        publish: true,
-        category: { $in: groceryKitchenCategoryIds },
-      })
-        .limit(8)
-        .select("productName mainImage price mrp discount")
-        .lean();
-
-      groceryKitchenTiles = groceryKitchenProducts.map((p: any) => ({
-        id: p._id.toString(),
-        productId: p._id.toString(),
-        name: p.productName,
-        productName: p.productName,
-        image: p.mainImage,
-        mainImage: p.mainImage,
-        price: p.price,
-        discount:
-          p.discount ||
-          (p.mrp && p.price
-            ? Math.round(((p.mrp - p.price) / p.mrp) * 100)
-            : 0),
-        productImages: p.mainImage ? [p.mainImage] : [],
-        type: "product",
-      }));
-    }
-
-    // 5b. Personal Care Subcategories - Fetch subcategories from "Personal Care" category
-    const personalCareCategory = await Category.findOne({
-      slug: "personal-care",
-      status: "Active",
-    }).lean();
-
-    let personalCareTiles: any[] = [];
-
-    if (personalCareCategory) {
-      // Fetch subcategories for Personal Care category
-      const subcategories = await SubCategory.find({
-        category: personalCareCategory._id,
-      })
-        .select("name image order")
-        .sort({ order: 1 })
-        .limit(10)
-        .lean();
-
-      personalCareTiles = subcategories.map((sub: any) => ({
-        id: sub._id.toString(),
-        subcategoryId: sub._id.toString(),
-        categoryId: personalCareCategory._id.toString(),
-        name: sub.name,
-        image: sub.image || personalCareCategory.image,
-        slug: sub.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-        type: "subcategory",
-      }));
-    } else {
-      // Fallback: If category doesn't exist, fetch products from personal care categories
-      const personalCareCategories = await Category.find({
-        status: "Active",
-        $or: [
-          { slug: { $regex: /personal-care|beauty|health|wellness/i } },
-          { name: { $regex: /personal-care|beauty|health|wellness/i } },
-        ],
-      })
-        .select("_id")
-        .lean();
-
-      const personalCareCategoryIds = personalCareCategories.map((c) => c._id);
-
-      const personalCareProducts = await Product.find({
-        status: "Active",
-        publish: true,
-        category: { $in: personalCareCategoryIds },
-      })
-        .limit(8)
-        .select("productName mainImage price mrp discount")
-        .lean();
-
-      personalCareTiles = personalCareProducts.map((p: any) => ({
-        id: p._id.toString(),
-        productId: p._id.toString(),
-        name: p.productName,
-        productName: p.productName,
-        image: p.mainImage,
-        mainImage: p.mainImage,
-        price: p.price,
-        discount:
-          p.discount ||
-          (p.mrp && p.price
-            ? Math.round(((p.mrp - p.price) / p.mrp) * 100)
-            : 0),
-        productImages: p.mainImage ? [p.mainImage] : [],
-        type: "product",
-      }));
-    }
-
-    // 6. Personal Care Subcategories - Already fetched above
+    // 6. Personal Care Subcategories - Now handled by dynamic sections
 
     // 7. Cooking Ideas (Fetch some products from 'Food' or 'Grocery' categories)
     const foodProducts = await Product.find({
       status: "Active",
       publish: true,
+      // $or: [
+      //   { category: { $in: foodCategoryIds } },
+      //   { subCategory: { $in: foodSubCategoryIds } },
+      // ],
     })
       .limit(3)
       .select("productName mainImage");
@@ -480,13 +453,35 @@ export const getHomeContent = async (req: Request, res: Response) => {
           },
         ];
 
+    // 9. Dynamic Home Sections - Fetch from database
+    const homeSections = await HomeSection.find({ isActive: true })
+      .populate("categories", "name slug image")
+      .populate("subCategories", "name")
+      .sort({ order: 1 })
+      .lean();
+
+    // Fetch data for each section
+    const dynamicSections = await Promise.all(
+      homeSections.map(async (section: any) => {
+        const sectionData = await fetchSectionData(section);
+        return {
+          id: section._id.toString(),
+          title: section.title,
+          slug: section.slug,
+          displayType: section.displayType,
+          columns: section.columns,
+          data: sectionData,
+        };
+      })
+    );
+
     res.status(200).json({
       success: true,
       data: {
         bestsellers,
         categories,
-        groceryKitchenProducts: groceryKitchenTiles,
-        personalCareProducts: personalCareTiles,
+        // Dynamic sections created by admin
+        homeSections: dynamicSections,
         shops,
         promoBanners: [
           {

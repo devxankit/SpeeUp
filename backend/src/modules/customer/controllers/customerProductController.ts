@@ -276,7 +276,7 @@ export const getProducts = async (req: Request, res: Response) => {
 export const getProductById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { latitude, longitude } = req.query; // User location
+    const { latitude, longitude, skipLocationCheck } = req.query; // User location and optional skip flag
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -305,11 +305,17 @@ export const getProductById = async (req: Request, res: Response) => {
       });
     }
 
-    // Verify user is within seller's service radius
+    // Parse location and skipLocationCheck flag
     const userLat = latitude ? parseFloat(latitude as string) : null;
     const userLng = longitude ? parseFloat(longitude as string) : null;
+    const shouldSkipLocationCheck =
+      skipLocationCheck === "true" || skipLocationCheck === true;
     const seller = product.seller as any;
 
+    // Initialize availability flag
+    let isAvailableAtLocation = false;
+
+    // Check location availability if coordinates are provided
     if (
       userLat &&
       userLng &&
@@ -318,7 +324,10 @@ export const getProductById = async (req: Request, res: Response) => {
       seller?.location
     ) {
       const nearbySellerIds = await findSellersWithinRange(userLat, userLng);
-      if (!nearbySellerIds.includes(seller._id)) {
+      isAvailableAtLocation = nearbySellerIds.includes(seller._id);
+
+      // If location check is NOT skipped and product is not available, return 403
+      if (!shouldSkipLocationCheck && !isAvailableAtLocation) {
         return res.status(403).json({
           success: false,
           message:
@@ -326,27 +335,54 @@ export const getProductById = async (req: Request, res: Response) => {
         });
       }
     } else if (!userLat || !userLng) {
-      return res.status(400).json({
-        success: false,
-        message: "Location is required to view product details",
-      });
+      // If no location provided and location check is NOT skipped, return 400
+      if (!shouldSkipLocationCheck) {
+        return res.status(400).json({
+          success: false,
+          message: "Location is required to view product details",
+        });
+      }
+      // If location check is skipped, we can't determine availability
+      isAvailableAtLocation = false;
     }
 
     // Find similar products (by category)
-    const similarProducts = await Product.find({
+    // Filter by location if coordinates are provided and location check is not skipped
+    const similarProductsQuery: any = {
       category: (product.category as any)._id,
       _id: { $ne: product._id },
       status: "Active",
       publish: true,
-    })
+    };
+
+    // Filter similar products by location if available and location check is not skipped
+    if (
+      userLat &&
+      userLng &&
+      !isNaN(userLat) &&
+      !isNaN(userLng) &&
+      !shouldSkipLocationCheck
+    ) {
+      const nearbySellerIds = await findSellersWithinRange(userLat, userLng);
+      if (nearbySellerIds.length > 0) {
+        similarProductsQuery.seller = { $in: nearbySellerIds };
+      } else {
+        // No sellers nearby, return empty similar products
+        similarProductsQuery.seller = { $in: [] };
+      }
+    }
+    // If shouldSkipLocationCheck is true, show all similar products regardless of location
+
+    const similarProducts = await Product.find(similarProductsQuery)
       .limit(6)
-      .select("productName price mainImage pack discount");
+      .select("productName price mainImage pack discount _id");
 
     return res.status(200).json({
       success: true,
       data: {
         ...product.toObject(),
         similarProducts,
+        isAvailableAtLocation, // Add availability flag to response
       },
     });
   } catch (error: any) {

@@ -22,8 +22,7 @@ export default function Home() {
   const [homeData, setHomeData] = useState<any>({
     bestsellers: [],
     categories: [],
-    groceryKitchenProducts: [],
-    personalCareProducts: [],
+    homeSections: [], // Dynamic sections created by admin
     shops: [],
     promoBanners: [],
     trending: [],
@@ -69,22 +68,6 @@ export default function Home() {
     () => getFilteredProducts(activeTab),
     [activeTab, products]
   );
-
-  // Derived categories for sections
-  const snacksCats =
-    homeData.categories?.filter((c: any) =>
-      ["snacks", "cold-drinks", "biscuits-bakery", "tea-coffee"].includes(
-        c.slug
-      )
-    ) || [];
-  const beautyCats =
-    homeData.categories?.filter((c: any) =>
-      ["beauty", "personal-care", "oral-care", "baby-care"].includes(c.slug)
-    ) || [];
-  const householdCats =
-    homeData.categories?.filter((c: any) =>
-      ["cleaning", "kitchenware"].includes(c.slug)
-    ) || [];
 
   if (loading && !products.length) {
     return (
@@ -150,21 +133,21 @@ export default function Home() {
                 tiles={
                   homeData.bestsellers && homeData.bestsellers.length > 0
                     ? homeData.bestsellers
-                        .slice(0, 6)
-                        .map((sellerCard: any) => {
-                          // Seller cards already have productImages array from backend
-                          return {
-                            id: sellerCard.id || sellerCard.sellerId,
-                            sellerId: sellerCard.sellerId || sellerCard.id,
-                            name:
-                              sellerCard.name ||
-                              sellerCard.storeName ||
-                              "Seller",
-                            image: sellerCard.logo,
-                            productImages: sellerCard.productImages || [],
-                            productCount: sellerCard.productCount || 0,
-                          };
-                        })
+                      .slice(0, 6)
+                      .map((sellerCard: any) => {
+                        // Seller cards already have productImages array from backend
+                        return {
+                          id: sellerCard.id || sellerCard.sellerId,
+                          sellerId: sellerCard.sellerId || sellerCard.id,
+                          name:
+                            sellerCard.name ||
+                            sellerCard.storeName ||
+                            "Seller",
+                          image: sellerCard.logo,
+                          productImages: sellerCard.productImages || [],
+                          productCount: sellerCard.productCount || 0,
+                        };
+                      })
                     : []
                 }
                 columns={3}
@@ -175,124 +158,63 @@ export default function Home() {
             {/* Featured this week Section */}
             <FeaturedThisWeek />
 
-            {/* Grocery & Kitchen Section - Show subcategories or products */}
-            <CategoryTileSection
-              title="Grocery & Kitchen"
-              tiles={
-                homeData.groceryKitchenProducts &&
-                homeData.groceryKitchenProducts.length > 0
-                  ? homeData.groceryKitchenProducts.map((item: any) => {
-                      // Handle subcategories
-                      if (item.type === "subcategory" || item.subcategoryId) {
-                        return {
-                          id: item.id || item.subcategoryId,
-                          categoryId: item.categoryId || item.id,
-                          subcategoryId: item.subcategoryId || item.id,
-                          name: item.name,
-                          image: item.image,
-                          slug: item.slug,
-                          type: "subcategory",
-                        };
-                      }
-                      // Handle products (fallback)
-                      return {
-                        id: item.id || item.productId,
-                        productId: item.productId || item.id,
-                        name: item.name || item.productName,
-                        image: item.image || item.mainImage,
-                        productImages:
-                          item.productImages ||
-                          (item.image ? [item.image] : []),
-                        price: item.price,
-                        discount: item.discount,
-                        type: "product",
-                      };
-                    })
-                  : []
-              }
-              columns={4}
-              showProductCount={false}
-            />
+            {/* Dynamic Home Sections - Render sections created by admin */}
+            {homeData.homeSections && homeData.homeSections.length > 0 && (
+              <>
+                {homeData.homeSections.map((section: any) => {
+                  const columnCount = Number(section.columns) || 4;
 
-            {/* Personal Care Section - Show subcategories or products */}
-            <CategoryTileSection
-              title="Personal Care"
-              tiles={
-                homeData.personalCareProducts &&
-                homeData.personalCareProducts.length > 0
-                  ? homeData.personalCareProducts.map((item: any) => {
-                      // Handle subcategories
-                      if (item.type === "subcategory" || item.subcategoryId) {
-                        return {
-                          id: item.id || item.subcategoryId,
-                          categoryId: item.categoryId || item.id,
-                          subcategoryId: item.subcategoryId || item.id,
-                          name: item.name,
-                          image: item.image,
-                          slug: item.slug,
-                          type: "subcategory",
-                        };
-                      }
-                      // Handle products (fallback)
-                      return {
-                        id: item.id || item.productId,
-                        productId: item.productId || item.id,
-                        name: item.name || item.productName,
-                        image: item.image || item.mainImage,
-                        productImages:
-                          item.productImages ||
-                          (item.image ? [item.image] : []),
-                        price: item.price,
-                        discount: item.discount,
-                        type: "product",
-                      };
-                    })
-                  : []
-              }
-              columns={4}
-              showProductCount={false}
-            />
+                  if (section.displayType === "products" && section.data && section.data.length > 0) {
+                    // Strict column mapping as requested - applies to ALL screen sizes including mobile
+                    const gridClass = {
+                      2: "grid-cols-2",
+                      3: "grid-cols-3",
+                      4: "grid-cols-4",
+                      6: "grid-cols-6",
+                      8: "grid-cols-8"
+                    }[columnCount] || "grid-cols-4";
 
-            {/* Snacks & Drinks Section */}
-            {snacksCats.length > 0 && (
-              <CategoryTileSection
-                title="Snacks & Drinks"
-                tiles={snacksCats.map((c: any) => ({
-                  ...c,
-                  id: c._id || c.id,
-                  categoryId: c.slug || c._id,
-                }))}
-                columns={4}
-                showProductCount={false}
-              />
-            )}
+                    // Use compact mode for 4 or more columns to fit content on mobile
+                    const isCompact = columnCount >= 4;
+                    const gapClass = columnCount >= 4 ? "gap-2" : "gap-3 md:gap-4";
 
-            {/* Beauty & Personal Care Section */}
-            {beautyCats.length > 0 && (
-              <CategoryTileSection
-                title="Beauty & Personal Care"
-                tiles={beautyCats.map((c: any) => ({
-                  ...c,
-                  id: c._id || c.id,
-                  categoryId: c.slug || c._id,
-                }))}
-                columns={4}
-                showProductCount={false}
-              />
-            )}
+                    return (
+                      <div key={section.id} className="mt-6 mb-6 md:mt-8 md:mb-8">
+                        {section.title && (
+                          <h2 className="text-lg md:text-2xl font-semibold text-neutral-900 mb-3 md:mb-6 px-4 md:px-6 lg:px-8 tracking-tight capitalize">
+                            {section.title}
+                          </h2>
+                        )}
+                        <div className="px-4 md:px-6 lg:px-8">
+                          <div className={`grid ${gridClass} ${gapClass}`}>
+                            {section.data.map((product: any) => (
+                              <ProductCard
+                                key={product.id || product._id}
+                                product={product}
+                                categoryStyle={true}
+                                showBadge={true}
+                                showPackBadge={false}
+                                showStockInfo={false}
+                                compact={isCompact}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
 
-            {/* Household Essentials Section */}
-            {householdCats.length > 0 && (
-              <CategoryTileSection
-                title="Household Essentials"
-                tiles={householdCats.map((c: any) => ({
-                  ...c,
-                  id: c._id || c.id,
-                  categoryId: c.slug || c._id,
-                }))}
-                columns={4}
-                showProductCount={false}
-              />
+                  return (
+                    <CategoryTileSection
+                      key={section.id}
+                      title={section.title}
+                      tiles={section.data || []}
+                      columns={columnCount as 2 | 3 | 4 | 6 | 8}
+                      showProductCount={false}
+                    />
+                  );
+                })}
+              </>
             )}
 
             {/* Shop by Store Section */}
@@ -330,9 +252,8 @@ export default function Home() {
                             />
                           ) : (
                             <div
-                              className={`w-full h-16 flex items-center justify-center text-3xl text-neutral-300 ${
-                                tile.bgColor || "bg-neutral-50"
-                              }`}>
+                              className={`w-full h-16 flex items-center justify-center text-3xl text-neutral-300 ${tile.bgColor || "bg-neutral-50"
+                                }`}>
                               {tile.name.charAt(0)}
                             </div>
                           )}

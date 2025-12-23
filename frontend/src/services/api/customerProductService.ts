@@ -60,12 +60,16 @@ export const getProducts = async (params?: GetProductsParams): Promise<ProductLi
 /**
  * Get product details by ID (Public)
  * Location (latitude/longitude) is required to verify product availability
+ * @param skipLocationCheck - If true, skip location validation (for store browsing)
  */
-export const getProductById = async (id: string, latitude?: number, longitude?: number): Promise<ProductDetailResponse> => {
+export const getProductById = async (id: string, latitude?: number, longitude?: number, skipLocationCheck?: boolean): Promise<ProductDetailResponse> => {
     const params: any = {};
     if (latitude !== undefined && longitude !== undefined) {
         params.latitude = latitude;
         params.longitude = longitude;
+    }
+    if (skipLocationCheck) {
+        params.skipLocationCheck = true;
     }
     const response = await api.get<ProductDetailResponse>(`/customer/products/${id}`, { params });
     return response.data;

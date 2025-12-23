@@ -210,12 +210,12 @@ export default function ProductCard({
                   <Button
                     ref={addButtonRef}
                     variant="outline"
-                    size="default"
+                    size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleAdd(e);
                     }}
-                    className="w-full border-2 border-green-600 text-green-600 bg-transparent hover:bg-green-50 rounded-full font-semibold text-sm h-9 px-3 flex items-center justify-center"
+                    className="w-full border border-green-600 text-green-600 bg-transparent hover:bg-green-50 rounded-full font-semibold text-xs h-7 px-3 flex items-center justify-center uppercase tracking-wide"
                   >
                     ADD
                   </Button>
@@ -227,7 +227,7 @@ export default function ProductCard({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
                   transition={{ duration: 0.2 }}
-                  className="flex items-center justify-center gap-2 bg-white border-2 border-green-600 rounded-full px-2 py-1.5"
+                  className="flex items-center justify-center gap-1.5 bg-white border border-green-600 rounded-full px-1.5 py-0.5 h-7 w-full"
                 >
                   <motion.div whileTap={{ scale: 0.9 }}>
                     <Button
@@ -237,7 +237,7 @@ export default function ProductCard({
                         e.stopPropagation();
                         handleDecrease(e);
                       }}
-                      className="w-7 h-7 p-0"
+                      className="w-5 h-5 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
                       aria-label="Decrease quantity"
                     >
                       −
@@ -248,7 +248,7 @@ export default function ProductCard({
                     initial={{ scale: 1.2, y: -4 }}
                     animate={{ scale: 1, y: 0 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 15 }}
-                    className="text-sm font-bold text-green-600 min-w-[1.5rem] text-center"
+                    className="text-xs font-bold text-green-600 min-w-[1rem] text-center"
                   >
                     {inCartQty}
                   </motion.span>
@@ -260,7 +260,7 @@ export default function ProductCard({
                         e.stopPropagation();
                         handleIncrease(e);
                       }}
-                      className="w-7 h-7 p-0"
+                      className="w-5 h-5 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
                       aria-label="Increase quantity"
                     >
                       +
@@ -357,9 +357,9 @@ export default function ProductCard({
                     <Button
                       ref={addButtonRef}
                       variant="outline"
-                      size="default"
+                      size="sm"
                       onClick={handleAdd}
-                      className="w-full"
+                      className="w-full border-green-600 text-green-600 hover:bg-green-50 h-8 text-xs font-semibold uppercase tracking-wide"
                     >
                       Add
                     </Button>
@@ -379,14 +379,14 @@ export default function ProductCard({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
                   transition={{ duration: 0.2 }}
-                  className="flex items-center justify-center gap-2 bg-white border-2 border-green-600 rounded-full px-2 py-1.5"
+                  className="flex items-center justify-center gap-2 bg-white border border-green-600 rounded-full px-2 py-0.5 h-8"
                 >
                   <motion.div whileTap={{ scale: 0.9 }}>
                     <Button
                       variant="default"
                       size="icon"
                       onClick={handleDecrease}
-                      className="w-7 h-7 p-0"
+                      className="w-6 h-6 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
                       aria-label="Decrease quantity"
                     >
                       −
@@ -397,7 +397,7 @@ export default function ProductCard({
                     initial={{ scale: 1.2, y: -4 }}
                     animate={{ scale: 1, y: 0 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 15 }}
-                    className="text-sm font-bold text-green-600 min-w-[1.5rem] text-center"
+                    className="text-xs font-bold text-green-600 min-w-[1.5rem] text-center"
                   >
                     {inCartQty}
                   </motion.span>
@@ -406,7 +406,7 @@ export default function ProductCard({
                       variant="default"
                       size="icon"
                       onClick={handleIncrease}
-                      className="w-7 h-7 p-0"
+                      className="w-6 h-6 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
                       aria-label="Increase quantity"
                     >
                       +

@@ -58,8 +58,7 @@ export default function AdminStockManagement() {
 
       // Fetch products
       const params: any = {
-        page: currentPage,
-        limit: rowsPerPage,
+        limit: 1000, // Fetch all products (increase if you have more than 1000)
       };
 
       if (searchTerm) {
@@ -105,8 +104,6 @@ export default function AdminStockManagement() {
   }, [
     isAuthenticated,
     token,
-    currentPage,
-    rowsPerPage,
     searchTerm,
     filterCategory,
     filterStatus,

@@ -134,7 +134,11 @@ export default function StorePage() {
                                     key={productId}
                                     className="bg-white rounded-xl border border-neutral-100 shadow-sm overflow-hidden flex flex-col"
                                 >
-                                    <Link to={`/product/${productId}`} className="relative bg-neutral-50 aspect-square flex items-center justify-center p-4">
+                                    <Link
+                                        to={`/product/${productId}`}
+                                        state={{ fromStore: true }}
+                                        className="relative bg-neutral-50 aspect-square flex items-center justify-center p-4"
+                                    >
                                         {product.imageUrl || product.mainImage ? (
                                             <img src={product.imageUrl || product.mainImage} alt={product.name} className="w-full h-full object-contain" />
                                         ) : (

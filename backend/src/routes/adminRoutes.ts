@@ -59,6 +59,9 @@ import {
 // System User Controllers
 import * as systemUserController from "../modules/admin/controllers/adminSystemUserController";
 
+// Home Section Controllers
+import * as homeSectionController from "../modules/admin/controllers/adminHomeSectionController";
+
 const router = Router();
 
 // All routes require admin authentication
@@ -300,5 +303,13 @@ router.get("/system-users/:id", systemUserController.getSystemUserById);
 router.post("/system-users", systemUserController.createSystemUser);
 router.put("/system-users/:id", systemUserController.updateSystemUser);
 router.delete("/system-users/:id", systemUserController.deleteSystemUser);
+
+// ==================== Home Section Routes ====================
+router.get("/home-sections", homeSectionController.getHomeSections);
+router.get("/home-sections/:id", homeSectionController.getHomeSectionById);
+router.post("/home-sections", homeSectionController.createHomeSection);
+router.put("/home-sections/:id", homeSectionController.updateHomeSection);
+router.delete("/home-sections/:id", homeSectionController.deleteHomeSection);
+router.put("/home-sections/reorder", homeSectionController.reorderHomeSections);
 
 export default router;
