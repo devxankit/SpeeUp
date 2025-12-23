@@ -1,0 +1,80 @@
+# How to Re-enable Location-Based Product Filtering
+
+This document tracks the changes made on **2025-12-23** to temporarily disable location-based filtering for products.
+To re-enable the feature (restrict products to only those from sellers within the user's location radius), follow the steps below.
+
+## 1. Customer Product Controller
+
+**File:** [backend/src/modules/customer/controllers/customerProductController.ts](file:///d:/AppZeto/SpeeUP/backend/src/modules/customer/controllers/customerProductController.ts)
+**Function:** [getProducts](file:///d:/AppZeto/SpeeUP/frontend/src/services/api/customerProductService.ts#51-59)
+
+**Action:**
+Uncomment the location filtering logic block.
+
+**Code to Uncomment:**
+Look for the `// Original Location Logic - Commented out` comment block around line **102**.
+
+```typescript
+    // Location-based filtering: Only show products from sellers within user's range
+    // TEMPORARILY DISABLED: Allow all products regardless of location
+    const userLat = latitude ? parseFloat(latitude as string) : null;
+    const userLng = longitude ? parseFloat(longitude as string) : null;
+
+    /*  <-- REMOVE THIS START COMMENT
+    // Original Location Logic - Commented out
+    if (userLat && userLng && !isNaN(userLat) && !isNaN(userLng)) {
+      // Find sellers within user's location range
+      const nearbySellerIds = await findSellersWithinRange(userLat, userLng);
+
+      if (nearbySellerIds.length === 0) {
+        // ... (code omitted)
+      }
+
+      // Filter products by sellers within range
+      query.seller = { $in: nearbySellerIds };
+    } else {
+      // If no location provided, return empty (require location for marketplace)
+      return res.status(200).json({
+         // ... (code omitted)
+      });
+    }
+    */  <-- REMOVE THIS END COMMENT
+```
+
+## 2. Customer Home Controller (Store Products)
+
+**File:** [backend/src/modules/customer/controllers/customerHomeController.ts](file:///d:/AppZeto/SpeeUP/backend/src/modules/customer/controllers/customerHomeController.ts)
+**Function:** [getStoreProducts](file:///d:/AppZeto/SpeeUP/backend/src/modules/customer/controllers/customerHomeController.ts#514-702)
+
+**Action:**
+Uncomment the location filtering logic block.
+
+**Code to Uncomment:**
+Look for the `// Original Location Logic - Commented out` comment block around line **617**.
+
+```typescript
+    // Location-based filtering: Only show products from sellers within user's range
+    // TEMPORARILY DISABLED: Allow all products regardless of location
+    const userLat = latitude ? parseFloat(latitude as string) : null;
+    const userLng = longitude ? parseFloat(longitude as string) : null;
+
+    console.log(`[getStoreProducts] User location: lat=${userLat}, lng=${userLng}`);
+
+    /*  <-- REMOVE THIS START COMMENT
+    // Original Location Logic - Commented out
+    if (userLat && userLng && !isNaN(userLat) && !isNaN(userLng)) {
+      const nearbySellerIds = await findSellersWithinRange(userLat, userLng);
+      // ... (code omitted)
+
+      // Filter products by sellers within range
+      query.seller = { $in: nearbySellerIds };
+      console.log(`[getStoreProducts] Added seller filter to query`);
+    } else {
+      // If no location provided, return empty (require location for marketplace)
+      // ... (code omitted)
+    }
+    */  <-- REMOVE THIS END COMMENT
+```
+
+## Note on Unused Functions
+When this feature is disabled, the helper function [findSellersWithinRange](file:///d:/AppZeto/SpeeUP/backend/src/modules/customer/controllers/customerHomeController.ts#23-64) in both files might be flagged as "unused" by the linter. Uncommenting the code above will use these functions again and resolve those warnings.

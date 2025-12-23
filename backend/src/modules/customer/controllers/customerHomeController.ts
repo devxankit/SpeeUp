@@ -98,16 +98,27 @@ async function fetchSectionData(section: any): Promise<any[]> {
       };
 
       if (categories && categories.length > 0) {
-        const categoryIds = categories.map((cat: any) => cat._id || cat);
-        query.category = { $in: categoryIds };
+        const categoryIds = categories
+          .map((cat: any) => (cat ? cat._id || cat : null))
+          .filter((id: any) => id);
+
+        if (categoryIds.length > 0) {
+          query.category = { $in: categoryIds };
+        }
       }
 
       if (subCategories && subCategories.length > 0) {
-        const subCategoryIds = subCategories.map((sub: any) => sub._id || sub);
-        query.subcategory = { $in: subCategoryIds };
+        const subCategoryIds = subCategories
+          .map((sub: any) => (sub ? sub._id || sub : null))
+          .filter((id: any) => id);
+
+        if (subCategoryIds.length > 0) {
+          query.subcategory = { $in: subCategoryIds };
+        }
       }
 
       const products = await Product.find(query)
+        .sort({ createdAt: -1 }) // Show newest items first
         .limit(limit || 8)
         .select("productName mainImage price mrp discount")
         .lean();
@@ -615,11 +626,14 @@ export const getStoreProducts = async (req: Request, res: Response) => {
     }
 
     // Location-based filtering: Only show products from sellers within user's range
+    // TEMPORARILY DISABLED: Allow all products regardless of location
     const userLat = latitude ? parseFloat(latitude as string) : null;
     const userLng = longitude ? parseFloat(longitude as string) : null;
 
     console.log(`[getStoreProducts] User location: lat=${userLat}, lng=${userLng}`);
 
+    /*
+    // Original Location Logic - Commented out
     if (userLat && userLng && !isNaN(userLat) && !isNaN(userLng)) {
       const nearbySellerIds = await findSellersWithinRange(userLat, userLng);
       console.log(`[getStoreProducts] Found ${nearbySellerIds.length} sellers within range`);
@@ -660,6 +674,7 @@ export const getStoreProducts = async (req: Request, res: Response) => {
         message: "Location is required to view products. Please enable location access.",
       });
     }
+    */
 
     console.log(`[getStoreProducts] Final query:`, JSON.stringify(query, null, 2));
 

@@ -12,6 +12,8 @@ export interface Category {
     isActive: boolean;
     children?: Category[];
     subcategories?: Category[];
+    headerCategoryId?: string | { _id: string; name?: string };
+    totalProducts?: number;
 }
 
 export interface GetProductsParams {

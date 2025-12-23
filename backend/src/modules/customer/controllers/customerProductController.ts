@@ -100,9 +100,12 @@ export const getProducts = async (req: Request, res: Response) => {
     };
 
     // Location-based filtering: Only show products from sellers within user's range
+    // TEMPORARILY DISABLED: Allow all products regardless of location
     const userLat = latitude ? parseFloat(latitude as string) : null;
     const userLng = longitude ? parseFloat(longitude as string) : null;
 
+    /*
+    // Original Location Logic - Commented out
     if (userLat && userLng && !isNaN(userLat) && !isNaN(userLng)) {
       // Find sellers within user's location range
       const nearbySellerIds = await findSellersWithinRange(userLat, userLng);
@@ -140,6 +143,7 @@ export const getProducts = async (req: Request, res: Response) => {
           "Location is required to view products. Please enable location access.",
       });
     }
+    */
 
     // Helper to resolve category/subcategory ID from slug or ID
     const resolveId = async (
