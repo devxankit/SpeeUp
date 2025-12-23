@@ -435,6 +435,7 @@ export default function SellerAddProduct() {
           if (!id) {
             setFormData({
               productName: "",
+              headerCategory: "",
               category: "",
               subcategory: "",
               publish: "No",

@@ -11,7 +11,6 @@ import {
   sendOTP as sendOTPService,
   verifyOTP as verifyOTPService,
 } from "../services/otpService";
-import { generateToken } from "../services/jwtService";
 
 // Explicitly load .env from backend root
 dotenv.config({ path: path.join(__dirname, "../../.env") });
@@ -233,7 +232,7 @@ async function seedProducts() {
         const stock = 10 + Math.floor(Math.random() * 90); // 10-100 stock
 
         // Create product
-        const product = await Product.create({
+        await Product.create({
           productName,
           seller: seller._id,
           headerCategoryId: weddingHeader._id,

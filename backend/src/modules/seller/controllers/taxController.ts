@@ -34,7 +34,7 @@ export const getAllTaxes = asyncHandler(
  * Create a new tax rate (Admin only usually, but providing for setup)
  */
 export const createTax = asyncHandler(async (req: Request, res: Response) => {
-  const { name, percentage, rate, type, description, status } = req.body;
+  const { name, percentage, rate, status } = req.body;
 
   // Support both 'percentage' and 'rate' field names for backward compatibility
   const taxPercentage = percentage || rate;

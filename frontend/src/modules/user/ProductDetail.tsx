@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 // import { products } from '../../data/products'; // REMOVED
 // import { categories } from '../../data/categories'; // REMOVED
 import { useCart } from '../../context/CartContext';
+import { useLocation } from '../../context/LocationContext';
 import Button from '../../components/ui/button';
 import Badge from '../../components/ui/badge';
 import { getProductById } from '../../services/api/customerProductService';
@@ -12,6 +13,7 @@ export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { cart, addToCart, updateQuantity } = useCart();
+  const { location } = useLocation();
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const [isProductDetailsExpanded, setIsProductDetailsExpanded] = useState(false);
   const [isHighlightsExpanded, setIsHighlightsExpanded] = useState(false);
@@ -29,7 +31,11 @@ export default function ProductDetail() {
       if (!id) return;
       setLoading(true);
       try {
-        const response = await getProductById(id);
+        const response = await getProductById(
+          id,
+          location?.latitude,
+          location?.longitude
+        );
         if (response.success && response.data) {
           const productData = response.data as any;
           setProduct({
@@ -73,7 +79,7 @@ export default function ProductDetail() {
     };
 
     fetchProduct();
-  }, [id]);
+  }, [id, location?.latitude, location?.longitude]);
 
   // Get quantity in cart
   const cartItem = product ? cart.items.find(item => item?.product && (item.product.id === product.id || item.product.id === product._id)) : null;

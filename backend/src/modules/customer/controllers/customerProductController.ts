@@ -141,63 +141,74 @@ export const getProducts = async (req: Request, res: Response) => {
       });
     }
 
-        // Helper to resolve category/subcategory ID from slug or ID
-        const resolveId = async (model: any, value: string, modelName: string = '') => {
-            if (mongoose.Types.ObjectId.isValid(value)) return value;
-            
-            // Build query - only check status if model has status field (Category has it, SubCategory might not)
-            const baseQuery: any = {};
-            if (modelName === 'Category') {
-                baseQuery.status = "Active";
-            }
-            
-            // Try exact slug match first
-            let item = await model.findOne({ ...baseQuery, slug: value }).select("_id").lean();
-            if (item) return item._id;
-            
-            // Try case-insensitive slug match
-            item = await model.findOne({ 
-                ...baseQuery,
-                slug: { $regex: new RegExp(`^${value}$`, 'i') }
-            }).select("_id").lean();
-            if (item) return item._id;
-            
-            // Try name match as fallback (case-insensitive) - replace hyphens/underscores with spaces
-            const namePattern = value.replace(/[-_]/g, ' ');
-            item = await model.findOne({ 
-                ...baseQuery,
-                name: { $regex: new RegExp(`^${namePattern}$`, 'i') }
-            }).select("_id").lean();
-            if (item) return item._id;
-            
-            return null;
-        };
     // Helper to resolve category/subcategory ID from slug or ID
-    const resolveId = async (model: any, value: string) => {
+    const resolveId = async (
+      model: any,
+      value: string,
+      modelName: string = ""
+    ) => {
       if (mongoose.Types.ObjectId.isValid(value)) return value;
-      const item = await model.findOne({ slug: value }).select("_id");
-      return item ? item._id : null;
+
+      // Build query - only check status if model has status field (Category has it, SubCategory might not)
+      const baseQuery: any = {};
+      if (modelName === "Category") {
+        baseQuery.status = "Active";
+      }
+
+      // Try exact slug match first
+      let item = await model
+        .findOne({ ...baseQuery, slug: value })
+        .select("_id")
+        .lean();
+      if (item) return item._id;
+
+      // Try case-insensitive slug match
+      item = await model
+        .findOne({
+          ...baseQuery,
+          slug: { $regex: new RegExp(`^${value}$`, "i") },
+        })
+        .select("_id")
+        .lean();
+      if (item) return item._id;
+
+      // Try name match as fallback (case-insensitive) - replace hyphens/underscores with spaces
+      const namePattern = value.replace(/[-_]/g, " ");
+      item = await model
+        .findOne({
+          ...baseQuery,
+          name: { $regex: new RegExp(`^${namePattern}$`, "i") },
+        })
+        .select("_id")
+        .lean();
+      if (item) return item._id;
+
+      return null;
     };
 
-        if (category) {
-            const categoryId = await resolveId(Category, category as string, 'Category');
-            if (categoryId) query.category = categoryId;
-        }
     if (category) {
-      const categoryId = await resolveId(Category, category as string);
+      const categoryId = await resolveId(
+        Category,
+        category as string,
+        "Category"
+      );
       if (categoryId) query.category = categoryId;
     }
 
-        if (subcategory) {
-            const subcategoryId = await resolveId(SubCategory, subcategory as string, 'SubCategory');
-            if (subcategoryId) query.subcategory = subcategoryId;
-        }
     if (subcategory) {
       // Try to resolve from Category model first (new structure where subcategories are categories with parentId)
-      let subcategoryId = await resolveId(Category, subcategory as string);
+      let subcategoryId = await resolveId(
+        Category,
+        subcategory as string,
+        "Category"
+      );
       // If not found in Category, try old SubCategory model (backward compatibility)
       if (!subcategoryId) {
-        subcategoryId = await resolveId(SubCategory, subcategory as string);
+        subcategoryId = await resolveId(
+          SubCategory,
+          subcategory as string,
+          "SubCategory"
+        );
       }
       if (subcategoryId) query.subcategory = subcategoryId;
     }

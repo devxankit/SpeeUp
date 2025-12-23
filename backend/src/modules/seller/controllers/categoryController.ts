@@ -198,8 +198,8 @@ export const getSubcategories = asyncHandler(
 
     // Sort combined results
     uniqueSubcategories.sort((a, b) => {
-      const aValue = a[sortField] || "";
-      const bValue = b[sortField] || "";
+      const aValue = (a as any)[sortField] || "";
+      const bValue = (b as any)[sortField] || "";
       if (sortOrder === "asc") {
         return aValue > bValue ? 1 : -1;
       } else {
