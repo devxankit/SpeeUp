@@ -21,6 +21,7 @@ export default function SellerProductList() {
     const [sortColumn, setSortColumn] = useState<string | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [totalPages, setTotalPages] = useState(1);
+    const [totalProducts, setTotalProducts] = useState(0);
     const [allCategories, setAllCategories] = useState<apiCategory[]>([]);
     const { user } = useAuth();
 
@@ -59,8 +60,13 @@ export default function SellerProductList() {
             if (response.success && response.data) {
                 setProducts(response.data);
                 // Extract pagination info if available
-                if ((response as any).pagination) {
-                    setTotalPages((response as any).pagination.pages);
+                if (response.pagination) {
+                    setTotalPages(response.pagination.pages);
+                    setTotalProducts(response.pagination.total);
+                } else {
+                    // Fallback: if no pagination info, calculate from data length
+                    setTotalPages(1);
+                    setTotalProducts(response.data.length);
                 }
             } else {
                 setError(response.message || 'Failed to fetch products');
@@ -143,11 +149,9 @@ export default function SellerProductList() {
         });
     }
 
-    // Use API pagination if available, otherwise client-side pagination
-    const displayTotalPages = totalPages > 1 ? totalPages : Math.ceil(filteredVariations.length / rowsPerPage);
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const displayedVariations = filteredVariations.slice(startIndex, endIndex);
+    // Show all variations from the current page's products (server-side pagination)
+    // No client-side pagination - pagination is handled by fetching different product pages
+    const displayedVariations = filteredVariations;
 
     const handleSort = (column: string) => {
         if (sortColumn === column) {
@@ -494,7 +498,7 @@ export default function SellerProductList() {
                 {/* Pagination Footer */}
                 <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
                     <div className="text-xs sm:text-sm text-neutral-700">
-                        Showing {startIndex + 1} to {Math.min(endIndex, filteredVariations.length)} of {filteredVariations.length} entries
+                        Page {currentPage} of {totalPages} | Showing {products.length} products ({filteredVariations.length} variations) | Total: {totalProducts} products
                     </div>
                     <div className="flex items-center gap-2">
                         <button
@@ -522,7 +526,7 @@ export default function SellerProductList() {
                                 />
                             </svg>
                         </button>
-                        {Array.from({ length: displayTotalPages }, (_, i) => i + 1).map(page => (
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                             <button
                                 key={page}
                                 onClick={() => setCurrentPage(page)}
@@ -535,9 +539,9 @@ export default function SellerProductList() {
                             </button>
                         ))}
                         <button
-                            onClick={() => setCurrentPage((prev) => Math.min(displayTotalPages, prev + 1))}
-                            disabled={currentPage === displayTotalPages}
-                            className={`p-2 border border-teal-600 rounded ${currentPage === displayTotalPages
+                            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className={`p-2 border border-teal-600 rounded ${currentPage === totalPages
                                 ? 'text-neutral-400 cursor-not-allowed bg-neutral-50'
                                 : 'text-teal-600 hover:bg-teal-50'
                                 }`}

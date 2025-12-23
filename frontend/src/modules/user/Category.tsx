@@ -3,10 +3,12 @@ import { useState, useMemo, useEffect } from 'react';
 import ProductCard from './components/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProducts, getCategoryById, Category as ApiCategory } from '../../services/api/customerProductService';
+import { useLocation as useLocationContext } from '../../context/LocationContext';
 
 export default function CategoryPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { location } = useLocationContext();
 
   const [category, setCategory] = useState<ApiCategory | null>(null);
   const [subcategories, setSubcategories] = useState<ApiCategory[]>([]);
@@ -60,6 +62,11 @@ export default function CategoryPage() {
         if (selectedSubcategory !== 'all') {
           params.subcategory = selectedSubcategory;
         }
+        // Include user location for seller service radius filtering
+        if (location?.latitude && location?.longitude) {
+          params.latitude = location.latitude;
+          params.longitude = location.longitude;
+        }
 
         const response = await getProducts(params);
         if (response.success) {
@@ -83,7 +90,7 @@ export default function CategoryPage() {
     if (id) {
       fetchProducts();
     }
-  }, [id, selectedSubcategory]);
+  }, [id, selectedSubcategory, category, location]);
 
   // Client-side filtering removed in favor of backend subcategory filtering
   const categoryProducts = products;

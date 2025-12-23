@@ -5,11 +5,13 @@ import Button from '../../components/ui/button';
 import { Product } from '../../types/domain';
 import { useEffect, useState } from 'react';
 import { getProducts, getCategoryById } from '../../services/api/customerProductService';
+import { useLocation } from '../../context/LocationContext';
 
 export default function StorePage() {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
     const { cart, addToCart, updateQuantity } = useCart();
+    const { location } = useLocation();
     const [products, setProducts] = useState<Product[]>([]);
     const [category, setCategory] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -21,7 +23,13 @@ export default function StorePage() {
                 setLoading(true);
 
                 // 1. Fetch products for this category (using slug as category ID/filter)
-                const response = await getProducts({ category: slug });
+                const params: any = { category: slug };
+                // Include user location for seller service radius filtering
+                if (location?.latitude && location?.longitude) {
+                  params.latitude = location.latitude;
+                  params.longitude = location.longitude;
+                }
+                const response = await getProducts(params);
                 setProducts(response.data as unknown as Product[]);
 
                 // 2. Fetch category details to get the banner/name
@@ -37,7 +45,7 @@ export default function StorePage() {
         };
 
         fetchData();
-    }, [slug]);
+    }, [slug, location]);
 
     const storeName = category?.name || (slug ? slug.charAt(0).toUpperCase() + slug.slice(1).replace('-', ' ') : 'Store');
     const bannerImage = category?.image || `/assets/shopbystore/${slug}/${slug}header.png`;

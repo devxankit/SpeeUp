@@ -63,12 +63,27 @@ export const getCategoriesWithSubs = async (_req: Request, res: Response) => {
 export const getCategoryById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
+        console.log(`[getCategoryById] Looking for category with id/slug: ${id}`);
         let category;
 
+        // Try to find by ObjectId first (only active categories for public endpoint)
         if (mongoose.Types.ObjectId.isValid(id)) {
-            category = await Category.findById(id).lean();
-        } else {
-            category = await Category.findOne({ slug: id }).lean();
+            category = await Category.findOne({ 
+                _id: id,
+                status: "Active" 
+            }).lean();
+        }
+        
+        // If not found by ID, try by slug (case-insensitive, only active categories)
+        if (!category) {
+            category = await Category.findOne({ 
+                $or: [
+                    { slug: id.toLowerCase() },
+                    { slug: id },
+                    { name: { $regex: new RegExp(`^${id}$`, 'i') } } // Fallback: match by name case-insensitive
+                ],
+                status: "Active"
+            }).lean();
         }
 
         if (!category) {
@@ -95,11 +110,14 @@ export const getCategoryById = async (req: Request, res: Response) => {
                 }
             }
 
+            console.log(`[getCategoryById] Category not found: ${id}`);
             return res.status(404).json({
                 success: false,
-                message: "Category not found",
+                message: `Category not found: ${id}`,
             });
         }
+        
+        console.log(`[getCategoryById] Found category: ${category.name} (${category._id})`);
 
         const subcategories = await SubCategory.find({ category: category._id }).sort({
             order: 1,
