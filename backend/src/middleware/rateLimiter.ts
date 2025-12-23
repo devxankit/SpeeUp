@@ -7,7 +7,7 @@ import { Request, Response, NextFunction } from 'express';
 /**
  * Rate limiter for OTP requests
  * 5 requests per 15 minutes per mobile number
- * 
+ *
  * PRODUCTION: Uncomment this and remove the no-op middleware below
  */
 // export const otpRateLimiter = rateLimit({
@@ -29,7 +29,7 @@ import { Request, Response, NextFunction } from 'express';
 /**
  * Rate limiter for login attempts
  * 10 attempts per 15 minutes per IP
- * 
+ *
  * PRODUCTION: Uncomment this and remove the no-op middleware below
  */
 // export const loginRateLimiter = rateLimit({
@@ -44,11 +44,19 @@ import { Request, Response, NextFunction } from 'express';
  * DEVELOPMENT: No-op middleware (bypasses rate limiting)
  * Remove these when deploying to production and uncomment the rate limiters above
  */
-export const otpRateLimiter = (_req: Request, _res: Response, next: NextFunction) => {
+export const otpRateLimiter = (req: Request, _res: Response, next: NextFunction) => {
+  // Skip rate limiting for OPTIONS requests (CORS preflight)
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
   next();
 };
 
-export const loginRateLimiter = (_req: Request, _res: Response, next: NextFunction) => {
+export const loginRateLimiter = (req: Request, _res: Response, next: NextFunction) => {
+  // Skip rate limiting for OPTIONS requests (CORS preflight)
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
   next();
 };
 

@@ -26,30 +26,34 @@ export const isOriginAllowed = (origin: string | undefined): boolean => {
     const frontendUrl = process.env.FRONTEND_URL || '';
     const allowedOrigins = frontendUrl
       .split(',')
-      .map((url) => url.trim())
+      .map((url) => url.trim().replace(/\/$/, '')) // Remove trailing slashes
       .filter((url) => url.length > 0);
 
-    // Default production origins
+    // Default production origins (explicitly include www.speeup.com)
     const defaultOrigins = [
       'https://www.speeup.com',
       'https://speeup.com',
     ];
 
+    // Combine and remove duplicates
     const allAllowedOrigins = allowedOrigins.length > 0
-      ? [...allowedOrigins, ...defaultOrigins]
+      ? [...new Set([...allowedOrigins, ...defaultOrigins])]
       : defaultOrigins;
+
+    // Normalize origin (remove trailing slash if present)
+    const normalizedOrigin = origin.replace(/\/$/, '');
 
     // Check if origin matches any allowed origin
     return allAllowedOrigins.some((allowedOrigin) => {
-      // Exact match
-      if (origin === allowedOrigin) return true;
+      // Exact match (with and without trailing slash)
+      if (normalizedOrigin === allowedOrigin || origin === allowedOrigin) return true;
       // Support for www and non-www variants
       if (allowedOrigin.includes('www.')) {
         const nonWww = allowedOrigin.replace('www.', '');
-        if (origin === nonWww) return true;
+        if (normalizedOrigin === nonWww || origin === nonWww) return true;
       } else {
         const withWww = allowedOrigin.replace(/^(https?:\/\/)/, '$1www.');
-        if (origin === withWww) return true;
+        if (normalizedOrigin === withWww || origin === withWww) return true;
       }
       return false;
     });
