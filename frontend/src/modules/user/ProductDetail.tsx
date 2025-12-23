@@ -12,11 +12,6 @@ import { useLocation } from '../../hooks/useLocation';
 import Button from '../../components/ui/button';
 import Badge from '../../components/ui/badge';
 import { getProductById } from '../../services/api/customerProductService';
-import { useCart } from "../../context/CartContext";
-import { useLocation } from "../../context/LocationContext";
-import Button from "../../components/ui/button";
-import Badge from "../../components/ui/badge";
-import { getProductById } from "../../services/api/customerProductService";
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
