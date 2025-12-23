@@ -146,7 +146,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
           }
 
           try {
-            const { latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed } = position.coords;
+            const { latitude, longitude, accuracy } = position.coords;
 
             // Validate coordinates
             if (!latitude || !longitude || isNaN(latitude) || isNaN(longitude)) {
@@ -269,7 +269,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
               isRequestingRef.current = false;
               reject(error);
             }
-          } catch (error: any) {
+          } catch (error: unknown) {
             console.error('Error in location success callback:', error);
             if (!abortControllerRef.current?.signal.aborted) {
               setLocationError('Failed to process location data');
@@ -371,7 +371,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
         // Use more precise result types and location_type to get better address match
         const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${preciseLat},${preciseLng}&key=${apiKey}&result_type=street_address|premise|route|sublocality|locality|administrative_area_level_1|postal_code&location_type=ROOFTOP|RANGE_INTERPOLATED&language=en`;
-        
+
         console.log('🌐 Geocoding coordinates:', `${preciseLat}, ${preciseLng}`);
 
         const response = await fetch(geocodeUrl, {
@@ -410,7 +410,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             const latDiff = Math.abs(resultLocation.lat - lat);
             const lngDiff = Math.abs(resultLocation.lng - lng);
             const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff);
-            
+
             if (distance < minDistance) {
               minDistance = distance;
               bestResult = result;
@@ -427,7 +427,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
           const latDiff = Math.abs(geocodedLocation.lat - lat);
           const lngDiff = Math.abs(geocodedLocation.lng - lng);
           const distanceMeters = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111000;
-          
+
           // Warn if geocoded location is more than 100m away
           if (distanceMeters > 100) {
             console.warn('⚠️ Geocoded location differs from input:', {
