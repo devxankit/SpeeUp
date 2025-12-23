@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useMemo, useEffect } from "react";
 import ProductCard from "./components/ProductCard";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,6 +12,7 @@ import { useLocation as useLocationContext } from "../../hooks/useLocation";
 export default function CategoryPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { location: userLocation } = useLocationContext();
 
   const [category, setCategory] = useState<ApiCategory | null>(null);
@@ -48,7 +49,11 @@ export default function CategoryPage() {
             ...(subs || []),
           ]);
 
-          if (currentSubcategory) {
+          // Check URL query params first, then API response
+          const subcategoryFromUrl = searchParams.get("subcategory");
+          if (subcategoryFromUrl) {
+            setSelectedSubcategory(subcategoryFromUrl);
+          } else if (currentSubcategory) {
             setSelectedSubcategory(
               currentSubcategory._id || currentSubcategory.id
             );
@@ -62,7 +67,7 @@ export default function CategoryPage() {
     if (id) {
       fetchCategoryDetails();
     }
-  }, [id]);
+  }, [id, searchParams]);
 
   // Fetch Products when category or subcategory changes
   useEffect(() => {
