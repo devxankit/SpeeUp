@@ -3,7 +3,7 @@ import HomeSection from "../../../models/HomeSection";
 import mongoose from "mongoose";
 
 // Get all home sections
-export const getHomeSections = async (req: Request, res: Response) => {
+export const getHomeSections = async (_req: Request, res: Response) => {
     try {
         const sections = await HomeSection.find()
             .populate("categories", "name slug image")

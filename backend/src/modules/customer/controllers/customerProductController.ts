@@ -309,7 +309,7 @@ export const getProductById = async (req: Request, res: Response) => {
     const userLat = latitude ? parseFloat(latitude as string) : null;
     const userLng = longitude ? parseFloat(longitude as string) : null;
     const shouldSkipLocationCheck =
-      skipLocationCheck === "true" || skipLocationCheck === true;
+      typeof skipLocationCheck === "string" && skipLocationCheck.toLowerCase() === "true";
     const seller = product.seller as any;
 
     // Initialize availability flag

@@ -145,13 +145,13 @@ async function fetchSectionData(section: any): Promise<any[]> {
         query.parentId = null;
       }
 
-      const categories = await Category.find(query)
+      const fetchedCategories = await Category.find(query)
         .select("name image slug")
         .sort({ order: 1 })
         .limit(limit || 8)
         .lean();
 
-      return categories.map((c: any) => ({
+      return fetchedCategories.map((c: any) => ({
         id: c._id.toString(),
         categoryId: c.slug || c._id.toString(),
         name: c.name,
