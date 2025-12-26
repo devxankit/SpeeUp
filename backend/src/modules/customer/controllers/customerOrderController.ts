@@ -3,8 +3,9 @@ import Order from "../../../models/Order";
 import Product from "../../../models/Product";
 import OrderItem from "../../../models/OrderItem";
 import Customer from "../../../models/Customer";
-import Seller from "../../../models/Seller";
 import mongoose from "mongoose";
+import { notifyDeliveryBoysOfNewOrder } from "../../../services/orderNotificationService";
+import { Server as SocketIOServer } from "socket.io";
 
 // Create a new order
 export const createOrder = async (req: Request, res: Response) => {
@@ -23,6 +24,16 @@ export const createOrder = async (req: Request, res: Response) => {
         const { items, address, paymentMethod, fees } = req.body;
         const userId = req.user!.userId;
 
+        // Log incoming request for debugging
+        console.log("DEBUG: Order creation request:", {
+            userId,
+            itemsCount: items?.length,
+            hasAddress: !!address,
+            addressLat: address?.latitude,
+            addressLng: address?.longitude,
+            paymentMethod,
+        });
+
         if (!items || items.length === 0) {
             if (session) await session.abortTransaction();
             return res.status(400).json({
@@ -39,6 +50,31 @@ export const createOrder = async (req: Request, res: Response) => {
             });
         }
 
+        // Validate required address fields
+        if (!address.city || (typeof address.city === 'string' && address.city.trim() === '')) {
+            if (session) await session.abortTransaction();
+            return res.status(400).json({
+                success: false,
+                message: "City is required in delivery address",
+                details: {
+                    receivedCity: address.city,
+                    addressObject: address
+                }
+            });
+        }
+
+        if (!address.pincode || (typeof address.pincode === 'string' && address.pincode.trim() === '')) {
+            if (session) await session.abortTransaction();
+            return res.status(400).json({
+                success: false,
+                message: "Pincode is required in delivery address",
+                details: {
+                    receivedPincode: address.pincode,
+                    addressObject: address
+                }
+            });
+        }
+
         // Fetch customer details
         const customer = await Customer.findById(userId);
         if (!customer) {
@@ -50,14 +86,25 @@ export const createOrder = async (req: Request, res: Response) => {
         }
 
         // Validate delivery address location
-        const deliveryLat = address.latitude ? parseFloat(address.latitude) : null;
-        const deliveryLng = address.longitude ? parseFloat(address.longitude) : null;
+        // Handle both string and number types, and check for null/undefined (not truthy, since 0 is valid)
+        const deliveryLat = address.latitude != null
+            ? (typeof address.latitude === 'number' ? address.latitude : parseFloat(address.latitude))
+            : null;
+        const deliveryLng = address.longitude != null
+            ? (typeof address.longitude === 'number' ? address.longitude : parseFloat(address.longitude))
+            : null;
 
-        if (!deliveryLat || !deliveryLng || isNaN(deliveryLat) || isNaN(deliveryLng)) {
+        if (deliveryLat == null || deliveryLng == null || isNaN(deliveryLat) || isNaN(deliveryLng)) {
             if (session) await session.abortTransaction();
             return res.status(400).json({
                 success: false,
                 message: "Delivery address location (latitude/longitude) is required",
+                details: {
+                    receivedLatitude: address.latitude,
+                    receivedLongitude: address.longitude,
+                    parsedLatitude: deliveryLat,
+                    parsedLongitude: deliveryLng,
+                }
             });
         }
 
@@ -159,10 +206,12 @@ export const createOrder = async (req: Request, res: Response) => {
             );
         }
 
+        // LOCATION VALIDATION DISABLED: Allow customers to order from any seller regardless of location
         // Validate all sellers can deliver to user's location
+        /*
         if (sellerIds.size > 0) {
             const uniqueSellerIds = Array.from(sellerIds).map(id => new mongoose.Types.ObjectId(id));
-            
+
             // Find sellers and check if user is within their service radius
             const sellers = await Seller.find({
                 _id: { $in: uniqueSellerIds },
@@ -206,6 +255,7 @@ export const createOrder = async (req: Request, res: Response) => {
                 }
             }
         }
+        */
 
         // Apply fees
         const platformFee = Number(fees?.platformFee) || 0;
@@ -228,6 +278,21 @@ export const createOrder = async (req: Request, res: Response) => {
                 throw validationError;
             }
             await newOrder.save();
+        }
+
+        // Emit notification to all available delivery boys
+        try {
+            const io: SocketIOServer = (req.app.get("io") as SocketIOServer);
+            if (io) {
+                // Reload order to ensure orderNumber is set (generated by pre-validate hook)
+                const savedOrder = await Order.findById(newOrder._id).lean();
+                if (savedOrder) {
+                    await notifyDeliveryBoysOfNewOrder(io, savedOrder);
+                }
+            }
+        } catch (notificationError) {
+            // Log error but don't fail the order creation
+            console.error("Error notifying delivery boys:", notificationError);
         }
 
         return res.status(201).json({

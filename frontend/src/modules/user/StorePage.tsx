@@ -55,29 +55,74 @@ export default function StorePage() {
     }, [slug, location]);
 
     const storeName = shopData?.name || (slug ? slug.charAt(0).toUpperCase() + slug.slice(1).replace('-', ' ') : 'Store');
-    const bannerImage = shopData?.image || `/assets/shopbystore/${slug}/${slug}header.png`;
+    const [bannerImage, setBannerImage] = useState<string | null>(null);
+    const [imageError, setImageError] = useState(false);
+
+    // Determine banner image source
+    useEffect(() => {
+        if (shopData?.image) {
+            setBannerImage(shopData.image);
+            setImageError(false);
+        } else if (slug) {
+            // Try multiple possible image paths
+            const possiblePaths = [
+                `/assets/shopbystore/${slug}/${slug}header.png`,
+                `/assets/shopbystore/${slug}/header.png`,
+                `/assets/shopbystore/${slug}.png`,
+                `/assets/shopbystore/${slug}.jpg`,
+            ];
+            setBannerImage(possiblePaths[0]);
+            setImageError(false);
+        } else {
+            setBannerImage(null);
+            setImageError(true);
+        }
+    }, [shopData, slug]);
+
+    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        const target = e.target as HTMLImageElement;
+        const currentSrc = target.src;
+
+        // Try fallback paths if current one fails
+        if (slug && currentSrc.includes('/assets/shopbystore/')) {
+            const fallbackPaths = [
+                `/assets/shopbystore/${slug}/header.png`,
+                `/assets/shopbystore/${slug}.png`,
+                `/assets/shopbystore/${slug}.jpg`,
+            ];
+            const currentIndex = fallbackPaths.findIndex(path => currentSrc.includes(path));
+
+            if (currentIndex < fallbackPaths.length - 1) {
+                // Try next fallback path
+                target.src = fallbackPaths[currentIndex + 1];
+                return;
+            }
+        }
+
+        // If all paths failed, show fallback
+        setImageError(true);
+        target.style.display = 'none';
+    };
 
     return (
         <div className="min-h-screen bg-white">
             {/* Store Banner */}
             <div className="relative w-full aspect-[2/1] bg-neutral-100 overflow-hidden">
-                <img
-                    src={bannerImage}
-                    alt={storeName}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                        // Hide broken image and show gradient fallback
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent && !parent.querySelector('.banner-fallback')) {
-                            const fallback = document.createElement('div');
-                            fallback.className = 'banner-fallback w-full h-full bg-gradient-to-br from-cyan-50 to-teal-100 flex items-center justify-center';
-                            fallback.innerHTML = `<div class="text-4xl font-bold text-neutral-400">${storeName.charAt(0).toUpperCase()}</div>`;
-                            parent.appendChild(fallback);
-                        }
-                    }}
-                />
+                {bannerImage && !imageError ? (
+                    <img
+                        src={bannerImage}
+                        alt={storeName}
+                        className="w-full h-full object-cover"
+                        onError={handleImageError}
+                        loading="eager"
+                    />
+                ) : (
+                    <div className="banner-fallback w-full h-full bg-gradient-to-br from-cyan-50 to-teal-100 flex items-center justify-center">
+                        <div className="text-4xl font-bold text-neutral-400">
+                            {storeName.charAt(0).toUpperCase()}
+                        </div>
+                    </div>
+                )}
 
                 {/* Header Overlay */}
                 <header className="absolute top-0 left-0 right-0 z-10">

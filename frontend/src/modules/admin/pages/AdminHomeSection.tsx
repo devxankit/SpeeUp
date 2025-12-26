@@ -8,6 +8,7 @@ import {
     type HomeSectionFormData,
 } from "../../../services/api/admin/adminHomeSectionService";
 import { getCategories, getSubcategories, type Category, type SubCategory } from "../../../services/api/categoryService";
+import { getHeaderCategoriesAdmin, type HeaderCategory } from "../../../services/api/headerCategoryService";
 
 const DISPLAY_TYPE_OPTIONS = [
     { value: "subcategories", label: "Subcategories" },
@@ -21,6 +22,7 @@ export default function AdminHomeSection() {
     // Form state
     const [title, setTitle] = useState("");
     const [slug, setSlug] = useState("");
+    const [selectedHeaderCategory, setSelectedHeaderCategory] = useState<string>("");
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>([]);
     const [displayType, setDisplayType] = useState<"subcategories" | "products" | "categories">("subcategories");
@@ -30,7 +32,9 @@ export default function AdminHomeSection() {
 
     // Data state
     const [sections, setSections] = useState<HomeSection[]>([]);
+    const [headerCategories, setHeaderCategories] = useState<HeaderCategory[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
     const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
 
     // UI state
@@ -47,18 +51,54 @@ export default function AdminHomeSection() {
     // Fetch initial data
     useEffect(() => {
         fetchSections();
+        fetchHeaderCategories();
         fetchCategories();
     }, []);
 
-    // Fetch subcategories when category changes
+    // Filter categories by header category when header category or display type changes
     useEffect(() => {
-        if (selectedCategories.length > 0) {
+        if (displayType === "categories" && selectedHeaderCategory) {
+            const filtered = categories.filter((cat) => {
+                const headerId = typeof cat.headerCategoryId === 'string'
+                    ? cat.headerCategoryId
+                    : cat.headerCategoryId?._id || cat.headerCategoryId;
+                return headerId === selectedHeaderCategory && !cat.parentId; // Only root categories
+            });
+            setFilteredCategories(filtered);
+            // Clear selected categories if they don't belong to the new header category
+            setSelectedCategories((prev) =>
+                prev.filter((id) => filtered.some((cat) => cat._id === id))
+            );
+        } else {
+            // For other display types, show all root categories
+            setFilteredCategories(categories.filter((cat) => !cat.parentId));
+        }
+    }, [selectedHeaderCategory, displayType, categories]);
+
+    // When editing and categories are loaded, try to set header category from selected categories
+    useEffect(() => {
+        if (editingId && displayType === "categories" && selectedCategories.length > 0 && categories.length > 0 && !selectedHeaderCategory) {
+            const firstSelectedCategory = categories.find(c => selectedCategories.includes(c._id));
+            if (firstSelectedCategory) {
+                const headerId = typeof firstSelectedCategory.headerCategoryId === 'string'
+                    ? firstSelectedCategory.headerCategoryId
+                    : firstSelectedCategory.headerCategoryId?._id || firstSelectedCategory.headerCategoryId;
+                if (headerId) {
+                    setSelectedHeaderCategory(headerId);
+                }
+            }
+        }
+    }, [editingId, displayType, selectedCategories, categories, selectedHeaderCategory]);
+
+    // Fetch subcategories when category changes (only for subcategories display type)
+    useEffect(() => {
+        if (displayType === "subcategories" && selectedCategories.length > 0) {
             fetchSubCategories(selectedCategories);
         } else {
             setSubCategories([]);
             setSelectedSubCategories([]);
         }
-    }, [selectedCategories]);
+    }, [selectedCategories, displayType]);
 
     // Auto-generate slug from title
     useEffect(() => {
@@ -83,6 +123,15 @@ export default function AdminHomeSection() {
             setError("Failed to load sections");
         } finally {
             setLoadingSections(false);
+        }
+    };
+
+    const fetchHeaderCategories = async () => {
+        try {
+            const data = await getHeaderCategoriesAdmin();
+            setHeaderCategories(data);
+        } catch (err) {
+            console.error("Error fetching header categories:", err);
         }
     };
 
@@ -131,12 +180,23 @@ export default function AdminHomeSection() {
             setError("Please enter a slug");
             return;
         }
+        if (displayType === "categories") {
+            if (!selectedHeaderCategory) {
+                setError("Please select a header category");
+                return;
+            }
+            if (selectedCategories.length === 0) {
+                setError("Please select at least one category");
+                return;
+            }
+        }
 
         const formData: HomeSectionFormData = {
             title: title.trim(),
             slug: slug.trim(),
             categories: selectedCategories.length > 0 ? selectedCategories : undefined,
-            subCategories: selectedSubCategories.length > 0 ? selectedSubCategories : undefined,
+            // Only include subcategories if displayType is not "categories"
+            subCategories: displayType !== "categories" && selectedSubCategories.length > 0 ? selectedSubCategories : undefined,
             displayType,
             columns,
             limit,
@@ -171,9 +231,37 @@ export default function AdminHomeSection() {
     const handleEdit = (section: HomeSection) => {
         setTitle(section.title);
         setSlug(section.slug);
+        setDisplayType(section.displayType);
+
+        // Try to determine header category from selected categories (only if displayType is "categories")
+        if (section.displayType === "categories") {
+            const firstCategory = section.categories?.[0];
+            if (firstCategory) {
+                // We need to find the category in our categories list
+                // Since categories might not be loaded yet, we'll set it after categories are loaded
+                // For now, we'll try to find it
+                const category = categories.find(c => c._id === firstCategory._id);
+                if (category) {
+                    const headerId = typeof category.headerCategoryId === 'string'
+                        ? category.headerCategoryId
+                        : category.headerCategoryId?._id || category.headerCategoryId;
+                    if (headerId) {
+                        setSelectedHeaderCategory(headerId);
+                    }
+                } else {
+                    // If category not found yet, we'll set it in a useEffect
+                    // For now, clear it and let the useEffect handle it
+                    setSelectedHeaderCategory("");
+                }
+            } else {
+                setSelectedHeaderCategory("");
+            }
+        } else {
+            setSelectedHeaderCategory("");
+        }
+
         setSelectedCategories(section.categories?.map(c => c._id) || []);
         setSelectedSubCategories(section.subCategories?.map(s => s._id) || []);
-        setDisplayType(section.displayType);
         setColumns(section.columns);
         setLimit(section.limit);
         setIsActive(section.isActive);
@@ -203,6 +291,7 @@ export default function AdminHomeSection() {
     const resetForm = () => {
         setTitle("");
         setSlug("");
+        setSelectedHeaderCategory("");
         setSelectedCategories([]);
         setSelectedSubCategories([]);
         setDisplayType("subcategories");
@@ -299,11 +388,16 @@ export default function AdminHomeSection() {
                                 </label>
                                 <select
                                     value={displayType}
-                                    onChange={(e) =>
-                                        setDisplayType(
-                                            e.target.value as "subcategories" | "products" | "categories"
-                                        )
-                                    }
+                                    onChange={(e) => {
+                                        const newDisplayType = e.target.value as "subcategories" | "products" | "categories";
+                                        setDisplayType(newDisplayType);
+                                        // Clear selections when switching display types
+                                        if (newDisplayType === "categories") {
+                                            setSelectedSubCategories([]);
+                                        } else {
+                                            setSelectedHeaderCategory("");
+                                        }
+                                    }}
                                     className="w-full px-3 py-2 border border-neutral-300 rounded bg-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
                                 >
                                     {DISPLAY_TYPE_OPTIONS.map((option) => (
@@ -314,16 +408,56 @@ export default function AdminHomeSection() {
                                 </select>
                             </div>
 
+                            {/* Header Category - Only show when displayType is "categories" */}
+                            {displayType === "categories" && (
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-2">
+                                        Header Category <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        value={selectedHeaderCategory}
+                                        onChange={(e) => {
+                                            setSelectedHeaderCategory(e.target.value);
+                                            setSelectedCategories([]); // Clear selected categories when header category changes
+                                        }}
+                                        className="w-full px-3 py-2 border border-neutral-300 rounded bg-white focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                                    >
+                                        <option value="">Select a header category</option>
+                                        {headerCategories
+                                            .filter((hc) => hc.status === "Published")
+                                            .map((hc) => (
+                                                <option key={hc._id} value={hc._id}>
+                                                    {hc.name}
+                                                </option>
+                                            ))}
+                                    </select>
+                                    <p className="text-xs text-neutral-500 mt-1">
+                                        Select a header category to filter categories
+                                    </p>
+                                </div>
+                            )}
+
                             {/* Categories - Checkbox List */}
                             <div>
                                 <label className="block text-sm font-medium text-neutral-700 mb-2">
                                     Categories
+                                    {displayType === "categories" && (
+                                        <span className="text-red-500 ml-1">*</span>
+                                    )}
                                 </label>
-                                <div className="border border-neutral-300 rounded bg-white max-h-40 overflow-y-auto p-2">
-                                    {categories.length === 0 ? (
-                                        <p className="text-sm text-neutral-400 p-2">Loading categories...</p>
+                                <div className={`border border-neutral-300 rounded max-h-40 overflow-y-auto p-2 ${
+                                    displayType === "categories" && !selectedHeaderCategory ? 'bg-gray-100' : 'bg-white'
+                                }`}>
+                                    {displayType === "categories" && !selectedHeaderCategory ? (
+                                        <p className="text-sm text-neutral-400 p-2">Please select a header category first</p>
+                                    ) : filteredCategories.length === 0 ? (
+                                        <p className="text-sm text-neutral-400 p-2">
+                                            {displayType === "categories"
+                                                ? "No categories found for selected header category"
+                                                : "Loading categories..."}
+                                        </p>
                                     ) : (
-                                        categories.map((cat) => (
+                                        filteredCategories.map((cat) => (
                                             <label
                                                 key={cat._id}
                                                 className="flex items-center p-2 hover:bg-neutral-50 rounded cursor-pointer"
@@ -352,47 +486,49 @@ export default function AdminHomeSection() {
                                 </p>
                             </div>
 
-                            {/* SubCategories - Checkbox List */}
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-2">
-                                    SubCategories
-                                </label>
-                                <div className={`border border-neutral-300 rounded max-h-40 overflow-y-auto p-2 ${selectedCategories.length === 0 ? 'bg-gray-100' : 'bg-white'
-                                    }`}>
-                                    {selectedCategories.length === 0 ? (
-                                        <p className="text-sm text-neutral-400 p-2">Select categories first</p>
-                                    ) : subCategories.length === 0 ? (
-                                        <p className="text-sm text-neutral-400 p-2">No subcategories available</p>
-                                    ) : (
-                                        subCategories.map((sub) => (
-                                            <label
-                                                key={sub._id || sub.id}
-                                                className="flex items-center p-2 hover:bg-neutral-50 rounded cursor-pointer"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedSubCategories.includes(sub._id || sub.id || '')}
-                                                    onChange={(e) => {
-                                                        const subId = sub._id || sub.id || '';
-                                                        if (e.target.checked) {
-                                                            setSelectedSubCategories([...selectedSubCategories, subId]);
-                                                        } else {
-                                                            setSelectedSubCategories(
-                                                                selectedSubCategories.filter((id) => id !== subId)
-                                                            );
-                                                        }
-                                                    }}
-                                                    className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
-                                                />
-                                                <span className="ml-2 text-sm text-neutral-700">{sub.subcategoryName}</span>
-                                            </label>
-                                        ))
-                                    )}
+                            {/* SubCategories - Checkbox List - Only show when displayType is NOT "categories" */}
+                            {displayType !== "categories" && (
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-2">
+                                        SubCategories
+                                    </label>
+                                    <div className={`border border-neutral-300 rounded max-h-40 overflow-y-auto p-2 ${selectedCategories.length === 0 ? 'bg-gray-100' : 'bg-white'
+                                        }`}>
+                                        {selectedCategories.length === 0 ? (
+                                            <p className="text-sm text-neutral-400 p-2">Select categories first</p>
+                                        ) : subCategories.length === 0 ? (
+                                            <p className="text-sm text-neutral-400 p-2">No subcategories available</p>
+                                        ) : (
+                                            subCategories.map((sub) => (
+                                                <label
+                                                    key={sub._id || sub.id}
+                                                    className="flex items-center p-2 hover:bg-neutral-50 rounded cursor-pointer"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedSubCategories.includes(sub._id || sub.id || '')}
+                                                        onChange={(e) => {
+                                                            const subId = sub._id || sub.id || '';
+                                                            if (e.target.checked) {
+                                                                setSelectedSubCategories([...selectedSubCategories, subId]);
+                                                            } else {
+                                                                setSelectedSubCategories(
+                                                                    selectedSubCategories.filter((id) => id !== subId)
+                                                                );
+                                                            }
+                                                        }}
+                                                        className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
+                                                    />
+                                                    <span className="ml-2 text-sm text-neutral-700">{sub.subcategoryName}</span>
+                                                </label>
+                                            ))
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-neutral-500 mt-1">
+                                        {selectedSubCategories.length} selected
+                                    </p>
                                 </div>
-                                <p className="text-xs text-neutral-500 mt-1">
-                                    {selectedSubCategories.length} selected
-                                </p>
-                            </div>
+                            )}
 
                             {/* Columns */}
                             <div>

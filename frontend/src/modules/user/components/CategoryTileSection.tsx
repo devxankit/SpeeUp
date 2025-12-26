@@ -117,11 +117,17 @@ export default function CategoryTileSection({
                           }`
                       : tile.productId
                         ? `/product/${tile.productId}`
-                        : tile.categoryId
-                          ? `/category/${tile.categoryId}`
-                          : (tile as any).sellerId
-                            ? `/seller/${(tile as any).sellerId}`
-                            : "#"
+                        : tile.type === "category"
+                          ? tile.slug
+                            ? `/category/${tile.slug}`
+                            : tile.categoryId
+                              ? `/category/${tile.categoryId}`
+                              : "#"
+                          : tile.categoryId
+                            ? `/category/${tile.categoryId}`
+                            : (tile as any).sellerId
+                              ? `/seller/${(tile as any).sellerId}`
+                              : "#"
                   }
                   onClick={(e) => {
                     if (

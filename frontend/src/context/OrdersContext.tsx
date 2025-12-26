@@ -137,8 +137,21 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         return response.data._id || response.data.id;
       }
       return undefined;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to create order", error);
+      // Extract and log the actual error message from the backend
+      if (error.response?.data) {
+        console.error("Backend error details:", error.response.data);
+        const errorMessage = error.response.data.message || error.message;
+        const errorDetails = error.response.data.details;
+        if (errorDetails) {
+          console.error("Validation details:", errorDetails);
+        }
+        // Re-throw with more details
+        const enhancedError = new Error(errorMessage);
+        (enhancedError as any).details = errorDetails;
+        throw enhancedError;
+      }
       throw error;
     }
   };

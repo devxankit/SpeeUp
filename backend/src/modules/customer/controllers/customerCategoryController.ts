@@ -142,10 +142,21 @@ export const getCategoryById = async (req: Request, res: Response) => {
 
       // Try name match as fallback (case-insensitive)
       if (!category) {
+        // First try standard replacement
+        let namePattern = id.replace(/[-_]/g, " ");
         category = await Category.findOne({
-          name: { $regex: new RegExp(`^${id.replace(/[-_]/g, " ")}$`, "i") },
+          name: { $regex: new RegExp(`^${namePattern}$`, "i") },
           status: "Active",
         }).lean();
+
+        // If not found, try replacing " and " with " & " specifically for categories like "Vegetables & Fruits"
+        if (!category && id.includes("and")) {
+           const withAmpersand = id.replace(/-and-/g, " & ").replace(/-/g, " ");
+           category = await Category.findOne({
+             name: { $regex: new RegExp(`^${withAmpersand}$`, "i") },
+             status: "Active",
+           }).lean();
+        }
       }
     }
 
@@ -160,9 +171,11 @@ export const getCategoryById = async (req: Request, res: Response) => {
             // Return both for the frontend to decide
             const subcategories = await SubCategory.find({
               category: category._id,
-            }).sort({
-              order: 1,
-            });
+            })
+              .select("name image order category")
+              .sort({
+                order: 1,
+              });
             return res.status(200).json({
               success: true,
               data: {
@@ -186,17 +199,37 @@ export const getCategoryById = async (req: Request, res: Response) => {
       `[getCategoryById] Found category: ${category.name} (${category._id})`
     );
 
-    const subcategories = await SubCategory.find({
-      category: category._id,
-    }).sort({
-      order: 1,
-    });
+    // Ensure category._id is treated as ObjectId for the query
+    let catId = category._id;
+    if (typeof catId === 'string') {
+        try {
+            catId = new mongoose.Types.ObjectId(catId);
+        } catch (e) {
+            console.error("Failed to cast category ID to ObjectId:", e);
+        }
+    }
+
+    // Query for BOTH ObjectId and String representation to be safe against legacy data references
+    // Use Category model to find subcategories (children) instead of separate SubCategory model
+    // Using parentId to find children
+    const subcategories = await Category.find({
+      parentId: { $in: [catId, catId.toString()] },
+      status: "Active"
+    })
+      .select("name image order slug icon")
+      .sort({
+        order: 1,
+      });
+
+    console.log(`[getCategoryById] Found ${subcategories.length} subcategories for ${category.name}`);
+
 
     return res.status(200).json({
       success: true,
       data: {
         category,
         subcategories,
+        currentSubcategory: null,
       },
     });
   } catch (error: any) {

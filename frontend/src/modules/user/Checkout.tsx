@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../context/CartContext';
 import { useOrders } from '../../context/OrdersContext';
+import { useLocation as useLocationContext } from '../../hooks/useLocation';
 // import { products } from '../../data/products'; // Removed
 import { OrderAddress, Order } from '../../types/order';
 import Toast from '../../components/Toast';
@@ -23,6 +24,7 @@ import { getProducts } from '../../services/api/customerProductService';
 export default function Checkout() {
   const { cart, updateQuantity, clearCart, addToCart, loading: cartLoading } = useCart();
   const { addOrder } = useOrders();
+  const { location: userLocation } = useLocationContext();
   const navigate = useNavigate();
   const [tipAmount, setTipAmount] = useState<number | null>(null);
   const [donationAmount, setDonationAmount] = useState<number>(5);
@@ -69,6 +71,8 @@ export default function Checkout() {
             state: defaultAddr.state,
             pincode: defaultAddr.pincode,
             landmark: defaultAddr.landmark || '',
+            latitude: defaultAddr.latitude,
+            longitude: defaultAddr.longitude,
             id: defaultAddr._id,
             _id: defaultAddr._id
           };
@@ -166,7 +170,7 @@ export default function Checkout() {
   const deliveryCharge = displayCart.total >= appConfig.freeDeliveryThreshold ? 0 : appConfig.deliveryFee;
 
   // Recalculate or use validated discount
-  // If we have a selected coupon, we should re-validate if cart total changes, 
+  // If we have a selected coupon, we should re-validate if cart total changes,
   // but for simplicity, we'll re-calculate locally if possible or trust the previous validation if acceptable (better to re-validate)
   const subtotalBeforeCoupon = discountedTotal + handlingCharge + deliveryCharge;
 
@@ -225,6 +229,31 @@ export default function Checkout() {
       return;
     }
 
+    // Validate required address fields
+    if (!selectedAddress.city || !selectedAddress.pincode) {
+      console.error("Address is missing required fields (city or pincode)");
+      alert("Please ensure your address has city and pincode.");
+      return;
+    }
+
+    // Use user's current location as fallback if address doesn't have coordinates
+    const finalLatitude = selectedAddress.latitude ?? userLocation?.latitude;
+    const finalLongitude = selectedAddress.longitude ?? userLocation?.longitude;
+
+    // Validate that we have location data (either from address or user's current location)
+    if (!finalLatitude || !finalLongitude) {
+      console.error("Address is missing location data (latitude/longitude) and user location is not available");
+      alert("Location is required for delivery. Please ensure your address has location data or enable location access.");
+      return;
+    }
+
+    // Create address object with location data (use fallback if needed)
+    const addressWithLocation: OrderAddress = {
+      ...selectedAddress,
+      latitude: finalLatitude,
+      longitude: finalLongitude,
+    };
+
     const orderId = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
     const order: Order = {
@@ -237,7 +266,7 @@ export default function Checkout() {
         deliveryFee: deliveryCharge,
       },
       totalAmount: grandTotal,
-      address: selectedAddress,
+      address: addressWithLocation,
       status: 'Placed',
       createdAt: new Date().toISOString(),
       // In a real app, send coupon code to backend to re-validate and apply
@@ -250,8 +279,11 @@ export default function Checkout() {
         clearCart();
         setShowOrderSuccess(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Order placement failed", error);
+      // Show user-friendly error message
+      const errorMessage = error.message || error.response?.data?.message || "Failed to place order. Please try again.";
+      alert(errorMessage);
     }
   };
 

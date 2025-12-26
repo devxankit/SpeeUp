@@ -106,6 +106,7 @@ import AdminCancelledOrders from "./modules/admin/pages/AdminCancelledOrders";
 import AdminCustomerAppPolicy from "./modules/admin/pages/AdminCustomerAppPolicy";
 import AdminDeliveryAppPolicy from "./modules/admin/pages/AdminDeliveryAppPolicy";
 import AdminOrders from "./modules/admin/pages/AdminOrders";
+import AdminOrderDetail from "./modules/admin/pages/AdminOrderDetail";
 import AdminManageCustomer from "./modules/admin/pages/AdminManageCustomer";
 import AdminProfile from "./modules/admin/pages/AdminProfile";
 
@@ -231,6 +232,7 @@ function App() {
                             <Route path="orders/out-for-delivery" element={<AdminOutForDeliveryOrders />} />
                             <Route path="orders/delivered" element={<AdminDeliveredOrders />} />
                             <Route path="orders/cancelled" element={<AdminCancelledOrders />} />
+                            <Route path="orders/:id" element={<AdminOrderDetail />} />
                           </Routes>
                         </AdminLayout>
                       </ProtectedRoute>

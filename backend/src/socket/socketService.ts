@@ -1,6 +1,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
+import { handleOrderAcceptance, handleOrderRejection } from '../services/orderNotificationService';
 
 export const initializeSocket = (httpServer: HttpServer) => {
     const io = new SocketIOServer(httpServer, {
@@ -24,7 +25,7 @@ export const initializeSocket = (httpServer: HttpServer) => {
                         "https://speeup.com",
                     ];
 
-                    const allAllowedOrigins = allowedOrigins.length > 0 
+                    const allAllowedOrigins = allowedOrigins.length > 0
                         ? [...allowedOrigins, ...defaultOrigins]
                         : defaultOrigins;
 
@@ -48,7 +49,7 @@ export const initializeSocket = (httpServer: HttpServer) => {
 
                 // In development, allow any localhost port
                 if (
-                    origin.startsWith('http://localhost:') || 
+                    origin.startsWith('http://localhost:') ||
                     origin.startsWith('http://127.0.0.1:') ||
                     origin.startsWith('https://localhost:')
                 ) {
@@ -105,6 +106,27 @@ export const initializeSocket = (httpServer: HttpServer) => {
         socket.on('join-delivery-room', (deliveryPartnerId: string) => {
             console.log(`🛵 Delivery partner joined: ${deliveryPartnerId}`);
             socket.join(`delivery-${deliveryPartnerId}`);
+        });
+
+        // Delivery boy joins notification room
+        socket.on('join-delivery-notifications', (deliveryBoyId: string) => {
+            console.log(`🔔 Delivery boy ${deliveryBoyId} joined notifications room`);
+            socket.join('delivery-notifications');
+            socket.join(`delivery-${deliveryBoyId}`);
+        });
+
+        // Handle order acceptance
+        socket.on('accept-order', async (data: { orderId: string; deliveryBoyId: string }) => {
+            console.log(`✅ Delivery boy ${data.deliveryBoyId} accepting order ${data.orderId}`);
+            const result = await handleOrderAcceptance(io, data.orderId, data.deliveryBoyId);
+            socket.emit('accept-order-response', result);
+        });
+
+        // Handle order rejection
+        socket.on('reject-order', async (data: { orderId: string; deliveryBoyId: string }) => {
+            console.log(`❌ Delivery boy ${data.deliveryBoyId} rejecting order ${data.orderId}`);
+            const result = await handleOrderRejection(io, data.orderId, data.deliveryBoyId);
+            socket.emit('reject-order-response', result);
         });
 
         // Handle disconnection

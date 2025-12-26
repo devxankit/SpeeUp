@@ -3,6 +3,8 @@ import DeliveryBottomNav from './DeliveryBottomNav';
 import { DeliveryStatusProvider, useDeliveryStatus } from '../context/DeliveryStatusContext';
 import { DeliveryUserProvider, useDeliveryUser } from '../context/DeliveryUserContext';
 import { getDeliveryProfile } from '../../../services/api/delivery/deliveryService';
+import { useDeliveryOrderNotifications } from '../../../hooks/useDeliveryOrderNotifications';
+import OrderNotificationCard from './OrderNotificationCard';
 
 interface DeliveryLayoutContentProps {
   children: ReactNode;
@@ -11,6 +13,11 @@ interface DeliveryLayoutContentProps {
 function DeliveryLayoutContent({ children }: DeliveryLayoutContentProps) {
   const { isOnline } = useDeliveryStatus();
   const { setUserName } = useDeliveryUser();
+  const {
+    currentNotification,
+    acceptOrder,
+    rejectOrder,
+  } = useDeliveryOrderNotifications();
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -33,6 +40,15 @@ function DeliveryLayoutContent({ children }: DeliveryLayoutContentProps) {
         {children}
       </main>
       <DeliveryBottomNav />
+
+      {/* Order Notification Card */}
+      {currentNotification && (
+        <OrderNotificationCard
+          notification={currentNotification}
+          onAccept={acceptOrder}
+          onReject={rejectOrder}
+        />
+      )}
     </div>
   );
 }

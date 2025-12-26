@@ -9,58 +9,58 @@ import HomeSection from "../../../models/HomeSection";
 import mongoose from "mongoose";
 
 // Helper function to calculate distance between two coordinates (Haversine formula)
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth radius in kilometers
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
+// function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+//   const R = 6371; // Earth radius in kilometers
+//   const dLat = (lat2 - lat1) * Math.PI / 180;
+//   const dLon = (lon2 - lon1) * Math.PI / 180;
+//   const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+//     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+//     Math.sin(dLon / 2) * Math.sin(dLon / 2);
+//   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+//   return R * c;
+// }
 
 // Helper function to find sellers within user's location range
-async function findSellersWithinRange(userLat: number, userLng: number): Promise<mongoose.Types.ObjectId[]> {
-  if (!userLat || !userLng || isNaN(userLat) || isNaN(userLng)) {
-    return [];
-  }
+// async function findSellersWithinRange(userLat: number, userLng: number): Promise<mongoose.Types.ObjectId[]> {
+//   if (!userLat || !userLng || isNaN(userLat) || isNaN(userLng)) {
+//     return [];
+//   }
 
-  // Validate coordinates
-  if (userLat < -90 || userLat > 90 || userLng < -180 || userLng > 180) {
-    return [];
-  }
+//   // Validate coordinates
+//   if (userLat < -90 || userLat > 90 || userLng < -180 || userLng > 180) {
+//     return [];
+//   }
 
-  try {
-    // Fetch all approved sellers with location
-    const sellers = await Seller.find({
-      status: "Approved",
-      location: { $exists: true, $ne: null },
-      serviceRadiusKm: { $exists: true, $gt: 0 },
-    }).select("_id location serviceRadiusKm");
+//   try {
+//     // Fetch all approved sellers with location
+//     const sellers = await Seller.find({
+//       status: "Approved",
+//       location: { $exists: true, $ne: null },
+//       serviceRadiusKm: { $exists: true, $gt: 0 },
+//     }).select("_id location serviceRadiusKm");
 
-    // Filter sellers where user is within their service radius
-    const nearbySellerIds: mongoose.Types.ObjectId[] = [];
+//     // Filter sellers where user is within their service radius
+//     const nearbySellerIds: mongoose.Types.ObjectId[] = [];
 
-    for (const seller of sellers) {
-      if (seller.location && seller.location.coordinates) {
-        const sellerLng = seller.location.coordinates[0];
-        const sellerLat = seller.location.coordinates[1];
-        const distance = calculateDistance(userLat, userLng, sellerLat, sellerLng);
-        const serviceRadius = seller.serviceRadiusKm || 10;
+//     for (const seller of sellers) {
+//       if (seller.location && seller.location.coordinates) {
+//         const sellerLng = seller.location.coordinates[0];
+//         const sellerLat = seller.location.coordinates[1];
+//         // const distance = calculateDistance(userLat, userLng, sellerLat, sellerLng);
+//         // const serviceRadius = seller.serviceRadiusKm || 10;
 
-        if (distance <= serviceRadius) {
-          nearbySellerIds.push(seller._id);
-        }
-      }
-    }
+//         // if (distance <= serviceRadius) {
+//           nearbySellerIds.push(seller._id);
+//         // }
+//       }
+//     }
 
-    return nearbySellerIds;
-  } catch (error) {
-    console.error("Error finding nearby sellers:", error);
-    return [];
-  }
-}
+//     return nearbySellerIds;
+//   } catch (error) {
+//     console.error("Error finding nearby sellers:", error);
+//     return [];
+//   }
+// }
 
 // Helper function to fetch data for a home section based on its configuration
 async function fetchSectionData(section: any): Promise<any[]> {
@@ -141,35 +141,33 @@ async function fetchSectionData(section: any): Promise<any[]> {
       }));
     }
 
-    // If displayType is "categories", fetch categories
+    // If displayType is "categories", fetch the selected categories themselves
     if (displayType === "categories") {
-      const query: any = {
-        status: "Active",
-      };
-
-      // If parent categories are specified, fetch their child categories
+      // If categories are specified, fetch those specific categories
       if (categories && categories.length > 0) {
         const categoryIds = categories.map((cat: any) => cat._id || cat);
-        query.parentId = { $in: categoryIds };
+
+        const fetchedCategories = await Category.find({
+          _id: { $in: categoryIds },
+          status: "Active",
+        })
+          .select("name image slug")
+          .sort({ order: 1 })
+          .limit(limit || 8)
+          .lean();
+
+        return fetchedCategories.map((c: any) => ({
+          id: c._id.toString(),
+          categoryId: c.slug || c._id.toString(), // Use slug for SEO-friendly URLs, fallback to _id
+          name: c.name,
+          image: c.image,
+          slug: c.slug,
+          type: "category",
+        }));
       } else {
-        // Otherwise fetch root categories
-        query.parentId = null;
+        // If no categories specified, return empty array
+        return [];
       }
-
-      const fetchedCategories = await Category.find(query)
-        .select("name image slug")
-        .sort({ order: 1 })
-        .limit(limit || 8)
-        .lean();
-
-      return fetchedCategories.map((c: any) => ({
-        id: c._id.toString(),
-        categoryId: c.slug || c._id.toString(),
-        name: c.name,
-        image: c.image,
-        slug: c.slug,
-        type: "category",
-      }));
     }
 
     return [];
