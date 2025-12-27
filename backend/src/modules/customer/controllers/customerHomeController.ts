@@ -7,6 +7,7 @@ import HeaderCategory from "../../../models/HeaderCategory";
 import HomeSection from "../../../models/HomeSection";
 import BestsellerCard from "../../../models/BestsellerCard";
 import LowestPricesProduct from "../../../models/LowestPricesProduct";
+import PromoStrip from "../../../models/PromoStrip";
 import mongoose from "mongoose";
 
 // Helper function to calculate distance between two coordinates (Haversine formula)
@@ -466,6 +467,20 @@ export const getHomeContent = async (req: Request, res: Response) => {
       })
     );
 
+    // 10. Fetch PromoStrip for the current header category
+    const currentHeaderCategorySlug = (headerCategorySlug as string) || "all";
+    const now = new Date();
+    const promoStrip = await PromoStrip.findOne({
+      headerCategorySlug: currentHeaderCategorySlug.toLowerCase(),
+      isActive: true,
+      startDate: { $lte: now },
+      endDate: { $gte: now },
+    })
+      .populate("categoryCards.categoryId", "name slug image")
+      .populate("featuredProducts", "productName mainImage price mrp discount rating reviewsCount")
+      .sort({ order: 1 })
+      .lean();
+
     res.status(200).json({
       success: true,
       data: {
@@ -492,6 +507,7 @@ export const getHomeContent = async (req: Request, res: Response) => {
         trending,
         cookingIdeas,
         promoCards: finalPromoCards, // Return dynamic or fallback cards
+        promoStrip: promoStrip || null, // PromoStrip data for the current header category
       },
     });
   } catch (error: any) {
