@@ -115,8 +115,6 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         maximumAge: 0, // Don't use cached position - always get fresh location (0 = no cache)
       };
 
-      console.log('📍 Requesting fresh GPS location (maximumAge: 0, enableHighAccuracy: true)...');
-
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           // Check if request was cancelled
@@ -138,22 +136,9 @@ export function LocationProvider({ children }: { children: ReactNode }) {
               throw new Error('Coordinates out of valid range');
             }
 
-            // Log received coordinates for debugging
-            const locationAge = Date.now() - position.timestamp;
-            console.log('📍 Location received from GPS:', {
-              latitude: latitude.toFixed(6),
-              longitude: longitude.toFixed(6),
-              accuracy: `${accuracy}m`,
-              timestamp: new Date(position.timestamp).toISOString(),
-              age: `${(locationAge / 1000).toFixed(1)}s ago`,
-              isFresh: locationAge < 5000 ? '✅ Yes' : '⚠️ May be stale'
-            });
-
             // Check accuracy (warn if accuracy is poor but don't fail)
             if (accuracy > 1000) {
-              console.warn(`⚠️ Location accuracy is ${accuracy}m - may not be precise`);
-            } else {
-              console.log(`✅ Location accuracy: ${accuracy}m (good)`);
+              console.warn(`Location accuracy is ${accuracy}m - may not be precise`);
             }
 
             // Set coordinates immediately for instant UI update
@@ -172,9 +157,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             // Reverse geocode in background (non-blocking)
             // IMPORTANT: Use the exact coordinates received, skip cache to ensure fresh geocoding
             try {
-              console.log('🔄 Starting reverse geocoding for:', latitude, longitude);
               const address = await reverseGeocode(latitude, longitude, abortControllerRef.current?.signal, true); // skipCache = true
-              console.log('✅ Reverse geocoding result:', address);
 
 
               // Check if request was cancelled during geocoding
@@ -194,12 +177,6 @@ export function LocationProvider({ children }: { children: ReactNode }) {
                 state: address.state,
                 pincode: address.pincode,
               };
-
-              // Verify coordinates match before saving
-              console.log('💾 Saving location:', {
-                coordinates: `${newLocation.latitude.toFixed(6)}, ${newLocation.longitude.toFixed(6)}`,
-                address: newLocation.address
-              });
 
               setLocation(newLocation);
               localStorage.setItem('userLocation', JSON.stringify(newLocation));
@@ -323,11 +300,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     if (!skipCache) {
       const cached = geocodeCache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-        console.log('📦 Using cached geocode result');
         return cached.data;
       }
-    } else {
-      console.log('🔄 Skipping cache - fetching fresh geocode');
     }
 
     // Retry logic for robustness
@@ -351,8 +325,6 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
         // Use more precise result types and location_type to get better address match
         const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${preciseLat},${preciseLng}&key=${apiKey}&result_type=street_address|premise|route|sublocality|locality|administrative_area_level_1|postal_code&location_type=ROOFTOP|RANGE_INTERPOLATED&language=en`;
-
-        console.log('🌐 Geocoding coordinates:', `${preciseLat}, ${preciseLng}`);
 
         const response = await fetch(geocodeUrl, {
           signal: signal || controller.signal,
@@ -410,13 +382,11 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
           // Warn if geocoded location is more than 100m away
           if (distanceMeters > 100) {
-            console.warn('⚠️ Geocoded location differs from input:', {
+            console.warn('Geocoded location differs from input:', {
               input: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
               geocoded: `${geocodedLocation.lat.toFixed(6)}, ${geocodedLocation.lng.toFixed(6)}`,
               distance: `${distanceMeters.toFixed(0)}m`
             });
-          } else {
-            console.log(`✅ Geocoded location matches input (within ${distanceMeters.toFixed(0)}m)`);
           }
         }
 
@@ -450,14 +420,6 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         // Clean the formatted address to remove Plus Codes
         const rawAddress = result.formatted_address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         const cleanedAddress = cleanAddress(rawAddress);
-
-        console.log('✅ Geocoded address:', {
-          raw: rawAddress,
-          cleaned: cleanedAddress,
-          city,
-          state,
-          pincode
-        });
 
         const geocodeResult = {
           formatted_address: cleanedAddress,

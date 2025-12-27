@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../context/CartContext';
-import { useOrders } from '../../context/OrdersContext';
+import { useOrders } from '../../hooks/useOrders';
 import { useLocation as useLocationContext } from '../../hooks/useLocation';
 // import { products } from '../../data/products'; // Removed
 import { OrderAddress, Order } from '../../types/order';
