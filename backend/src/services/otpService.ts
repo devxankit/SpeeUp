@@ -146,10 +146,13 @@ async function sendSmsViaApi(mobile: string, message: string): Promise<void> {
  * Save OTP to database
  */
 async function saveOtpToDb(mobile: string, otp: string, userType: UserType): Promise<void> {
-  await Otp.deleteMany({ mobile, userType });
+  // Normalize mobile number (remove any non-digits, ensure consistent format)
+  const normalizedMobile = mobile.replace(/\D/g, '');
+
+  await Otp.deleteMany({ mobile: normalizedMobile, userType });
   await Otp.create({
-    mobile,
-    otp,
+    mobile: normalizedMobile,
+    otp: otp.trim(),
     userType,
     expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes expiry
   });
@@ -159,14 +162,32 @@ async function saveOtpToDb(mobile: string, otp: string, userType: UserType): Pro
  * Verify OTP from database
  */
 async function verifyOtpFromDb(mobile: string, otp: string, userType: UserType): Promise<boolean> {
-  const record = await Otp.findOne({ mobile, userType, otp });
+  // Normalize mobile number (remove any non-digits, ensure consistent format)
+  const normalizedMobile = mobile.replace(/\D/g, '');
+
+  const record = await Otp.findOne({
+    mobile: normalizedMobile,
+    userType,
+    otp: otp.trim()
+  });
 
   if (!record) {
+    console.error('OTP verification failed - record not found:', {
+      mobile: normalizedMobile,
+      userType,
+      otp: otp.trim(),
+      availableRecords: await Otp.find({ mobile: normalizedMobile, userType }).select('otp expiresAt')
+    });
     return false;
   }
 
   if (record.expiresAt < new Date()) {
     await Otp.deleteOne({ _id: record._id });
+    console.error('OTP verification failed - expired:', {
+      mobile: normalizedMobile,
+      expiresAt: record.expiresAt,
+      now: new Date()
+    });
     return false;
   }
 
@@ -258,20 +279,49 @@ export async function verifySmsOtp(
     return true;
   }
 
+  // Normalize OTP input (remove spaces, ensure it's a string)
+  const normalizedOtp = String(otpInput).trim().replace(/\s/g, '');
+
+  if (!normalizedOtp || normalizedOtp.length !== 4) {
+    console.error('OTP verification failed - invalid OTP format:', {
+      otpInput,
+      normalizedOtp,
+      length: normalizedOtp.length
+    });
+    return false;
+  }
+
   let targetMobile = mobile;
-  if (!targetMobile) {
-    if (sessionId?.startsWith('DB_VERIFIED_')) {
+  if (!targetMobile && sessionId) {
+    if (sessionId.startsWith('DB_VERIFIED_')) {
       targetMobile = sessionId.replace('DB_VERIFIED_', '');
-    } else if (sessionId?.startsWith('MOCK_SESSION_')) {
+    } else if (sessionId.startsWith('MOCK_SESSION_')) {
       targetMobile = sessionId.replace('MOCK_SESSION_', '');
     }
   }
 
   if (!targetMobile) {
+    console.error('OTP verification failed - no mobile number:', {
+      sessionId,
+      mobile,
+      userType
+    });
     return false;
   }
 
-  return verifyOtpFromDb(targetMobile, otpInput, userType);
+  // Normalize mobile number
+  const normalizedMobile = targetMobile.replace(/\D/g, '');
+
+  if (normalizedMobile.length !== 10) {
+    console.error('OTP verification failed - invalid mobile format:', {
+      original: targetMobile,
+      normalized: normalizedMobile,
+      length: normalizedMobile.length
+    });
+    return false;
+  }
+
+  return verifyOtpFromDb(normalizedMobile, normalizedOtp, userType);
 }
 
 // ==========================================
@@ -334,5 +384,29 @@ export async function verifyOTP(
     return true;
   }
 
-  return verifyOtpFromDb(mobile, otpInput, userType);
+  // Normalize OTP input (remove spaces, ensure it's a string)
+  const normalizedOtp = String(otpInput).trim().replace(/\s/g, '');
+
+  if (!normalizedOtp || normalizedOtp.length !== 4) {
+    console.error('OTP verification failed - invalid OTP format:', {
+      otpInput,
+      normalizedOtp,
+      length: normalizedOtp.length
+    });
+    return false;
+  }
+
+  // Normalize mobile number
+  const normalizedMobile = mobile.replace(/\D/g, '');
+
+  if (normalizedMobile.length !== 10) {
+    console.error('OTP verification failed - invalid mobile format:', {
+      original: mobile,
+      normalized: normalizedMobile,
+      length: normalizedMobile.length
+    });
+    return false;
+  }
+
+  return verifyOtpFromDb(normalizedMobile, normalizedOtp, userType);
 }
