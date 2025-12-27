@@ -35,13 +35,21 @@ export const sendCallOtp = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Send Call OTP
-  const result = await sendCallOtpService(mobile, 'Customer');
+  try {
+    const result = await sendCallOtpService(mobile, 'Customer');
 
-  return res.status(200).json({
-    success: true,
-    message: result.message,
-    sessionId: result.sessionId, // Return session ID to frontend
-  });
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+      sessionId: result.sessionId, // Return session ID to frontend
+    });
+  } catch (error: any) {
+    console.error('Error sending Call OTP:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to send Call OTP. Please try again.',
+    });
+  }
 });
 
 /**

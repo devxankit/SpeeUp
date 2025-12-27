@@ -95,6 +95,7 @@ import AdminUsers from "./modules/admin/pages/AdminUsers";
 import AdminFAQ from "./modules/admin/pages/AdminFAQ";
 import AdminHomeSection from "./modules/admin/pages/AdminHomeSection";
 import AdminBestsellerCards from "./modules/admin/pages/AdminBestsellerCards";
+import AdminPromoStrip from "./modules/admin/pages/AdminPromoStrip";
 import AdminLowestPrices from "./modules/admin/pages/AdminLowestPrices";
 import AdminShopByStore from "./modules/admin/pages/AdminShopByStore";
 import AdminAllOrders from "./modules/admin/pages/AdminAllOrders";
@@ -226,6 +227,7 @@ function App() {
                             <Route path="faq" element={<AdminFAQ />} />
                             <Route path="home-section" element={<AdminHomeSection />} />
                             <Route path="bestseller-cards" element={<AdminBestsellerCards />} />
+                            <Route path="promo-strip" element={<AdminPromoStrip />} />
                             <Route path="lowest-prices" element={<AdminLowestPrices />} />
                             <Route path="shop-by-store" element={<AdminShopByStore />} />
                             <Route path="orders/all" element={<AdminAllOrders />} />

@@ -32,16 +32,21 @@ function generateOTP(length: number = 4): string {
  * Save OTP to Database
  */
 async function saveOtpToDb(mobile: string, otp: string, userType: 'Customer' | 'Delivery' | 'Seller' | 'Admin') {
-  // Delete any existing OTP for this user/mobile
-  await Otp.deleteMany({ mobile, userType });
+  try {
+    // Delete any existing OTP for this user/mobile
+    await Otp.deleteMany({ mobile, userType });
 
-  // Create new OTP record
-  await Otp.create({
-    mobile,
-    otp,
-    userType,
-    expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes expiry
-  });
+    // Create new OTP record
+    await Otp.create({
+      mobile,
+      otp,
+      userType,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes expiry
+    });
+  } catch (error: any) {
+    console.error('Error saving OTP to database:', error);
+    throw new Error(`Failed to save OTP: ${error.message || 'Database error'}`);
+  }
 }
 
 /**
@@ -109,7 +114,15 @@ export async function sendCallOtp(mobile: string, userType: 'Customer' | 'Delive
     };
 
   } catch (error: any) {
-    console.error('2Factor Service Error:', error.message);
+    if (axios.isAxiosError(error)) {
+      console.error('2Factor Service API Error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        config: { url: error.config?.url, method: error.config?.method }
+      });
+      throw new Error(`Failed to send Call OTP: ${JSON.stringify(error.response?.data) || error.message}`);
+    }
+    console.error('2Factor Service Unexpected Error:', error);
     throw new Error(error.message || 'Failed to send Call OTP');
   }
 }

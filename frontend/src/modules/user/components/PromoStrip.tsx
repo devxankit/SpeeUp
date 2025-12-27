@@ -1,8 +1,9 @@
-import { useLayoutEffect, useRef, useState, useEffect } from "react";
+import { useLayoutEffect, useRef, useState, useEffect, useCallback } from "react";
 import { gsap } from "gsap";
 import { Link } from "react-router-dom";
 import { getTheme } from "../../../utils/themes";
 import { getHomeContent } from "../../../services/api/customerHomeService";
+import { getSubcategories } from "../../../services/api/categoryService";
 
 interface PromoCard {
   id: string;
@@ -41,6 +42,11 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
   const theme = getTheme(activeTab);
   const [categoryCards, setCategoryCards] = useState<PromoCard[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [headingText, setHeadingText] = useState(theme.bannerText);
+  const [saleTextValue, setSaleTextValue] = useState(theme.saleText);
+  const [dateRange, setDateRange] = useState("");
+  const [crazyDealsTitle, setCrazyDealsTitle] = useState("CRAZY DEALS");
+  const [subcategoryImagesMap, setSubcategoryImagesMap] = useState<Record<string, string[]>>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const snowflakesRef = useRef<HTMLDivElement>(null);
   const housefullRef = useRef<HTMLDivElement>(null);
@@ -53,6 +59,39 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
 
+  // Fetch subcategory images for category cards
+  const fetchSubcategoryImages = useCallback(async (cards: PromoCard[]) => {
+    const imagesMap: Record<string, string[]> = {};
+
+    await Promise.all(
+      cards.map(async (card) => {
+        // Use categoryId for fetching (should be _id, not slug)
+        const categoryId = card.categoryId;
+        if (!categoryId) return;
+
+        try {
+          // Fetch subcategories for this category
+          const response = await getSubcategories(categoryId, { limit: 4 });
+          if (response.success && response.data) {
+            // Extract subcategory images
+            const images = response.data
+              .filter((subcat) => subcat.subcategoryImage)
+              .map((subcat) => subcat.subcategoryImage!)
+              .slice(0, 4);
+
+            if (images.length > 0) {
+              imagesMap[card.id] = images;
+            }
+          }
+        } catch (error) {
+          console.error(`Error fetching subcategories for category ${categoryId}:`, error);
+        }
+      })
+    );
+
+    setSubcategoryImagesMap(imagesMap);
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -62,13 +101,67 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
 
         let fetchedCards: PromoCard[] = [];
         let fetchedProducts: any[] = [];
+        let newHeadingText = theme.bannerText;
+        let newSaleTextValue = theme.saleText;
+        let newDateRange = "";
 
         if (response.success && response.data) {
-          // 1. Check for specific Promo Cards (curated from backend)
-          if (response.data.promoCards && response.data.promoCards.length > 0) {
+          // 1. Check for PromoStrip data from backend (highest priority)
+          if (response.data.promoStrip && response.data.promoStrip.isActive) {
+            const promoStrip = response.data.promoStrip;
+            newHeadingText = promoStrip.heading || newHeadingText;
+            newSaleTextValue = promoStrip.saleText || newSaleTextValue;
+            // Set CRAZY DEALS title from PromoStrip
+            if (promoStrip.crazyDealsTitle) {
+              setCrazyDealsTitle(promoStrip.crazyDealsTitle);
+            } else {
+              setCrazyDealsTitle("CRAZY DEALS");
+            }
+
+            // Format date range
+            if (promoStrip.startDate && promoStrip.endDate) {
+              const start = new Date(promoStrip.startDate);
+              const end = new Date(promoStrip.endDate);
+              newDateRange = `${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()} - ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()}`;
+            }
+
+            // Map category cards from PromoStrip
+            if (promoStrip.categoryCards && promoStrip.categoryCards.length > 0) {
+              fetchedCards = promoStrip.categoryCards
+                .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
+                .map((card: any) => {
+                  const category = typeof card.categoryId === 'object' ? card.categoryId : null;
+                  return {
+                    id: card._id || card.categoryId?._id || card.categoryId,
+                    badge: card.badge || `Up to ${card.discountPercentage || 0}% OFF`,
+                    title: card.title || category?.name || "",
+                    categoryId: category?._id || card.categoryId, // Use _id for fetching subcategories
+                    slug: category?.slug || card.categoryId, // Use slug for navigation
+                    imageUrl: category?.image,
+                    bgColor: "bg-yellow-50",
+                  };
+                });
+            }
+
+            // Map featured products from PromoStrip
+            if (promoStrip.featuredProducts && promoStrip.featuredProducts.length > 0) {
+              fetchedProducts = promoStrip.featuredProducts.map((p: any) => {
+                const product = typeof p === 'object' ? p : null;
+                return {
+                  id: product?._id || p,
+                  name: product?.productName || product?.name || "Product",
+                  originalPrice: product?.mrp || product?.compareAtPrice || Math.round((product?.price || 0) * 1.2),
+                  discountedPrice: product?.price || 0,
+                  imageUrl: product?.mainImage || product?.image,
+                };
+              });
+            }
+          }
+          // 2. Fallback to promoCards if no PromoStrip
+          else if (response.data.promoCards && response.data.promoCards.length > 0) {
             fetchedCards = response.data.promoCards;
           }
-          // 2. Fallback to categories if no promo cards
+          // 3. Fallback to categories if no promo cards
           else if (
             response.data.categories &&
             response.data.categories.length > 0
@@ -84,11 +177,8 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
               }));
           }
 
-          // Map bestsellers to FeaturedProducts
-          if (
-            response.data.bestsellers &&
-            response.data.bestsellers.length > 0
-          ) {
+          // Fallback: Map bestsellers to FeaturedProducts if no PromoStrip featured products
+          if (fetchedProducts.length === 0 && response.data.bestsellers && response.data.bestsellers.length > 0) {
             fetchedProducts = response.data.bestsellers.map((p: any) => ({
               id: p._id,
               name: p.productName || p.name,
@@ -101,7 +191,19 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
 
         setCategoryCards(fetchedCards);
         setFeaturedProducts(fetchedProducts);
+        setHeadingText(newHeadingText);
+        setSaleTextValue(newSaleTextValue);
+        setDateRange(newDateRange);
+        // Reset CRAZY DEALS title if no PromoStrip data
+        if (!response.data?.promoStrip || !response.data.promoStrip.isActive) {
+          setCrazyDealsTitle("CRAZY DEALS");
+        }
         setHasData(fetchedCards.length > 0 || fetchedProducts.length > 0);
+
+        // Fetch subcategory images for each category card
+        if (fetchedCards.length > 0) {
+          fetchSubcategoryImages(fetchedCards);
+        }
       } catch (error) {
         console.error("Error fetching home content for PromoStrip:", error);
         setCategoryCards([]);
@@ -112,7 +214,7 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
       }
     };
     fetchData();
-  }, [activeTab]);
+  }, [activeTab, theme.bannerText, theme.saleText]);
 
   // Reset product index when activeTab changes or featuredProducts change
   useEffect(() => {
@@ -445,7 +547,7 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                     "2px 2px 2px rgba(0, 0, 0, 0.5)",
                 } as React.CSSProperties
               }>
-              {theme.bannerText.split("").map((letter, index) => (
+              {headingText.split("").map((letter, index) => (
                 <span key={index} className="housefull-letter inline-block">
                   {letter}
                 </span>
@@ -490,17 +592,19 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                     "2px 2px 2px rgba(0, 0, 0, 0.5)",
                 } as React.CSSProperties
               }>
-              {theme.saleText}
+              {saleTextValue}
             </h2>
           </div>
 
           {/* Dates */}
-          <div
-            ref={dateRef}
-            className="font-bold text-xs text-center mt-1"
-            style={{ color: theme.textColor }}>
-            30TH NOV, 2025 - 7TH DEC, 2025
-          </div>
+          {dateRange && (
+            <div
+              ref={dateRef}
+              className="font-bold text-xs text-center mt-1"
+              style={{ color: theme.textColor }}>
+              {dateRange}
+            </div>
+          )}
         </div>
       </div>
 
@@ -526,8 +630,9 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                       "2px 2px 4px rgba(0, 0, 0, 0.8), 1px 1px 2px rgba(0, 0, 0, 0.9)",
                     letterSpacing: "0.5px",
                   }}>
-                  <div>CRAZY</div>
-                  <div>DEALS</div>
+                  {crazyDealsTitle.split(" ").map((word, idx) => (
+                    <div key={idx}>{word}</div>
+                  ))}
                 </div>
               </div>
 
@@ -604,15 +709,15 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
           {/* Category Cards Grid - Right */}
           <div className="flex-1 grid grid-cols-2 gap-2">
             {categoryCards.map((card) => {
-              // Use subcategory images if available, otherwise fallback to emoji icons
-              const hasSubcategoryImages =
-                card.subcategoryImages && card.subcategoryImages.length > 0;
+              // Use subcategory images from the map if available, otherwise check card.subcategoryImages, then fallback to emoji icons
+              const subcategoryImages = subcategoryImagesMap[card.id] || card.subcategoryImages || [];
+              const hasSubcategoryImages = subcategoryImages.length > 0;
               const categoryIcons = getCategoryIcons(card.categoryId || "");
 
               return (
                 <div key={card.id} className="promo-card">
                   <Link
-                    to={card.categoryId ? `/category/${card.categoryId}` : "#"}
+                    to={card.slug || card.categoryId ? `/category/${card.slug || card.categoryId}` : "#"}
                     className="group rounded-lg transition-all duration-300 hover:shadow-md active:scale-[0.98] h-full flex flex-col overflow-hidden relative"
                     style={{
                       minHeight: "90px",
@@ -647,9 +752,7 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                         style={{ marginTop: "auto" }}>
                         {hasSubcategoryImages
                           ? // Display subcategory images as small icons
-                            card
-                              .subcategoryImages!.slice(0, 4)
-                              .map((imageUrl, idx) => (
+                            subcategoryImages.slice(0, 4).map((imageUrl, idx) => (
                                 <div
                                   key={idx}
                                   className="flex-shrink-0 bg-white rounded flex items-center justify-center overflow-hidden border border-neutral-200"

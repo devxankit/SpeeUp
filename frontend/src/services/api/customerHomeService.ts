@@ -11,6 +11,7 @@ export interface HomeContentResponse {
     trending: any[];
     cookingIdeas: any[];
     promoCards?: any[];
+    promoStrip?: any; // PromoStrip data from backend
   };
 }
 

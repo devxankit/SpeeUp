@@ -79,14 +79,20 @@ export default function OrderAgain() {
       try {
         const response = await getProducts({ sort: 'popular', limit: 6 });
         if (response.success && response.data) {
-          const mapped = (response.data as any[]).map(p => ({
+        const mapped = (response.data as any[]).map(p => {
+          // Clean product name - remove description suffixes
+          let productName = p.productName || p.name || '';
+          productName = productName.replace(/\s*-\s*(Fresh|Quality|Assured|Premium|Best|Top|Hygienic|Carefully|Selected).*$/i, '').trim();
+
+          return {
             ...p,
             id: p._id || p.id,
-            name: p.productName || p.name,
+            name: productName,
             imageUrl: p.mainImage || p.imageUrl,
             mrp: p.mrp || p.price,
             pack: p.variations?.[0]?.title || p.smallDescription || 'Standard'
-          }));
+          };
+        });
           setBestsellerProducts(mapped);
         }
       } catch (error) {
@@ -339,25 +345,17 @@ export default function OrderAgain() {
 
                   {/* Product Details */}
                   <div className="p-1.5 flex-1 flex flex-col bg-white">
-                    {/* Light Grey Tags */}
-                    <div className="flex gap-0.5 mb-0.5">
-                      <div className="bg-neutral-200 text-neutral-700 text-[8px] font-medium px-1 py-0.5 rounded">
-                        {product.pack || '1 unit'}
-                      </div>
-                      {product.pack && (product.pack.includes('g') || product.pack.includes('kg')) && (
-                        <div className="bg-neutral-200 text-neutral-700 text-[8px] font-medium px-1 py-0.5 rounded">
-                          {product.pack.replace(/[gk]/gi, '').trim()} GSM
-                        </div>
-                      )}
-                    </div>
-
                     {/* Product Name */}
                     <div
                       onClick={() => navigate(`/product/${product.id}`)}
                       className="mb-0.5 cursor-pointer"
                     >
                       <h3 className="text-[10px] font-bold text-neutral-900 line-clamp-2 leading-tight">
-                        {product.name || product.productName}
+                        {(() => {
+                          // Remove description suffixes like " - Fresh & Quality Assured", " - Premium Quality", etc.
+                          const productName = product.name || product.productName || '';
+                          return productName.replace(/\s*-\s*(Fresh|Quality|Assured|Premium|Best|Top|Hygienic|Carefully|Selected).*$/i, '').trim();
+                        })()}
                       </h3>
                     </div>
 
