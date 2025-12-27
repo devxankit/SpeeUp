@@ -439,7 +439,9 @@ export const getOrderById = async (req: Request, res: Response) => {
             },
             // Keep original fields for backward compatibility
             subtotal: orderObj.subtotal,
-            address: orderObj.deliveryAddress
+            address: orderObj.deliveryAddress,
+            // Include invoice enabled flag
+            invoiceEnabled: orderObj.invoiceEnabled || false
         };
 
         return res.status(200).json({

@@ -87,6 +87,15 @@ export const useDeliveryTracking = (orderId: string | undefined) => {
             console.log('📡 Tracking started:', data)
         })
 
+        socket.on('delivery-boy-accepted', (data: any) => {
+            console.log('✅ Delivery boy accepted order:', data)
+            // Start tracking when delivery boy accepts
+            setTrackingData(prev => ({
+                ...prev,
+                isConnected: true,
+            }))
+        })
+
         socket.on('location-update', (update: LocationUpdate) => {
             console.log('📍 Location update received:', update)
 

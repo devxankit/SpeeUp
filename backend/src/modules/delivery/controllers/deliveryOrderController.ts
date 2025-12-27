@@ -2,6 +2,10 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../../../utils/asyncHandler";
 import Order from "../../../models/Order";
 import Delivery from "../../../models/Delivery";
+import OrderItem from "../../../models/OrderItem";
+import Seller from "../../../models/Seller";
+import { generateDeliveryOtp, verifyDeliveryOtp } from "../../../services/deliveryOtpService";
+import { processOrderStatusTransition } from "../../../services/orderService";
 
 /**
  * Helper to map order items for response
@@ -184,7 +188,8 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
         return res.status(403).json({ success: false, message: "This order is not assigned to you" });
     }
 
-    order.status = status;
+    // Save previous status before updating
+    const previousStatus = order.status;
 
     // Status transition logic
     if (status) order.status = status;
@@ -211,6 +216,34 @@ export const updateOrderStatus = asyncHandler(async (req: Request, res: Response
     }
 
     await order.save();
+
+    // Emit socket events for status changes
+    const io = (req.app as any).get("io");
+    if (io) {
+        if (status === 'Picked up' && previousStatus !== 'Picked up') {
+            // Emit order-taken event
+            io.to(`order-${id}`).emit('order-taken', {
+                orderId: id,
+                message: 'Order has been picked up from seller',
+            });
+        }
+
+        if (status === 'Delivered' && previousStatus !== 'Delivered') {
+            // Emit order-delivered event to all relevant parties
+            io.to(`order-${id}`).emit('order-delivered', {
+                orderId: id,
+                orderNumber: order.orderNumber,
+                message: 'Order has been delivered successfully',
+            });
+
+            // Also emit to delivery boy room
+            io.to(`delivery-${deliveryId}`).emit('order-delivered', {
+                orderId: id,
+                orderNumber: order.orderNumber,
+                message: 'Order delivered successfully',
+            });
+        }
+    }
 
     return res.status(200).json({
         success: true,
@@ -249,4 +282,165 @@ export const getReturnOrders = asyncHandler(async (req: Request, res: Response) 
         success: true,
         data: formattedOrders
     });
+});
+
+/**
+ * Get Seller Locations for Order
+ * Returns all unique seller shop locations for items in this order
+ */
+export const getSellerLocationsForOrder = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const deliveryId = req.user?.userId;
+
+    // Verify order exists and is assigned to this delivery boy
+    const order = await Order.findById(id);
+    if (!order) {
+        return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (order.deliveryBoy?.toString() !== deliveryId) {
+        return res.status(403).json({ success: false, message: "This order is not assigned to you" });
+    }
+
+    // Get all unique seller IDs from order items
+    const orderItems = await OrderItem.find({ order: id });
+    const sellerIds = [...new Set(orderItems.map(item => item.seller.toString()))];
+
+    // Get seller details including locations
+    const sellers = await Seller.find({ _id: { $in: sellerIds } })
+        .select('storeName address city latitude longitude');
+
+    // Format seller locations
+    const sellerLocations = sellers
+        .filter(seller => seller.latitude && seller.longitude) // Only include sellers with location data
+        .map(seller => ({
+            sellerId: seller._id.toString(),
+            storeName: seller.storeName,
+            address: seller.address,
+            city: seller.city,
+            latitude: parseFloat(seller.latitude || '0'),
+            longitude: parseFloat(seller.longitude || '0'),
+        }));
+
+    return res.status(200).json({
+        success: true,
+        data: sellerLocations
+    });
+});
+
+/**
+ * Send Delivery OTP
+ * Generates and sends OTP to customer
+ */
+export const sendDeliveryOtp = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const deliveryId = req.user?.userId;
+
+    const order = await Order.findById(id);
+    if (!order) {
+        return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (order.deliveryBoy?.toString() !== deliveryId) {
+        return res.status(403).json({ success: false, message: "This order is not assigned to you" });
+    }
+
+    if (order.status === 'Delivered') {
+        return res.status(400).json({ success: false, message: "Order is already delivered" });
+    }
+
+    if (order.status !== 'Picked up' && order.status !== 'Out for Delivery') {
+        return res.status(400).json({ success: false, message: "Order must be picked up before sending delivery OTP" });
+    }
+
+    try {
+        const result = await generateDeliveryOtp(id, order.customerPhone);
+
+        // Emit otp-sent event to delivery boy
+        const io = (req.app as any).get("io");
+        if (io) {
+            io.to(`delivery-${deliveryId}`).emit('otp-sent', {
+                orderId: id,
+                orderNumber: order.orderNumber,
+                message: 'Delivery OTP sent to customer',
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: result.message
+        });
+    } catch (error: any) {
+        return res.status(400).json({
+            success: false,
+            message: error.message || "Failed to send delivery OTP"
+        });
+    }
+});
+
+/**
+ * Verify Delivery OTP and mark order as delivered
+ */
+export const verifyDeliveryOtpController = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { otp } = req.body;
+    const deliveryId = req.user?.userId;
+
+    if (!otp) {
+        return res.status(400).json({ success: false, message: "OTP is required" });
+    }
+
+    const order = await Order.findById(id);
+    if (!order) {
+        return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (order.deliveryBoy?.toString() !== deliveryId) {
+        return res.status(403).json({ success: false, message: "This order is not assigned to you" });
+    }
+
+    try {
+        const previousStatus = order.status;
+        const result = await verifyDeliveryOtp(id, otp);
+        // Note: verifyDeliveryOtp is from service, not this controller
+
+        // Reload order to get updated status
+        const updatedOrder = await Order.findById(id);
+
+        // Process order status transition for financial transactions
+        if (updatedOrder && updatedOrder.status === 'Delivered' && previousStatus !== 'Delivered') {
+            try {
+                await processOrderStatusTransition(id, 'Delivered', previousStatus);
+            } catch (transitionError: any) {
+                console.error('Error processing order status transition:', transitionError);
+                // Continue even if transition fails - order is already marked as delivered
+            }
+        }
+
+        // Update delivery boy balance and cash collected (if COD)
+        if (updatedOrder && updatedOrder.status === 'Delivered') {
+            if (updatedOrder.paymentMethod === 'COD') {
+                await Delivery.findByIdAndUpdate(deliveryId, {
+                    $inc: { cashCollected: updatedOrder.total }
+                });
+            }
+
+            // Update delivery boy commission
+            const COMMISSION = 40; // Fixed amount for now, should be dynamic in future
+            await Delivery.findByIdAndUpdate(deliveryId, {
+                $inc: { balance: COMMISSION }
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: result.message,
+            data: updatedOrder
+        });
+    } catch (error: any) {
+        return res.status(400).json({
+            success: false,
+            message: error.message || "Failed to verify delivery OTP"
+        });
+    }
 });

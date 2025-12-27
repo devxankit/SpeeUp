@@ -1224,11 +1224,22 @@ export default function OrderDetail() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.85 }}>
-          <Link to={`/orders/${id}/invoice`} className="flex-1">
-            <Button className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white">
-              View Invoice
-            </Button>
-          </Link>
+          {order?.invoiceEnabled ? (
+            <Link to={`/orders/${id}/invoice`} className="flex-1">
+              <Button className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white">
+                View Invoice
+              </Button>
+            </Link>
+          ) : (
+            <div className="flex-1">
+              <Button
+                className="w-full bg-gray-400 cursor-not-allowed text-white"
+                disabled
+                title="Invoice will be available after delivery is completed">
+                Invoice Unavailable
+              </Button>
+            </div>
+          )}
           <Link to="/orders" className="flex-1">
             <Button variant="outline" className="w-full border-gray-300">
               All Orders

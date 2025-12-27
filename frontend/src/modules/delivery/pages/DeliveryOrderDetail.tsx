@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getOrderDetails, updateOrderStatus } from '../../../services/api/delivery/deliveryService';
+import { getOrderDetails, updateOrderStatus, getSellerLocationsForOrder, sendDeliveryOtp, verifyDeliveryOtp, updateDeliveryLocation } from '../../../services/api/delivery/deliveryService';
 
 // Icons components to avoid external dependency issues
 const Icons = {
@@ -57,6 +57,12 @@ const Icons = {
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
             <polygon points="3 11 22 2 13 21 11 13 3 11" />
         </svg>
+    ),
+    Store: ({ size = 24, className = "" }) => (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
     )
 };
 
@@ -71,6 +77,12 @@ export default function DeliveryOrderDetail() {
     const [isMapLoaded, setIsMapLoaded] = useState(false);
     const mapRef = useRef<HTMLDivElement>(null);
     const googleMapRef = useRef<any>(null);
+    const [sellerLocations, setSellerLocations] = useState<any[]>([]);
+    const [showOtpInput, setShowOtpInput] = useState(false);
+    const [otpValue, setOtpValue] = useState('');
+    const [otpSending, setOtpSending] = useState(false);
+    const [otpVerifying, setOtpVerifying] = useState(false);
+    const locationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     const fetchOrder = async () => {
         if (!id) return;
@@ -88,6 +100,23 @@ export default function DeliveryOrderDetail() {
     useEffect(() => {
         fetchOrder();
     }, [id]);
+
+    // Fetch seller locations when order is assigned
+    useEffect(() => {
+        const fetchSellerLocations = async () => {
+            if (!id || !order) return;
+            // Only fetch if order has delivery boy assigned and status is before "Picked up"
+            if (order.status && order.status !== 'Picked up' && order.status !== 'Delivered') {
+                try {
+                    const locations = await getSellerLocationsForOrder(id);
+                    setSellerLocations(locations || []);
+                } catch (err) {
+                    console.error('Failed to fetch seller locations:', err);
+                }
+            }
+        };
+        fetchSellerLocations();
+    }, [id, order?.status]);
 
     // Load Google Maps Script
     useEffect(() => {
@@ -120,18 +149,16 @@ export default function DeliveryOrderDetail() {
         }
     }, []);
 
-    // Initialize Map
+    // Initialize Map for seller locations (before picked up) or customer location (after picked up)
     useEffect(() => {
-        if (isMapLoaded && mapRef.current && order && order.status === 'Picked up' && !googleMapRef.current) {
-
-            // Default center (Indore, based on mocks - or use order coordinates if available)
+        if (isMapLoaded && mapRef.current && order && !googleMapRef.current) {
             const defaultCenter = { lat: 22.7196, lng: 75.8577 };
 
             googleMapRef.current = new (window as any).google.maps.Map(mapRef.current, {
                 center: defaultCenter,
-                zoom: 15,
-                disableDefaultUI: true, // Clean look
-                styles: [ // Optional: Custom styles for a cleaner 'app' look
+                zoom: 13,
+                disableDefaultUI: true,
+                styles: [
                     {
                         featureType: "poi",
                         elementType: "labels",
@@ -140,40 +167,150 @@ export default function DeliveryOrderDetail() {
                 ]
             });
 
-            // Geocode address to find location
-            const geocoder = new (window as any).google.maps.Geocoder();
-            geocoder.geocode({ address: order.address }, (results: any, status: any) => {
-                if (status === 'OK' && results && results[0]) {
-                    const location = results[0].geometry.location;
-                    googleMapRef.current.setCenter(location);
-                    new (window as any).google.maps.Marker({
-                        map: googleMapRef.current,
-                        position: location,
-                        title: "Delivery Location",
-                        icon: {
-                            path: (window as any).google.maps.SymbolPath.CIRCLE,
-                            scale: 10,
-                            fillColor: "#e11d48", // Reddish
-                            fillOpacity: 1,
-                            strokeWeight: 2,
-                            strokeColor: "#ffffff"
-                        }
-                    });
-                } else {
-                    console.log('Geocode was not successful for the following reason: ' + status);
+            // If order is picked up, show customer location
+            if (order.status === 'Picked up') {
+                const geocoder = new (window as any).google.maps.Geocoder();
+                geocoder.geocode({ address: order.address }, (results: any, status: any) => {
+                    if (status === 'OK' && results && results[0]) {
+                        const location = results[0].geometry.location;
+                        googleMapRef.current.setCenter(location);
+                        new (window as any).google.maps.Marker({
+                            map: googleMapRef.current,
+                            position: location,
+                            title: "Customer Location",
+                            icon: {
+                                path: (window as any).google.maps.SymbolPath.CIRCLE,
+                                scale: 10,
+                                fillColor: "#e11d48",
+                                fillOpacity: 1,
+                                strokeWeight: 2,
+                                strokeColor: "#ffffff"
+                            }
+                        });
+                    }
+                });
+            } else if (sellerLocations.length > 0) {
+                // Show seller locations before picked up
+                const bounds = new (window as any).google.maps.LatLngBounds();
+                sellerLocations.forEach((seller: any) => {
+                    if (seller.latitude && seller.longitude) {
+                        const position = { lat: seller.latitude, lng: seller.longitude };
+                        bounds.extend(position);
+                        new (window as any).google.maps.Marker({
+                            map: googleMapRef.current,
+                            position: position,
+                            title: seller.storeName,
+                            icon: {
+                                path: (window as any).google.maps.SymbolPath.CIRCLE,
+                                scale: 10,
+                                fillColor: "#3b82f6", // Blue for seller
+                                fillOpacity: 1,
+                                strokeWeight: 2,
+                                strokeColor: "#ffffff"
+                            }
+                        });
+                    }
+                });
+                if (sellerLocations.length > 0) {
+                    googleMapRef.current.fitBounds(bounds);
                 }
-            });
-
-
+            }
         }
-    }, [isMapLoaded, order]); // Re-run if order status changes to 'Picked up'
+    }, [isMapLoaded, order, sellerLocations]);
 
-    // Clean up map instance when component unmounts or status changes away
+    // Clean up map instance when component unmounts
     useEffect(() => {
-        if ((!order || order.status !== 'Picked up') && googleMapRef.current) {
-            googleMapRef.current = null;
+        return () => {
+            if (googleMapRef.current) {
+                googleMapRef.current = null;
+            }
+        };
+    }, []);
+
+    // Continuous location updates (every 10 seconds when order is active)
+    useEffect(() => {
+        if (!id || !order) return;
+
+        // Only track location if order is assigned and not delivered
+        const shouldTrack = order.status && order.status !== 'Delivered' && order.status !== 'Cancelled' && order.status !== 'Returned';
+
+        if (shouldTrack) {
+            const updateLocation = async () => {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        async (position) => {
+                            try {
+                                await updateDeliveryLocation(id, position.coords.latitude, position.coords.longitude);
+                            } catch (err) {
+                                console.error('Failed to update location:', err);
+                            }
+                        },
+                        (error) => {
+                            console.error('Error getting location:', error);
+                        },
+                        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                    );
+                }
+            };
+
+            // Send initial location update
+            updateLocation();
+
+            // Set up interval for continuous updates (every 10 seconds)
+            locationIntervalRef.current = setInterval(updateLocation, 10000);
+
+            return () => {
+                if (locationIntervalRef.current) {
+                    clearInterval(locationIntervalRef.current);
+                    locationIntervalRef.current = null;
+                }
+            };
+        } else {
+            // Clear interval if order is delivered/cancelled
+            if (locationIntervalRef.current) {
+                clearInterval(locationIntervalRef.current);
+                locationIntervalRef.current = null;
+            }
         }
-    }, [order]);
+    }, [id, order?.status]);
+
+    const handleSendOtp = async () => {
+        if (!id) return;
+        try {
+            setOtpSending(true);
+            await sendDeliveryOtp(id);
+            setShowOtpInput(true);
+            alert('OTP sent to customer successfully');
+        } catch (err: any) {
+            alert(err.message || 'Failed to send OTP');
+        } finally {
+            setOtpSending(false);
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        if (!id || !otpValue) {
+            alert('Please enter OTP');
+            return;
+        }
+        try {
+            setOtpVerifying(true);
+            const result = await verifyDeliveryOtp(id, otpValue);
+            alert(result.message || 'OTP verified successfully. Order marked as delivered.');
+            await fetchOrder(); // Refresh order data
+            setShowOtpInput(false);
+            setOtpValue('');
+        } catch (err: any) {
+            alert(err.message || 'Failed to verify OTP');
+        } finally {
+            setOtpVerifying(false);
+        }
+    };
+
+    const openGoogleMapsNavigation = (lat: number, lng: number, label?: string) => {
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}${label ? `&destination_place_id=${label}` : ''}`;
+        window.open(url, '_blank');
+    };
 
 
     if (loading) {
@@ -233,7 +370,9 @@ export default function DeliveryOrderDetail() {
     };
 
     const nextStatus = getNextStatus();
-    const isMapVisible = order.status === 'Picked up';
+    const isMapVisible = order.status === 'Picked up' || (sellerLocations.length > 0 && order.status !== 'Delivered');
+    const showSellerLocations = sellerLocations.length > 0 && order.status !== 'Picked up' && order.status !== 'Delivered';
+    const showCustomerLocation = order.status === 'Picked up';
 
     return (
         <div className="min-h-screen bg-neutral-50 pb-32 relative">
@@ -259,7 +398,7 @@ export default function DeliveryOrderDetail() {
                 </div>
             </div>
 
-            {/* Google Maps View for Picked Up state */}
+            {/* Google Maps View - Seller Locations (before picked up) or Customer Location (after picked up) */}
             {isMapVisible && (
                 <div className="w-full h-80 bg-neutral-100 relative border-b border-neutral-200">
                     {/* Map Container */}
@@ -271,9 +410,83 @@ export default function DeliveryOrderDetail() {
                         </div>
                     )}
 
-                    <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl shadow-md border border-neutral-100 z-10">
-                        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">Destination</p>
-                        <p className="text-xs font-bold text-neutral-800 truncate max-w-[200px]">{order.address?.split(',')[0]}</p>
+                    {showSellerLocations && (
+                        <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl shadow-md border border-neutral-100 z-10">
+                            <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">Seller Locations</p>
+                            <p className="text-xs font-bold text-neutral-800">{sellerLocations.length} Shop(s)</p>
+                        </div>
+                    )}
+
+                    {showCustomerLocation && (
+                        <>
+                            <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl shadow-md border border-neutral-100 z-10">
+                                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">Destination</p>
+                                <p className="text-xs font-bold text-neutral-800 truncate max-w-[200px]">{order.address?.split(',')[0]}</p>
+                            </div>
+                            {order.address && (
+                                <button
+                                    onClick={() => {
+                                        // Extract lat/lng from order if available, or geocode
+                                        if (order.deliveryAddress?.latitude && order.deliveryAddress?.longitude) {
+                                            openGoogleMapsNavigation(order.deliveryAddress.latitude, order.deliveryAddress.longitude, order.address);
+                                        } else {
+                                            // Fallback: open with address string
+                                            const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.address)}`;
+                                            window.open(url, '_blank');
+                                        }
+                                    }}
+                                    className="absolute bottom-4 left-4 right-4 bg-blue-600 text-white px-4 py-3 rounded-xl shadow-lg font-semibold flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors z-10"
+                                >
+                                    <Icons.Navigation size={20} />
+                                    Navigate to Customer
+                                </button>
+                            )}
+                        </>
+                    )}
+
+                    {showSellerLocations && sellerLocations.length > 0 && (
+                        <button
+                            onClick={() => {
+                                const firstSeller = sellerLocations[0];
+                                if (firstSeller.latitude && firstSeller.longitude) {
+                                    openGoogleMapsNavigation(firstSeller.latitude, firstSeller.longitude, firstSeller.storeName);
+                                }
+                            }}
+                            className="absolute bottom-4 left-4 right-4 bg-blue-600 text-white px-4 py-3 rounded-xl shadow-lg font-semibold flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors z-10"
+                        >
+                            <Icons.Navigation size={20} />
+                            Navigate to Seller
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {/* Seller Locations Card (before picked up) */}
+            {showSellerLocations && sellerLocations.length > 0 && (
+                <div className="p-4">
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-neutral-100">
+                        <h3 className="font-semibold text-neutral-900 mb-4 flex items-center gap-2">
+                            <Icons.Store size={18} className="text-neutral-500" />
+                            Seller Shop Locations
+                        </h3>
+                        <div className="space-y-3">
+                            {sellerLocations.map((seller: any, idx: number) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg">
+                                    <div>
+                                        <p className="font-medium text-neutral-900">{seller.storeName}</p>
+                                        <p className="text-sm text-neutral-500">{seller.address}, {seller.city}</p>
+                                    </div>
+                                    {seller.latitude && seller.longitude && (
+                                        <button
+                                            onClick={() => openGoogleMapsNavigation(seller.latitude, seller.longitude, seller.storeName)}
+                                            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        >
+                                            <Icons.Navigation size={18} />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
@@ -405,20 +618,67 @@ export default function DeliveryOrderDetail() {
 
             </div>
 
-            {/* Floating Glassmorphic Action Button Dock */}
-            {nextStatus && (
+            {/* OTP Section (when order is Picked up) */}
+            {order.status === 'Picked up' && !showOtpInput && (
+                <div className="fixed bottom-24 left-6 right-6 z-30">
+                    <button
+                        onClick={handleSendOtp}
+                        className="w-full py-4 rounded-2xl bg-green-600 backdrop-blur-md border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] text-white font-bold text-lg transition-transform active:scale-[0.98] flex items-center justify-center gap-3 overflow-hidden group"
+                        disabled={otpSending}
+                    >
+                        <span className="relative z-10">{otpSending ? 'Sending OTP...' : 'Send Delivery OTP'}</span>
+                        <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none"></div>
+                    </button>
+                </div>
+            )}
+
+            {/* OTP Input Section */}
+            {showOtpInput && (
+                <div className="fixed bottom-24 left-6 right-6 z-30 bg-white rounded-2xl p-4 shadow-2xl border border-neutral-200">
+                    <p className="text-sm font-semibold text-neutral-900 mb-3">Enter Delivery OTP</p>
+                    <input
+                        type="text"
+                        value={otpValue}
+                        onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="Enter 6-digit OTP"
+                        className="w-full px-4 py-3 border border-neutral-300 rounded-xl text-lg font-semibold text-center mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        maxLength={6}
+                    />
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => {
+                                setShowOtpInput(false);
+                                setOtpValue('');
+                            }}
+                            className="flex-1 py-3 rounded-xl bg-neutral-200 text-neutral-700 font-semibold hover:bg-neutral-300 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleVerifyOtp}
+                            className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors"
+                            disabled={otpVerifying || otpValue.length !== 6}
+                        >
+                            {otpVerifying ? 'Verifying...' : 'Verify OTP'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Floating Glassmorphic Action Button Dock - Order Taken button or status update */}
+            {nextStatus && order.status !== 'Picked up' && !showOtpInput && (
                 <div className="fixed bottom-24 left-6 right-6 z-30">
                     <button
                         onClick={() => handleStatusChange(nextStatus)}
                         className="w-full py-4 rounded-2xl bg-black/75 backdrop-blur-md border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] text-white font-bold text-lg transition-transform active:scale-[0.98] flex items-center justify-center gap-3 overflow-hidden group"
                         disabled={loading}
                     >
-                        <span className="relative z-10">{loading ? 'Updating...' : `Mark as ${nextStatus}`}</span>
-                        {/* Status Change Arrow if not loading */}
+                        <span className="relative z-10">
+                            {loading ? 'Updating...' : nextStatus === 'Picked up' ? 'Order Taken' : `Mark as ${nextStatus}`}
+                        </span>
                         {!loading && <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center relative z-10 group-hover:bg-white/30 transition-colors">
                             <Icons.ChevronLeft className="rotate-180" size={18} />
                         </div>}
-                        {/* Gloss Effect */}
                         <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none"></div>
                     </button>
                 </div>

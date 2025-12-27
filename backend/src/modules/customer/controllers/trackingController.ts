@@ -66,7 +66,7 @@ export const getOrderTracking = asyncHandler(
 export const updateDeliveryLocation = asyncHandler(
   async (req: Request, res: Response) => {
     const { orderId, latitude, longitude } = req.body;
-    const deliveryBoyId = (req as any).user.id;
+    const deliveryBoyId = req.user?.userId;
 
     // Validate inputs
     if (!orderId || !latitude || !longitude) {
@@ -97,16 +97,26 @@ export const updateDeliveryLocation = asyncHandler(
     let tracking = await DeliveryTracking.findOne({ order: orderId });
 
     if (!tracking) {
+      // Determine initial status based on order status
+      let initialStatus: 'idle' | 'picked_up' | 'in_transit' | 'nearby' = 'idle';
+      if (order.status === 'Picked up' || order.status === 'Out for Delivery') {
+        initialStatus = 'picked_up';
+      } else {
+        initialStatus = 'idle';
+      }
+
       tracking = new DeliveryTracking({
         order: orderId,
         deliveryBoy: deliveryBoyId,
+        latitude, // Legacy field
+        longitude, // Legacy field
         currentLocation: {
           latitude,
           longitude,
           timestamp: new Date(),
         },
-        route: [],
-        status: "picked_up",
+        route: [{ lat: latitude, lng: longitude }],
+        status: initialStatus,
       });
     } else {
       tracking.currentLocation = {
@@ -114,6 +124,9 @@ export const updateDeliveryLocation = asyncHandler(
         longitude,
         timestamp: new Date(),
       };
+      // Update legacy fields
+      tracking.latitude = latitude;
+      tracking.longitude = longitude;
       // Add to route history (keep last 50 points)
       tracking.route.push({ lat: latitude, lng: longitude });
       if (tracking.route.length > 50) {
@@ -128,13 +141,20 @@ export const updateDeliveryLocation = asyncHandler(
     tracking.distance = distance;
     tracking.eta = eta;
 
-    // Update status based on distance
-    if (distance < 100) {
-      tracking.status = "nearby";
-    } else if (distance < 5000) {
-      tracking.status = "in_transit";
+    // Update status based on order status and distance
+    if (order.status === 'Delivered') {
+      tracking.status = "delivered";
+    } else if (order.status === 'Picked up' || order.status === 'Out for Delivery') {
+      if (distance < 100) {
+        tracking.status = "nearby";
+      } else if (distance < 5000) {
+        tracking.status = "in_transit";
+      } else {
+        tracking.status = "picked_up";
+      }
     } else {
-      tracking.status = "picked_up";
+      // Order is still assigned but not picked up yet
+      tracking.status = "idle";
     }
 
     await tracking.save();

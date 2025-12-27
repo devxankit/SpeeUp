@@ -79,6 +79,42 @@ export const updateOrderStatus = async (id: string, status: string) => {
     }
 };
 
+export const getSellerLocationsForOrder = async (id: string) => {
+    try {
+        const response = await api.get(`${BASE_URL}/orders/${id}/seller-locations`);
+        return response.data.data;
+    } catch (error) {
+        throw handleApiError(error);
+    }
+};
+
+export const sendDeliveryOtp = async (id: string) => {
+    try {
+        const response = await api.post(`${BASE_URL}/orders/${id}/send-delivery-otp`);
+        return response.data;
+    } catch (error) {
+        throw handleApiError(error);
+    }
+};
+
+export const verifyDeliveryOtp = async (id: string, otp: string) => {
+    try {
+        const response = await api.post(`${BASE_URL}/orders/${id}/verify-delivery-otp`, { otp });
+        return response.data;
+    } catch (error) {
+        throw handleApiError(error);
+    }
+};
+
+export const updateDeliveryLocation = async (orderId: string, latitude: number, longitude: number) => {
+    try {
+        const response = await api.post('/delivery/location', { orderId, latitude, longitude });
+        return response.data;
+    } catch (error) {
+        throw handleApiError(error);
+    }
+};
+
 // --- Earnings ---
 export const getEarningsHistory = async () => {
     try {

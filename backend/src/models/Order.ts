@@ -66,6 +66,12 @@ export interface IOrder extends Document {
   estimatedDeliveryDate?: Date;
   deliveredAt?: Date;
 
+  // Delivery OTP
+  deliveryOtp?: string;
+  deliveryOtpExpiresAt?: Date;
+  deliveryOtpVerified?: boolean;
+  invoiceEnabled?: boolean;
+
   // Notes
   adminNotes?: string;
   customerNotes?: string;
@@ -247,6 +253,23 @@ const OrderSchema = new Schema<IOrder>(
     },
     deliveredAt: {
       type: Date,
+    },
+
+    // Delivery OTP
+    deliveryOtp: {
+      type: String,
+      trim: true,
+    },
+    deliveryOtpExpiresAt: {
+      type: Date,
+    },
+    deliveryOtpVerified: {
+      type: Boolean,
+      default: false,
+    },
+    invoiceEnabled: {
+      type: Boolean,
+      default: false,
     },
 
     // Notes

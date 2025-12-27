@@ -31,7 +31,10 @@ router.get("/orders/today", deliveryOrderController.getTodayOrders);
 router.get("/orders/pending", deliveryOrderController.getPendingOrders);
 router.get("/orders/returns", deliveryOrderController.getReturnOrders);
 router.get("/orders/:id", deliveryOrderController.getOrderDetails); // Specific order details
+router.get("/orders/:id/seller-locations", deliveryOrderController.getSellerLocationsForOrder);
 router.put("/orders/:id/status", deliveryOrderController.updateOrderStatus);
+router.post("/orders/:id/send-delivery-otp", deliveryOrderController.sendDeliveryOtp);
+router.post("/orders/:id/verify-delivery-otp", deliveryOrderController.verifyDeliveryOtpController);
 
 // Earnings
 router.get("/earnings", deliveryEarningController.getEarningsHistory);

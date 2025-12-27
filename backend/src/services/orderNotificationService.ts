@@ -152,6 +152,13 @@ export async function handleOrderAcceptance(
             });
         }
 
+        // Emit delivery-boy-accepted event to customer for tracking
+        io.to(`order-${orderId}`).emit('delivery-boy-accepted', {
+            orderId,
+            deliveryBoyId,
+            message: 'Delivery boy accepted your order. Tracking started.',
+        });
+
         // Clean up notification state
         notificationStates.delete(orderId);
 
