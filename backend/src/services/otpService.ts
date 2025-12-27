@@ -1,14 +1,21 @@
 import axios from 'axios';
 import Otp from '../models/Otp';
 
-const TWOFACTOR_API_KEY = process.env.TWOFACTOR_API_KEY;
+// SMS India HUB Configuration
+const SMS_INDIA_HUB_API_KEY = process.env.SMS_INDIA_HUB_API_KEY;
+const SMS_INDIA_HUB_SENDER_ID = process.env.SMS_INDIA_HUB_SENDER_ID;
+const SMS_INDIA_HUB_DLT_TEMPLATE_ID = process.env.SMS_INDIA_HUB_DLT_TEMPLATE_ID;
+const SMS_INDIA_HUB_API_URL = 'http://cloud.smsindiahub.in/vendorsms/pushsms.aspx';
+const API_TIMEOUT = 30000; // 30 seconds
 
-if (!TWOFACTOR_API_KEY && process.env.NODE_ENV === 'production') {
-  console.warn('TWOFACTOR_API_KEY is not set in environment variables');
+if (!SMS_INDIA_HUB_API_KEY || !SMS_INDIA_HUB_SENDER_ID) {
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('SMS India HUB credentials are not fully set in environment variables');
+  }
 }
 
 /**
- * Interface for Call/SMS OTP Response
+ * Interface for OTP Response
  */
 interface OtpResponse {
   success: boolean;
@@ -17,7 +24,24 @@ interface OtpResponse {
 }
 
 /**
- * Helper to generate numeric OTP
+ * SMS India HUB API Response Interface
+ */
+interface SmsIndiaHubResponse {
+  ErrorCode?: string;
+  ErrorMessage?: string;
+  JobId?: string;
+  MessageId?: string;
+  MessageData?: Array<{
+    Number: string;
+    MessageId: string;
+    Message: string;
+  }>;
+}
+
+type UserType = 'Customer' | 'Delivery' | 'Seller' | 'Admin';
+
+/**
+ * Generate numeric OTP
  */
 function generateOTP(length: number = 4): string {
   const digits = '0123456789';
@@ -29,13 +53,100 @@ function generateOTP(length: number = 4): string {
 }
 
 /**
- * Save OTP to Database
+ * Normalize mobile number to include country code (91)
  */
-async function saveOtpToDb(mobile: string, otp: string, userType: 'Customer' | 'Delivery' | 'Seller' | 'Admin') {
-  // Delete any existing OTP for this user/mobile
-  await Otp.deleteMany({ mobile, userType });
+function normalizeMobileNumber(mobile: string): string {
+  let cleanMobile = mobile.replace(/^\+/, '').replace(/\D/g, '');
 
-  // Create new OTP record
+  if (!cleanMobile.startsWith('91')) {
+    cleanMobile = '91' + cleanMobile;
+  }
+
+  if (cleanMobile.length < 12 || cleanMobile.length > 13) {
+    throw new Error(`Invalid mobile number: ${cleanMobile}. Must be 12-13 digits with country code.`);
+  }
+
+  return cleanMobile;
+}
+
+/**
+ * Build DLT-compliant message
+ */
+function buildOtpMessage(otp: string): string {
+  const appName = process.env.APP_NAME || 'SpeeUP';
+  return `Welcome to the ${appName} powered by SMSINDIAHUB. Your OTP for registration is ${otp}`;
+}
+
+/**
+ * Parse and handle SMS India HUB API response
+ */
+function handleSmsResponse(responseData: SmsIndiaHubResponse): void {
+  const errorCode = responseData.ErrorCode || '';
+  const errorMsg = responseData.ErrorMessage || '';
+
+  // Success indicators
+  if (errorCode === '000' || errorMsg === 'Done' || responseData.JobId || responseData.MessageData) {
+    return; // Success
+  }
+
+  // Error handling
+  if (errorCode || errorMsg) {
+    switch (errorCode) {
+      case '001':
+        throw new Error('SMS India HUB: Account details cannot be blank.');
+      case '006':
+        throw new Error('SMS India HUB: Invalid DLT template. Message does not match registered template.');
+      case '007':
+        throw new Error('SMS India HUB: Invalid API key or credentials.');
+      case '021':
+        throw new Error('SMS India HUB: Insufficient credits in your account.');
+      default:
+        throw new Error(`SMS India HUB API Error (Code: ${errorCode}): ${errorMsg}`);
+    }
+  }
+}
+
+/**
+ * Send SMS via SMS India HUB API
+ */
+async function sendSmsViaApi(mobile: string, message: string): Promise<void> {
+  if (!SMS_INDIA_HUB_API_KEY || !SMS_INDIA_HUB_SENDER_ID) {
+    throw new Error('SMS India HUB credentials are missing. Please check environment variables.');
+  }
+
+  const cleanMobile = normalizeMobileNumber(mobile);
+
+  const params: Record<string, string> = {
+    APIKey: SMS_INDIA_HUB_API_KEY.trim(),
+    msisdn: cleanMobile,
+    sid: SMS_INDIA_HUB_SENDER_ID.trim(),
+    msg: message,
+    fl: '0',
+    gwid: '2',
+  };
+
+  if (SMS_INDIA_HUB_DLT_TEMPLATE_ID?.trim()) {
+    params.DLT_TE_ID = SMS_INDIA_HUB_DLT_TEMPLATE_ID.trim();
+  }
+
+  const response = await axios.get<SmsIndiaHubResponse>(SMS_INDIA_HUB_API_URL, {
+    params,
+    paramsSerializer: (params) => {
+      return Object.keys(params)
+        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+        .join('&');
+    },
+    timeout: API_TIMEOUT,
+  });
+
+  handleSmsResponse(response.data);
+}
+
+/**
+ * Save OTP to database
+ */
+async function saveOtpToDb(mobile: string, otp: string, userType: UserType): Promise<void> {
+  await Otp.deleteMany({ mobile, userType });
   await Otp.create({
     mobile,
     otp,
@@ -45,153 +156,181 @@ async function saveOtpToDb(mobile: string, otp: string, userType: 'Customer' | '
 }
 
 /**
- * Verify OTP from Database
+ * Verify OTP from database
  */
-async function verifyOtpFromDb(mobile: string, otp: string, userType: 'Customer' | 'Delivery' | 'Seller' | 'Admin'): Promise<boolean> {
+async function verifyOtpFromDb(mobile: string, otp: string, userType: UserType): Promise<boolean> {
   const record = await Otp.findOne({ mobile, userType, otp });
 
-  if (record) {
-    if (record.expiresAt < new Date()) {
-      await Otp.deleteOne({ _id: record._id });
-      return false; // Expired
-    }
-    // Valid OTP
-    await Otp.deleteOne({ _id: record._id }); // Consume OTP
-    return true;
+  if (!record) {
+    return false;
   }
-  return false;
+
+  if (record.expiresAt < new Date()) {
+    await Otp.deleteOne({ _id: record._id });
+    return false;
+  }
+
+  await Otp.deleteOne({ _id: record._id });
+  return true;
+}
+
+/**
+ * Check if special bypass should be used
+ */
+function isSpecialBypass(mobile: string): boolean {
+  return mobile === '9111966732';
+}
+
+/**
+ * Check if mock mode should be used
+ */
+function isMockMode(): boolean {
+  return process.env.USE_MOCK_OTP === 'true' || !SMS_INDIA_HUB_API_KEY || !SMS_INDIA_HUB_SENDER_ID;
+}
+
+/**
+ * Check if developer bypass OTP
+ */
+function isDeveloperBypass(otp: string): boolean {
+  return (process.env.NODE_ENV !== 'production' || process.env.USE_MOCK_OTP === 'true') && otp === '999999';
 }
 
 // ==========================================
-// VOICE OTP (Customer / Delivery)
+// SMS OTP (Customer / Delivery)
 // ==========================================
 
-export async function sendCallOtp(mobile: string, userType: 'Customer' | 'Delivery' = 'Delivery'): Promise<OtpResponse> {
+export async function sendSmsOtp(
+  mobile: string,
+  userType: 'Customer' | 'Delivery' = 'Delivery'
+): Promise<OtpResponse> {
   try {
     const otp = generateOTP(4);
 
-    // Special Number Bypass
-    if (mobile === '9111966732') {
+    // Special number bypass
+    if (isSpecialBypass(mobile)) {
       const specialOtp = '1234';
-      console.log(`[SPECIAL BYPASS] Using default OTP ${specialOtp} for ${mobile} (${userType})`);
       await saveOtpToDb(mobile, specialOtp, userType);
-
       return {
         success: true,
         sessionId: 'DB_VERIFIED_' + mobile,
-        message: 'Voice OTP initiated (Special Bypass) - OTP: ' + specialOtp,
+        message: 'OTP sent successfully',
       };
     }
 
-    // Mock Mode Check
-    if (process.env.USE_MOCK_OTP === 'true' || !TWOFACTOR_API_KEY || TWOFACTOR_API_KEY === 'your_2factor_api_key') {
-      console.log(`[MOCK MODE] Generated OTP ${otp} for ${mobile} (${userType})`);
+    // Mock mode
+    if (isMockMode()) {
       await saveOtpToDb(mobile, otp, userType);
-
       return {
         success: true,
         sessionId: 'MOCK_SESSION_' + mobile,
-        message: 'Voice OTP initiated (Mock Mode) - OTP: ' + otp,
+        message: 'OTP sent successfully',
       };
     }
 
-    console.log(`[REAL MODE] Sending 4-digit Voice OTP to ${mobile} (${userType})`);
+    // Real mode - Send via SMS India HUB
     await saveOtpToDb(mobile, otp, userType);
-
-    // Endpoint for Custom Voice OTP: /VOICE/{mobile}/{otp}
-    const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/VOICE/${mobile}/${otp}`;
-    await axios.get(url);
+    const message = buildOtpMessage(otp);
+    await sendSmsViaApi(mobile, message);
 
     return {
       success: true,
       sessionId: 'DB_VERIFIED_' + mobile,
-      message: 'Voice call initiated successfully',
+      message: 'OTP sent successfully',
     };
-
   } catch (error: any) {
-    console.error('2Factor Service Error:', error.message);
-    throw new Error(error.message || 'Failed to send Call OTP');
+    const errorMessage = error.message || 'Failed to send OTP. Please try again.';
+    console.error('SMS OTP Error (sendSmsOtp):', {
+      error: errorMessage,
+      mobile,
+      userType,
+    });
+    throw new Error(errorMessage);
   }
 }
 
-// Updated Signature: Requires Mobile for DB lookup
-export async function verifyCallOtp(sessionId: string, otpInput: string, mobile?: string, userType: 'Customer' | 'Delivery' = 'Delivery'): Promise<boolean> {
-
-  // Developer Bypass
-  if ((process.env.NODE_ENV !== 'production' || process.env.USE_MOCK_OTP === 'true') && otpInput === '999999') {
+export async function verifySmsOtp(
+  sessionId: string,
+  otpInput: string,
+  mobile?: string,
+  userType: 'Customer' | 'Delivery' = 'Delivery'
+): Promise<boolean> {
+  if (isDeveloperBypass(otpInput)) {
     return true;
   }
 
-  // Fallback if mobile not provided (try to parse sessionId)
   let targetMobile = mobile;
-  if (!targetMobile && sessionId && sessionId.startsWith('DB_VERIFIED_')) {
-    targetMobile = sessionId.replace('DB_VERIFIED_', '');
-  }
-  if (!targetMobile && sessionId && sessionId.startsWith('MOCK_SESSION_')) {
-    targetMobile = sessionId.replace('MOCK_SESSION_', '');
+  if (!targetMobile) {
+    if (sessionId?.startsWith('DB_VERIFIED_')) {
+      targetMobile = sessionId.replace('DB_VERIFIED_', '');
+    } else if (sessionId?.startsWith('MOCK_SESSION_')) {
+      targetMobile = sessionId.replace('MOCK_SESSION_', '');
+    }
   }
 
   if (!targetMobile) {
-    console.error("verifyCallOtp: Cannot verify without mobile number");
     return false;
   }
 
   return verifyOtpFromDb(targetMobile, otpInput, userType);
 }
 
-
 // ==========================================
 // SMS OTP (Seller / Admin)
 // ==========================================
 
-export async function sendOTP(mobile: string, userType: 'Seller' | 'Admin' | 'Customer' | 'Delivery', _isLogin: boolean = true): Promise<OtpResponse> {
+export async function sendOTP(
+  mobile: string,
+  userType: 'Seller' | 'Admin' | 'Customer' | 'Delivery',
+  _isLogin: boolean = true
+): Promise<OtpResponse> {
   try {
     const otp = generateOTP(4);
 
-    // Special Number Bypass
-    if (mobile === '9111966732') {
+    // Special number bypass
+    if (isSpecialBypass(mobile)) {
       const specialOtp = '1234';
-      console.log(`[SPECIAL BYPASS] Using default OTP ${specialOtp} for ${mobile} (${userType})`);
       await saveOtpToDb(mobile, specialOtp, userType);
       return {
         success: true,
-        message: 'OTP sent successfully (Special Bypass) - OTP: ' + specialOtp,
+        message: 'OTP sent successfully',
       };
     }
 
-    // Mock Mode Check
-    if (process.env.USE_MOCK_OTP === 'true' || !TWOFACTOR_API_KEY || TWOFACTOR_API_KEY === 'your_2factor_api_key') {
-      console.log(`[MOCK MODE] Generated SMS OTP ${otp} for ${mobile} (${userType})`);
+    // Mock mode
+    if (isMockMode()) {
       await saveOtpToDb(mobile, otp, userType);
       return {
         success: true,
-        message: 'OTP sent successfully (Mock) - OTP: ' + otp,
+        message: 'OTP sent successfully',
       };
     }
 
-    // Real Mode
-    console.log(`[REAL MODE] Sending 4-digit SMS OTP to ${mobile}`);
+    // Real mode - Send via SMS India HUB
     await saveOtpToDb(mobile, otp, userType);
-
-    // Template Name - usually required for SMS. Assuming "OTP_VERIFICATION" or similar if configured.
-    // If using open template: /SMS/{mobile}/{otp}
-    const url = `https://2factor.in/API/V1/${TWOFACTOR_API_KEY}/SMS/${mobile}/${otp}/OTP_VERIFICATION`;
-    await axios.get(url);
+    const message = buildOtpMessage(otp);
+    await sendSmsViaApi(mobile, message);
 
     return {
       success: true,
       message: 'OTP sent successfully',
     };
-
   } catch (error: any) {
-    console.error('2Factor SMS Error:', error.message);
-    throw new Error(error.message || 'Failed to send SMS OTP');
+    const errorMessage = error.message || 'Failed to send OTP. Please try again.';
+    console.error('SMS OTP Error (sendOTP):', {
+      error: errorMessage,
+      mobile,
+      userType,
+    });
+    throw new Error(errorMessage);
   }
 }
 
-export async function verifyOTP(mobile: string, otpInput: string, userType: 'Seller' | 'Admin' | 'Customer' | 'Delivery'): Promise<boolean> {
-  // Developer Bypass
-  if ((process.env.NODE_ENV !== 'production' || process.env.USE_MOCK_OTP === 'true') && otpInput === '999999') {
+export async function verifyOTP(
+  mobile: string,
+  otpInput: string,
+  userType: 'Seller' | 'Admin' | 'Customer' | 'Delivery'
+): Promise<boolean> {
+  if (isDeveloperBypass(otpInput)) {
     return true;
   }
 

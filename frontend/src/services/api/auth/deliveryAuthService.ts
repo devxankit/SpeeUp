@@ -62,19 +62,19 @@ export interface RegisterResponse {
   };
 }
 
-// Send Call OTP
+// Send SMS OTP
 export const sendOTP = async (mobile: string): Promise<SendOTPResponse> => {
-  const response = await api.post('/auth/delivery/send-call-otp', { mobile });
+  const response = await api.post('/auth/delivery/send-sms-otp', { mobile });
   return response.data;
 };
 
-// Verify Call OTP
+// Verify SMS OTP
 export const verifyOTP = async (
   mobile: string,
   otp: string,
   sessionId?: string
 ): Promise<VerifyOTPResponse> => {
-  const response = await api.post('/auth/delivery/verify-call-otp', {
+  const response = await api.post('/auth/delivery/verify-sms-otp', {
     mobile,
     otp,
     sessionId,
