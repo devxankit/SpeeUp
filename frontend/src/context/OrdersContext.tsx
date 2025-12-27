@@ -1,6 +1,4 @@
 import {
-  createContext,
-  useContext,
   useState,
   ReactNode,
   useEffect,
@@ -8,18 +6,44 @@ import {
 import { useAuth } from "./AuthContext";
 import { Order } from "../types/order";
 import { createOrder, getMyOrders } from "../services/api/customerOrderService";
-// updateOrderStatus might not be available in customerOrderService, but typical for cancellation
-// Actually order creation is main thing here.
+import { OrdersContext } from "./ordersContext.types";
 
-const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
+// Type for API response order (with _id from MongoDB)
+interface ApiOrder {
+  _id?: string;
+  id?: string;
+  items: Order['items'];
+  totalItems: number;
+  subtotal: number;
+  fees: Order['fees'];
+  totalAmount: number;
+  address: Order['address'];
+  status: Order['status'];
+  paymentMethod?: string;
+  createdAt: string;
+  [key: string]: unknown; // Allow additional properties
+}
 
-interface OrdersContextType {
-  orders: Order[];
-  addOrder: (order: Order) => Promise<string | undefined>;
-  getOrderById: (id: string) => Order | undefined;
-  fetchOrderById: (id: string) => Promise<Order | undefined>; // Add this
-  updateOrderStatus: (id: string, status: Order["status"]) => void;
-  loading: boolean;
+// Type for API response
+interface OrdersApiResponse {
+  success: boolean;
+  data?: ApiOrder[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
+// Type for error response
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+      details?: unknown;
+    };
+  };
+  message?: string;
 }
 
 export function OrdersProvider({ children }: { children: ReactNode }) {
@@ -34,43 +58,22 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     const userType =
       user?.userType || (isAuthenticated && user ? "Customer" : undefined);
 
-    console.log("🚀 fetchOrders called", {
-      isAuthenticated,
-      userType,
-      userId: user?.id,
-    });
-
     if (!isAuthenticated || userType !== "Customer") {
-      console.log(
-        "⚠️ fetchOrders: Skipping - not authenticated or not a customer",
-        {
-          isAuthenticated,
-          userType,
-        }
-      );
       setLoading(false);
       return;
     }
 
     try {
-      console.log("📡 Calling getMyOrders API...");
-      const response = await getMyOrders();
-      console.log("📦 Fetched orders response:", response);
+      const response = await getMyOrders() as OrdersApiResponse;
       if (response && response.data) {
-        // Backend now returns transformed data with id, totalItems, totalAmount, fees
-        // Just use it directly
-        const orders = response.data.map((o: any) => ({
+        const orders: Order[] = response.data.map((o: ApiOrder) => ({
           ...o,
-          // Backend already provides 'id', but ensure it's set from _id if missing
-          id: o.id || o._id,
-        }));
-        console.log("📦 Mapped orders:", orders);
+          id: o.id || o._id || '',
+        } as Order));
         setOrders(orders);
-      } else {
-        console.log("⚠️ No data in response:", response);
       }
     } catch (error) {
-      console.error("❌ Failed to fetch orders", error);
+      console.error("Failed to fetch orders", error);
     } finally {
       setLoading(false);
     }
@@ -78,24 +81,14 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Ensure userType is set in user object if missing (for backward compatibility)
-    // This handles cases where user was logged in before userType was added to the login flow
     if (isAuthenticated && user && !user.userType) {
-      console.log("🔧 Fixing missing userType for user:", user.id);
       const updatedUser = { ...user, userType: "Customer" as const };
       updateUser(updatedUser);
     }
 
-    console.log("🔄 OrdersContext useEffect triggered", {
-      isAuthenticated,
-      userType: user?.userType,
-      userId: user?.id,
-    });
-
     if (isAuthenticated) {
-      console.log("✅ User is authenticated, fetching orders...");
       fetchOrders();
     } else {
-      console.log("❌ User NOT authenticated, clearing orders");
       setOrders([]);
       setLoading(false);
     }
@@ -118,7 +111,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         paymentMethod: order.paymentMethod || "COD",
         items: order.items.map((item) => ({
           product: {
-            id: item.product.id || (item.product as any)._id,
+            id: item.product.id || (item.product as { _id?: string })._id || '',
           },
           quantity: item.quantity,
           variant: item.variant, // Pass variant if available
@@ -129,27 +122,29 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
         },
       };
 
-      const response = await createOrder(payload as any);
+      const response = await createOrder(payload);
       await fetchOrders();
 
       // Return the created order ID from response
       if (response && response.data) {
-        return response.data._id || response.data.id;
+        const orderData = response.data as { _id?: string; id?: string };
+        return orderData._id || orderData.id;
       }
       return undefined;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to create order", error);
       // Extract and log the actual error message from the backend
-      if (error.response?.data) {
-        console.error("Backend error details:", error.response.data);
-        const errorMessage = error.response.data.message || error.message;
-        const errorDetails = error.response.data.details;
+      const apiError = error as ApiError;
+      if (apiError.response?.data) {
+        console.error("Backend error details:", apiError.response.data);
+        const errorMessage = apiError.response.data.message || apiError.message || 'Failed to create order';
+        const errorDetails = apiError.response.data.details;
         if (errorDetails) {
           console.error("Validation details:", errorDetails);
         }
         // Re-throw with more details
-        const enhancedError = new Error(errorMessage);
-        (enhancedError as any).details = errorDetails;
+        const enhancedError = new Error(errorMessage) as Error & { details?: unknown };
+        enhancedError.details = errorDetails;
         throw enhancedError;
       }
       throw error;
@@ -207,12 +202,4 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
       {children}
     </OrdersContext.Provider>
   );
-}
-
-export function useOrders() {
-  const context = useContext(OrdersContext);
-  if (context === undefined) {
-    throw new Error("useOrders must be used within an OrdersProvider");
-  }
-  return context;
 }

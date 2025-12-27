@@ -1,17 +1,17 @@
 import { Request, Response } from "express";
 import Customer from "../../../models/Customer";
 import {
-  sendCallOtp as sendCallOtpService,
-  verifyCallOtp as verifyCallOtpService,
+  sendSmsOtp as sendSmsOtpService,
+  verifySmsOtp as verifySmsOtpService,
 } from "../../../services/otpService";
 import { generateToken } from "../../../services/jwtService";
 import { asyncHandler } from "../../../utils/asyncHandler";
 
 /**
- * Send Call OTP to customer mobile number
+ * Send SMS OTP to customer mobile number
  * Returns session_id for verification
  */
-export const sendCallOtp = asyncHandler(async (req: Request, res: Response) => {
+export const sendSmsOtp = asyncHandler(async (req: Request, res: Response) => {
   const { mobile } = req.body;
 
   if (!mobile || !/^[0-9]{10}$/.test(mobile)) {
@@ -22,10 +22,6 @@ export const sendCallOtp = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Check if customer exists with this mobile (Login Flow)
-  // Note: For Signup, we might need a separate flow or allow if not found?
-  // The user didn't specify distinct signup/login flows for call OTP, but existing code checks customer.
-  // Standard practice: if checking for login, user must exist.
-  // We will keep this check.
   const customer = await Customer.findOne({ phone: mobile });
   if (!customer) {
     return res.status(404).json({
@@ -34,29 +30,21 @@ export const sendCallOtp = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  // Send Call OTP
-  try {
-    const result = await sendCallOtpService(mobile, 'Customer');
+  // Send SMS OTP
+  const result = await sendSmsOtpService(mobile, 'Customer');
 
-    return res.status(200).json({
-      success: true,
-      message: result.message,
-      sessionId: result.sessionId, // Return session ID to frontend
-    });
-  } catch (error: any) {
-    console.error('Error sending Call OTP:', error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to send Call OTP. Please try again.',
-    });
-  }
+  return res.status(200).json({
+    success: true,
+    message: result.message,
+    sessionId: result.sessionId,
+  });
 });
 
 /**
- * Verify Call OTP and login customer
+ * Verify SMS OTP and login customer
  * Requires session_id and otp
  */
-export const verifyCallOtp = asyncHandler(async (req: Request, res: Response) => {
+export const verifySmsOtp = asyncHandler(async (req: Request, res: Response) => {
   const { mobile, otp, sessionId } = req.body;
 
   if (!mobile || !/^[0-9]{10}$/.test(mobile)) {
@@ -80,8 +68,8 @@ export const verifyCallOtp = asyncHandler(async (req: Request, res: Response) =>
     });
   }
 
-  // Verify Voice OTP
-  const isValid = await verifyCallOtpService(sessionId, otp, mobile, 'Customer');
+  // Verify SMS OTP
+  const isValid = await verifySmsOtpService(sessionId, otp, mobile, 'Customer');
   if (!isValid) {
     return res.status(401).json({
       success: false,

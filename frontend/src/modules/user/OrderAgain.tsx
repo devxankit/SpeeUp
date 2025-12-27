@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import HomeHero from './components/HomeHero';
-import { useOrders } from '../../context/OrdersContext';
+import { useOrders } from '../../hooks/useOrders';
 import { useCart } from '../../context/CartContext';
 import { getProducts } from '../../services/api/customerProductService';
 import { addProductToWishlist } from '../../utils/wishlist';

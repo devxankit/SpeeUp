@@ -12,11 +12,13 @@ interface SmsGateway {
 export default function AdminSmsGateway() {
   const [gateways, setGateways] = useState<SmsGateway[]>([
     {
-      id: '2factor',
-      name: '2Factor SMS',
+      id: 'smsindiahub',
+      name: 'SMS India HUB',
       fields: {
+        username: '',
         apiKey: '',
-        otpTemplateName: '',
+        senderId: '',
+        dltTemplateId: '',
       },
       status: 'InActive',
     },
@@ -63,12 +65,14 @@ export default function AdminSmsGateway() {
       vonageApiSecret: 'VonageApiSecret',
       smsSenderId: 'SmsSenderId',
       messageText: 'Message Text',
-      apiKey: 'ApiKey',
+      apiKey: 'API Key',
       otpTemplateName: 'Otp Template Name',
       otpTemplateId: 'OtpTemplateId',
       authKey: 'AuthKey',
-      senderId: 'Sender Id',
+      senderId: 'Sender ID',
       messageId: 'Message Id',
+      username: 'Username',
+      dltTemplateId: 'DLT Template ID',
     };
     return labelMap[fieldName] || fieldName;
   };

@@ -175,7 +175,7 @@ export default function DeliverySignUp() {
         // Clear token from registration (we'll get it after OTP verification)
         localStorage.removeItem("authToken");
         localStorage.removeItem("userData");
-        // Registration successful, now send Call OTP for verification
+        // Registration successful, now send SMS OTP for verification
         try {
           const otpRes = await sendOTP(formData.mobile);
           if (otpRes.sessionId) setSessionId(otpRes.sessionId);

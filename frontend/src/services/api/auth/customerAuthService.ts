@@ -48,20 +48,18 @@ export interface RegisterResponse {
 }
 
 /**
- * Send Call OTP to customer mobile number
+ * Send SMS OTP to customer mobile number
  */
 export const sendOTP = async (mobile: string): Promise<SendOTPResponse> => {
-  // Use new endpoint for Call OTP
-  const response = await api.post<SendOTPResponse>('/auth/customer/send-call-otp', { mobile });
+  const response = await api.post<SendOTPResponse>('/auth/customer/send-sms-otp', { mobile });
   return response.data;
 };
 
 /**
- * Verify Call OTP and login customer
+ * Verify SMS OTP and login customer
  */
 export const verifyOTP = async (mobile: string, otp: string, sessionId?: string): Promise<VerifyOTPResponse> => {
-  // Use new endpoint and pass sessionId
-  const response = await api.post<VerifyOTPResponse>('/auth/customer/verify-call-otp', { mobile, otp, sessionId });
+  const response = await api.post<VerifyOTPResponse>('/auth/customer/verify-sms-otp', { mobile, otp, sessionId });
 
   if (response.data.success && response.data.data.token) {
     setAuthToken(response.data.data.token);
@@ -82,9 +80,9 @@ export const verifyOTP = async (mobile: string, otp: string, sessionId?: string)
 export const register = async (data: RegisterData): Promise<RegisterResponse> => {
   const response = await api.post<RegisterResponse>('/auth/customer/register', data);
 
-  // Note: Registration typically logs user in automatically in original implementation, 
+  // Note: Registration typically logs user in automatically in original implementation,
   // but SignUp.tsx flow suggests OTP is required AFTER register?
-  // Actually original SignUp.tsx: calls register(), then sendOTP(), then verifyOTP(). 
+  // Actually original SignUp.tsx: calls register(), then sendOTP(), then verifyOTP().
   // If register returns token, we might set it, but then verifyOTP overwrites it?
 
   if (response.data.success && response.data.data.token) {
