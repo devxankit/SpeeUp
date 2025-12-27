@@ -4,8 +4,7 @@ import {
   validateImageFile,
   createImagePreview,
 } from "../../../utils/imageUpload";
-import { getCategories, getSubcategories, Category, SubCategory } from "../../../services/api/categoryService";
-import { getProducts, Product } from "../../../services/api/admin/adminProductService";
+import { getProducts, getCategories, getBrands, getSellers, Product, Category, Brand, Seller } from "../../../services/api/admin/adminProductService";
 import {
   getShopByStores,
   createShopByStore,
@@ -30,56 +29,72 @@ export default function AdminShopByStore() {
   const [uploadError, setUploadError] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
 
-  // New State for Selections
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
-  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<string>("");
+  // New State for Selections - Now supports multiple selections
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [productSearchTerm, setProductSearchTerm] = useState("");
+
+  // Filter States
+  const [filterCategory, setFilterCategory] = useState<string>("");
+  const [filterSubcategory, setFilterSubcategory] = useState<string>("");
+  const [filterBrand, setFilterBrand] = useState<string>("");
+  const [filterSeller, setFilterSeller] = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState<string>("Active");
+  const [filterMinPrice, setFilterMinPrice] = useState<string>("");
+  const [filterMaxPrice, setFilterMaxPrice] = useState<string>("");
 
   // Data State
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]); // Store all products for filtering
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [loadingStores, setLoadingStores] = useState(false);
 
   // Initialize with empty shops - using ShopByStore from API
   const [stores, setStores] = useState<ShopByStore[]>([]);
 
-  // Fetch Initial Data (Categories and Stores)
+  // Fetch Initial Data (Stores, Products, Categories, Brands, Sellers)
   useEffect(() => {
-    fetchCategories();
     fetchStores();
+    fetchProducts();
+    fetchCategories();
+    fetchBrands();
+    fetchSellers();
   }, []);
 
-  // Fetch Subcategories when Category changes
-  useEffect(() => {
-    if (selectedCategoryId) {
-      fetchSubCategories(selectedCategoryId);
-      // Reset subcategory selection if category changes
-      if (!subCategories.find(sub => sub._id === selectedSubCategoryId)) {
-        setSelectedSubCategoryId("");
+  const fetchProducts = async () => {
+    setLoadingData(true);
+    try {
+      // Fetch all products (status filtering will be done client-side)
+      const params: any = {
+        limit: 10000,
+        page: 1,
+      };
+
+      const res = await getProducts(params);
+
+      if (res.success && res.data) {
+        const productList = Array.isArray(res.data) ? res.data : [];
+        setAllProducts(productList);
+        setProducts(productList);
+      } else {
+        setAllProducts([]);
+        setProducts([]);
       }
-    } else {
-      setSubCategories([]);
-      setSelectedSubCategoryId("");
-    }
-  }, [selectedCategoryId]);
-
-  // Fetch Products based on Category/Subcategory
-  useEffect(() => {
-    // Only fetch if category is selected, otherwise we might fetch too many or none depending on logic
-    if (selectedCategoryId) {
-      fetchProducts();
-    } else {
+    } catch (error) {
+      console.error("Failed to fetch products", error);
+      setAllProducts([]);
       setProducts([]);
+    } finally {
+      setLoadingData(false);
     }
-  }, [selectedCategoryId, selectedSubCategoryId]);
-
+  };
 
   const fetchCategories = async () => {
     try {
-      const res = await getCategories();
-      if (res.success) {
+      const res = await getCategories({ status: "Active" });
+      if (res.success && res.data) {
         setCategories(res.data);
       }
     } catch (error) {
@@ -87,67 +102,29 @@ export default function AdminShopByStore() {
     }
   };
 
-  const fetchSubCategories = async (categoryId: string) => {
+  const fetchBrands = async () => {
     try {
-      const res = await getSubcategories(categoryId);
-      if (res.success) {
-        setSubCategories(res.data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch subcategories", error);
-    }
-  };
-
-  const fetchProducts = async () => {
-    if (!selectedCategoryId) {
-      setProducts([]);
-      return;
-    }
-
-    setLoadingData(true);
-    try {
-      const params: any = {
-        category: selectedCategoryId,
-        limit: 1000, // Get a large number of products for selection
-        page: 1,
-        // Don't filter by status or publish - admin should see ALL products in the category
-        // so they can select any product regardless of status
-      };
-
-      // Add subcategory filter if selected
-      if (selectedSubCategoryId) {
-        params.subcategory = selectedSubCategoryId;
-      }
-
-      const res = await getProducts(params);
+      const res = await getBrands();
       if (res.success && res.data) {
-        // Ensure we have an array
-        let prods = Array.isArray(res.data) ? res.data : [];
-
-        // Additional client-side filtering if needed (in case API doesn't filter by subcategory properly)
-        if (selectedSubCategoryId && prods.length > 0) {
-          prods = prods.filter(p => {
-            // Handle subcategory which could be string id, object, or null
-            if (!p.subcategory) return false;
-            const pSubId = typeof p.subcategory === 'string'
-              ? p.subcategory
-              : p.subcategory._id;
-            return pSubId === selectedSubCategoryId;
-          });
-        }
-
-        // No additional filtering - show all products for admin to select
-        setProducts(prods);
-      } else {
-        setProducts([]);
+        setBrands(res.data);
       }
     } catch (error) {
-      console.error("Failed to fetch products", error);
-      setProducts([]);
-    } finally {
-      setLoadingData(false);
+      console.error("Failed to fetch brands", error);
     }
   };
+
+  const fetchSellers = async () => {
+    try {
+      const res = await getSellers();
+      if (res.success && res.data) {
+        setSellers(res.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch sellers", error);
+    }
+  };
+
+
 
   const fetchStores = async () => {
     setLoadingStores(true);
@@ -267,8 +244,6 @@ export default function AdminShopByStore() {
         name: storeName.trim(),
         image: imageUrl || (editingId ? stores.find(s => s._id === editingId)?.image || "" : ""),
         description: "",
-        category: selectedCategoryId || undefined,
-        subCategory: selectedSubCategoryId || undefined,
         products: selectedProductIds,
         order: stores.length,
         isActive: true,
@@ -320,14 +295,7 @@ export default function AdminShopByStore() {
     const store = stores.find((s) => s._id === id);
     if (store) {
       setStoreName(store.name);
-
-      // Handle category - could be string ID or object
-      const categoryId = typeof store.category === 'string' ? store.category : store.category?._id;
-      setSelectedCategoryId(categoryId || "");
-
-      // Handle subcategory - could be string ID or object
-      const subCategoryId = typeof store.subCategory === 'string' ? store.subCategory : store.subCategory?._id;
-      setSelectedSubCategoryId(subCategoryId || "");
+      setSelectedProductIds(store.products || []);
 
       setSelectedProductIds(store.products || []);
 
@@ -363,6 +331,88 @@ export default function AdminShopByStore() {
     }
   };
 
+  // Filter products based on all filter criteria
+  useEffect(() => {
+    let filtered = [...allProducts];
+
+    // Apply search filter
+    if (productSearchTerm) {
+      filtered = filtered.filter(p =>
+        p.productName.toLowerCase().includes(productSearchTerm.toLowerCase())
+      );
+    }
+
+    // Apply category filter
+    if (filterCategory) {
+      filtered = filtered.filter(p => {
+        const catId = typeof p.category === 'string' ? p.category : (p.category as any)?._id;
+        return catId === filterCategory;
+      });
+    }
+
+    // Apply subcategory filter
+    if (filterSubcategory) {
+      filtered = filtered.filter(p => {
+        if (!p.subcategory) return false;
+        const subId = typeof p.subcategory === 'string' ? p.subcategory : (p.subcategory as any)?._id;
+        return subId === filterSubcategory;
+      });
+    }
+
+    // Apply brand filter
+    if (filterBrand) {
+      filtered = filtered.filter(p => {
+        if (!p.brand) return false;
+        const brandId = typeof p.brand === 'string' ? p.brand : (p.brand as any)?._id;
+        return brandId === filterBrand;
+      });
+    }
+
+    // Apply seller filter
+    if (filterSeller) {
+      filtered = filtered.filter(p => {
+        const sellerId = typeof p.seller === 'string' ? p.seller : (p.seller as any)?._id;
+        return sellerId === filterSeller;
+      });
+    }
+
+    // Apply status filter
+    if (filterStatus) {
+      filtered = filtered.filter(p => p.status === filterStatus);
+    }
+
+    // Apply price filters
+    if (filterMinPrice) {
+      const minPrice = parseFloat(filterMinPrice);
+      if (!isNaN(minPrice)) {
+        filtered = filtered.filter(p => p.price >= minPrice);
+      }
+    }
+
+    if (filterMaxPrice) {
+      const maxPrice = parseFloat(filterMaxPrice);
+      if (!isNaN(maxPrice)) {
+        filtered = filtered.filter(p => p.price <= maxPrice);
+      }
+    }
+
+    setProducts(filtered);
+  }, [allProducts, productSearchTerm, filterCategory, filterSubcategory, filterBrand, filterSeller, filterStatus, filterMinPrice, filterMaxPrice]);
+
+  // Get subcategories for selected category
+  const getSubcategoriesForCategory = () => {
+    if (!filterCategory) return [];
+    const category = categories.find(c => c._id === filterCategory);
+    if (!category) return [];
+
+    // Get all subcategories that belong to this category
+    // Subcategories are categories with parentId matching the selected category
+    return categories.filter(c => {
+      const parentId = typeof c.parentId === 'string' ? c.parentId : (c.parentId as any)?._id;
+      return parentId === filterCategory;
+    });
+  };
+
   const handleReset = () => {
     setStoreName("");
     setStoreImageFile(null);
@@ -370,10 +420,18 @@ export default function AdminShopByStore() {
     setEditingId(null);
     setUploadError("");
     setSuccessMessage("");
-    setSelectedCategoryId("");
-    setSelectedSubCategoryId("");
     setSelectedProductIds([]);
+    setProductSearchTerm("");
+    setFilterCategory("");
+    setFilterSubcategory("");
+    setFilterBrand("");
+    setFilterSeller("");
+    setFilterStatus("Active");
+    setFilterMinPrice("");
+    setFilterMaxPrice("");
   };
+
+
 
   const handleExport = () => {
     setUploadError("Export functionality will be implemented soon.");
@@ -418,42 +476,7 @@ export default function AdminShopByStore() {
               />
             </div>
 
-            {/* Category Dropdown */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Category:
-              </label>
-              <select
-                value={selectedCategoryId}
-                onChange={(e) => {
-                  setSelectedCategoryId(e.target.value);
-                }}
-                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer bg-white"
-              >
-                <option value="">Select Category</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>{cat.name}</option>
-                ))}
-              </select>
-            </div>
 
-            {/* SubCategory Dropdown */}
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                SubCategory:
-              </label>
-              <select
-                value={selectedSubCategoryId}
-                onChange={(e) => setSelectedSubCategoryId(e.target.value)}
-                className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer bg-white"
-                disabled={!selectedCategoryId}
-              >
-                <option value="">Select SubCategory</option>
-                {subCategories.map((sub) => (
-                  <option key={sub._id || sub.id} value={sub._id || sub.id}>{sub.subcategoryName}</option>
-                ))}
-              </select>
-            </div>
 
             {/* Product Selection */}
             <div>
@@ -461,12 +484,135 @@ export default function AdminShopByStore() {
                 Select Products: {selectedProductIds.length} selected
                 {products.length > 0 && ` (${products.length} available)`}
               </label>
-              <div className="border border-neutral-300 rounded-md max-h-48 overflow-y-auto p-2 bg-neutral-50">
-                {!selectedCategoryId ? (
-                  <div className="text-center text-sm text-neutral-500 py-2">
-                    Please select a category first
-                  </div>
-                ) : loadingData ? (
+
+              {/* Filters Section */}
+              <div className="mb-3 space-y-2 p-3 bg-neutral-50 rounded-md border border-neutral-200">
+                <div className="text-xs font-semibold text-neutral-600 mb-2">Filters:</div>
+
+                {/* Search */}
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  value={productSearchTerm}
+                  onChange={(e) => setProductSearchTerm(e.target.value)}
+                  className="w-full px-3 py-1.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
+
+                {/* Category and Subcategory */}
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={filterCategory}
+                    onChange={(e) => {
+                      setFilterCategory(e.target.value);
+                      setFilterSubcategory(""); // Reset subcategory when category changes
+                    }}
+                    className="w-full px-2 py-1.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer bg-white"
+                  >
+                    <option value="">All Categories</option>
+                    {categories.filter(c => !c.parentId).map((cat) => (
+                      <option key={cat._id} value={cat._id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filterSubcategory}
+                    onChange={(e) => setFilterSubcategory(e.target.value)}
+                    disabled={!filterCategory}
+                    className="w-full px-2 py-1.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer bg-white disabled:bg-neutral-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">All Subcategories</option>
+                    {getSubcategoriesForCategory().map((sub) => (
+                      <option key={sub._id} value={sub._id}>
+                        {sub.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Brand and Seller */}
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={filterBrand}
+                    onChange={(e) => setFilterBrand(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer bg-white"
+                  >
+                    <option value="">All Brands</option>
+                    {brands.map((brand) => (
+                      <option key={brand._id} value={brand._id}>
+                        {brand.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filterSeller}
+                    onChange={(e) => setFilterSeller(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer bg-white"
+                  >
+                    <option value="">All Sellers</option>
+                    {sellers.map((seller) => (
+                      <option key={seller._id} value={seller._id}>
+                        {seller.storeName || seller.sellerName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Status and Price Range */}
+                <div className="grid grid-cols-3 gap-2">
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer bg-white"
+                  >
+                    <option value="">All Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+
+                  <input
+                    type="number"
+                    placeholder="Min Price"
+                    value={filterMinPrice}
+                    onChange={(e) => setFilterMinPrice(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+
+                  <input
+                    type="number"
+                    placeholder="Max Price"
+                    value={filterMaxPrice}
+                    onChange={(e) => setFilterMaxPrice(e.target.value)}
+                    className="w-full px-2 py-1.5 border border-neutral-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
+
+                {/* Clear Filters Button */}
+                {(filterCategory || filterSubcategory || filterBrand || filterSeller || filterStatus !== "Active" || filterMinPrice || filterMaxPrice) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterCategory("");
+                      setFilterSubcategory("");
+                      setFilterBrand("");
+                      setFilterSeller("");
+                      setFilterStatus("Active");
+                      setFilterMinPrice("");
+                      setFilterMaxPrice("");
+                    }}
+                    className="w-full px-3 py-1.5 text-xs bg-neutral-200 hover:bg-neutral-300 text-neutral-700 rounded transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+
+              <div className="border border-neutral-300 rounded-md max-h-60 overflow-y-auto p-2 bg-neutral-50">
+                {loadingData ? (
                   <div className="text-center text-sm text-neutral-500 py-2">
                     <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-teal-600 mr-2"></div>
                     Loading products...
@@ -490,7 +636,7 @@ export default function AdminShopByStore() {
                   </>
                 ) : (
                   <div className="text-center text-sm text-neutral-500 py-2">
-                    No products found in this {selectedSubCategoryId ? 'subcategory' : 'category'}
+                    No products found matching the filters
                   </div>
                 )}
               </div>

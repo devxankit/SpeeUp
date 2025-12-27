@@ -62,6 +62,12 @@ import * as systemUserController from "../modules/admin/controllers/adminSystemU
 // Home Section Controllers
 import * as homeSectionController from "../modules/admin/controllers/adminHomeSectionController";
 
+// Bestseller Card Controllers
+import * as bestsellerCardController from "../modules/admin/controllers/adminBestsellerCardController";
+
+// Lowest Prices Controllers
+import * as lowestPricesController from "../modules/admin/controllers/adminLowestPricesController";
+
 const router = Router();
 
 // All routes require admin authentication
@@ -311,5 +317,21 @@ router.post("/home-sections", homeSectionController.createHomeSection);
 router.put("/home-sections/:id", homeSectionController.updateHomeSection);
 router.delete("/home-sections/:id", homeSectionController.deleteHomeSection);
 router.put("/home-sections/reorder", homeSectionController.reorderHomeSections);
+
+// ==================== Bestseller Card Routes ====================
+router.get("/bestseller-cards", bestsellerCardController.getBestsellerCards);
+router.get("/bestseller-cards/:id", bestsellerCardController.getBestsellerCardById);
+router.post("/bestseller-cards", bestsellerCardController.createBestsellerCard);
+router.put("/bestseller-cards/:id", bestsellerCardController.updateBestsellerCard);
+router.delete("/bestseller-cards/:id", bestsellerCardController.deleteBestsellerCard);
+router.put("/bestseller-cards/reorder", bestsellerCardController.reorderBestsellerCards);
+
+// ==================== Lowest Prices Product Routes ====================
+router.get("/lowest-prices-products", lowestPricesController.getLowestPricesProducts);
+router.get("/lowest-prices-products/:id", lowestPricesController.getLowestPricesProductById);
+router.post("/lowest-prices-products", lowestPricesController.createLowestPricesProduct);
+router.put("/lowest-prices-products/:id", lowestPricesController.updateLowestPricesProduct);
+router.delete("/lowest-prices-products/:id", lowestPricesController.deleteLowestPricesProduct);
+router.put("/lowest-prices-products/reorder", lowestPricesController.reorderLowestPricesProducts);
 
 export default router;

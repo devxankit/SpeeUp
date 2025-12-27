@@ -5,6 +5,7 @@ export interface IHomeSection extends Document {
     slug: string;
     categories?: mongoose.Types.ObjectId[]; // Changed to array
     subCategories?: mongoose.Types.ObjectId[]; // Changed to array
+    products?: mongoose.Types.ObjectId[]; // Manual product selection
     displayType: "subcategories" | "products" | "categories";
     columns: number;
     limit: number;
@@ -36,6 +37,10 @@ const HomeSectionSchema = new Schema<IHomeSection>(
         },
         subCategories: {
             type: [{ type: Schema.Types.ObjectId, ref: "SubCategory" }],
+            default: [],
+        },
+        products: {
+            type: [{ type: Schema.Types.ObjectId, ref: "Product" }],
             default: [],
         },
         displayType: {

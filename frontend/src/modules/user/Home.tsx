@@ -86,7 +86,7 @@ export default function Home() {
       <PromoStrip activeTab={activeTab} />
 
       {/* LOWEST PRICES EVER Section */}
-      <LowestPricesEver activeTab={activeTab} />
+      <LowestPricesEver activeTab={activeTab} products={homeData.lowestPrices} />
 
       {/* Main content */}
       <div
@@ -134,18 +134,14 @@ export default function Home() {
                   homeData.bestsellers && homeData.bestsellers.length > 0
                     ? homeData.bestsellers
                       .slice(0, 6)
-                      .map((sellerCard: any) => {
-                        // Seller cards already have productImages array from backend
+                      .map((card: any) => {
+                        // Bestseller cards have categoryId and productImages array from backend
                         return {
-                          id: sellerCard.id || sellerCard.sellerId,
-                          sellerId: sellerCard.sellerId || sellerCard.id,
-                          name:
-                            sellerCard.name ||
-                            sellerCard.storeName ||
-                            "Seller",
-                          image: sellerCard.logo,
-                          productImages: sellerCard.productImages || [],
-                          productCount: sellerCard.productCount || 0,
+                          id: card.id,
+                          categoryId: card.categoryId,
+                          name: card.name || "Category",
+                          productImages: card.productImages || [],
+                          productCount: card.productCount || 0,
                         };
                       })
                     : []

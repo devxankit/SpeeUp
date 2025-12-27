@@ -163,40 +163,43 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...validItems, { product: normalizedProduct, quantity: 1 }];
     });
 
-    try {
-      const response = await apiAddToCart(productId);
-      if (response && response.data && response.data.items) {
-        // Atomic update from server response
-        setItems(mapApiItemsToState(response.data.items));
+    // Only sync to API if user is authenticated
+    if (isAuthenticated && user?.userType === 'Customer') {
+      try {
+        const response = await apiAddToCart(productId);
+        if (response && response.data && response.data.items) {
+          // Atomic update from server response
+          setItems(mapApiItemsToState(response.data.items));
+        }
+      } catch (error) {
+        console.error("Add to cart failed", error);
+        // Revert on error
+        setItems(previousItems);
       }
-    } catch (error) {
-      console.error("Add to cart failed", error);
-      // Revert on error
-      setItems(previousItems);
     }
+    // For unregistered users, the optimistic update is already saved to localStorage
   };
 
   const removeFromCart = async (productId: string) => {
     // Find item matching either id or _id
     const itemToRemove = items.find(item => item?.product && (item.product.id === productId || item.product._id === productId));
-    if (!itemToRemove || !itemToRemove.id) {
-      console.warn("Cannot remove item without CartItemID");
-      await fetchCart();
-      return;
-    }
 
     const previousItems = [...items];
     setItems((prevItems) => prevItems.filter((item) => item?.product && item.product.id !== productId && item.product._id !== productId));
 
-    try {
-      const response = await apiRemoveFromCart(itemToRemove.id);
-      if (response && response.data && response.data.items) {
-        setItems(mapApiItemsToState(response.data.items));
+    // Only sync to API if user is authenticated and item has CartItemID
+    if (isAuthenticated && user?.userType === 'Customer' && itemToRemove?.id) {
+      try {
+        const response = await apiRemoveFromCart(itemToRemove.id);
+        if (response && response.data && response.data.items) {
+          setItems(mapApiItemsToState(response.data.items));
+        }
+      } catch (error) {
+        console.error("Remove from cart failed", error);
+        setItems(previousItems);
       }
-    } catch (error) {
-      console.error("Remove from cart failed", error);
-      setItems(previousItems);
     }
+    // For unregistered users, the optimistic update is already saved to localStorage
   };
 
   const updateQuantity = async (productId: string, quantity: number) => {
@@ -207,10 +210,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     // Find item matching either id or _id
     const itemToUpdate = items.find(item => item?.product && (item.product.id === productId || item.product._id === productId));
-    if (!itemToUpdate || !itemToUpdate.id) {
-      await fetchCart();
-      return;
-    }
 
     const previousItems = [...items];
     setItems((prevItems) =>
@@ -219,15 +218,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
       )
     );
 
-    try {
-      const response = await apiUpdateCartItem(itemToUpdate.id, quantity);
-      if (response && response.data && response.data.items) {
-        setItems(mapApiItemsToState(response.data.items));
+    // Only sync to API if user is authenticated and item has CartItemID
+    if (isAuthenticated && user?.userType === 'Customer' && itemToUpdate?.id) {
+      try {
+        const response = await apiUpdateCartItem(itemToUpdate.id, quantity);
+        if (response && response.data && response.data.items) {
+          setItems(mapApiItemsToState(response.data.items));
+        }
+      } catch (error) {
+        console.error("Update quantity failed", error);
+        setItems(previousItems);
       }
-    } catch (error) {
-      console.error("Update quantity failed", error);
-      setItems(previousItems);
     }
+    // For unregistered users, the optimistic update is already saved to localStorage
   };
 
 

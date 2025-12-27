@@ -189,43 +189,67 @@ export default function StorePage() {
                                         ) : (
                                             <span className="text-4xl">📦</span>
                                         )}
-                                        {discount > 0 && (
-                                            <div className="absolute top-2 left-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                                {discount}% OFF
-                                            </div>
-                                        )}
                                     </Link>
 
-                                    <div className="p-3 flex-1 flex flex-col">
-                                        <div className="text-[10px] text-neutral-500 mb-1">{product.pack}</div>
-                                        <h4 className="text-sm font-bold text-neutral-900 line-clamp-2 mb-2">{product.name || product.productName}</h4>
+                                    <div className="p-3 flex-1 flex flex-col" style={{ background: '#fef9e7' }}>
+                                        {/* Quantity */}
+                                        {product.pack && (
+                                            <p className="text-[9px] text-neutral-600 mb-0.5 leading-tight">
+                                                {product.pack}
+                                            </p>
+                                        )}
 
-                                        <div className="mt-auto flex items-center justify-between">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-neutral-900">₹{product.price}</span>
+                                        {/* Product Name */}
+                                        <h3 className="text-[10px] font-bold text-neutral-900 mb-0.5 line-clamp-2 leading-tight min-h-[1.75rem] max-h-[1.75rem] overflow-hidden">
+                                            {product.name || product.productName}
+                                        </h3>
+
+                                        {/* Time */}
+                                        <p className="text-[9px] text-neutral-600 mb-0.5 flex items-center gap-0.5 leading-tight">
+                                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
+                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                                                <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                            </svg>
+                                            <span>14 MINS</span>
+                                        </p>
+
+                                        {/* % OFF and Price with Discount */}
+                                        <div className="mt-auto">
+                                            {discount > 0 && (
+                                                <p className="text-[9px] font-semibold text-green-600 mb-0.5 leading-tight">
+                                                    {discount}% OFF
+                                                </p>
+                                            )}
+                                            <div className="flex items-baseline gap-1 flex-wrap">
+                                                <span className="text-[11px] font-bold text-neutral-900 leading-tight">
+                                                    ₹{product.price.toFixed(0)}
+                                                </span>
                                                 {product.mrp && product.mrp > product.price && (
-                                                    <span className="text-[10px] text-neutral-400 line-through">₹{product.mrp}</span>
+                                                    <span className="text-[8px] text-neutral-500 line-through leading-tight">
+                                                        ₹{product.mrp.toFixed(0)}
+                                                    </span>
                                                 )}
                                             </div>
+                                        </div>
 
-                                            <div className="w-20">
-                                                {inCartQty === 0 ? (
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => addToCart(product)}
-                                                        className="w-full border-green-600 text-green-600 hover:bg-green-50 rounded-lg h-8 text-xs font-bold"
-                                                    >
-                                                        ADD
-                                                    </Button>
-                                                ) : (
-                                                    <div className="flex items-center justify-between bg-green-600 text-white rounded-lg h-8 px-1">
-                                                        <button onClick={() => updateQuantity(productId, inCartQty - 1)} className="w-6 h-6 flex items-center justify-center font-bold">−</button>
-                                                        <span className="text-xs font-bold">{inCartQty}</span>
-                                                        <button onClick={() => updateQuantity(productId, inCartQty + 1)} className="w-6 h-6 flex items-center justify-center font-bold">+</button>
-                                                    </div>
-                                                )}
-                                            </div>
+                                        {/* Add to Cart Button */}
+                                        <div className="mt-2">
+                                            {inCartQty === 0 ? (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => addToCart(product)}
+                                                    className="w-full border-green-600 text-green-600 hover:bg-green-50 rounded-lg h-7 text-xs font-bold"
+                                                >
+                                                    ADD
+                                                </Button>
+                                            ) : (
+                                                <div className="flex items-center justify-between bg-green-600 text-white rounded-lg h-7 px-1">
+                                                    <button onClick={() => updateQuantity(productId, inCartQty - 1)} className="w-6 h-6 flex items-center justify-center font-bold">−</button>
+                                                    <span className="text-xs font-bold">{inCartQty}</span>
+                                                    <button onClick={() => updateQuantity(productId, inCartQty + 1)} className="w-6 h-6 flex items-center justify-center font-bold">+</button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </motion.div>

@@ -4,6 +4,7 @@ export interface HomeContentResponse {
   success: boolean;
   data: {
     bestsellers: any[];
+    lowestPrices?: any[];
     categories: any[];
     shops: any[];
     promoBanners: any[];

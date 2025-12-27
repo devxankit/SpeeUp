@@ -5,8 +5,10 @@ export interface IShop extends Document {
   storeId: string; // slug/identifier for the store
   image: string;
   description?: string;
-  category?: mongoose.Types.ObjectId; // Reference to Category
-  subCategory?: mongoose.Types.ObjectId; // Reference to SubCategory
+  headerCategoryId?: mongoose.Types.ObjectId; // Reference to HeaderCategory
+  category?: mongoose.Types.ObjectId | mongoose.Types.ObjectId[]; // Reference to Category(s) - supports both single and array
+  subCategory?: mongoose.Types.ObjectId | mongoose.Types.ObjectId[]; // Reference to SubCategory(s) - supports both single and array
+  subSubCategory?: mongoose.Types.ObjectId | mongoose.Types.ObjectId[]; // Reference to Sub-SubCategory(s) - supports both single and array
   products: mongoose.Types.ObjectId[];
   order: number; // For sorting/ordering
   isActive: boolean;
@@ -37,13 +39,21 @@ const ShopSchema = new Schema<IShop>(
       type: String,
       trim: true,
     },
-    category: {
+    headerCategoryId: {
       type: Schema.Types.ObjectId,
+      ref: 'HeaderCategory',
+    },
+    category: {
+      type: Schema.Types.Mixed, // Supports both single ObjectId and array of ObjectIds
       ref: 'Category',
     },
     subCategory: {
-      type: Schema.Types.ObjectId,
+      type: Schema.Types.Mixed, // Supports both single ObjectId and array of ObjectIds
       ref: 'SubCategory',
+    },
+    subSubCategory: {
+      type: Schema.Types.Mixed, // Supports both single ObjectId and array of ObjectIds
+      ref: 'Category', // Sub-subcategories are also Category documents with parentId
     },
     products: [{
       type: Schema.Types.ObjectId,

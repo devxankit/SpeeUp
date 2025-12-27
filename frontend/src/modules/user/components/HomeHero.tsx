@@ -5,7 +5,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { getTheme } from '../../../utils/themes';
 import { useLocation } from '../../../hooks/useLocation';
 import { appConfig } from '../../../services/configService';
-import { getCategories } from '../../../services/api/categoryService';
+import { getCategories } from '../../../services/api/customerProductService';
 import { Category } from '../../../types/domain';
 import { getHeaderCategoriesPublic } from '../../../services/api/headerCategoryService';
 import { getIconByName } from '../../../utils/iconLibrary';
@@ -92,7 +92,7 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
     const fetchCategories = async () => {
       try {
         const response = await getCategories();
-        if (response.success) {
+        if (response.success && response.data) {
           setCategories(response.data.map((c: any) => ({
             ...c,
             id: c._id || c.id

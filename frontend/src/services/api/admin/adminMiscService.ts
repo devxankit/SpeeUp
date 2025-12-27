@@ -70,8 +70,9 @@ export interface ShopByStore {
   name: string;
   image: string;
   description?: string;
-  category?: string | { _id: string; name: string };
-  subCategory?: string | { _id: string; subcategoryName: string };
+  headerCategoryId?: string | { _id: string; name: string };
+  category?: string | string[] | { _id: string; name: string } | { _id: string; name: string }[];
+  subCategory?: string | string[] | { _id: string; subcategoryName: string } | { _id: string; subcategoryName: string }[];
   products?: string[];
   isActive: boolean;
   order: number;

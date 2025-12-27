@@ -6,7 +6,7 @@ import Shop from "../../../models/Shop";
  * Create a new shop
  */
 export const createShop = asyncHandler(async (req: Request, res: Response) => {
-    const { name, storeId, image, description, category, subCategory, products, order, isActive } = req.body;
+    const { name, storeId, image, description, headerCategoryId, category, subCategory, subSubCategory, products, order, isActive } = req.body;
 
     if (!name || !image) {
         return res.status(400).json({
@@ -32,8 +32,10 @@ export const createShop = asyncHandler(async (req: Request, res: Response) => {
         storeId: finalStoreId,
         image,
         description,
+        headerCategoryId: headerCategoryId || undefined,
         category: category || undefined,
         subCategory: subCategory || undefined,
+        subSubCategory: subSubCategory || undefined,
         products: products || [],
         order: order !== undefined ? order : 0,
         isActive: isActive !== undefined ? isActive : true,
@@ -51,16 +53,16 @@ export const createShop = asyncHandler(async (req: Request, res: Response) => {
  */
 export const getAllShops = asyncHandler(async (req: Request, res: Response) => {
     const { search, status, sortBy = 'order', sortOrder = 'asc' } = req.query;
-    
+
     let query: any = {};
-    
+
     // Filter by active status
     if (status === 'active') {
         query.isActive = true;
     } else if (status === 'inactive') {
         query.isActive = false;
     }
-    
+
     // Search filter
     if (search) {
         query.$or = [
@@ -68,7 +70,7 @@ export const getAllShops = asyncHandler(async (req: Request, res: Response) => {
             { storeId: { $regex: search, $options: 'i' } },
         ];
     }
-    
+
     const sort: any = {};
     if (sortBy === 'order') {
         sort.order = sortOrder === 'desc' ? -1 : 1;
@@ -76,10 +78,12 @@ export const getAllShops = asyncHandler(async (req: Request, res: Response) => {
     } else {
         sort[sortBy as string] = sortOrder === 'desc' ? -1 : 1;
     }
-    
+
     const shops = await Shop.find(query)
+        .populate('headerCategoryId', 'name')
         .populate('category', 'name')
         .populate('subCategory', 'subcategoryName')
+        .populate('subSubCategory', 'name')
         .sort(sort);
 
     return res.status(200).json({
@@ -97,8 +101,10 @@ export const getShopById = asyncHandler(async (req: Request, res: Response) => {
 
     const shop = await Shop.findById(id)
         .populate("products")
+        .populate('headerCategoryId', 'name')
         .populate('category', 'name')
-        .populate('subCategory', 'subcategoryName');
+        .populate('subCategory', 'subcategoryName')
+        .populate('subSubCategory', 'name');
 
     if (!shop) {
         return res.status(404).json({
@@ -120,7 +126,7 @@ export const getShopById = asyncHandler(async (req: Request, res: Response) => {
 export const updateShop = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const { storeId, ...updateData } = req.body;
-    
+
     // If storeId is being updated, check for uniqueness
     if (storeId) {
         const existingShop = await Shop.findOne({ storeId, _id: { $ne: id } });
@@ -138,8 +144,10 @@ export const updateShop = asyncHandler(async (req: Request, res: Response) => {
         runValidators: true,
     })
     .populate("products")
+    .populate('headerCategoryId', 'name')
     .populate('category', 'name')
-    .populate('subCategory', 'subcategoryName');
+    .populate('subCategory', 'subcategoryName')
+    .populate('subSubCategory', 'name');
 
     if (!shop) {
         return res.status(404).json({

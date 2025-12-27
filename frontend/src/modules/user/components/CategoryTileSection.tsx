@@ -140,11 +140,11 @@ export default function CategoryTileSection({
                       handleTileClick(tile);
                     }
                   }}
-                  className={`block bg-white rounded-xl shadow-sm border border-neutral-200 hover:shadow-md transition-shadow ${showProductCount ? "p-2.5" : "p-1.5"
+                  className={`block bg-white rounded-xl shadow-sm border border-neutral-200 hover:shadow-md transition-shadow ${showProductCount ? "px-2.5" : "px-1.5"
                     }`}>
                   {/* Image - Single image for non-bestsellers, 2x2 grid for bestsellers */}
                   <div
-                    className={`w-full rounded-lg overflow-hidden ${showProductCount ? "h-20 mb-2" : "aspect-[3/4]"
+                    className={`w-full rounded-lg overflow-hidden ${showProductCount ? "h-20 mb-2" : "aspect-square"
                       } ${tile.bgColor || "bg-cyan-50"}`}>
                     {hasImages ? (
                       showProductCount ? (
@@ -213,7 +213,14 @@ export default function CategoryTileSection({
                   )}
                 </Link>
 
-                {/* Text label removed - images already contain category names */}
+                {/* Category name - outside card for non-bestsellers */}
+                {!showProductCount && (
+                  <div className="mt-1.5 text-center">
+                    <span className="text-xs font-semibold text-neutral-900 line-clamp-2 leading-tight">
+                      {tile.name}
+                    </span>
+                  </div>
+                )}
               </motion.div>
             );
           })}

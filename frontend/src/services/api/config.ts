@@ -39,7 +39,14 @@ api.interceptors.response.use(
       // Don't redirect for auth endpoints - let the component handle the error
       const isAuthEndpoint = error.config?.url?.includes("/auth/");
 
-      if (!isAuthEndpoint) {
+      // Check if there was a token in the request (meaning user was logged in)
+      const hadToken = error.config?.headers?.Authorization;
+
+      // Only redirect if:
+      // 1. It's not an auth endpoint
+      // 2. There was a token in the request (user was logged in but token expired)
+      // 3. User is not already on login/signup pages
+      if (!isAuthEndpoint && hadToken) {
         const currentPath = window.location.pathname;
 
         // Skip redirect if already on public auth pages (login/signup)
@@ -71,6 +78,8 @@ api.interceptors.response.use(
         localStorage.removeItem("userData");
         window.location.href = redirectPath;
       }
+      // If no token was present, user is just browsing as guest - don't redirect
+      // Just reject the promise so the component can handle it gracefully
     }
     // For 403 and other errors, just reject the promise so the UI can handle it
     return Promise.reject(error);

@@ -59,6 +59,7 @@ export default function CategoryFormModal({
     []
   );
   const [loadingHeaderCategories, setLoadingHeaderCategories] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Get available parent categories
   const availableParents = getAvailableParents(
@@ -198,7 +199,10 @@ export default function CategoryFormModal({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    await processFile(file);
+  };
 
+  const processFile = async (file: File) => {
     const validation = validateImageFile(file);
     if (!validation.valid) {
       setErrors((prev) => ({
@@ -223,6 +227,35 @@ export default function CategoryFormModal({
         ...prev,
         image: "Failed to create image preview",
       }));
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      await processFile(file);
     }
   };
 
@@ -546,7 +579,16 @@ export default function CategoryFormModal({
             <label className="block text-sm font-medium text-neutral-700 mb-2">
               Category Image
             </label>
-            <label className="block border-2 border-dashed border-neutral-300 rounded-lg p-4 text-center cursor-pointer hover:border-teal-500 transition-colors">
+            <label
+              className={`block border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                isDragging
+                  ? "border-teal-500 bg-teal-50"
+                  : "border-neutral-300 hover:border-teal-500"
+              }`}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}>
               {imagePreview ? (
                 <div className="space-y-2">
                   <img
@@ -583,7 +625,9 @@ export default function CategoryFormModal({
                     <polyline points="17 8 12 3 7 8"></polyline>
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                   </svg>
-                  <p className="text-xs text-neutral-600">Choose File</p>
+                  <p className="text-xs text-neutral-600">
+                    {isDragging ? "Drop image here" : "Choose File or Drag & Drop"}
+                  </p>
                   <p className="text-xs text-neutral-500 mt-1">Max 5MB</p>
                 </div>
               )}

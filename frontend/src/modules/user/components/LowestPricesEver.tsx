@@ -10,7 +10,15 @@ import { addProductToWishlist } from '../../../utils/wishlist';
 
 interface LowestPricesEverProps {
   activeTab?: string;
+  products?: Product[]; // Admin-selected products from home data
 }
+
+// Helper function to truncate text to a maximum length
+const truncateText = (text: string, maxLength: number = 60): string => {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength).trim() + '...';
+};
 
 // Product Card Component - Defined outside to prevent recreation on every render
 const ProductCard = memo(({
@@ -32,12 +40,18 @@ const ProductCard = memo(({
   // Use cartQuantity from props
   const inCartQty = cartQuantity;
 
+  // Get product name, clean it (remove description suffixes), and truncate if needed
+  let productName = product.name || product.productName || '';
+  // Remove common description patterns like " - Fresh & Quality Assured", " - Premium Quality", etc.
+  productName = productName.replace(/\s*-\s*(Fresh|Quality|Assured|Premium|Best|Top|Hygienic|Carefully|Selected).*$/i, '').trim();
+  const displayName = truncateText(productName, 60);
+
   return (
     <div
       className="flex-shrink-0 w-[140px]"
       style={{ scrollSnapAlign: 'start' }}
     >
-      <div className="bg-white rounded-lg overflow-hidden flex flex-col relative h-full" style={{ boxShadow: '0 1px 1px rgba(0, 0, 0, 0.03)' }}>
+      <div className="bg-white rounded-lg overflow-hidden flex flex-col relative h-full max-h-full" style={{ boxShadow: '0 1px 1px rgba(0, 0, 0, 0.03)' }}>
         {/* Product Image Area */}
         <div
           onClick={() => navigate(`/product/${product.id}`)}
@@ -163,7 +177,7 @@ const ProductCard = memo(({
         </div>
 
         {/* Product Details */}
-        <div className="p-1.5 flex-1 flex flex-col" style={{ background: '#fef9e7' }}>
+        <div className="p-1.5 flex-1 flex flex-col min-h-0" style={{ background: '#fef9e7' }}>
           {/* Light Grey Tags */}
           <div className="flex gap-0.5 mb-0.5">
             <div className="bg-neutral-200 text-neutral-700 text-[8px] font-medium px-1 py-0.5 rounded">
@@ -181,8 +195,8 @@ const ProductCard = memo(({
             onClick={() => navigate(`/product/${product.id}`)}
             className="mb-0.5 cursor-pointer"
           >
-            <h3 className="text-[10px] font-bold text-neutral-900 line-clamp-2 leading-tight">
-              {product.name || product.productName}
+            <h3 className="text-[10px] font-bold text-neutral-900 line-clamp-2 leading-tight min-h-[2rem] max-h-[2rem] overflow-hidden" title={productName}>
+              {displayName}
             </h3>
           </div>
 
@@ -257,7 +271,7 @@ const ProductCard = memo(({
 
 ProductCard.displayName = 'ProductCard';
 
-export default function LowestPricesEver({ activeTab = 'all' }: LowestPricesEverProps) {
+export default function LowestPricesEver({ activeTab = 'all', products: adminProducts }: LowestPricesEverProps) {
   const theme = getTheme(activeTab);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { cart } = useCart();
@@ -304,33 +318,75 @@ export default function LowestPricesEver({ activeTab = 'all' }: LowestPricesEver
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    const fetchDiscountedProducts = async () => {
-      try {
-        // Fetch products that might have offers. 
-        // Ideally backend supports sorting by discount or has a 'lowest-prices' endpoint.
-        // For now, we fetch a batch and filter client side as per original logic, 
-        // or rely on backend 'popular' or 'limit'.
-        const response = await getProducts({ limit: 50 }); // Fetch enough to filter
-        if (response.success && response.data) {
-          const mappedProducts = (response.data as any[]).map(p => ({
-            ...p,
-            id: p._id || p.id,
-            name: p.productName || p.name,
-            imageUrl: p.mainImage || p.imageUrl,
-            mrp: p.mrp || p.price,
-            pack: p.variations?.[0]?.title || p.smallDescription || 'Standard'
-          }));
-          setProducts(mappedProducts);
-        }
-      } catch (err) {
-        console.error("Failed to fetch products for LowestPricesEver", err);
-      }
-    };
-    fetchDiscountedProducts();
-  }, []);
+    // Use admin-selected products if provided, otherwise fallback to fetching
+    if (adminProducts && adminProducts.length > 0) {
+      const mappedProducts = adminProducts.map((p: any) => {
+        // Get product name and remove any description-like suffixes
+        let productName = p.productName || p.name || '';
+        // Remove common description patterns like " - Fresh & Quality Assured"
+        productName = productName.replace(/\s*-\s*(Fresh|Quality|Assured|Premium|Best|Top|Hygienic|Carefully|Selected).*$/i, '').trim();
 
-  // Get products with discounts for this section, filtered by activeTab
+        // Get pack without description
+        let packValue = p.variations?.[0]?.title || p.pack || 'Standard';
+        // Remove description from pack if it contains it
+        if (packValue && packValue.includes(' - ')) {
+          packValue = packValue.split(' - ')[0].trim();
+        }
+
+        return {
+          ...p,
+          id: p._id || p.id || p.id,
+          name: productName,
+          imageUrl: p.mainImage || p.imageUrl || p.mainImage,
+          mrp: p.mrp || p.price,
+          pack: packValue
+        };
+      });
+      setProducts(mappedProducts);
+    } else {
+      // Fallback: fetch products if admin hasn't configured any
+      const fetchDiscountedProducts = async () => {
+        try {
+          const response = await getProducts({ limit: 50 });
+          if (response.success && response.data) {
+            const mappedProducts = (response.data as any[]).map(p => {
+              let productName = p.productName || p.name || '';
+              productName = productName.replace(/\s*-\s*(Fresh|Quality|Assured|Premium|Best|Top|Hygienic|Carefully|Selected).*$/i, '').trim();
+
+              let packValue = p.variations?.[0]?.title || p.pack || 'Standard';
+              if (packValue && packValue.includes(' - ')) {
+                packValue = packValue.split(' - ')[0].trim();
+              }
+
+              return {
+                ...p,
+                id: p._id || p.id,
+                name: productName,
+                imageUrl: p.mainImage || p.imageUrl,
+                mrp: p.mrp || p.price,
+                pack: packValue
+              };
+            });
+            setProducts(mappedProducts);
+          }
+        } catch (err) {
+          console.error("Failed to fetch products for LowestPricesEver", err);
+        }
+      };
+      fetchDiscountedProducts();
+    }
+  }, [adminProducts]);
+
+  // Get products for this section
+  // If using admin-selected products, use them directly (already filtered and ordered)
+  // Otherwise, filter by activeTab and discount
   const getFilteredProducts = () => {
+    // If admin has selected products, use them directly (already ordered)
+    if (adminProducts && adminProducts.length > 0) {
+      return products.slice(0, 20); // Show up to 20 admin-selected products
+    }
+
+    // Fallback: filter by activeTab and discount
     let filtered = products;
 
     if (activeTab !== 'all') {
@@ -386,31 +442,31 @@ export default function LowestPricesEver({ activeTab = 'all' }: LowestPricesEver
         >
           {/* White scalloped pattern with upward semicircles - clearly visible */}
           <path
-            d="M0,30 L0,15 
-               Q25,0 50,15 
-               T100,15 
-               T150,15 
-               T200,15 
-               T250,15 
-               T300,15 
-               T350,15 
-               T400,15 
-               T450,15 
-               T500,15 
-               T550,15 
-               T600,15 
-               T650,15 
-               T700,15 
-               T750,15 
-               T800,15 
-               T850,15 
-               T900,15 
-               T950,15 
-               T1000,15 
-               T1050,15 
-               T1100,15 
-               T1150,15 
-               L1200,15 
+            d="M0,30 L0,15
+               Q25,0 50,15
+               T100,15
+               T150,15
+               T200,15
+               T250,15
+               T300,15
+               T350,15
+               T400,15
+               T450,15
+               T500,15
+               T550,15
+               T600,15
+               T650,15
+               T700,15
+               T750,15
+               T800,15
+               T850,15
+               T900,15
+               T950,15
+               T1000,15
+               T1050,15
+               T1100,15
+               T1150,15
+               L1200,15
                L1200,30 Z"
             fill="white"
             stroke="white"

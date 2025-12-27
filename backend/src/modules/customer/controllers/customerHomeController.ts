@@ -3,9 +3,10 @@ import Product from "../../../models/Product";
 import Category from "../../../models/Category";
 import SubCategory from "../../../models/SubCategory";
 import Shop from "../../../models/Shop";
-import Seller from "../../../models/Seller";
 import HeaderCategory from "../../../models/HeaderCategory";
 import HomeSection from "../../../models/HomeSection";
+import BestsellerCard from "../../../models/BestsellerCard";
+import LowestPricesProduct from "../../../models/LowestPricesProduct";
 import mongoose from "mongoose";
 
 // Helper function to calculate distance between two coordinates (Haversine formula)
@@ -181,30 +182,34 @@ async function fetchSectionData(section: any): Promise<any[]> {
 export const getHomeContent = async (req: Request, res: Response) => {
   const { headerCategorySlug } = req.query; // Get header category slug from query params
   try {
-    // 1. Featured / Bestsellers - Get 6 sellers with their top 4 products each
-    // First, get approved sellers
-    const approvedSellers = await Seller.find({
-      status: "Approved",
+    // 1. Featured / Bestsellers - Get bestseller cards from admin configuration
+    const bestsellerCards = await BestsellerCard.find({
+      isActive: true,
     })
-      .select("_id storeName logo")
+      .populate("category", "name slug image")
+      .sort({ order: 1 })
       .limit(6)
       .lean();
 
-    // For each seller, get their top 4 popular/active products
-    const sellerCards = await Promise.all(
-      approvedSellers.map(async (seller) => {
-        const sellerProducts = await Product.find({
-          seller: seller._id,
+    // For each bestseller card, get 4 products from the associated category
+    const bestsellers = await Promise.all(
+      bestsellerCards.map(async (card: any) => {
+        const categoryId = card.category?._id || card.category;
+
+        // Fetch 4 active products from the category (newest first)
+        const categoryProducts = await Product.find({
+          category: categoryId,
           status: "Active",
           publish: true,
         })
           .select("productName mainImage galleryImages")
+          .sort({ createdAt: -1 }) // Show newest products first
           .limit(4)
           .lean();
 
-        // Extract exactly 4 product images (one mainImage from each of 4 products)
+        // Extract exactly 4 product images (prefer mainImage, fallback to galleryImages[0])
         const productImages: string[] = [];
-        sellerProducts.forEach((product) => {
+        categoryProducts.forEach((product: any) => {
           if (productImages.length < 4 && product.mainImage) {
             productImages.push(product.mainImage);
           }
@@ -212,7 +217,7 @@ export const getHomeContent = async (req: Request, res: Response) => {
 
         // If we have less than 4 products, try to use gallery images
         if (productImages.length < 4) {
-          sellerProducts.forEach((product) => {
+          categoryProducts.forEach((product: any) => {
             if (
               productImages.length < 4 &&
               product.galleryImages &&
@@ -229,84 +234,57 @@ export const getHomeContent = async (req: Request, res: Response) => {
         }
 
         return {
-          id: seller._id.toString(),
-          sellerId: seller._id.toString(),
-          name: seller.storeName,
-          logo: seller.logo,
+          id: card._id.toString(),
+          categoryId: categoryId.toString(),
+          name: card.name,
           productImages: productImages.slice(0, 4),
-          productCount: sellerProducts.length,
+          productCount: categoryProducts.length,
         };
       })
     );
 
-    // Fallback: If we don't have enough sellers, use popular products grouped by seller
-    let bestsellers = sellerCards;
-    if (sellerCards.length < 6) {
-      // Get popular products and group by seller
-      const popularProducts = await Product.find({
-        status: "Active",
-        publish: true,
-        popular: true,
+    // 2. Lowest Prices Products - Get admin-selected products
+    const lowestPricesProducts = await LowestPricesProduct.find({
+      isActive: true,
+    })
+      .populate({
+        path: "product",
+        select: "productName mainImage price mrp discount status publish category subcategory",
+        match: { status: "Active", publish: true }, // Only include active, published products
       })
-        .select("seller productName mainImage galleryImages")
-        .populate("seller", "storeName logo")
-        .limit(24) // Get enough products to fill 6 sellers × 4 products
-        .lean();
+      .sort({ order: 1 })
+      .lean();
 
-      // Group products by seller
-      const sellerMap = new Map();
-      popularProducts.forEach((product: any) => {
-        if (!product.seller || !product.seller._id) return;
-
-        const sellerId = product.seller._id.toString();
-        if (!sellerMap.has(sellerId)) {
-          sellerMap.set(sellerId, {
-            id: sellerId,
-            sellerId: sellerId,
-            name: product.seller.storeName || "Seller",
-            logo: product.seller.logo,
-            productImages: [],
-            productCount: 0,
-          });
-        }
-
-        const sellerCard = sellerMap.get(sellerId);
-        if (sellerCard.productImages.length < 4) {
-          // Prefer mainImage, fallback to first gallery image
-          const imageToAdd =
-            product.mainImage ||
-            (product.galleryImages && product.galleryImages[0]
-              ? product.galleryImages[0]
-              : null);
-          if (imageToAdd) {
-            sellerCard.productImages.push(imageToAdd);
-            sellerCard.productCount++;
-          }
-        }
+    // Filter out any products that were null (due to match condition)
+    const validLowestPricesProducts = lowestPricesProducts
+      .filter((item: any) => item.product !== null)
+      .map((item: any) => {
+        const product = item.product;
+        return {
+          id: product._id.toString(),
+          _id: product._id.toString(),
+          productName: product.productName,
+          name: product.productName,
+          mainImage: product.mainImage,
+          imageUrl: product.mainImage,
+          price: product.price,
+          mrp: product.mrp || product.price,
+          discount: product.discount || (product.mrp && product.price ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0),
+          categoryId: product.category?.toString() || "",
+          subcategory: product.subcategory?.toString() || "",
+          status: product.status,
+          publish: product.publish,
+        };
       });
 
-      // Convert map to array and take first 6
-      bestsellers = Array.from(sellerMap.values())
-        .filter((card) => card.productImages.length > 0)
-        .slice(0, 6);
-
-      // Pad images if needed
-      bestsellers.forEach((card) => {
-        while (card.productImages.length < 4 && card.productImages[0]) {
-          card.productImages.push(card.productImages[0]);
-        }
-        card.productImages = card.productImages.slice(0, 4);
-      });
-    }
-
-    // 2. Categories for Tiles (Grocery, Snacks, etc)
+    // 3. Categories for Tiles (Grocery, Snacks, etc)
     const categories = await Category.find({
       status: "Active",
     })
       .select("name image icon color slug")
       .sort({ order: 1 });
 
-    // 3. Shop By Store - Fetch from database
+    // 4. Shop By Store - Fetch from database
     const shopDocuments = await Shop.find({ isActive: true })
       .populate("category", "name slug")
       .sort({ order: 1, createdAt: -1 })
@@ -323,7 +301,7 @@ export const getHomeContent = async (req: Request, res: Response) => {
       bgColor: shop.bgColor || "bg-neutral-50",
     }));
 
-    // 4. Trending Items (Fetch some popular categories or products)
+    // 5. Trending Items (Fetch some popular categories or products)
     const trendingCategories = await Category.find({
       status: "Active",
     })
@@ -488,6 +466,7 @@ export const getHomeContent = async (req: Request, res: Response) => {
       success: true,
       data: {
         bestsellers,
+        lowestPrices: validLowestPricesProducts, // Admin-selected products for LowestPricesEver section
         categories,
         // Dynamic sections created by admin
         homeSections: dynamicSections,

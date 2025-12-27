@@ -40,7 +40,20 @@ export default function SellerProductList() {
   const [allCategories, setAllCategories] = useState<apiCategory[]>([]);
   const { user } = useAuth();
 
-  // ... (fetchCats useEffect)
+  // Fetch categories
+  useEffect(() => {
+    const fetchCats = async () => {
+      try {
+        const response = await getCategories();
+        if (response.success && response.data) {
+          setAllCategories(response.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch categories:", err);
+      }
+    };
+    fetchCats();
+  }, []);
 
   // Fetch products
   const fetchProducts = async () => {
@@ -131,8 +144,30 @@ export default function SellerProductList() {
   // ... (rest of logic: flatten, filter, sort)
 
   // Flatten products with variations for display
-  const allVariations = products.flatMap((product) =>
-    product.variations.map((variation, index) => ({
+  // Handle products with no variations by creating a default variation entry
+  const allVariations = products.flatMap((product) => {
+    // If product has no variations, create a default one
+    if (!product.variations || product.variations.length === 0) {
+      return [{
+        variationId: `${product._id}-default`,
+        productName: product.productName,
+        sellerName: user?.storeName || "",
+        productImage:
+          product.mainImage ||
+          product.mainImageUrl ||
+          "/assets/product-placeholder.jpg",
+        brandName: (product.brand as any)?.name || "-",
+        category: (product.category as any)?.name || "-",
+        subCategory: (product.subcategory as any)?.name || "-",
+        price: (product as any).price || 0,
+        discPrice: (product as any).discPrice || 0,
+        variation: "Default",
+        isPopular: product.popular,
+        productId: product._id,
+      }];
+    }
+    // If product has variations, map them
+    return product.variations.map((variation, index) => ({
       variationId: variation._id || `${product._id}-${index}`,
       productName: product.productName,
       sellerName: user?.storeName || "",
@@ -149,8 +184,8 @@ export default function SellerProductList() {
         variation.title || variation.value || variation.name || "Default",
       isPopular: product.popular,
       productId: product._id,
-    }))
-  );
+    }));
+  });
 
   // Filter variations
   let filteredVariations = allVariations.filter((variation) => {
@@ -400,7 +435,28 @@ export default function SellerProductList() {
           </div>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="p-8 text-center text-neutral-400">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-2"></div>
+            Loading products...
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="p-8 text-center text-red-600">
+            <p>{error}</p>
+            <button
+              onClick={fetchProducts}
+              className="mt-4 px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700">
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Table */}
+        {!loading && !error && (
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left border-collapse border border-neutral-200">
             <thead>
@@ -625,8 +681,10 @@ export default function SellerProductList() {
             </tbody>
           </table>
         </div>
+        )}
 
         {/* Pagination Footer */}
+        {!loading && !error && (
         <div className="px-4 sm:px-6 py-3 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
           <div className="text-xs sm:text-sm text-neutral-700">
             Showing {startIndex + 1} to {endIndex} of{" "}
@@ -702,6 +760,7 @@ export default function SellerProductList() {
             </button>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

@@ -94,6 +94,8 @@ import AdminSystemUser from "./modules/admin/pages/AdminSystemUser";
 import AdminUsers from "./modules/admin/pages/AdminUsers";
 import AdminFAQ from "./modules/admin/pages/AdminFAQ";
 import AdminHomeSection from "./modules/admin/pages/AdminHomeSection";
+import AdminBestsellerCards from "./modules/admin/pages/AdminBestsellerCards";
+import AdminLowestPrices from "./modules/admin/pages/AdminLowestPrices";
 import AdminShopByStore from "./modules/admin/pages/AdminShopByStore";
 import AdminAllOrders from "./modules/admin/pages/AdminAllOrders";
 import AdminPendingOrders from "./modules/admin/pages/AdminPendingOrders";
@@ -223,6 +225,8 @@ function App() {
                             <Route path="users" element={<AdminUsers />} />
                             <Route path="faq" element={<AdminFAQ />} />
                             <Route path="home-section" element={<AdminHomeSection />} />
+                            <Route path="bestseller-cards" element={<AdminBestsellerCards />} />
+                            <Route path="lowest-prices" element={<AdminLowestPrices />} />
                             <Route path="shop-by-store" element={<AdminShopByStore />} />
                             <Route path="orders/all" element={<AdminAllOrders />} />
                             <Route path="orders/pending" element={<AdminPendingOrders />} />
