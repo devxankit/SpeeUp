@@ -427,7 +427,7 @@ export const getProductById = async (req: Request, res: Response) => {
 
     const similarProducts = await Product.find(similarProductsQuery)
       .limit(6)
-      .select("productName price mainImage pack discount _id");
+      .select("productName price mainImage pack discount _id rating reviewsCount");
 
     return res.status(200).json({
       success: true,

@@ -342,26 +342,6 @@ export default function CategoryPage() {
                   {category.name}
                 </h1>
               </div>
-              <button
-                className="w-8 h-8 flex items-center justify-center text-neutral-700 hover:bg-neutral-100 rounded-full transition-colors"
-                aria-label="Menu">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M3 12h18M3 6h18M3 18h18"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  />
-                  <circle cx="4" cy="6" r="1.5" fill="currentColor" />
-                  <circle cx="4" cy="12" r="1.5" fill="currentColor" />
-                  <circle cx="4" cy="18" r="1.5" fill="currentColor" />
-                </svg>
-              </button>
             </div>
           </div>
         </div>

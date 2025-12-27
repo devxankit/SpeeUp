@@ -7,6 +7,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { addToWishlist, removeFromWishlist, getWishlist } from '../../../services/api/customerWishlistService';
 import Button from '../../../components/ui/button';
 import Badge from '../../../components/ui/badge';
+import StarRating from '../../../components/ui/StarRating';
 
 interface ProductCardProps {
   product: Product;
@@ -92,9 +93,13 @@ export default function ProductCard({
   const cartItem = cart.items.find((item) => item?.product && (item.product.id === (product as any).id || item.product._id === (product as any).id || item.product.id === product._id));
   const inCartQty = cartItem?.quantity || 0;
 
-  const discount = product.mrp && product.mrp > product.price
-    ? Math.round(((product.mrp - product.price) / product.mrp) * 100)
-    : 0;
+  // Get MRP - check both mrp (virtual) and compareAtPrice (actual field)
+  const mrp = product.mrp || (product as any).compareAtPrice;
+
+  // Calculate discount - use product.discount if available, otherwise calculate from mrp and price
+  const discount = (product as any).discount || (mrp && mrp > product.price
+    ? Math.round(((mrp - product.price) / mrp) * 100)
+    : 0);
 
   const handleCardClick = () => {
     navigate(`/product/${((product as any).id || product._id) as string}`);
@@ -139,7 +144,7 @@ export default function ProductCard({
             <img
               ref={imageRef}
               src={product.imageUrl || product.mainImage}
-              alt={product.name}
+              alt={product.name || product.productName || 'Product'}
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
               onError={(e) => {
@@ -150,14 +155,14 @@ export default function ProductCard({
                 if (parent && !parent.querySelector('.fallback-icon')) {
                   const fallback = document.createElement('div');
                   fallback.className = 'w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-4xl fallback-icon';
-                  fallback.textContent = (product.name || '?').charAt(0).toUpperCase();
+                  fallback.textContent = (product.name || product.productName || '?').charAt(0).toUpperCase();
                   parent.appendChild(fallback);
                 }
               }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-4xl">
-              {(product.name || '?').charAt(0).toUpperCase()}
+              {(product.name || product.productName || '?').charAt(0).toUpperCase()}
             </div>
           )}
 
@@ -301,8 +306,18 @@ export default function ProductCard({
 
               {/* 2. Name */}
               <h3 className="text-[10px] font-bold text-neutral-900 mb-0.5 line-clamp-2 leading-tight min-h-[1.75rem] max-h-[1.75rem] overflow-hidden">
-                {product.name}
+                {product.name || product.productName || ''}
               </h3>
+
+              {/* 2.5. Rating */}
+              <div className="mb-0.5">
+                <StarRating
+                  rating={(product.rating || (product as any).rating) || 0}
+                  reviewCount={(product.reviews || (product as any).reviewsCount) || 0}
+                  size="sm"
+                  showCount={true}
+                />
+              </div>
 
               {/* 3. Time */}
               <p className="text-[9px] text-neutral-600 mb-0.5 flex items-center gap-0.5 leading-tight">
@@ -326,9 +341,9 @@ export default function ProductCard({
                   <span className="text-[11px] font-bold text-neutral-900 leading-tight">
                     ₹{product.price.toFixed(0)}
                   </span>
-                  {product.mrp && product.mrp > product.price && (
+                  {mrp && mrp > product.price && (
                     <span className="text-[8px] text-neutral-500 line-through leading-tight">
-                      ₹{product.mrp.toFixed(0)}
+                      ₹{mrp.toFixed(0)}
                     </span>
                   )}
                 </div>
@@ -342,18 +357,18 @@ export default function ProductCard({
               )}
 
               <h3 className={`${compact ? 'text-xs md:text-sm' : 'text-sm md:text-base'} font-semibold text-neutral-900 ${compact ? 'mb-1' : 'mb-2'} line-clamp-2 ${compact ? 'min-h-[2rem]' : 'min-h-[2.5rem]'}`}>
-                {product.name}
+                {product.name || product.productName || ''}
               </h3>
 
-              {showRating && (
-                <div className={`flex items-center gap-1.5 ${compact ? 'mb-1' : 'mb-2'}`}>
-                  <div className="flex items-center gap-0.5">
-                    <span className={`text-yellow-400 ${compact ? 'text-[10px]' : 'text-xs'}`}>★★★★★</span>
-                    <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-neutral-600 font-medium ml-1`}>4.5</span>
-                  </div>
-                  <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-neutral-500`}>(1.17 lac)</span>
-                </div>
-              )}
+              {/* Always show rating */}
+              <div className={`${compact ? 'mb-1' : 'mb-2'}`}>
+                <StarRating
+                  rating={(product.rating || (product as any).rating) || 0}
+                  reviewCount={(product.reviews || (product as any).reviewsCount) || 0}
+                  size={compact ? 'sm' : 'md'}
+                  showCount={true}
+                />
+              </div>
 
               {showStockInfo && (
                 <p className="text-xs text-green-600 mb-2 font-medium">
@@ -375,9 +390,9 @@ export default function ProductCard({
                   <span className="text-base font-bold text-neutral-900">
                     ₹{product.price}
                   </span>
-                  {product.mrp && product.mrp > product.price && (
+                  {mrp && mrp > product.price && (
                     <span className="text-xs text-neutral-500 line-through">
-                      ₹{product.mrp}
+                      ₹{mrp}
                     </span>
                   )}
                 </div>

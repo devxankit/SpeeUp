@@ -121,7 +121,7 @@ async function fetchSectionData(section: any): Promise<any[]> {
       const products = await Product.find(query)
         .sort({ createdAt: -1 }) // Show newest items first
         .limit(limit || 8)
-        .select("productName mainImage price mrp discount")
+        .select("productName mainImage price mrp discount rating reviewsCount pack")
         .lean();
 
       return products.map((p: any) => ({
@@ -138,6 +138,10 @@ async function fetchSectionData(section: any): Promise<any[]> {
             ? Math.round(((p.mrp - p.price) / p.mrp) * 100)
             : 0),
         productImages: p.mainImage ? [p.mainImage] : [],
+        rating: p.rating || 0,
+        reviewsCount: p.reviewsCount || 0,
+        reviews: p.reviewsCount || 0,
+        pack: p.pack || "",
         type: "product",
       }));
     }
@@ -662,7 +666,7 @@ export const getStoreProducts = async (req: Request, res: Response) => {
       .populate("seller", "storeName")
       .sort({ createdAt: -1 })
       .limit(50)
-      .lean();
+      .lean({ virtuals: true });
 
     const total = await Product.countDocuments(query);
 
