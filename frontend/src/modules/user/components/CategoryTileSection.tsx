@@ -144,7 +144,7 @@ export default function CategoryTileSection({
                     }`}>
                   {/* Image - Single image for non-bestsellers, 2x2 grid for bestsellers */}
                   <div
-                    className={`w-full rounded-lg overflow-hidden ${showProductCount ? "h-20 mb-2" : "aspect-square"
+                    className={`w-full rounded-lg overflow-hidden ${showProductCount ? "h-32 md:h-36 mb-2" : "aspect-square"
                       } ${tile.bgColor || "bg-cyan-50"}`}>
                     {hasImages ? (
                       showProductCount ? (

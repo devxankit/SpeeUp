@@ -1,143 +1,109 @@
-import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import {
-  getCategories,
-  Category,
-} from "../../services/api/customerProductService";
+import { getHomeContent } from "../../services/api/customerHomeService";
+import CategoryTileSection from "./components/CategoryTileSection";
+import ProductCard from "./components/ProductCard";
 
 export default function Categories() {
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [homeData, setHomeData] = useState<any>({
+    homeSections: [],
+  });
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const categoryRes = await getCategories(true); // tree with subcategories filtered by products
-
-        // Backend already filters to categories that have products (and subcategories with products).
-        const filtered = (categoryRes.data || []).map((cat) => ({
-          ...cat,
-          subcategories:
-            cat.subcategories?.filter((sub) => sub && sub.name)?.slice() || [],
-        }));
-
-        setCategories(filtered);
+        const response = await getHomeContent();
+        if (response.success && response.data) {
+          setHomeData(response.data);
+        }
       } catch (error) {
-        console.error("Failed to fetch categories:", error);
+        console.error("Failed to fetch home content:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCategories();
+    fetchData();
   }, []);
 
-  const renderSubcategoryTile = (sub: any, parentCategoryId: string) => {
-    const fallbackLetter = sub.name?.charAt(0)?.toUpperCase() || "?";
-    // Navigate to parent category with subcategory filter
-    const subcategoryId = sub._id || sub.id;
-    const linkTo = `/category/${parentCategoryId}?subcategory=${subcategoryId}`;
-
-    return (
-      <Link
-        key={sub._id || sub.id}
-        to={linkTo}
-        className="flex flex-col items-center gap-1 rounded-xl border border-neutral-200 bg-white p-2 shadow-sm hover:shadow-md transition-shadow"
-      >
-        <div className="w-full aspect-square rounded-lg overflow-hidden bg-gradient-to-br from-neutral-50 to-white flex items-center justify-center">
-          {sub.image ? (
-            <img
-              src={sub.image}
-              alt={sub.name}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = "none";
-                const parent = target.parentElement;
-                if (parent) {
-                  parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-lg font-semibold text-green-700">${fallbackLetter}</div>`;
-                }
-              }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-lg font-semibold text-green-700">
-              {fallbackLetter}
-            </div>
-          )}
-        </div>
-        <span className="text-[11px] font-semibold text-neutral-900 text-center leading-tight line-clamp-2">
-          {sub.name}
-        </span>
-      </Link>
-    );
-  };
-
-  const renderCategoryBlock = (category: Category) => {
-    const subcats = category.subcategories || [];
-    const categoryId = category.id || category._id;
-    const fallbackLetter = category.name?.charAt(0)?.toUpperCase() || "?";
-
-    return (
-      <div key={category._id} className="space-y-3">
-        <div className="px-1 flex items-center gap-3">
-          {/* Category Image */}
-          <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-neutral-50 to-white flex items-center justify-center flex-shrink-0 border border-neutral-200">
-            {category.image ? (
-              <img
-                src={category.image}
-                alt={category.name}
-                className="w-full h-full object-cover"
-                loading="lazy"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = "none";
-                  const parent = target.parentElement;
-                  if (parent) {
-                    parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-lg font-semibold text-green-700">${fallbackLetter}</div>`;
-                  }
-                }}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-lg font-semibold text-green-700">
-                {fallbackLetter}
-              </div>
-            )}
-          </div>
-          <div className="flex-1">
-            <p className="text-[11px] uppercase tracking-wide text-neutral-500">
-              Category
-            </p>
-            <h3 className="text-base font-bold text-neutral-900 leading-tight">
-              {category.name}
-            </h3>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-          {subcats.map((sub) => renderSubcategoryTile(sub, categoryId))}
-        </div>
-      </div>
-    );
-  };
 
   return (
-    <div className="pb-4 bg-white min-h-screen">
-      <div className="px-4 py-4 bg-white border-b border-neutral-200 mb-4 sticky top-0 z-10 shadow-sm">
-        <h1 className="text-xl font-bold text-neutral-900">Categories</h1>
+    <div className="pb-4 md:pb-8 bg-white min-h-screen">
+      {/* Page Header */}
+      <div className="px-4 py-4 md:px-6 md:py-6 bg-white border-b border-neutral-200 mb-4 sticky top-0 z-10 shadow-sm">
+        <h1 className="text-xl md:text-2xl font-bold text-neutral-900">Categories</h1>
       </div>
 
       {loading ? (
-        <div className="flex justify-center pt-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
         </div>
       ) : (
-        <div className="space-y-8 px-4">
-          {categories.length > 0 ? (
-            categories.map((cat) => renderCategoryBlock(cat))
+        <div className="bg-neutral-50 -mt-2 pt-1 space-y-5 md:space-y-8 md:pt-4">
+          {/* Render all admin-created home sections */}
+          {homeData.homeSections && homeData.homeSections.length > 0 ? (
+            <>
+              {homeData.homeSections.map((section: any) => {
+                const columnCount = Number(section.columns) || 4;
+
+                if (section.displayType === "products" && section.data && section.data.length > 0) {
+                  // Products display - same as home page
+                  const gridClass = {
+                    2: "grid-cols-2",
+                    3: "grid-cols-3",
+                    4: "grid-cols-4",
+                    6: "grid-cols-6",
+                    8: "grid-cols-8"
+                  }[columnCount] || "grid-cols-4";
+
+                  const isCompact = columnCount >= 4;
+                  const gapClass = columnCount >= 4 ? "gap-2" : "gap-3 md:gap-4";
+
+                  return (
+                    <div key={section.id} className="mt-6 mb-6 md:mt-8 md:mb-8">
+                      {section.title && (
+                        <h2 className="text-lg md:text-2xl font-semibold text-neutral-900 mb-3 md:mb-6 px-4 md:px-6 lg:px-8 tracking-tight capitalize">
+                          {section.title}
+                        </h2>
+                      )}
+                      <div className="px-4 md:px-6 lg:px-8">
+                        <div className={`grid ${gridClass} ${gapClass}`}>
+                          {section.data.map((product: any) => (
+                            <ProductCard
+                              key={product.id || product._id}
+                              product={product}
+                              categoryStyle={true}
+                              showBadge={true}
+                              showPackBadge={false}
+                              showStockInfo={false}
+                              compact={isCompact}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Categories/Subcategories display - same as home page
+                return (
+                  <CategoryTileSection
+                    key={section.id}
+                    title={section.title}
+                    tiles={section.data || []}
+                    columns={columnCount as 2 | 3 | 4 | 6 | 8}
+                    showProductCount={false}
+                  />
+                );
+              })}
+            </>
           ) : (
-            <div className="text-center py-10 text-gray-500">
-              No categories found.
+            <div className="text-center py-12 md:py-16 text-neutral-500 px-4">
+              <p className="text-lg md:text-xl mb-2">No categories found</p>
+              <p className="text-sm md:text-base">
+                Please create home sections from the admin panel
+              </p>
             </div>
           )}
         </div>

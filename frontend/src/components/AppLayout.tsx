@@ -249,24 +249,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 Delivering in 10–15 mins
               </div>
 
-              {/* Location line */}
-              <div className="px-4 md:px-6 lg:px-8 py-2 flex items-center justify-between text-sm">
-                <span className="text-neutral-700 line-clamp-1" title={userLocation?.address || 'Location not set'}>
-                  {userLocation?.address
-                    ? userLocation.address.length > 50
-                      ? `${userLocation.address.substring(0, 50)}...`
-                      : userLocation.address
-                    : userLocation?.city && userLocation?.state
-                      ? `${userLocation.city}, ${userLocation.state}`
-                      : userLocation?.city || 'Location not set'}
-                </span>
-                <button
-                  onClick={() => setShowLocationChangeModal(true)}
-                  className="text-blue-600 font-medium hover:text-blue-700 transition-colors flex-shrink-0 ml-2"
-                >
-                  Change
-                </button>
-              </div>
+              {/* Location line - only show if user has provided location */}
+              {userLocation && (userLocation.address || userLocation.city) && (
+                <div className="px-4 md:px-6 lg:px-8 py-2 flex items-center justify-between text-sm">
+                  <span className="text-neutral-700 line-clamp-1" title={userLocation?.address || ''}>
+                    {userLocation?.address
+                      ? userLocation.address.length > 50
+                        ? `${userLocation.address.substring(0, 50)}...`
+                        : userLocation.address
+                      : userLocation?.city && userLocation?.state
+                        ? `${userLocation.city}, ${userLocation.state}`
+                        : userLocation?.city || ''}
+                  </span>
+                  <button
+                    onClick={() => setShowLocationChangeModal(true)}
+                    className="text-blue-600 font-medium hover:text-blue-700 transition-colors flex-shrink-0 ml-2"
+                  >
+                    Change
+                  </button>
+                </div>
+              )}
 
               {/* Search bar - Hidden on Order Again page */}
               {showSearchBar && (

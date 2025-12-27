@@ -67,7 +67,7 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
   const [scrollProgress, setScrollProgress] = useState(0);
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
 
-  // Format location display text
+  // Format location display text - only show if user has provided location
   const locationDisplayText = useMemo(() => {
     if (userLocation?.address) {
       // Use the full address if available
@@ -81,8 +81,8 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
     if (userLocation?.city) {
       return userLocation.city;
     }
-    // Default fallback
-    return 'SpeeUp, Princess Center, New Palasia, Indore, Madhya Pradesh';
+    // No default - return empty string if no location provided
+    return '';
   }, [userLocation]);
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -292,13 +292,15 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
               <div className="text-neutral-800 font-medium text-[10px] md:text-xs mb-0 leading-tight">SpeeUp Quick Commerce</div>
               {/* Delivery time - large, bold, dark grey/black */}
               <div className="text-neutral-900 font-extrabold text-2xl md:text-xl mb-0 md:mb-0.5 leading-tight">{appConfig.estimatedDeliveryTime}</div>
-              {/* Location with dropdown indicator */}
-              <div className="text-neutral-700 text-[10px] md:text-xs flex items-center gap-0.5 leading-tight">
-                <span className="line-clamp-1" title={locationDisplayText}>{locationDisplayText}</span>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
-                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
+              {/* Location with dropdown indicator - only show if location is provided */}
+              {locationDisplayText && (
+                <div className="text-neutral-700 text-[10px] md:text-xs flex items-center gap-0.5 leading-tight">
+                  <span className="line-clamp-1" title={locationDisplayText}>{locationDisplayText}</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
+                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              )}
             </div>
             {/* Right: Wallet Icon */}
             <div className="flex items-center">
