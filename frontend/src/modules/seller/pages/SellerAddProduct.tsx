@@ -14,8 +14,10 @@ import {
 import {
   getCategories,
   getSubcategories,
+  getSubSubCategories,
   Category,
   SubCategory,
+  SubSubCategory,
 } from "../../../services/api/categoryService";
 import { getActiveTaxes, Tax } from "../../../services/api/taxService";
 import { getBrands, Brand } from "../../../services/api/brandService";
@@ -32,6 +34,7 @@ export default function SellerAddProduct() {
     headerCategory: "",
     category: "",
     subcategory: "",
+    subSubCategory: "",
     publish: "No",
     popular: "No",
     dealOfDay: "No",
@@ -75,6 +78,7 @@ export default function SellerAddProduct() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<SubCategory[]>([]);
+  const [subSubCategories, setSubSubCategories] = useState<SubSubCategory[]>([]);
   const [taxes, setTaxes] = useState<Tax[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [headerCategories, setHeaderCategories] = useState<HeaderCategory[]>(
@@ -125,6 +129,10 @@ export default function SellerAddProduct() {
               subcategory:
                 (product.subcategory as any)?._id ||
                 product.subcategoryId ||
+                "",
+              subSubCategory:
+                (product.subSubCategory as any)?._id ||
+                (product as any).subSubCategoryId ||
                 "",
               publish: product.publish ? "Yes" : "No",
               popular: product.popular ? "Yes" : "No",
@@ -189,6 +197,25 @@ export default function SellerAddProduct() {
     }
   }, [formData.category]);
 
+  useEffect(() => {
+    const fetchSubSubs = async () => {
+      if (formData.subcategory) {
+        try {
+          const res = await getSubSubCategories(formData.subcategory);
+          if (res.success) setSubSubCategories(res.data);
+        } catch (err) {
+          console.error("Error fetching sub-subcategories:", err);
+        }
+      } else {
+        setSubSubCategories([]);
+        setFormData((prev) => ({ ...prev, subSubCategory: "" }));
+      }
+    };
+    if (formData.subcategory) {
+      fetchSubSubs();
+    }
+  }, [formData.subcategory]);
+
   // Clear category and subcategory when header category changes
   useEffect(() => {
     if (formData.headerCategory) {
@@ -207,8 +234,10 @@ export default function SellerAddProduct() {
             ...prev,
             category: "",
             subcategory: "",
+            subSubCategory: "",
           }));
           setSubcategories([]);
+          setSubSubCategories([]);
         }
       }
     } else {
@@ -393,6 +422,7 @@ export default function SellerAddProduct() {
         headerCategoryId: formData.headerCategory || undefined,
         categoryId: formData.category || undefined,
         subcategoryId: formData.subcategory || undefined,
+        subSubCategoryId: formData.subSubCategory || undefined,
         brandId: formData.brand || undefined,
         publish: formData.publish === "Yes",
         popular: formData.popular === "Yes",
@@ -438,6 +468,7 @@ export default function SellerAddProduct() {
               headerCategory: "",
               category: "",
               subcategory: "",
+              subSubCategory: "",
               publish: "No",
               popular: "No",
               dealOfDay: "No",
@@ -598,6 +629,33 @@ export default function SellerAddProduct() {
                     {subcategories.map((sub) => (
                       <option key={sub._id} value={sub._id}>
                         {sub.subcategoryName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Select Sub-SubCategory
+                    {!formData.subcategory && (
+                      <span className="text-xs text-neutral-500 ml-1">
+                        (Select subcategory first)
+                      </span>
+                    )}
+                  </label>
+                  <select
+                    name="subSubCategory"
+                    value={formData.subSubCategory}
+                    onChange={handleChange}
+                    disabled={!formData.subcategory}
+                    className={`w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 ${
+                      !formData.subcategory
+                        ? "bg-neutral-100 cursor-not-allowed text-neutral-500"
+                        : "bg-white"
+                    }`}>
+                    <option value="">Select Sub-SubCategory</option>
+                    {subSubCategories.map((subSub) => (
+                      <option key={subSub._id} value={subSub._id}>
+                        {subSub.name}
                       </option>
                     ))}
                   </select>

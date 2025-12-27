@@ -88,6 +88,20 @@ export const createProduct = asyncHandler(
       }
     }
 
+    // 6. Set product status - All products are published automatically without approval
+    newProductData.publish = true;
+    newProductData.status = "Active";
+    newProductData.requiresApproval = false;
+
+    // Set default values for other required fields if not provided
+    if (!newProductData.popular) newProductData.popular = false;
+    if (!newProductData.dealOfDay) newProductData.dealOfDay = false;
+    if (!newProductData.isReturnable) newProductData.isReturnable = false;
+    if (!newProductData.rating) newProductData.rating = 0;
+    if (!newProductData.reviewsCount) newProductData.reviewsCount = 0;
+    if (!newProductData.discount) newProductData.discount = 0;
+    if (!newProductData.tags) newProductData.tags = [];
+
     const product = await Product.create(newProductData);
 
     return res.status(201).json({

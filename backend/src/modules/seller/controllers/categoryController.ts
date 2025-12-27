@@ -383,3 +383,34 @@ export const getAllSubcategories = asyncHandler(
     });
   }
 );
+
+/**
+ * Get sub-subcategories by subcategory ID
+ */
+export const getSubSubCategories = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { subCategoryId } = req.params;
+    const { search, isActive } = req.query;
+
+    // Query Category model where parentId is the subcategory ID
+    const query: any = { parentId: subCategoryId };
+
+    if (isActive === "true") {
+      query.status = "Active";
+    }
+
+    if (search) {
+      query.name = { $regex: search as string, $options: "i" };
+    }
+
+    const subSubCategories = await Category.find(query)
+      .sort({ order: 1, name: 1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      message: "Sub-subcategories fetched successfully",
+      data: subSubCategories,
+    });
+  }
+);

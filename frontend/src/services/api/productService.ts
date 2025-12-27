@@ -30,7 +30,8 @@ export interface Product {
   seller: string | any; // Updated to allow populated object
   headerCategoryId?: string | any; // Updated to allow populated object
   category?: string | any; // Updated to allow populated object
-  subcategory?: string | any; // Updated
+  subcategory?: string | any;
+  subSubCategory?: string | any; // Added subSubCategory
   brand?: string | any; // Updated
   publish: boolean;
   popular: boolean;
@@ -68,6 +69,7 @@ export interface CreateProductData {
   headerCategoryId?: string;
   categoryId?: string;
   subcategoryId?: string;
+  subSubCategoryId?: string;
   brandId?: string;
   publish: boolean;
   popular: boolean;

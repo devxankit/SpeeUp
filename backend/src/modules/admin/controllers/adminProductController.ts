@@ -844,14 +844,10 @@ export const createProduct = asyncHandler(
         });
       }
 
-      // Set default status based on seller settings
-      if (seller.requireProductApproval) {
-        productData.status = "Pending";
-        productData.requiresApproval = true;
-      } else {
-        productData.status = "Active";
-        productData.requiresApproval = false;
-      }
+      // All products are published automatically without approval
+      productData.status = "Active";
+      productData.publish = true;
+      productData.requiresApproval = false;
 
       const product = await Product.create(productData);
 
@@ -1170,14 +1166,10 @@ export const bulkImportProducts = asyncHandler(
           continue;
         }
 
-        // Set default status
-        if (seller.requireProductApproval) {
-          productData.status = "Pending";
-          productData.requiresApproval = true;
-        } else {
-          productData.status = "Active";
-          productData.requiresApproval = false;
-        }
+        // All products are published automatically without approval
+        productData.status = "Active";
+        productData.publish = true;
+        productData.requiresApproval = false;
 
         const product = await Product.create(productData);
 

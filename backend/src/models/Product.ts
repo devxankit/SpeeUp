@@ -9,6 +9,7 @@ export interface IProduct extends Document {
   // Categorization
   category: mongoose.Types.ObjectId;
   subcategory?: mongoose.Types.ObjectId;
+  subSubCategory?: mongoose.Types.ObjectId;
   headerCategoryId?: mongoose.Types.ObjectId;
   brand?: mongoose.Types.ObjectId;
 
@@ -113,6 +114,10 @@ const ProductSchema = new Schema<IProduct>(
       type: Schema.Types.ObjectId,
       ref: "SubCategory",
     },
+    subSubCategory: {
+      type: Schema.Types.ObjectId,
+      ref: "Category",
+    },
     headerCategoryId: {
       type: Schema.Types.ObjectId,
       ref: "HeaderCategory",
@@ -193,7 +198,7 @@ const ProductSchema = new Schema<IProduct>(
     // Status Flags
     publish: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     popular: {
       type: Boolean,
@@ -206,7 +211,7 @@ const ProductSchema = new Schema<IProduct>(
     status: {
       type: String,
       enum: ["Active", "Inactive", "Pending", "Rejected"],
-      default: "Pending",
+      default: "Active",
     },
 
     // Product Details
@@ -277,10 +282,10 @@ const ProductSchema = new Schema<IProduct>(
       default: [],
     },
 
-    // Approval
+    // Approval (removed - all products are auto-published)
     requiresApproval: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     approvedBy: {
       type: Schema.Types.ObjectId,
