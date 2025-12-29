@@ -327,6 +327,7 @@ export default function DeliveryOrderDetail() {
                         directionsRendererRef.current.setOptions({ preserveViewport: false });
                         directionsRendererRef.current.setDirections(result);
                         directionsRendererRef.current.setOptions({ preserveViewport: true });
+                        console.log('fit bounds');
                         hasInitialRouteFitted.current = true;
                         // Reset the flag after a delay to allow for the change to complete
                         setTimeout(() => {
