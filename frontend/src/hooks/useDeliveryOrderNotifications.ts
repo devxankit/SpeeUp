@@ -200,7 +200,7 @@ export const useDeliveryOrderNotifications = () => {
         }
     }, []);
 
-    const handleAccept = useCallback(async (orderId: string) => {
+    const handleAccept = useCallback(async (orderId: string, navigate?: (path: string) => void) => {
         if (!socketRef.current || !user?.id) {
             return { success: false, message: 'Not connected or user not found' };
         }
@@ -218,6 +218,11 @@ export const useDeliveryOrderNotifications = () => {
                         notificationQueue: prev.notificationQueue.slice(1),
                     };
                 });
+
+                // Navigate to order detail page
+                if (navigate) {
+                    navigate(`/delivery/orders/${orderId}`);
+                }
             }
 
             return result;

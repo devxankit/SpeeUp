@@ -1,4 +1,5 @@
 import { ReactNode, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DeliveryBottomNav from './DeliveryBottomNav';
 import { DeliveryStatusProvider, useDeliveryStatus } from '../context/DeliveryStatusContext';
 import { DeliveryUserProvider, useDeliveryUser } from '../context/DeliveryUserContext';
@@ -11,6 +12,7 @@ interface DeliveryLayoutContentProps {
 }
 
 function DeliveryLayoutContent({ children }: DeliveryLayoutContentProps) {
+  const navigate = useNavigate();
   const { isOnline } = useDeliveryStatus();
   const { setUserName } = useDeliveryUser();
   const {
@@ -45,7 +47,7 @@ function DeliveryLayoutContent({ children }: DeliveryLayoutContentProps) {
       {currentNotification && (
         <OrderNotificationCard
           notification={currentNotification}
-          onAccept={acceptOrder}
+          onAccept={(orderId) => acceptOrder(orderId, navigate)}
           onReject={rejectOrder}
         />
       )}
