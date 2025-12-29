@@ -59,37 +59,48 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
 
-  // Fetch subcategory images for category cards
+  // Fetch subcategory images for category cards - DEFERRED for faster initial load
   const fetchSubcategoryImages = useCallback(async (cards: PromoCard[]) => {
-    const imagesMap: Record<string, string[]> = {};
+    // Defer subcategory image fetching to not block initial render
+    // Load them after a short delay to prioritize main content
+    setTimeout(async () => {
+      const imagesMap: Record<string, string[]> = {};
 
-    await Promise.all(
-      cards.map(async (card) => {
-        // Use categoryId for fetching (should be _id, not slug)
-        const categoryId = card.categoryId;
-        if (!categoryId) return;
+      // Fetch images in batches to avoid overwhelming the network
+      const batchSize = 2;
+      for (let i = 0; i < cards.length; i += batchSize) {
+        const batch = cards.slice(i, i + batchSize);
+        await Promise.all(
+          batch.map(async (card) => {
+            const categoryId = card.categoryId;
+            if (!categoryId) return;
 
-        try {
-          // Fetch subcategories for this category
-          const response = await getSubcategories(categoryId, { limit: 4 });
-          if (response.success && response.data) {
-            // Extract subcategory images
-            const images = response.data
-              .filter((subcat) => subcat.subcategoryImage)
-              .map((subcat) => subcat.subcategoryImage!)
-              .slice(0, 4);
+            try {
+              const response = await getSubcategories(categoryId, { limit: 4 });
+              if (response.success && response.data) {
+                const images = response.data
+                  .filter((subcat) => subcat.subcategoryImage)
+                  .map((subcat) => subcat.subcategoryImage!)
+                  .slice(0, 4);
 
-            if (images.length > 0) {
-              imagesMap[card.id] = images;
+                if (images.length > 0) {
+                  imagesMap[card.id] = images;
+                }
+              }
+            } catch (error) {
+              // Silently fail - emoji fallback will be used
+              console.error(`Error fetching subcategories for category ${categoryId}:`, error);
             }
-          }
-        } catch (error) {
-          console.error(`Error fetching subcategories for category ${categoryId}:`, error);
+          })
+        );
+        // Small delay between batches to prevent network congestion
+        if (i + batchSize < cards.length) {
+          await new Promise(resolve => setTimeout(resolve, 50));
         }
-      })
-    );
+      }
 
-    setSubcategoryImagesMap(imagesMap);
+      setSubcategoryImagesMap(imagesMap);
+    }, 300); // 300ms delay - allows main content to render first
   }, []);
 
   useEffect(() => {
@@ -236,7 +247,8 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
         }
         setHasData(fetchedCards.length > 0 || fetchedProducts.length > 0);
 
-        // Fetch subcategory images for each category card
+        // Fetch subcategory images AFTER setting hasData to true
+        // This allows the main content to render immediately
         if (fetchedCards.length > 0) {
           fetchSubcategoryImages(fetchedCards);
         }
@@ -251,12 +263,10 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
     };
     fetchData();
 
-    // Set up polling to refresh data every 30 seconds
-    const intervalId = setInterval(() => {
-      fetchData();
-    }, 30000);
+    // REMOVED: Polling every 30 seconds causes unnecessary re-renders and API calls
+    // If real-time updates are needed, consider using WebSockets or Server-Sent Events
+    // For now, data will only refresh when activeTab changes
 
-    return () => clearInterval(intervalId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, theme.bannerText, theme.saleText]);
 
@@ -270,64 +280,79 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
     const container = containerRef.current;
     if (!container) return;
 
-    const ctx = gsap.context(() => {
-      const cards = container.querySelectorAll(".promo-card");
-      if (cards.length > 0) {
-        gsap.fromTo(
-          cards,
-          { y: 30, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.5,
-            stagger: 0.08,
-            ease: "power3.out",
-          }
-        );
-      }
-    }, container);
+    let ctx: gsap.Context | null = null;
 
-    return () => ctx.revert();
+    // Defer card animation to prioritize content rendering
+    const timeoutId = setTimeout(() => {
+      ctx = gsap.context(() => {
+        const cards = container.querySelectorAll(".promo-card");
+        if (cards.length > 0) {
+          gsap.fromTo(
+            cards,
+            { y: 20, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.4, // Reduced duration
+              stagger: 0.05, // Reduced stagger
+              ease: "power2.out", // Simpler easing
+            }
+          );
+        }
+      }, container);
+    }, 100); // Start animation 100ms after render
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (ctx) {
+        ctx.revert();
+      }
+    };
   }, [hasData]);
 
-  // Snowflake animation
+  // Snowflake animation - DEFERRED for faster initial load
   useLayoutEffect(() => {
     if (!hasData) return;
     const snowflakesContainer = snowflakesRef.current;
     if (!snowflakesContainer) return;
 
-    const snowflakes = snowflakesContainer.querySelectorAll(".snowflake");
+    // Defer animation start to prioritize content rendering
+    const timeoutId = setTimeout(() => {
+      const snowflakes = snowflakesContainer.querySelectorAll(".snowflake");
 
-    snowflakes.forEach((snowflake, index) => {
-      const delay = index * 0.3;
-      const duration = 3 + Math.random() * 2; // 3-5 seconds
-      const xOffset = (Math.random() - 0.5) * 40; // Random horizontal drift
+      snowflakes.forEach((snowflake, index) => {
+        const delay = index * 0.3;
+        const duration = 3 + Math.random() * 2; // 3-5 seconds
+        const xOffset = (Math.random() - 0.5) * 40; // Random horizontal drift
 
-      gsap.set(snowflake, {
-        y: -20,
-        x: xOffset,
-        opacity: 0.8 + Math.random() * 0.2, // 0.8-1.0 opacity for better visibility
-        scale: 0.6 + Math.random() * 0.4, // 0.6-1.0 scale for better visibility
+        gsap.set(snowflake, {
+          y: -20,
+          x: xOffset,
+          opacity: 0.8 + Math.random() * 0.2, // 0.8-1.0 opacity for better visibility
+          scale: 0.6 + Math.random() * 0.4, // 0.6-1.0 scale for better visibility
+        });
+
+        gsap.to(snowflake, {
+          y: "+=200",
+          x: `+=${xOffset}`,
+          duration: duration,
+          delay: delay,
+          ease: "none",
+          repeat: -1,
+        });
       });
-
-      gsap.to(snowflake, {
-        y: "+=200",
-        x: `+=${xOffset}`,
-        duration: duration,
-        delay: delay,
-        ease: "none",
-        repeat: -1,
-      });
-    });
+    }, 200); // Start animation 200ms after render
 
     return () => {
+      clearTimeout(timeoutId);
+      const snowflakes = snowflakesContainer.querySelectorAll(".snowflake");
       snowflakes.forEach((snowflake) => {
         gsap.killTweensOf(snowflake);
       });
     };
   }, [hasData]);
 
-  // HOUSEFULL SALE animation
+  // HOUSEFULL SALE animation - SIMPLIFIED and DEFERRED for faster load
   useLayoutEffect(() => {
     if (!hasData) return;
     const housefullContainer = housefullRef.current;
@@ -335,62 +360,37 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
     const dateText = dateRef.current;
     if (!housefullContainer) return;
 
-    const letters = housefullContainer.querySelectorAll(".housefull-letter");
+    // Defer animation start to prioritize content rendering
+    const timeoutId = setTimeout(() => {
+      const letters = housefullContainer.querySelectorAll(".housefull-letter");
 
-    const animate = () => {
-      const tl = gsap.timeline();
+      // Simplified animation - single entrance animation instead of loop
       gsap.set([housefullContainer, saleText, dateText], {
-        scale: 1,
-        opacity: 1,
+        scale: 0.8,
+        opacity: 0,
       });
 
-      tl.to([housefullContainer, saleText, dateText], {
-        scale: 0,
-        opacity: 0,
-        duration: 0.6,
-        ease: "power2.in",
-      })
-        .to([housefullContainer, saleText, dateText], {
-          scale: 1.2,
-          opacity: 1,
-          duration: 0.5,
-          ease: "back.out(1.7)",
-        })
-        .to([housefullContainer, saleText, dateText], {
-          scale: 1,
-          duration: 0.4,
-          ease: "power2.out",
-        })
-        .to({}, { duration: 0.4 })
-        .to(letters, {
-          y: -15,
-          duration: 0.2,
-          stagger: 0.06,
-          ease: "power2.out",
-        })
-        .to(letters, {
-          y: 0,
-          duration: 0.2,
-          stagger: 0.06,
-          ease: "power2.in",
-        })
-        .to(
-          {},
-          {
-            duration: 2,
-            onComplete: () => {
-              // Check if component is still mounted implicitly by closure not being killed,
-              // but better to rely on cleanup.
-              // However, for layoutEffect loop, it's fine.
-              setTimeout(animate, 1000);
-            },
-          }
-        );
-    };
+      gsap.to([housefullContainer, saleText, dateText], {
+        scale: 1,
+        opacity: 1,
+        duration: 0.5,
+        ease: "back.out(1.7)",
+      });
 
-    animate();
+      // Simplified letter animation - only run once
+      gsap.to(letters, {
+        y: -10,
+        duration: 0.15,
+        stagger: 0.04,
+        ease: "power2.out",
+        yoyo: true,
+        repeat: 1,
+      });
+    }, 150); // Start animation 150ms after render
 
     return () => {
+      clearTimeout(timeoutId);
+      const letters = housefullContainer.querySelectorAll(".housefull-letter");
       gsap.killTweensOf([housefullContainer, saleText, dateText, letters]);
     };
   }, [hasData]);
@@ -455,9 +455,20 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
 
   const currentProduct = featuredProducts.length > 0 ? featuredProducts[currentProductIndex] : null;
 
+  // Show minimal loading state - render faster
   if (loading) {
     return (
-      <div className="h-[200px] w-full bg-neutral-100 animate-pulse rounded-lg mx-0 mt-4" />
+      <div
+        className="relative"
+        style={{
+          background: `linear-gradient(to bottom, ${theme.primary[0]}, ${theme.primary[1]}, ${theme.primary[2]}, ${theme.primary[3]}, ${theme.primary[3]})`,
+          paddingTop: "12px",
+          paddingBottom: "0px",
+          marginTop: 0,
+          minHeight: "200px"
+        }}>
+        <div className="h-[200px] w-full bg-transparent animate-pulse rounded-lg mx-0 mt-4" />
+      </div>
     );
   }
 
@@ -740,6 +751,8 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                       src={displayProduct.imageUrl}
                       alt={displayProduct.name}
                       className="w-full h-full object-contain"
+                      loading="lazy"
+                      decoding="async"
                       style={{
                         mixBlendMode: "normal",
                         backgroundColor: "transparent",
@@ -832,6 +845,8 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                                     src={imageUrl}
                                     alt={`Subcategory ${idx + 1}`}
                                     className="w-full h-full object-cover"
+                                    loading="lazy"
+                                    decoding="async"
                                     onError={(e) => {
                                       // Fallback to emoji if image fails to load
                                       const target =

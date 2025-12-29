@@ -36,6 +36,9 @@ export default function ProductDetail() {
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [selectedVariantIndex, setSelectedVariantIndex] = useState<number>(0);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number>(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -130,6 +133,41 @@ export default function ProductDetail() {
   // Get all images for gallery
   const allImages = product?.allImages || [product?.imageUrl || ""].filter(Boolean);
   const currentImage = allImages[selectedImageIndex] || product?.imageUrl || "";
+
+  // Minimum swipe distance (in pixels)
+  const minSwipeDistance = 50;
+
+  // Handle touch start
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  // Handle touch move
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  // Handle touch end - perform swipe
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && selectedImageIndex < allImages.length - 1) {
+      setIsTransitioning(true);
+      setSelectedImageIndex(selectedImageIndex + 1);
+      setTimeout(() => setIsTransitioning(false), 300);
+    }
+
+    if (isRightSwipe && selectedImageIndex > 0) {
+      setIsTransitioning(true);
+      setSelectedImageIndex(selectedImageIndex - 1);
+      setTimeout(() => setIsTransitioning(false), 300);
+    }
+  };
 
   // Get quantity in cart - check by product ID and variant if available
   const cartItem = product
@@ -309,31 +347,79 @@ export default function ProductDetail() {
 
         {/* Product Image Gallery */}
         <div className="relative w-full bg-gradient-to-br from-neutral-100 to-neutral-200 overflow-hidden">
-          {/* Main Product Image */}
-          <div className="w-full aspect-square flex items-center justify-center relative">
-            {currentImage ? (
-              <img
-                src={currentImage}
-                alt={product.name}
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-neutral-400 text-6xl">
-                {(product.name || product.productName || "?")
-                  .charAt(0)
-                  .toUpperCase()}
-              </div>
-            )}
+          {/* Main Product Image - Swipeable on mobile */}
+          <div
+            className="w-full aspect-square relative overflow-hidden"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            style={{
+              touchAction: allImages.length > 1 ? 'pan-x' : 'pan-y pinch-zoom',
+              cursor: allImages.length > 1 ? 'grab' : 'default',
+            }}
+          >
+            {/* Image Container with swipe animation - Mobile swipe carousel */}
+            <div
+              className="w-full h-full flex transition-transform duration-300 ease-out md:hidden"
+              style={{
+                transform: `translateX(-${selectedImageIndex * 100}%)`,
+              }}
+            >
+              {allImages.map((image: string, index: number) => (
+                <div
+                  key={index}
+                  className="w-full h-full flex-shrink-0 flex items-center justify-center relative"
+                  style={{ minWidth: '100%' }}
+                >
+                  {image ? (
+                    <img
+                      src={image}
+                      alt={`${product.name} - Image ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                      draggable={false}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-neutral-400 text-6xl">
+                      {(product.name || product.productName || "?")
+                        .charAt(0)
+                        .toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop: Single image display */}
+            <div className="hidden md:flex w-full h-full items-center justify-center">
+              {currentImage ? (
+                <img
+                  src={currentImage}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-neutral-400 text-6xl">
+                  {(product.name || product.productName || "?")
+                    .charAt(0)
+                    .toUpperCase()}
+                </div>
+              )}
+            </div>
 
             {/* Image Gallery Navigation - Only show if multiple images */}
             {allImages.length > 1 && (
               <>
-                {/* Previous Image Button */}
+                {/* Previous Image Button - Desktop only */}
                 {selectedImageIndex > 0 && (
                   <button
-                    onClick={() => setSelectedImageIndex(selectedImageIndex - 1)}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors z-10"
+                    onClick={() => {
+                      setIsTransitioning(true);
+                      setSelectedImageIndex(selectedImageIndex - 1);
+                      setTimeout(() => setIsTransitioning(false), 300);
+                    }}
+                    className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full items-center justify-center shadow-md hover:bg-white transition-colors z-10"
                     aria-label="Previous image">
                     <svg
                       width="20"
@@ -352,11 +438,15 @@ export default function ProductDetail() {
                   </button>
                 )}
 
-                {/* Next Image Button */}
+                {/* Next Image Button - Desktop only */}
                 {selectedImageIndex < allImages.length - 1 && (
                   <button
-                    onClick={() => setSelectedImageIndex(selectedImageIndex + 1)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors z-10"
+                    onClick={() => {
+                      setIsTransitioning(true);
+                      setSelectedImageIndex(selectedImageIndex + 1);
+                      setTimeout(() => setIsTransitioning(false), 300);
+                    }}
+                    className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full items-center justify-center shadow-md hover:bg-white transition-colors z-10"
                     aria-label="Next image">
                     <svg
                       width="20"
@@ -375,12 +465,16 @@ export default function ProductDetail() {
                   </button>
                 )}
 
-                {/* Image Indicators */}
+                {/* Image Indicators - Show on both mobile and desktop */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
                   {allImages.map((_: string, index: number) => (
                     <button
                       key={index}
-                      onClick={() => setSelectedImageIndex(index)}
+                      onClick={() => {
+                        setIsTransitioning(true);
+                        setSelectedImageIndex(index);
+                        setTimeout(() => setIsTransitioning(false), 300);
+                      }}
                       className={`w-2 h-2 rounded-full transition-all ${
                         index === selectedImageIndex
                           ? "bg-white w-6"
@@ -397,11 +491,22 @@ export default function ProductDetail() {
           {/* Thumbnail Gallery - Show below main image if multiple images */}
           {allImages.length > 1 && (
             <div className="px-4 py-2 bg-white/50 backdrop-blur-sm">
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+              {/* Mobile swipe hint */}
+              <div className="md:hidden flex items-center justify-center gap-1 mb-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-500">
+                  <path d="M7 12l5-5M17 12l-5-5M12 7l-5 5M12 17l5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="text-xs text-neutral-500">Swipe to view more</span>
+              </div>
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 scroll-smooth">
                 {allImages.map((image: string, index: number) => (
                   <button
                     key={index}
-                    onClick={() => setSelectedImageIndex(index)}
+                    onClick={() => {
+                      setIsTransitioning(true);
+                      setSelectedImageIndex(index);
+                      setTimeout(() => setIsTransitioning(false), 300);
+                    }}
                     className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
                       index === selectedImageIndex
                         ? "border-green-600 ring-2 ring-green-200"
