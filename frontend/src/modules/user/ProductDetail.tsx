@@ -12,6 +12,7 @@ import { useLocation } from '../../hooks/useLocation';
 import Button from '../../components/ui/button';
 import Badge from '../../components/ui/badge';
 import { getProductById } from '../../services/api/customerProductService';
+import WishlistButton from '../../components/WishlistButton';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -240,52 +241,14 @@ export default function ProductDetail() {
           {/* Action icons - top right */}
           <div className="flex items-center gap-2">
             {/* Heart icon */}
-            <button
-              className="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm hover:bg-neutral-50 transition-colors"
-              aria-label="Add to favorites">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path
-                  d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              </svg>
-            </button>
+            {product?.id && (
+              <WishlistButton
+                productId={product.id}
+                size="md"
+                className="bg-white rounded-full shadow-sm"
+              />
+            )}
 
-            {/* Search icon */}
-            <button
-              className="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-sm hover:bg-neutral-50 transition-colors"
-              aria-label="Search"
-              onClick={() => navigate("/search")}>
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <circle
-                  cx="11"
-                  cy="11"
-                  r="8"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                />
-                <path
-                  d="m21 21-4.35-4.35"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
 
             {/* Share icon - upward arrow */}
             <button
@@ -978,25 +941,11 @@ export default function ProductDetail() {
                       key={similarProduct.id}
                       className="flex-shrink-0 w-40 bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden relative">
                       {/* Heart icon - top right */}
-                      <button
-                        className="absolute top-2 right-2 z-10 w-8 h-8 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors"
-                        aria-label="Add to favorites">
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg">
-                          <path
-                            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-                            stroke="#ef4444"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            fill="none"
-                          />
-                        </svg>
-                      </button>
+                      <WishlistButton
+                        productId={similarProduct.id || similarProduct._id}
+                        size="sm"
+                        className="absolute top-2 right-2 shadow-md"
+                      />
 
                       {/* Image */}
                       <div

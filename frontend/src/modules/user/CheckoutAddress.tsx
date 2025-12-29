@@ -1,23 +1,44 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { OrderAddress } from '../../types/order';
-import { addAddress } from '../../services/api/customerAddressService';
+import { addAddress, updateAddress } from '../../services/api/customerAddressService';
 import { appConfig } from '../../services/configService';
 
 export default function CheckoutAddress() {
   const { cart } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get address from navigation state if editing
+  const editAddress = (location.state as any)?.editAddress as OrderAddress | undefined;
 
   const [address, setAddress] = useState<OrderAddress>({
-    name: '',
-    phone: '',
-    flat: '',
-    street: '',
-    city: 'Indore',
-    pincode: '',
-    state: 'Madhya Pradesh', // Default
+    name: editAddress?.name || '',
+    phone: editAddress?.phone || '',
+    flat: editAddress?.flat || '',
+    street: editAddress?.street || '',
+    city: editAddress?.city || 'Indore',
+    pincode: editAddress?.pincode || '',
+    state: editAddress?.state || 'Madhya Pradesh',
+    landmark: editAddress?.landmark || '',
   });
+
+  // Update address when editAddress changes
+  useEffect(() => {
+    if (editAddress) {
+      setAddress({
+        name: editAddress.name || '',
+        phone: editAddress.phone || '',
+        flat: editAddress.flat || '',
+        street: editAddress.street || '',
+        city: editAddress.city || 'Indore',
+        pincode: editAddress.pincode || '',
+        state: editAddress.state || 'Madhya Pradesh',
+        landmark: editAddress.landmark || '',
+      });
+    }
+  }, [editAddress]);
   const [errors, setErrors] = useState<Partial<Record<keyof OrderAddress, string>>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [orderingFor, setOrderingFor] = useState<'myself' | 'someone-else'>('myself');
@@ -80,12 +101,19 @@ export default function CheckoutAddress() {
         city: address.city,
         state: address.state,
         pincode: address.pincode,
+        landmark: address.landmark,
         type: addressType.charAt(0).toUpperCase() + addressType.slice(1) as 'Home' | 'Work' | 'Other', // Capitalize
         isDefault: true, // Auto set as default for now
         address: `${address.flat}, ${address.street}` // Fallback combined string
       };
 
-      await addAddress(payload);
+      // If editing an existing address, use updateAddress instead
+      if (editAddress && (editAddress.id || editAddress._id)) {
+        const addressId = editAddress.id || editAddress._id;
+        await updateAddress(addressId!, payload);
+      } else {
+        await addAddress(payload);
+      }
 
       // Show success feedback logic if needed or just navigate
       setTimeout(() => {

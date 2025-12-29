@@ -15,6 +15,7 @@ import { getCoupons, validateCoupon, Coupon as ApiCoupon } from '../../services/
 import { appConfig } from '../../services/configService';
 import { getAddresses } from '../../services/api/customerAddressService';
 import { getProducts } from '../../services/api/customerProductService';
+import { addToWishlist } from '../../services/api/customerWishlistService';
 
 // const STORAGE_KEY = 'saved_address'; // Removed
 
@@ -22,13 +23,13 @@ import { getProducts } from '../../services/api/customerProductService';
 
 
 export default function Checkout() {
-  const { cart, updateQuantity, clearCart, addToCart, loading: cartLoading } = useCart();
+  const { cart, updateQuantity, clearCart, addToCart, removeFromCart, loading: cartLoading } = useCart();
   const { addOrder } = useOrders();
   const { location: userLocation } = useLocationContext();
   const navigate = useNavigate();
   const [tipAmount, setTipAmount] = useState<number | null>(null);
-  const [donationAmount, setDonationAmount] = useState<number>(5);
-  const [showDonationInput, setShowDonationInput] = useState(false);
+  const [customTipAmount, setCustomTipAmount] = useState<number>(0);
+  const [showCustomTipInput, setShowCustomTipInput] = useState(false);
   const [savedAddress, setSavedAddress] = useState<OrderAddress | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<OrderAddress | null>(null);
   const [showToast, setShowToast] = useState(false);
@@ -43,6 +44,11 @@ export default function Checkout() {
   const [couponError, setCouponError] = useState<string | null>(null);
   const [validatedDiscount, setValidatedDiscount] = useState<number>(0);
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
+  const [showGstinSheet, setShowGstinSheet] = useState(false);
+  const [gstin, setGstin] = useState<string>('');
+  const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string>('Order placed');
+  const [giftPackaging, setGiftPackaging] = useState<boolean>(false);
 
   // Redirect if empty
   useEffect(() => {
@@ -121,8 +127,19 @@ export default function Checkout() {
 
         if (response && response.data) {
           // Filter out items already in cart
-          const itemsInCartIds = new Set((cart?.items || []).map(i => i.product?.id).filter(Boolean));
-          const filtered = response.data.filter((p: any) => !itemsInCartIds.has(p.id || p._id)).slice(0, 6);
+          const itemsInCartIds = new Set((cart?.items || []).map(i => i.product?.id || i.product?._id).filter(Boolean));
+          const filtered = response.data
+            .filter((p: any) => !itemsInCartIds.has(p.id || p._id))
+            .map((p: any) => ({
+              ...p,
+              id: p._id || p.id,
+              name: p.productName || p.name || 'Product',
+              imageUrl: p.mainImage || p.imageUrl || p.mainImageUrl || '',
+              price: p.price || p.variations?.[0]?.price || 0,
+              mrp: p.mrp || p.compareAtPrice || p.price || 0,
+              pack: p.pack || p.variations?.[0]?.title || p.variations?.[0]?.name || 'Standard',
+            }))
+            .slice(0, 6);
           setSimilarProducts(filtered);
         }
       } catch (err) {
@@ -192,7 +209,10 @@ export default function Checkout() {
     }
   }
 
-  const grandTotal = Math.max(0, discountedTotal + handlingCharge + deliveryCharge + (tipAmount || 0) + (showDonationInput ? donationAmount : 0) - currentCouponDiscount);
+  // Calculate tip amount (use custom tip if custom tip input is shown, otherwise use selected tip)
+  const finalTipAmount = showCustomTipInput ? customTipAmount : (tipAmount || 0);
+  const giftPackagingFee = giftPackaging ? 30 : 0;
+  const grandTotal = Math.max(0, discountedTotal + handlingCharge + deliveryCharge + finalTipAmount + giftPackagingFee - currentCouponDiscount);
 
   const handleApplyCoupon = async (coupon: ApiCoupon) => {
     setIsValidatingCoupon(true);
@@ -222,6 +242,26 @@ export default function Checkout() {
     setSelectedCoupon(null);
     setValidatedDiscount(0);
     setCouponError(null);
+  };
+
+  const handleMoveToWishlist = async (product: any) => {
+    if (!product?.id && !product?._id) return;
+
+    const productId = product.id || product._id;
+
+    try {
+      // Add to wishlist
+      await addToWishlist(productId);
+      // Remove from cart
+      await removeFromCart(productId);
+      // Show success message
+      setToastMessage('Item moved to wishlist');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2000);
+    } catch (error) {
+      console.error('Failed to move to wishlist:', error);
+      alert('Failed to move item to wishlist. Please try again.');
+    }
   };
 
   const handlePlaceOrder = async () => {
@@ -269,7 +309,10 @@ export default function Checkout() {
       address: addressWithLocation,
       status: 'Placed',
       createdAt: new Date().toISOString(),
-      // In a real app, send coupon code to backend to re-validate and apply
+      tipAmount: finalTipAmount,
+      gstin: gstin || undefined,
+      couponCode: selectedCoupon?.code || undefined,
+      giftPackaging: giftPackaging,
     };
 
     try {
@@ -297,12 +340,12 @@ export default function Checkout() {
 
   return (
     <div
-      className="pb-24 bg-white min-h-screen flex flex-col opacity-100"
-      style={{ opacity: 1 }}
+      className="bg-white min-h-screen flex flex-col opacity-100"
+      style={{ opacity: 1, height: '1250px' }}
     >
       {/* Toast Notification */}
       <Toast
-        message="Order placed"
+        message={toastMessage}
         isVisible={showToast}
         onClose={() => setShowToast(false)}
         duration={3000}
@@ -440,15 +483,8 @@ export default function Checkout() {
           {/* Title */}
           <h1 className="text-base font-bold text-neutral-900">Checkout</h1>
 
-          {/* Share Icon */}
-          <button
-            className="w-7 h-7 flex items-center justify-center text-neutral-700 hover:bg-neutral-100 rounded-full transition-colors"
-            aria-label="Share"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </svg>
-          </button>
+          {/* Spacer to maintain layout */}
+          <div className="w-7 h-7"></div>
         </div>
       </div>
 
@@ -457,7 +493,11 @@ export default function Checkout() {
         <div className="flex items-center justify-between">
           <span className="text-xs text-neutral-700">Ordering for someone else?</span>
           <button
-            onClick={() => navigate('/checkout/address')}
+            onClick={() => navigate('/checkout/address', {
+              state: {
+                editAddress: savedAddress
+              }
+            })}
             className="text-xs text-green-600 font-medium hover:text-green-700 transition-colors"
           >
             Add details
@@ -499,7 +539,11 @@ export default function Checkout() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate('/checkout/address');
+                  navigate('/checkout/address', {
+                    state: {
+                      editAddress: savedAddress
+                    }
+                  });
                 }}
                 className="text-xs text-green-600 font-medium ml-2"
               >
@@ -551,7 +595,15 @@ export default function Checkout() {
                     {item.product?.name}
                   </h3>
                   <p className="text-[10px] text-neutral-600 mb-0.5">{item.quantity} × {item.product?.pack}</p>
-                  <button className="text-[10px] text-green-600 font-medium mb-1.5">Move to wishlist</button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMoveToWishlist(item.product);
+                    }}
+                    className="text-[10px] text-green-600 font-medium mb-1.5 hover:text-green-700 transition-colors"
+                  >
+                    Move to wishlist
+                  </button>
 
                   {/* Quantity Selector */}
                   <div className="flex items-center justify-between mt-1.5">
@@ -601,12 +653,11 @@ export default function Checkout() {
             const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
 
             // Get quantity in cart
-            const inCartItem = (cart?.items || []).find(item =>
-              (item.product.id && item.product.id === product.id) ||
-              (item.product._id && item.product._id === product._id) ||
-              (item.product._id && item.product._id === product.id) ||
-              (item.product.id && item.product.id === product._id)
-            );
+            const productId = product.id || product._id;
+            const inCartItem = (cart?.items || []).find(item => {
+              const itemProductId = item.product?.id || item.product?._id;
+              return itemProductId === productId;
+            });
             const inCartQty = inCartItem?.quantity || 0;
 
             return (
@@ -618,19 +669,30 @@ export default function Checkout() {
                 <div className="bg-white rounded-lg overflow-hidden flex flex-col relative h-full" style={{ boxShadow: '0 1px 1px rgba(0, 0, 0, 0.03)' }}>
                   {/* Product Image Area */}
                   <div
-                    onClick={() => navigate(`/product/${product.id}`)}
+                    onClick={() => navigate(`/product/${product.id || product._id}`)}
                     className="relative block cursor-pointer"
                   >
                     <div className="w-full h-28 bg-neutral-100 flex items-center justify-center overflow-hidden relative">
-                      {product.imageUrl ? (
+                      {product.imageUrl || product.mainImage ? (
                         <img
-                          src={product.imageUrl}
-                          alt={product.name}
+                          src={product.imageUrl || product.mainImage}
+                          alt={product.name || product.productName || 'Product'}
                           className="w-full h-full object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent && !parent.querySelector('.fallback-icon')) {
+                              const fallback = document.createElement('div');
+                              fallback.className = 'w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-4xl fallback-icon';
+                              fallback.textContent = (product.name || product.productName || '?').charAt(0).toUpperCase();
+                              parent.appendChild(fallback);
+                            }
+                          }}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-4xl">
-                          {(product.name || '').charAt(0).toUpperCase()}
+                          {(product.name || product.productName || '?').charAt(0).toUpperCase()}
                         </div>
                       )}
 
@@ -643,7 +705,7 @@ export default function Checkout() {
 
                       {/* Heart Icon - Top Right */}
                       <WishlistButton
-                        productId={product.id}
+                        productId={product.id || product._id}
                         size="sm"
                         className="top-1 right-1 shadow-sm"
                       />
@@ -679,11 +741,11 @@ export default function Checkout() {
                             >
                               <motion.button
                                 whileTap={{ scale: 0.9 }}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  updateQuantity(product.id, inCartQty - 1);
-                                }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                updateQuantity(productId, inCartQty - 1);
+                              }}
                                 className="w-4 h-4 flex items-center justify-center text-white font-bold hover:bg-green-700 rounded transition-colors p-0 leading-none"
                                 style={{ lineHeight: 1, fontSize: '14px' }}
                               >
@@ -704,7 +766,7 @@ export default function Checkout() {
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  updateQuantity(product.id, inCartQty + 1);
+                                  updateQuantity(productId, inCartQty + 1);
                                 }}
                                 className="w-4 h-4 flex items-center justify-center text-white font-bold hover:bg-green-700 rounded transition-colors p-0 leading-none"
                                 style={{ lineHeight: 1, fontSize: '14px' }}
@@ -734,11 +796,11 @@ export default function Checkout() {
 
                     {/* Product Name */}
                     <div
-                      onClick={() => navigate(`/product/${product.id}`)}
+                      onClick={() => navigate(`/product/${product.id || product._id}`)}
                       className="mb-0.5 cursor-pointer"
                     >
                       <h3 className="text-[10px] font-bold text-neutral-900 line-clamp-2 leading-tight">
-                        {product.name}
+                        {product.name || product.productName || 'Product'}
                       </h3>
                     </div>
 
@@ -787,7 +849,7 @@ export default function Checkout() {
 
                     {/* Bottom Link */}
                     <div
-                      onClick={() => navigate(`/category/${product.categoryId || 'all'}`)}
+                      onClick={() => navigate(`/category/${product.categoryId || product.category || 'all'}`)}
                       className="w-full bg-green-100 text-green-700 text-[8px] font-medium py-0.5 rounded-lg flex items-center justify-between px-1 hover:bg-green-200 transition-colors mt-auto cursor-pointer"
                     >
                       <span>See more like this</span>
@@ -943,6 +1005,32 @@ export default function Checkout() {
             </div>
           )}
 
+          {/* Tip amount */}
+          {finalTipAmount > 0 && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="text-xs text-neutral-700">Tip to delivery partner</span>
+              </div>
+              <span className="text-xs font-medium text-neutral-900">₹{finalTipAmount}</span>
+            </div>
+          )}
+
+          {/* Gift Packaging */}
+          {giftPackaging && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2z" stroke="currentColor" strokeWidth="2" fill="none" />
+                </svg>
+                <span className="text-xs text-neutral-700">Gift Packaging</span>
+              </div>
+              <span className="text-xs font-medium text-neutral-900">₹{giftPackagingFee}</span>
+            </div>
+          )}
+
           {/* Grand total */}
           <div className="pt-2 border-t border-neutral-200 flex items-center justify-between">
             <span className="text-sm font-bold text-neutral-900">Grand total</span>
@@ -953,77 +1041,27 @@ export default function Checkout() {
 
       {/* Add GSTIN */}
       <div className="px-4 py-2 border-b border-neutral-200">
-        <div className="flex items-center justify-between bg-neutral-50 rounded-lg p-2">
+        <button
+          onClick={() => setShowGstinSheet(true)}
+          className="w-full flex items-center justify-between bg-neutral-50 rounded-lg p-2 hover:bg-neutral-100 transition-colors"
+        >
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
               <span className="text-blue-600 font-bold text-sm">%</span>
             </div>
-            <div>
+            <div className="text-left">
               <p className="text-xs font-semibold text-neutral-900">Add GSTIN</p>
-              <p className="text-[10px] text-neutral-600">Claim GST input credit up to 18% on your order</p>
+              <p className="text-[10px] text-neutral-600">
+                {gstin ? `GSTIN: ${gstin}` : 'Claim GST input credit up to 18% on your order'}
+              </p>
             </div>
           </div>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-        </div>
+        </button>
       </div>
 
-      {/* Donate to Feeding India */}
-      <div className="px-4 py-2 border-b border-neutral-200">
-        <div className="bg-pink-50 rounded-lg p-2.5">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-bold text-neutral-900">Donate to Feeding India</h3>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <p className="text-xs text-neutral-600 mb-2">Your continued support will help us serve daily meals to children</p>
-
-          <div className="flex gap-2 mb-2">
-            <div className="flex-1 bg-white rounded-lg p-1.5 flex items-center justify-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-200 to-purple-200 rounded-lg flex items-center justify-center">
-                <span className="text-lg">👦</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-neutral-700">Donation amount</span>
-            <div className="flex items-center gap-1.5">
-              <input
-                type="number"
-                value={donationAmount}
-                onChange={(e) => {
-                  const val = Number(e.target.value);
-                  if (val >= 0) {
-                    setDonationAmount(val);
-                  }
-                }}
-                onBlur={(e) => {
-                  const val = Number(e.target.value);
-                  if (val < 1) {
-                    setDonationAmount(1);
-                  }
-                }}
-                className="w-16 px-2 py-1.5 bg-white border border-neutral-200 rounded-lg text-xs text-center text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-all"
-                min="1"
-                step="1"
-                placeholder="5"
-              />
-              <button
-                onClick={() => setShowDonationInput(!showDonationInput)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${showDonationInput
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : 'bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50'
-                  }`}
-              >
-                {showDonationInput ? 'Added' : 'Add'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Tip your delivery partner */}
       <div className="px-4 py-2 border-b border-neutral-200">
@@ -1032,8 +1070,11 @@ export default function Checkout() {
 
         <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1.5">
           <button
-            onClick={() => setTipAmount(20)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${tipAmount === 20
+            onClick={() => {
+              setTipAmount(20);
+              setShowCustomTipInput(false);
+            }}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${tipAmount === 20 && !showCustomTipInput
               ? 'border-green-600 bg-green-50 text-green-700'
               : 'border-neutral-300 bg-white text-neutral-700'
               }`}
@@ -1041,8 +1082,11 @@ export default function Checkout() {
             😊 ₹20
           </button>
           <button
-            onClick={() => setTipAmount(30)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${tipAmount === 30
+            onClick={() => {
+              setTipAmount(30);
+              setShowCustomTipInput(false);
+            }}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${tipAmount === 30 && !showCustomTipInput
               ? 'border-green-600 bg-green-50 text-green-700'
               : 'border-neutral-300 bg-white text-neutral-700'
               }`}
@@ -1050,8 +1094,11 @@ export default function Checkout() {
             🤩 ₹30
           </button>
           <button
-            onClick={() => setTipAmount(50)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${tipAmount === 50
+            onClick={() => {
+              setTipAmount(50);
+              setShowCustomTipInput(false);
+            }}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${tipAmount === 50 && !showCustomTipInput
               ? 'border-green-600 bg-green-50 text-green-700'
               : 'border-neutral-300 bg-white text-neutral-700'
               }`}
@@ -1059,8 +1106,11 @@ export default function Checkout() {
             😍 ₹50
           </button>
           <button
-            onClick={() => setTipAmount(null)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${tipAmount === null
+            onClick={() => {
+              setShowCustomTipInput(true);
+              setTipAmount(null);
+            }}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-lg border-2 font-medium text-xs ${showCustomTipInput
               ? 'border-green-600 bg-green-50 text-green-700'
               : 'border-neutral-300 bg-white text-neutral-700'
               }`}
@@ -1068,31 +1118,97 @@ export default function Checkout() {
             🎁 Custom
           </button>
         </div>
+
+        {/* Custom Tip Input */}
+        {showCustomTipInput && (
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              type="number"
+              value={customTipAmount || ''}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                if (val >= 0) {
+                  setCustomTipAmount(val);
+                }
+              }}
+              onBlur={(e) => {
+                const val = Number(e.target.value);
+                if (val < 0) {
+                  setCustomTipAmount(0);
+                }
+              }}
+              placeholder="Enter custom tip amount"
+              className="flex-1 px-3 py-1.5 bg-white border-2 border-green-600 rounded-lg text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-green-500"
+              min="0"
+              step="1"
+            />
+            <button
+              onClick={() => {
+                setShowCustomTipInput(false);
+                setCustomTipAmount(0);
+                setTipAmount(null);
+              }}
+              className="px-3 py-1.5 text-xs font-medium text-neutral-700 hover:text-neutral-900"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Gift Packaging */}
       <div className="px-4 py-2 border-b border-neutral-200">
-        <div className="flex items-center justify-between bg-neutral-50 rounded-lg p-2">
+        <button
+          onClick={() => setGiftPackaging(!giftPackaging)}
+          className={`w-full flex items-center justify-between rounded-lg p-2 transition-colors ${
+            giftPackaging
+              ? 'bg-green-50 border-2 border-green-600'
+              : 'bg-neutral-50 border-2 border-transparent hover:bg-neutral-100'
+          }`}
+        >
           <div className="flex items-center gap-2">
+            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+              giftPackaging
+                ? 'border-green-600 bg-green-600'
+                : 'border-neutral-400 bg-white'
+            }`}>
+              {giftPackaging && (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 6L9 17l-5-5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2z" stroke="currentColor" strokeWidth="2" fill="none" />
             </svg>
-            <div>
-              <p className="text-xs font-semibold text-neutral-900">Gift Packaging</p>
-              <p className="text-[10px] text-neutral-600">All items in your cart are ineligible for gifting</p>
+            <div className="text-left">
+              <p className={`text-xs font-semibold ${giftPackaging ? 'text-green-700' : 'text-neutral-900'}`}>
+                Gift Packaging
+              </p>
+              <p className="text-[10px] text-neutral-600">
+                {giftPackaging ? 'Add ₹30 for gift packaging' : 'Add ₹30 for elegant gift packaging'}
+              </p>
             </div>
           </div>
-        </div>
+          {giftPackaging && (
+            <span className="text-xs font-semibold text-green-600">₹30</span>
+          )}
+        </button>
       </div>
 
       {/* Cancellation Policy */}
       <div className="px-4 py-2">
-        <button className="text-xs text-neutral-700">Cancellation Policy</button>
+        <button
+          onClick={() => setShowCancellationPolicy(true)}
+          className="text-xs text-neutral-700 hover:text-neutral-900 transition-colors"
+        >
+          Cancellation Policy
+        </button>
       </div>
 
-      {/* Made with love by SpeeUp - Expanded to fill bottom */}
-      <div className="px-4 flex-1 flex items-end pb-4">
-        <div className="w-full flex flex-col items-center justify-center py-6">
+      {/* Made with love by SpeeUp */}
+      <div className="px-4 py-2">
+        <div className="w-full flex flex-col items-center justify-center">
           <div className="flex items-center gap-1.5 text-neutral-500">
             <span className="text-[10px] font-medium">Made with</span>
             <motion.span
@@ -1107,6 +1223,119 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+
+      {/* GSTIN Sheet Modal */}
+      <Sheet open={showGstinSheet} onOpenChange={setShowGstinSheet}>
+        <SheetContent side="bottom" className="max-h-[50vh]">
+          <SheetHeader className="text-left">
+            <div className="flex items-center justify-between mb-2">
+              <SheetTitle className="text-base font-bold text-neutral-900">Add GSTIN</SheetTitle>
+              <SheetClose onClick={() => setShowGstinSheet(false)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </SheetClose>
+            </div>
+          </SheetHeader>
+
+          <div className="px-4 pb-4 mt-4">
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-neutral-900 mb-2">
+                GSTIN Number
+              </label>
+              <input
+                type="text"
+                value={gstin}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                  if (value.length <= 15) {
+                    setGstin(value);
+                  }
+                }}
+                placeholder="Enter 15-character GSTIN"
+                className="w-full px-4 py-3 bg-white border-2 border-neutral-300 rounded-lg text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                maxLength={15}
+              />
+              <p className="text-xs text-neutral-500 mt-1">
+                Format: 15 characters (e.g., 27AAAAA0000A1Z5)
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                if (gstin.length === 15) {
+                  setShowGstinSheet(false);
+                } else {
+                  alert('Please enter a valid 15-character GSTIN');
+                }
+              }}
+              className="w-full bg-green-600 text-white py-3 px-4 font-bold text-sm uppercase tracking-wide hover:bg-green-700 transition-colors rounded-lg"
+            >
+              Save GSTIN
+            </button>
+            {gstin && (
+              <button
+                onClick={() => {
+                  setGstin('');
+                  setShowGstinSheet(false);
+                }}
+                className="w-full mt-2 bg-neutral-100 text-neutral-700 py-2 px-4 font-medium text-sm hover:bg-neutral-200 transition-colors rounded-lg"
+              >
+                Remove GSTIN
+              </button>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Cancellation Policy Sheet Modal */}
+      <Sheet open={showCancellationPolicy} onOpenChange={setShowCancellationPolicy}>
+        <SheetContent side="bottom" className="max-h-[85vh]">
+          <SheetHeader className="text-left">
+            <div className="flex items-center justify-between mb-2">
+              <SheetTitle className="text-base font-bold text-neutral-900">Cancellation Policy</SheetTitle>
+              <SheetClose onClick={() => setShowCancellationPolicy(false)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </SheetClose>
+            </div>
+          </SheetHeader>
+
+          <div className="px-4 pb-4 overflow-y-auto max-h-[calc(85vh-80px)]">
+            <div className="space-y-4 mt-4 text-sm text-neutral-700">
+              <div>
+                <h3 className="font-bold text-neutral-900 mb-2">Order Cancellation</h3>
+                <p className="mb-2">
+                  You can cancel your order before it is confirmed by the seller. Once confirmed, cancellation may not be possible.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-neutral-900 mb-2">Refund Policy</h3>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Refunds will be processed within 5-7 business days</li>
+                  <li>Refund amount will be credited to your original payment method</li>
+                  <li>Delivery charges are non-refundable</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-neutral-900 mb-2">Partial Cancellation</h3>
+                <p>
+                  Partial cancellation of items in an order is not allowed. You can cancel the entire order or contact customer support for assistance.
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-bold text-neutral-900 mb-2">Contact Support</h3>
+                <p>
+                  For any cancellation requests or queries, please contact our customer support team at support@speeup.com or call +91-XXXXX-XXXXX
+                </p>
+              </div>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Coupon Sheet Modal */}
       <Sheet open={showCouponSheet} onOpenChange={setShowCouponSheet}>
@@ -1201,7 +1430,11 @@ export default function Checkout() {
           </button>
         ) : (
           <button
-            onClick={() => navigate('/checkout/address')}
+            onClick={() => navigate('/checkout/address', {
+              state: {
+                editAddress: savedAddress
+              }
+            })}
             className="w-full bg-green-600 text-white py-3 px-4 font-bold text-sm uppercase tracking-wide hover:bg-green-700 transition-colors"
           >
             Choose address at next step
