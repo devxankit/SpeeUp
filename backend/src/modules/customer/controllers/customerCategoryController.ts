@@ -3,15 +3,27 @@ import Category from "../../../models/Category";
 import SubCategory from "../../../models/SubCategory";
 import Product from "../../../models/Product";
 import mongoose from "mongoose";
+import { cache } from "../../../utils/cache";
 
-// Get all categories (public)
+// Get all categories (public) - with caching
 export const getCategories = async (_req: Request, res: Response) => {
   try {
-    const categories = await Category.find({
-      status: "Active", // Only return active categories
-    })
-      .sort({ order: 1 })
-      .select("name image icon description color slug _id");
+    const cacheKey = "customer-categories-list";
+
+    // Try cache first
+    let categories = cache.get(cacheKey);
+
+    if (!categories) {
+      categories = await Category.find({
+        status: "Active", // Only return active categories
+      })
+        .sort({ order: 1 })
+        .select("name image icon description color slug _id")
+        .lean(); // Use lean() for better performance
+
+      // Cache for 10 minutes
+      cache.set(cacheKey, categories, 10 * 60 * 1000);
+    }
 
     return res.status(200).json({
       success: true,
@@ -26,9 +38,21 @@ export const getCategories = async (_req: Request, res: Response) => {
   }
 };
 
-// Get all categories with their subcategories (for menu/sidebar)
+// Get all categories with their subcategories (for menu/sidebar) - with caching
 export const getCategoriesWithSubs = async (_req: Request, res: Response) => {
   try {
+    const cacheKey = "customer-categories-tree";
+
+    // Try cache first
+    let categoriesWithSubs = cache.get(cacheKey);
+
+    if (categoriesWithSubs) {
+      return res.status(200).json({
+        success: true,
+        data: categoriesWithSubs,
+      });
+    }
+
     const categories = await Category.find({ status: "Active" })
       .sort({ order: 1 })
       .lean();
@@ -61,7 +85,7 @@ export const getCategoriesWithSubs = async (_req: Request, res: Response) => {
       }
     });
 
-    const categoriesWithSubs = await Promise.all(
+    categoriesWithSubs = await Promise.all(
       categories.map(async (category) => {
         const subcategories = await SubCategory.find({
           category: category._id,
@@ -96,6 +120,9 @@ export const getCategoriesWithSubs = async (_req: Request, res: Response) => {
       })
     ).then((list) => list.filter(Boolean));
 
+    // Cache for 10 minutes
+    cache.set(cacheKey, categoriesWithSubs, 10 * 60 * 1000);
+
     return res.status(200).json({
       success: true,
       data: categoriesWithSubs,
@@ -109,10 +136,21 @@ export const getCategoriesWithSubs = async (_req: Request, res: Response) => {
   }
 };
 
-// Get single category details with subcategories
+// Get single category details with subcategories - with caching
 export const getCategoryById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const cacheKey = `customer-category-${id}`;
+
+    // Try cache first
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return res.status(200).json({
+        success: true,
+        data: cached,
+      });
+    }
+
     console.log(`[getCategoryById] Looking for category with id/slug: ${id}`);
     let category;
 
@@ -223,14 +261,18 @@ export const getCategoryById = async (req: Request, res: Response) => {
 
     console.log(`[getCategoryById] Found ${subcategories.length} subcategories for ${category.name}`);
 
+    const responseData = {
+      category,
+      subcategories,
+      currentSubcategory: null,
+    };
+
+    // Cache for 10 minutes
+    cache.set(cacheKey, responseData, 10 * 60 * 1000);
 
     return res.status(200).json({
       success: true,
-      data: {
-        category,
-        subcategories,
-        currentSubcategory: null,
-      },
+      data: responseData,
     });
   } catch (error: any) {
     return res.status(500).json({

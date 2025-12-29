@@ -7,6 +7,7 @@ import Product from "../../../models/Product";
 import Inventory from "../../../models/Inventory";
 import Seller from "../../../models/Seller";
 import HeaderCategory from "../../../models/HeaderCategory";
+import { cache } from "../../../utils/cache";
 
 // ==================== Category Controllers ====================
 
@@ -126,6 +127,11 @@ export const createCategory = asyncHandler(
       headerCategoryId: finalHeaderCategoryId || null,
       status,
     });
+
+    // Invalidate category caches
+    cache.delete("customer-categories-list");
+    cache.delete("customer-categories-tree");
+    cache.invalidatePattern(/^customer-category-/);
 
     return res.status(201).json({
       success: true,
@@ -315,6 +321,11 @@ export const updateCategory = asyncHandler(
       .populate("parentId", "name")
       .populate("headerCategoryId", "name status");
 
+    // Invalidate category caches
+    cache.delete("customer-categories-list");
+    cache.delete("customer-categories-tree");
+    cache.invalidatePattern(/^customer-category-/);
+
     return res.status(200).json({
       success: true,
       message: "Category updated successfully",
@@ -367,6 +378,11 @@ export const deleteCategory = asyncHandler(
         message: "Category not found",
       });
     }
+
+    // Invalidate category caches
+    cache.delete("customer-categories-list");
+    cache.delete("customer-categories-tree");
+    cache.invalidatePattern(/^customer-category-/);
 
     return res.status(200).json({
       success: true,

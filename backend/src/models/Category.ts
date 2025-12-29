@@ -92,6 +92,9 @@ CategorySchema.index({ slug: 1 });
 CategorySchema.index({ parentId: 1 });
 CategorySchema.index({ status: 1 });
 CategorySchema.index({ headerCategoryId: 1 });
+// Compound indexes for common queries
+CategorySchema.index({ status: 1, order: 1 }); // For getCategories
+CategorySchema.index({ parentId: 1, status: 1 }); // For getCategoryById subcategories
 
 // Virtual for children count
 CategorySchema.virtual("childrenCount", {

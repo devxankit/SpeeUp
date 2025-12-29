@@ -1,4 +1,5 @@
 import api from "./config";
+import { apiCache } from "../../utils/apiCache";
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -69,14 +70,22 @@ export interface PaginatedResponse<T> {
 
 /**
  * Get all categories (parent categories only by default)
+ * Cached for 10 minutes as categories don't change frequently
  */
 export const getCategories = async (
   params?: GetCategoriesParams
 ): Promise<ApiResponse<Category[]>> => {
-  const response = await api.get<ApiResponse<Category[]>>("/categories", {
-    params,
-  });
-  return response.data;
+  const cacheKey = `categories-${JSON.stringify(params || {})}`;
+  return apiCache.getOrFetch(
+    cacheKey,
+    async () => {
+      const response = await api.get<ApiResponse<Category[]>>("/categories", {
+        params,
+      });
+      return response.data;
+    },
+    10 * 60 * 1000 // 10 minutes cache
+  );
 };
 
 /**

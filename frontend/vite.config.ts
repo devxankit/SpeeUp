@@ -39,5 +39,23 @@ export default defineConfig({
       include: [/node_modules/],
       transformMixedEsModules: true,
     },
+    // Code splitting optimization
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['framer-motion', 'gsap'],
+          'chart-vendor': ['apexcharts', 'react-apexcharts', 'recharts'],
+          'map-vendor': ['@react-google-maps/api', 'leaflet', 'react-leaflet'],
+        },
+      },
+    },
+    // Optimize chunk size
+    chunkSizeWarningLimit: 1000,
+    // Enable source maps for production debugging (optional)
+    sourcemap: false,
+    // Minify with esbuild (built-in, faster than terser, no extra dependencies needed)
+    minify: 'esbuild',
   },
 })
