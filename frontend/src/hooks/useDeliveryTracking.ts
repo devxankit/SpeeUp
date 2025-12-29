@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 // @ts-ignore - socket.io-client types may not be available
 import { io, Socket } from 'socket.io-client'
+import { getSocketBaseURL } from '../services/api/config'
 
 interface LocationUpdate {
     orderId: string
@@ -55,7 +56,7 @@ export const useDeliveryTracking = (orderId: string | undefined) => {
         }
 
         const token = localStorage.getItem('token')
-        const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+        const socket = io(getSocketBaseURL(), {
             auth: {
                 token,
             },

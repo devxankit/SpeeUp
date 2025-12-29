@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import { OrderNotificationData } from '../services/api/delivery/deliveryOrderNotificationService';
 import { acceptOrder, rejectOrder } from '../services/api/delivery/deliveryOrderNotificationService';
+import { getSocketBaseURL } from '../services/api/config';
 
 interface NotificationState {
     currentNotification: OrderNotificationData | null;
@@ -39,7 +40,7 @@ export const useDeliveryOrderNotifications = () => {
         }
 
         const token = localStorage.getItem('token');
-        const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+        const socket = io(getSocketBaseURL(), {
             auth: {
                 token,
             },
