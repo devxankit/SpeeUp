@@ -83,6 +83,10 @@ export interface IProduct extends Document {
   // Commission
   commission?: number;
 
+  // Shop by Store
+  isShopByStoreOnly?: boolean;
+  shopId?: mongoose.Types.ObjectId;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -299,6 +303,16 @@ const ProductSchema = new Schema<IProduct>(
     commission: {
       type: Number,
       min: [0, "Commission cannot be negative"],
+    },
+
+    // Shop by Store
+    isShopByStoreOnly: {
+      type: Boolean,
+      default: false,
+    },
+    shopId: {
+      type: Schema.Types.ObjectId,
+      ref: "Shop",
     },
   },
   {

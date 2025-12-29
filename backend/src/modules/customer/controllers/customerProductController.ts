@@ -97,6 +97,11 @@ export const getProducts = async (req: Request, res: Response) => {
     const query: any = {
       status: "Active",
       publish: true,
+      // Exclude shop-by-store-only products from category pages
+      $or: [
+        { isShopByStoreOnly: { $ne: true } },
+        { isShopByStoreOnly: { $exists: false } },
+      ],
     };
 
     // Location-based filtering: Only show products from sellers within user's range
@@ -385,6 +390,11 @@ export const getProductById = async (req: Request, res: Response) => {
       _id: { $ne: product._id },
       status: "Active",
       publish: true,
+      // Exclude shop-by-store-only products from similar products
+      $or: [
+        { isShopByStoreOnly: { $ne: true } },
+        { isShopByStoreOnly: { $exists: false } },
+      ],
     };
 
     // Safely get category ID - handle both populated and unpopulated cases

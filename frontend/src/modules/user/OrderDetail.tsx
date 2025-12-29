@@ -1003,7 +1003,11 @@ export default function OrderDetail() {
       {isConnected && lastUpdate && (
         <div className="px-4 py-2 bg-green-50 text-green-800 text-sm text-center">
           🔴 Live tracking active · Last update:{" "}
-          {new Date(lastUpdate).toLocaleTimeString()}
+          {lastUpdate instanceof Date
+            ? lastUpdate.toLocaleTimeString()
+            : typeof lastUpdate === 'string'
+            ? new Date(lastUpdate).toLocaleTimeString()
+            : new Date().toLocaleTimeString()}
         </div>
       )}
 

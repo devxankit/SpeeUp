@@ -118,11 +118,11 @@ export default function GoogleMapsTracking({
                     <Marker
                         position={deliveryLocation}
                         icon={{
-                            url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text x="8" y="32" font-size="32">🛵</text></svg>')}`,
-                            scaledSize: window.google?.maps?.Size ? new window.google.maps.Size(40, 40) : undefined
+                            url: '/assets/deliveryboy/deliveryIcon.png',
+                            scaledSize: window.google?.maps?.Size ? new window.google.maps.Size(60, 60) : undefined,
+                            anchor: window.google?.maps?.Point ? new window.google.maps.Point(30, 30) : undefined
                         } as any}
                         title="Delivery Partner"
-                        animation={window.google?.maps?.Animation?.BOUNCE}
                     />
                 )}
 

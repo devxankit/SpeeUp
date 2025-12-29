@@ -153,6 +153,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
             setLocation(tempLocation);
             setIsLocationEnabled(true);
             setIsLocationLoading(false); // Set loading false early
+            setLocationError(null); // Clear any previous errors since location was successfully obtained
 
             // Reverse geocode in background (non-blocking)
             // IMPORTANT: Use the exact coordinates received, skip cache to ensure fresh geocoding
@@ -179,6 +180,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
               };
 
               setLocation(newLocation);
+              setLocationError(null); // Clear error on successful geocoding
               localStorage.setItem('userLocation', JSON.stringify(newLocation));
 
               // Save to backend in background (non-blocking, don't wait - only for customers)
@@ -205,6 +207,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
                   address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
                 };
                 setLocation(fallbackLocation);
+                setLocationError(null); // Clear error since we have valid coordinates
                 localStorage.setItem('userLocation', JSON.stringify(fallbackLocation));
 
                 // Try to save to backend anyway

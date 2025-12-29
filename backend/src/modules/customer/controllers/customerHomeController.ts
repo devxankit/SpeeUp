@@ -97,6 +97,11 @@ async function fetchSectionData(section: any): Promise<any[]> {
       const query: any = {
         status: "Active",
         publish: true,
+        // Exclude shop-by-store-only products from home sections
+        $or: [
+          { isShopByStoreOnly: { $ne: true } },
+          { isShopByStoreOnly: { $exists: false } },
+        ],
       };
 
       if (categories && categories.length > 0) {
@@ -525,7 +530,12 @@ export const getStoreProducts = async (req: Request, res: Response) => {
   try {
     const { storeId } = req.params;
     const { latitude, longitude } = req.query; // User location for filtering
-    let query: any = { status: "Active", publish: true };
+    let query: any = {
+      status: "Active",
+      publish: true,
+      // Only show shop-by-store-only products in shop by store section
+      isShopByStoreOnly: true,
+    };
 
     console.log(`[getStoreProducts] Looking for shop with storeId: ${storeId}`);
 
@@ -573,28 +583,37 @@ export const getStoreProducts = async (req: Request, res: Response) => {
 
       console.log(`[getStoreProducts] Shop has ${productIds.length} products assigned`);
 
+      // Get shop ID for filtering
+      const shopId = (shop as any)._id;
+
       // If shop has specific products assigned, use those
       if (productIds.length > 0) {
         query._id = { $in: productIds };
-        console.log(`[getStoreProducts] Filtering by product IDs: ${productIds.length} products`);
+        // Also filter by shopId to ensure products belong to this shop
+        query.shopId = shopId;
+        console.log(`[getStoreProducts] Filtering by product IDs: ${productIds.length} products and shopId: ${shopId}`);
       }
-      // Otherwise, filter by category/subcategory
-      else if (shop.category) {
-        const categoryId = (shop.category as any)._id || (shop.category as any);
-        query.category = categoryId;
-        console.log(`[getStoreProducts] Filtering by category: ${categoryId}`);
+      // Otherwise, filter by shopId and category/subcategory
+      else {
+        // Filter by shopId to show only products assigned to this shop
+        query.shopId = shopId;
+        console.log(`[getStoreProducts] Filtering by shopId: ${shopId}`);
 
-        // If subcategory is also specified, filter by both
-        if (shop.subCategory) {
-          const subCategoryId = (shop.subCategory as any)._id || (shop.subCategory as any);
-          query.$or = [
-            { category: categoryId },
-            { subcategory: subCategoryId },
-          ];
-          console.log(`[getStoreProducts] Also filtering by subcategory: ${subCategoryId}`);
+        if (shop.category) {
+          const categoryId = (shop.category as any)._id || (shop.category as any);
+          query.category = categoryId;
+          console.log(`[getStoreProducts] Also filtering by category: ${categoryId}`);
+
+          // If subcategory is also specified, filter by both
+          if (shop.subCategory) {
+            const subCategoryId = (shop.subCategory as any)._id || (shop.subCategory as any);
+            query.$or = [
+              { category: categoryId, shopId: shopId },
+              { subcategory: subCategoryId, shopId: shopId },
+            ];
+            console.log(`[getStoreProducts] Also filtering by subcategory: ${subCategoryId}`);
+          }
         }
-      } else {
-        console.log(`[getStoreProducts] Shop has no products or category, cannot build query`);
       }
     } else {
       // Fallback: try to match by category name (legacy support)

@@ -99,6 +99,22 @@ export const useDeliveryTracking = (orderId: string | undefined) => {
         socket.on('location-update', (update: LocationUpdate) => {
             console.log('📍 Location update received:', update)
 
+            // Parse timestamp - handle both string and Date objects
+            let timestamp: Date;
+            if (update.timestamp instanceof Date) {
+                timestamp = update.timestamp;
+            } else if (typeof update.timestamp === 'string') {
+                timestamp = new Date(update.timestamp);
+            } else if (update.location?.timestamp) {
+                // Fallback to location timestamp if available
+                timestamp = update.location.timestamp instanceof Date
+                    ? update.location.timestamp
+                    : new Date(update.location.timestamp);
+            } else {
+                // Use current time as fallback
+                timestamp = new Date();
+            }
+
             setTrackingData(prev => ({
                 ...prev,
                 deliveryLocation: {
@@ -108,7 +124,7 @@ export const useDeliveryTracking = (orderId: string | undefined) => {
                 eta: update.eta,
                 distance: update.distance,
                 status: update.status,
-                lastUpdate: new Date(update.timestamp),
+                lastUpdate: timestamp,
                 error: null,
             }))
         })

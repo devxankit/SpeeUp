@@ -62,6 +62,9 @@ export interface Product {
   subcategoryId?: string;
   brandId?: string;
   taxId?: string;
+  // Shop by Store fields
+  isShopByStoreOnly?: boolean;
+  shopId?: string | any;
 }
 
 export interface CreateProductData {
@@ -91,6 +94,15 @@ export interface CreateProductData {
   galleryImageUrls?: string[];
   variations: ProductVariation[];
   variationType?: string;
+  isShopByStoreOnly?: boolean;
+  shopId?: string;
+}
+
+export interface Shop {
+  _id: string;
+  name: string;
+  storeId: string;
+  image?: string;
 }
 
 export interface UpdateProductData extends Partial<CreateProductData> {}
@@ -204,5 +216,13 @@ export const updateProductStatus = async (
     `/products/${id}/status`,
     status
   );
+  return response.data;
+};
+
+/**
+ * Get all active shops (for seller to select when creating shop-by-store-only products)
+ */
+export const getShops = async (): Promise<ApiResponse<Shop[]>> => {
+  const response = await api.get<ApiResponse<Shop[]>>("/products/shops");
   return response.data;
 };

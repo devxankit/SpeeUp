@@ -38,6 +38,8 @@ export default function LocationPermissionRequest({
       // ONLY call location API when user explicitly clicks the button
       // This ensures we don't auto-request location on app load
       await requestLocation();
+      // If requestLocation succeeds, locationError will be cleared in the context
+      // and isLocationEnabled will be set to true, which will trigger onLocationGranted
     } catch (error) {
       // Error is handled by context and displayed in the error box
       // Location will remain disabled, modal will stay visible
