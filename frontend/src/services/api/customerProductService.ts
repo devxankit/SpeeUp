@@ -96,9 +96,9 @@ export const getCategories = async (tree: boolean = false): Promise<CategoryList
     return apiCache.getOrFetch(
         cacheKey,
         async () => {
-            const url = tree ? '/customer/categories/tree' : '/customer/categories';
-            const response = await api.get<CategoryListResponse>(url);
-            return response.data;
+    const url = tree ? '/customer/categories/tree' : '/customer/categories';
+    const response = await api.get<CategoryListResponse>(url);
+    return response.data;
         },
         10 * 60 * 1000 // 10 minutes cache
     );

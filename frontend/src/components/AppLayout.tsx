@@ -87,13 +87,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
 
 
-  // Reset scroll position when navigating to any page
+  // Reset scroll position when navigating to any page (smooth, no flash)
   useEffect(() => {
-    if (mainRef.current) {
-      mainRef.current.scrollTop = 0;
-    }
-    // Also reset window scroll
-    window.scrollTo(0, 0);
+    // Use requestAnimationFrame to prevent visual flash
+    requestAnimationFrame(() => {
+      if (mainRef.current) {
+        mainRef.current.scrollTop = 0;
+      }
+      // Also reset window scroll smoothly
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    });
   }, [location.pathname]);
 
   // Track categories active state for rotation

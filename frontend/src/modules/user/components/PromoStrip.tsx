@@ -64,42 +64,42 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
     // Defer subcategory image fetching to not block initial render
     // Load them after a short delay to prioritize main content
     setTimeout(async () => {
-      const imagesMap: Record<string, string[]> = {};
+    const imagesMap: Record<string, string[]> = {};
 
       // Fetch images in batches to avoid overwhelming the network
       const batchSize = 2;
       for (let i = 0; i < cards.length; i += batchSize) {
         const batch = cards.slice(i, i + batchSize);
-        await Promise.all(
+    await Promise.all(
           batch.map(async (card) => {
-            const categoryId = card.categoryId;
-            if (!categoryId) return;
+        const categoryId = card.categoryId;
+        if (!categoryId) return;
 
-            try {
-              const response = await getSubcategories(categoryId, { limit: 4 });
-              if (response.success && response.data) {
-                const images = response.data
-                  .filter((subcat) => subcat.subcategoryImage)
-                  .map((subcat) => subcat.subcategoryImage!)
-                  .slice(0, 4);
+        try {
+          const response = await getSubcategories(categoryId, { limit: 4 });
+          if (response.success && response.data) {
+            const images = response.data
+              .filter((subcat) => subcat.subcategoryImage)
+              .map((subcat) => subcat.subcategoryImage!)
+              .slice(0, 4);
 
-                if (images.length > 0) {
-                  imagesMap[card.id] = images;
-                }
-              }
-            } catch (error) {
-              // Silently fail - emoji fallback will be used
-              console.error(`Error fetching subcategories for category ${categoryId}:`, error);
+            if (images.length > 0) {
+              imagesMap[card.id] = images;
             }
-          })
-        );
+          }
+        } catch (error) {
+              // Silently fail - emoji fallback will be used
+          console.error(`Error fetching subcategories for category ${categoryId}:`, error);
+        }
+      })
+    );
         // Small delay between batches to prevent network congestion
         if (i + batchSize < cards.length) {
           await new Promise(resolve => setTimeout(resolve, 50));
         }
       }
 
-      setSubcategoryImagesMap(imagesMap);
+    setSubcategoryImagesMap(imagesMap);
     }, 300); // 300ms delay - allows main content to render first
   }, []);
 
@@ -286,21 +286,21 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
     // Defer card animation to prioritize content rendering
     const timeoutId = setTimeout(() => {
       ctx = gsap.context(() => {
-        const cards = container.querySelectorAll(".promo-card");
-        if (cards.length > 0) {
-          gsap.fromTo(
-            cards,
+      const cards = container.querySelectorAll(".promo-card");
+      if (cards.length > 0) {
+        gsap.fromTo(
+          cards,
             { y: 20, opacity: 0 },
-            {
-              y: 0,
-              opacity: 1,
+          {
+            y: 0,
+            opacity: 1,
               duration: 0.4, // Reduced duration
               stagger: 0.05, // Reduced stagger
               ease: "power2.out", // Simpler easing
-            }
-          );
-        }
-      }, container);
+          }
+        );
+      }
+    }, container);
     }, 100); // Start animation 100ms after render
 
     return () => {
@@ -319,29 +319,29 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
 
     // Defer animation start to prioritize content rendering
     const timeoutId = setTimeout(() => {
-      const snowflakes = snowflakesContainer.querySelectorAll(".snowflake");
+    const snowflakes = snowflakesContainer.querySelectorAll(".snowflake");
 
-      snowflakes.forEach((snowflake, index) => {
-        const delay = index * 0.3;
-        const duration = 3 + Math.random() * 2; // 3-5 seconds
-        const xOffset = (Math.random() - 0.5) * 40; // Random horizontal drift
+    snowflakes.forEach((snowflake, index) => {
+      const delay = index * 0.3;
+      const duration = 3 + Math.random() * 2; // 3-5 seconds
+      const xOffset = (Math.random() - 0.5) * 40; // Random horizontal drift
 
-        gsap.set(snowflake, {
-          y: -20,
-          x: xOffset,
-          opacity: 0.8 + Math.random() * 0.2, // 0.8-1.0 opacity for better visibility
-          scale: 0.6 + Math.random() * 0.4, // 0.6-1.0 scale for better visibility
-        });
-
-        gsap.to(snowflake, {
-          y: "+=200",
-          x: `+=${xOffset}`,
-          duration: duration,
-          delay: delay,
-          ease: "none",
-          repeat: -1,
-        });
+      gsap.set(snowflake, {
+        y: -20,
+        x: xOffset,
+        opacity: 0.8 + Math.random() * 0.2, // 0.8-1.0 opacity for better visibility
+        scale: 0.6 + Math.random() * 0.4, // 0.6-1.0 scale for better visibility
       });
+
+      gsap.to(snowflake, {
+        y: "+=200",
+        x: `+=${xOffset}`,
+        duration: duration,
+        delay: delay,
+        ease: "none",
+        repeat: -1,
+      });
+    });
     }, 200); // Start animation 200ms after render
 
     return () => {
@@ -363,7 +363,7 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
 
     // Defer animation start to prioritize content rendering
     const timeoutId = setTimeout(() => {
-      const letters = housefullContainer.querySelectorAll(".housefull-letter");
+    const letters = housefullContainer.querySelectorAll(".housefull-letter");
 
       // Simplified animation - single entrance animation instead of loop
       gsap.set([housefullContainer, saleText, dateText], {
@@ -373,9 +373,9 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
 
       gsap.to([housefullContainer, saleText, dateText], {
         scale: 1,
-        opacity: 1,
-        duration: 0.5,
-        ease: "back.out(1.7)",
+          opacity: 1,
+          duration: 0.5,
+          ease: "back.out(1.7)",
       });
 
       // Simplified letter animation - only run once
@@ -383,7 +383,7 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
         y: -10,
         duration: 0.15,
         stagger: 0.04,
-        ease: "power2.out",
+          ease: "power2.out",
         yoyo: true,
         repeat: 1,
       });

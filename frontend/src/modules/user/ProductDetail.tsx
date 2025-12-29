@@ -392,20 +392,20 @@ export default function ProductDetail() {
 
             {/* Desktop: Single image display */}
             <div className="hidden md:flex w-full h-full items-center justify-center">
-              {currentImage ? (
-                <img
-                  src={currentImage}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-neutral-400 text-6xl">
-                  {(product.name || product.productName || "?")
-                    .charAt(0)
-                    .toUpperCase()}
-                </div>
-              )}
+            {currentImage ? (
+              <img
+                src={currentImage}
+                alt={product.name}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-neutral-400 text-6xl">
+                {(product.name || product.productName || "?")
+                  .charAt(0)
+                  .toUpperCase()}
+              </div>
+            )}
             </div>
 
             {/* Image Gallery Navigation - Only show if multiple images */}

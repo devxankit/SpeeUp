@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, startTransition } from "react";
 import { CartProvider } from "./context/CartContext";
 import { OrdersProvider } from "./context/OrdersContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -10,6 +10,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import LoadingSpinner from "./components/LoadingSpinner";
 import ErrorBoundary from "./components/ErrorBoundary";
+import RouteTransition from "./components/RouteTransition";
 
 // Critical routes - load immediately (Home, Cart, Checkout)
 import Home from "./modules/user/Home";
@@ -144,7 +145,7 @@ function App() {
                     path="/login"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={<LoadingSpinner size="lg" className="min-h-screen" />}>
+                        <Suspense fallback={null}>
                           <Login />
                         </Suspense>
                       </PublicRoute>
@@ -154,7 +155,7 @@ function App() {
                     path="/signup"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={<LoadingSpinner size="lg" className="min-h-screen" />}>
+                        <Suspense fallback={null}>
                           <SignUp />
                         </Suspense>
                       </PublicRoute>
@@ -164,7 +165,7 @@ function App() {
                     path="/seller/login"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={<LoadingSpinner size="lg" className="min-h-screen" />}>
+                        <Suspense fallback={null}>
                           <SellerLogin />
                         </Suspense>
                       </PublicRoute>
@@ -174,7 +175,7 @@ function App() {
                     path="/seller/signup"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={<LoadingSpinner size="lg" className="min-h-screen" />}>
+                        <Suspense fallback={null}>
                           <SellerSignUp />
                         </Suspense>
                       </PublicRoute>
@@ -184,7 +185,7 @@ function App() {
                     path="/delivery/login"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={<LoadingSpinner size="lg" className="min-h-screen" />}>
+                        <Suspense fallback={null}>
                           <DeliveryLogin />
                         </Suspense>
                       </PublicRoute>
@@ -194,7 +195,7 @@ function App() {
                     path="/delivery/signup"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={<LoadingSpinner size="lg" className="min-h-screen" />}>
+                        <Suspense fallback={null}>
                           <DeliverySignUp />
                         </Suspense>
                       </PublicRoute>
@@ -204,7 +205,7 @@ function App() {
                     path="/admin/login"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={<LoadingSpinner size="lg" className="min-h-screen" />}>
+                        <Suspense fallback={null}>
                           <AdminLogin />
                         </Suspense>
                       </PublicRoute>
@@ -216,7 +217,7 @@ function App() {
                     path="/delivery/*"
                     element={
                       <ProtectedRoute requiredUserType="Delivery" redirectTo="/delivery/login">
-                        <Suspense fallback={<LoadingSpinner size="lg" className="min-h-screen" />}>
+                        <Suspense fallback={null}>
                           <DeliveryLayout>
                             <Routes>
                               <Route path="" element={<DeliveryDashboard />} />
@@ -244,7 +245,7 @@ function App() {
                     path="/seller/*"
                     element={
                       <ProtectedRoute requiredUserType="Seller" redirectTo="/seller/login">
-                        <Suspense fallback={<LoadingSpinner size="lg" className="min-h-screen" />}>
+                        <Suspense fallback={null}>
                           <SellerLayout>
                             <Routes>
                               <Route path="" element={<SellerDashboard />} />
@@ -274,7 +275,7 @@ function App() {
                     path="/admin/*"
                     element={
                       <ProtectedRoute requiredUserType="Admin" redirectTo="/admin/login">
-                        <Suspense fallback={<LoadingSpinner size="lg" className="min-h-screen" />}>
+                        <Suspense fallback={null}>
                           <AdminLayout>
                             <Routes>
                             <Route path="" element={<AdminDashboard />} />
@@ -332,7 +333,7 @@ function App() {
                     path="/*"
                     element={
                       <AppLayout>
-                        <Suspense fallback={<LoadingSpinner size="lg" className="min-h-screen" />}>
+                        <Suspense fallback={null}>
                           <Routes>
                             <Route path="/" element={<Home />} />
                             <Route path="/user/home" element={<Home />} />
