@@ -56,7 +56,8 @@ export default function GoogleMapsTracking({
         googleMapsApiKey: apiKey || ''
     })
 
-    const center = {
+    // Center will be updated dynamically based on deliveryLocation
+    const center = deliveryLocation || {
         lat: (storeLocation.lat + customerLocation.lat) / 2,
         lng: (storeLocation.lng + customerLocation.lng) / 2
     }
@@ -71,6 +72,7 @@ export default function GoogleMapsTracking({
         mapRef.current = map
 
         // Only fit bounds on initial load, not on subsequent updates
+        // This should only run once when map first loads
         if (!hasInitialBoundsFitted.current && !userHasInteracted.current) {
             if (window.google && window.google.maps) {
                 const bounds = new window.google.maps.LatLngBounds()
@@ -88,43 +90,55 @@ export default function GoogleMapsTracking({
         }
 
         // Add event listeners to track user interaction (pan, zoom, drag)
-        map.addListener('dragstart', trackInteraction)
-        map.addListener('zoom_changed', () => {
-            // Use a small delay to distinguish user zoom from programmatic zoom
-            setTimeout(() => {
-                if (!userHasInteracted.current) {
-                    trackInteraction()
-                }
-            }, 100)
-        })
-    }, [storeLocation, customerLocation])
+        // Only add listeners once, not on every callback recreation
+        if (!map._interactionListenersAdded) {
+            map.addListener('dragstart', trackInteraction)
+            map.addListener('zoom_changed', () => {
+                // Use a small delay to distinguish user zoom from programmatic zoom
+                setTimeout(() => {
+                    if (!userHasInteracted.current) {
+                        trackInteraction()
+                    }
+                }, 100)
+            })
+            map._interactionListenersAdded = true
+        }
+    }, []) // Empty deps - this should only run once when map loads
 
     // Calculate and display route using Google Directions Service
     const calculateAndDisplayRoute = useCallback((origin: Location, destination: Location) => {
-        if (!isLoaded || !mapRef.current || !window.google?.maps) return
+        if (!isLoaded || !mapRef.current || !window.google?.maps) {
+            console.log('⚠️ Cannot calculate route: map not loaded or not ready')
+            return
+        }
+
+        // Validate origin and destination
+        if (!origin || !destination || !origin.lat || !origin.lng || !destination.lat || !destination.lng) {
+            console.log('⚠️ Cannot calculate route: invalid origin or destination', { origin, destination })
+            return
+        }
 
         // Initialize DirectionsService if not already initialized
         if (!directionsServiceRef.current) {
             directionsServiceRef.current = new window.google.maps.DirectionsService()
         }
 
-        // Clear previous directions renderer
-        if (directionsRendererRef.current) {
-            directionsRendererRef.current.setMap(null)
-            directionsRendererRef.current = null
+        // Initialize or reuse DirectionsRenderer
+        if (!directionsRendererRef.current) {
+            directionsRendererRef.current = new window.google.maps.DirectionsRenderer({
+                map: mapRef.current,
+                suppressMarkers: true, // We'll use custom markers
+                preserveViewport: true, // Preserve viewport - we'll center manually
+                polylineOptions: {
+                    strokeColor: '#2563eb',
+                    strokeWeight: 5,
+                    strokeOpacity: 0.8,
+                },
+            })
+        } else {
+            // Ensure preserveViewport is true so route updates don't change viewport
+            directionsRendererRef.current.setOptions({ preserveViewport: true })
         }
-
-        // Initialize DirectionsRenderer with preserveViewport to prevent viewport jumps
-        directionsRendererRef.current = new window.google.maps.DirectionsRenderer({
-            map: mapRef.current,
-            suppressMarkers: true, // We'll use custom markers
-            preserveViewport: userHasInteracted.current || hasInitialBoundsFitted.current, // Preserve viewport if user has interacted or initial bounds fitted
-            polylineOptions: {
-                strokeColor: '#2563eb',
-                strokeWeight: 5,
-                strokeOpacity: 0.8,
-            },
-        })
 
         // Calculate route
         directionsServiceRef.current.route(
@@ -134,16 +148,10 @@ export default function GoogleMapsTracking({
                 travelMode: window.google.maps.TravelMode.DRIVING,
             },
             (result: any, status: any) => {
-                if (status === 'OK' && directionsRendererRef.current && result.routes && result.routes[0]) {
-                    // Only fit bounds on initial route calculation
-                    if (!hasInitialBoundsFitted.current && !userHasInteracted.current) {
-                        directionsRendererRef.current.setOptions({ preserveViewport: false })
-                        directionsRendererRef.current.setDirections(result)
-                        directionsRendererRef.current.setOptions({ preserveViewport: true })
-                        hasInitialBoundsFitted.current = true
-                    } else {
-                        directionsRendererRef.current.setDirections(result)
-                    }
+                if (status === 'OK' && result.routes && result.routes[0]) {
+                    // Always preserve viewport - we center on delivery boy separately
+                    directionsRendererRef.current.setOptions({ preserveViewport: true })
+                    directionsRendererRef.current.setDirections(result)
 
                     // Extract route information
                     const route = result.routes[0]
@@ -155,7 +163,7 @@ export default function GoogleMapsTracking({
                         })
                     }
                 } else {
-                    console.error('Directions request failed:', status)
+                    console.error('❌ Directions request failed:', status, { origin, destination })
                     setRouteInfo(null)
                 }
             }
@@ -165,6 +173,7 @@ export default function GoogleMapsTracking({
     // Handle route calculation when routeOrigin and routeDestination are provided
     useEffect(() => {
         if (showRoute && routeOrigin && routeDestination && isLoaded && mapRef.current) {
+            // Recalculate route when origin or destination changes
             calculateAndDisplayRoute(routeOrigin, routeDestination)
         } else if (!showRoute && directionsRendererRef.current) {
             // Clear route if showRoute is false
@@ -174,21 +183,29 @@ export default function GoogleMapsTracking({
         }
     }, [showRoute, routeOrigin, routeDestination, isLoaded, calculateAndDisplayRoute])
 
-    // Handle initial bounds fitting when deliveryLocation first appears
+    // Center map on delivery boy location whenever it updates
     useEffect(() => {
-        if (mapRef.current && !hasInitialBoundsFitted.current && !userHasInteracted.current && deliveryLocation) {
-            if (window.google && window.google.maps) {
-                const bounds = new window.google.maps.LatLngBounds()
-                bounds.extend(storeLocation)
-                bounds.extend(customerLocation)
-                bounds.extend(deliveryLocation)
-                mapRef.current.fitBounds(bounds)
-                hasInitialBoundsFitted.current = true
-            }
+        if (mapRef.current && deliveryLocation && isLoaded && window.google?.maps) {
+            // Center map on delivery boy's location with smooth pan
+            mapRef.current.panTo({
+                lat: deliveryLocation.lat,
+                lng: deliveryLocation.lng
+            })
         }
-        // Note: When deliveryLocation updates after initial load, we don't reset viewport
-        // The Marker component will automatically update its position
-    }, [deliveryLocation, storeLocation, customerLocation])
+    }, [deliveryLocation, isLoaded])
+
+    // Handle initial bounds fitting when map first loads
+    useEffect(() => {
+        if (mapRef.current && !hasInitialBoundsFitted.current && deliveryLocation && isLoaded && window.google?.maps) {
+            // On initial load, fit bounds to show all important locations
+            const bounds = new window.google.maps.LatLngBounds()
+            bounds.extend(storeLocation)
+            bounds.extend(customerLocation)
+            bounds.extend(deliveryLocation)
+            mapRef.current.fitBounds(bounds)
+            hasInitialBoundsFitted.current = true
+        }
+    }, [deliveryLocation, storeLocation, customerLocation, isLoaded])
 
     if (loadError) {
         return (
@@ -307,3 +324,4 @@ export default function GoogleMapsTracking({
         </div>
     )
 }
+

@@ -1045,19 +1045,21 @@ export default function OrderDetail() {
               order?.status === 'Out for Delivery' ||
               (sellerLocations.length > 0 &&
                 order?.status !== 'Delivered' &&
+                order?.status !== 'Cancelled' &&
+                order?.status !== 'Returned' &&
                 order?.status !== 'Picked up' &&
                 order?.status !== 'Out for Delivery'))
           }
           routeOrigin={deliveryLocation || undefined}
           routeDestination={
-            // If order is picked up, show route to customer
-            // Otherwise, show route to seller shop
+            // If order is picked up or out for delivery, show route to customer
+            // Otherwise (Pending, Ready for pickup, etc.), show route to seller shop
             order?.status === 'Picked up' || order?.status === 'Out for Delivery'
               ? {
                   lat: order?.deliveryAddress?.latitude || order?.address?.latitude || 28.7041,
                   lng: order?.deliveryAddress?.longitude || order?.address?.longitude || 77.1025,
                 }
-              : sellerLocations.length > 0
+              : sellerLocations.length > 0 && sellerLocations[0].latitude && sellerLocations[0].longitude
               ? {
                   lat: sellerLocations[0].latitude,
                   lng: sellerLocations[0].longitude,

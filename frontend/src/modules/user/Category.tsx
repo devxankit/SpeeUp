@@ -24,10 +24,12 @@ export default function CategoryPage() {
   const [selectedFilterCategory, setSelectedFilterCategory] = useState("Type");
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categoryLoading, setCategoryLoading] = useState(true);
 
   // Fetch Category Details
   useEffect(() => {
     const fetchCategoryDetails = async () => {
+      setCategoryLoading(true);
       try {
         const response = await getCategoryById(id!);
         if (response.success && response.data) {
@@ -61,6 +63,8 @@ export default function CategoryPage() {
         }
       } catch (error) {
         console.error("Error fetching category details:", error);
+      } finally {
+        setCategoryLoading(false);
       }
     };
 
@@ -116,6 +120,19 @@ export default function CategoryPage() {
   // Client-side filtering removed in favor of backend subcategory filtering
   const categoryProducts = products;
 
+  // Show loading state while fetching category details
+  if (categoryLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-neutral-600">Loading category...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Only show "not found" if loading is complete and category is still null
   if (!category) {
     return (
       <div className="px-4 md:px-6 lg:px-8 py-6 md:py-8">

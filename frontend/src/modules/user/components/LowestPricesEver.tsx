@@ -6,7 +6,7 @@ import { getProducts } from '../../../services/api/customerProductService';
 import { getTheme } from '../../../utils/themes';
 import { useCart } from '../../../context/CartContext';
 import { Product } from '../../../types/domain';
-import { addProductToWishlist } from '../../../utils/wishlist';
+import { useWishlist } from '../../../hooks/useWishlist';
 
 interface LowestPricesEverProps {
   activeTab?: string;
@@ -33,6 +33,7 @@ const ProductCard = memo(({
   onUpdateQuantity: (productId: string, quantity: number) => void;
 }) => {
   const navigate = useNavigate();
+  const { isWishlisted, toggleWishlist } = useWishlist(product.id);
 
   // Calculate discount
   const discount = product.mrp ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0;
@@ -79,21 +80,17 @@ const ProductCard = memo(({
 
             {/* Heart Icon - Top Right */}
             <button
-              onClick={async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                await addProductToWishlist(product.id);
-              }}
+              onClick={toggleWishlist}
               className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
-              aria-label="Add to wishlist"
+              aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
             >
               <svg
                 width="12"
                 height="12"
                 viewBox="0 0 24 24"
-                fill="none"
+                fill={isWishlisted ? "#ef4444" : "none"}
                 xmlns="http://www.w3.org/2000/svg"
-                className="text-neutral-700"
+                className={isWishlisted ? "text-red-500" : "text-neutral-700"}
               >
                 <path
                   d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
