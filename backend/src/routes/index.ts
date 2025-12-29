@@ -24,7 +24,6 @@ import customerCategoryRoutes from "./customerCategoryRoutes";
 import customerCouponRoutes from "./customerCouponRoutes";
 import customerAddressRoutes from "./customerAddressRoutes";
 import customerHomeRoutes from "./customerHomeRoutes";
-import customerWalletRoutes from "./customerWalletRoutes";
 import customerCartRoutes from "./customerCartRoutes";
 import wishlistRoutes from "./wishlistRoutes";
 import productReviewRoutes from "./productReviewRoutes";
@@ -91,7 +90,6 @@ router.use("/customer/coupons", customerCouponRoutes);
 router.use("/customer/addresses", customerAddressRoutes);
 router.use("/customer/home", customerHomeRoutes);
 router.use("/customer/cart", customerCartRoutes);
-router.use("/customer/wallet", customerWalletRoutes);
 router.use("/customer/wishlist", wishlistRoutes);
 router.use("/customer/reviews", productReviewRoutes);
 // Tracking routes (must be before general /customer route)

@@ -8,7 +8,6 @@ export interface ICustomer extends Document {
   registrationDate: Date;
   status: 'Active' | 'Inactive';
   refCode: string;
-  walletAmount: number;
   totalOrders: number;
   totalSpent: number;
   // Location fields
@@ -86,11 +85,6 @@ const CustomerSchema = new Schema<ICustomer>(
       unique: true,
       trim: true,
       uppercase: true,
-    },
-    walletAmount: {
-      type: Number,
-      default: 0,
-      min: [0, 'Wallet amount cannot be negative'],
     },
     totalOrders: {
       type: Number,

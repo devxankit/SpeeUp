@@ -39,12 +39,6 @@ export interface UpdateCustomerStatusData {
   status: "Active" | "Inactive";
 }
 
-export interface UpdateCustomerWalletData {
-  amount: number;
-  type: "add" | "deduct";
-  reason?: string;
-}
-
 export interface CustomerOrder {
   _id: string;
   orderNumber: string;
@@ -109,15 +103,3 @@ export const getCustomerOrders = async (
   return response.data;
 };
 
-/**
- * Update customer wallet
- */
-export const updateCustomerWallet = async (
-  id: string,
-  data: UpdateCustomerWalletData
-): Promise<ApiResponse<{ customer: Customer; transaction: any }>> => {
-  const response = await api.patch<
-    ApiResponse<{ customer: Customer; transaction: any }>
-  >(`/admin/customers/${id}/wallet`, data);
-  return response.data;
-};

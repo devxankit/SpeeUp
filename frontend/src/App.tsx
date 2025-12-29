@@ -13,7 +13,6 @@ import Orders from "./modules/user/Orders";
 import OrderDetail from "./modules/user/OrderDetail";
 import OrderAgain from "./modules/user/OrderAgain";
 import Account from "./modules/user/Account";
-import Wallet from "./modules/user/Wallet";
 import Categories from "./modules/user/Categories";
 import Category from "./modules/user/Category";
 import Cart from "./modules/user/Cart";
@@ -24,6 +23,7 @@ import Invoice from "./modules/user/Invoice";
 import Login from "./modules/user/Login";
 import SignUp from "./modules/user/SignUp";
 import AboutUs from "./modules/user/AboutUs";
+import FAQ from "./modules/user/FAQ";
 import Wishlist from "./modules/user/Wishlist";
 import Addresses from "./modules/user/Addresses";
 import AddressBook from "./modules/user/AddressBook";
@@ -259,11 +259,11 @@ function App() {
                           <Route path="/order-again" element={<OrderAgain />} />
                           <Route path="/account" element={<Account />} />
                           <Route path="/about-us" element={<AboutUs />} />
+                          <Route path="/faq" element={<FAQ />} />
                           <Route path="/wishlist" element={<Wishlist />} />
                           <Route path="/categories" element={<Categories />} />
                           <Route path="/category/:id" element={<Category />} />
                           <Route path="/address-book" element={<AddressBook />} />
-                          <Route path="/wallet" element={<Wallet />} />
                           <Route path="/checkout" element={<Checkout />} />
                           <Route path="/checkout/address" element={<CheckoutAddress />} />
                           <Route path="/product/:id" element={<ProductDetail />} />

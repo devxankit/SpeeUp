@@ -302,39 +302,6 @@ export default function HomeHero({ activeTab = 'all', onTabChange }: HomeHeroPro
               </div>
               )}
             </div>
-            {/* Right: Wallet Icon */}
-            <div className="flex items-center">
-              <button
-                className="w-8 h-8 md:w-7 md:h-7 rounded-full flex items-center justify-center transition-colors shadow-sm border"
-                style={{
-                  backgroundColor: theme.primary[3] || theme.primary[2],
-                  borderColor: theme.primary[2] || theme.primary[1],
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.primary[2] || theme.primary[1];
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.primary[3] || theme.primary[2];
-                }}
-                onClick={() => navigate('/wallet')}
-                aria-label="Wallet"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  {/* Wallet body */}
-                  <path d="M3 7C3 5.89543 3.89543 5 5 5H19C20.1046 5 21 5.89543 21 7V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V7Z" stroke="#1f2937" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                  {/* Wallet flap */}
-                  <path d="M3 10H21" stroke="#1f2937" strokeWidth="1.8" strokeLinecap="round" />
-                  {/* Card slot */}
-                  <rect x="6" y="12" width="8" height="5" rx="1" stroke="#1f2937" strokeWidth="1.5" fill="none" />
-                  {/* Card lines */}
-                  <line x1="8" y1="14" x2="12" y2="14" stroke="#1f2937" strokeWidth="1" strokeLinecap="round" />
-                  <line x1="8" y1="15.5" x2="10" y2="15.5" stroke="#1f2937" strokeWidth="1" strokeLinecap="round" />
-                  {/* Money symbol */}
-                  <circle cx="17" cy="14.5" r="2" fill="#10b981" stroke="#10b981" strokeWidth="0.5" />
-                  <text x="17" y="16" textAnchor="middle" fontSize="6" fill="white" fontWeight="bold" fontFamily="Arial, sans-serif">₹</text>
-                </svg>
-              </button>
-            </div>
           </div>
         </div>
       </div>

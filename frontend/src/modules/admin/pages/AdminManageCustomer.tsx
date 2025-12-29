@@ -12,7 +12,6 @@ type SortField =
   | "phone"
   | "registrationDate"
   | "status"
-  | "walletAmount"
   | "totalOrders"
   | "totalSpent";
 type SortDirection = "asc" | "desc";
@@ -136,10 +135,6 @@ export default function AdminManageCustomer() {
             aValue = a.status || "";
             bValue = b.status || "";
             break;
-          case "walletAmount":
-            aValue = a.walletAmount || 0;
-            bValue = b.walletAmount || 0;
-            break;
           case "totalOrders":
             aValue = a.totalOrders || 0;
             bValue = b.totalOrders || 0;
@@ -206,7 +201,6 @@ export default function AdminManageCustomer() {
             : "",
           customer.status,
           customer.refCode,
-          customer.walletAmount.toFixed(2),
           customer.totalOrders,
           customer.totalSpent.toFixed(2),
         ].join(",")
@@ -390,13 +384,6 @@ export default function AdminManageCustomer() {
                   <th className="p-4 border border-neutral-200">Ref Code</th>
                   <th
                     className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
-                    onClick={() => handleSort("walletAmount")}>
-                    <div className="flex items-center justify-between">
-                      Wallet Amount <SortIcon field="walletAmount" />
-                    </div>
-                  </th>
-                  <th
-                    className="p-4 border border-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors"
                     onClick={() => handleSort("totalOrders")}>
                     <div className="flex items-center justify-between">
                       Total Orders <SortIcon field="totalOrders" />
@@ -470,9 +457,6 @@ export default function AdminManageCustomer() {
                       </td>
                       <td className="p-4 border border-neutral-200">
                         {customer.refCode}
-                      </td>
-                      <td className="p-4 border border-neutral-200">
-                        ₹{customer.walletAmount.toFixed(2)}
                       </td>
                       <td className="p-4 border border-neutral-200">
                         {customer.totalOrders}
