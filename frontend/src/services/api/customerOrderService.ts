@@ -63,3 +63,11 @@ export const getOrderById = async (id: string): Promise<any> => {
     const response = await api.get(`/customer/orders/${id}`);
     return response.data;
 };
+
+/**
+ * Get seller locations for an order
+ */
+export const getSellerLocationsForOrder = async (id: string): Promise<any> => {
+    const response = await api.get(`/customer/orders/${id}/seller-locations`);
+    return response.data;
+};

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react'
+import { useCallback, useRef, useEffect, useState } from 'react'
 // @ts-ignore - @react-google-maps/api types may not be available
 import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api'
 import { motion } from 'framer-motion'
@@ -13,6 +13,9 @@ interface GoogleMapsTrackingProps {
     customerLocation: Location
     deliveryLocation?: Location
     isTracking: boolean
+    showRoute?: boolean // Whether to show actual route using Directions API
+    routeOrigin?: Location // Origin for route (delivery partner location)
+    routeDestination?: Location // Destination for route (seller shop or customer)
 }
 
 const mapContainerStyle = {
@@ -24,12 +27,18 @@ export default function GoogleMapsTracking({
     storeLocation,
     customerLocation,
     deliveryLocation,
-    isTracking
+    isTracking,
+    showRoute = false,
+    routeOrigin,
+    routeDestination
 }: GoogleMapsTrackingProps) {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
     const mapRef = useRef<any>(null)
+    const directionsServiceRef = useRef<any>(null)
+    const directionsRendererRef = useRef<any>(null)
     const hasInitialBoundsFitted = useRef<boolean>(false)
     const userHasInteracted = useRef<boolean>(false)
+    const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null)
 
     const { isLoaded, loadError } = useJsApiLoader({
         id: 'google-map-script',
@@ -78,6 +87,81 @@ export default function GoogleMapsTracking({
             }, 100)
         })
     }, [storeLocation, customerLocation])
+
+    // Calculate and display route using Google Directions Service
+    const calculateAndDisplayRoute = useCallback((origin: Location, destination: Location) => {
+        if (!isLoaded || !mapRef.current || !window.google?.maps) return
+
+        // Initialize DirectionsService if not already initialized
+        if (!directionsServiceRef.current) {
+            directionsServiceRef.current = new window.google.maps.DirectionsService()
+        }
+
+        // Clear previous directions renderer
+        if (directionsRendererRef.current) {
+            directionsRendererRef.current.setMap(null)
+            directionsRendererRef.current = null
+        }
+
+        // Initialize DirectionsRenderer with preserveViewport to prevent viewport jumps
+        directionsRendererRef.current = new window.google.maps.DirectionsRenderer({
+            map: mapRef.current,
+            suppressMarkers: true, // We'll use custom markers
+            preserveViewport: userHasInteracted.current || hasInitialBoundsFitted.current, // Preserve viewport if user has interacted or initial bounds fitted
+            polylineOptions: {
+                strokeColor: '#2563eb',
+                strokeWeight: 5,
+                strokeOpacity: 0.8,
+            },
+        })
+
+        // Calculate route
+        directionsServiceRef.current.route(
+            {
+                origin: origin,
+                destination: destination,
+                travelMode: window.google.maps.TravelMode.DRIVING,
+            },
+            (result: any, status: any) => {
+                if (status === 'OK' && directionsRendererRef.current && result.routes && result.routes[0]) {
+                    // Only fit bounds on initial route calculation
+                    if (!hasInitialBoundsFitted.current && !userHasInteracted.current) {
+                        directionsRendererRef.current.setOptions({ preserveViewport: false })
+                        directionsRendererRef.current.setDirections(result)
+                        directionsRendererRef.current.setOptions({ preserveViewport: true })
+                        hasInitialBoundsFitted.current = true
+                    } else {
+                        directionsRendererRef.current.setDirections(result)
+                    }
+
+                    // Extract route information
+                    const route = result.routes[0]
+                    const leg = route.legs[0]
+                    if (leg) {
+                        setRouteInfo({
+                            distance: leg.distance?.text || '0 km',
+                            duration: leg.duration?.text || '0 mins',
+                        })
+                    }
+                } else {
+                    console.error('Directions request failed:', status)
+                    setRouteInfo(null)
+                }
+            }
+        )
+    }, [isLoaded])
+
+    // Handle route calculation when routeOrigin and routeDestination are provided
+    useEffect(() => {
+        if (showRoute && routeOrigin && routeDestination && isLoaded && mapRef.current) {
+            calculateAndDisplayRoute(routeOrigin, routeDestination)
+        } else if (!showRoute && directionsRendererRef.current) {
+            // Clear route if showRoute is false
+            directionsRendererRef.current.setMap(null)
+            directionsRendererRef.current = null
+            setRouteInfo(null)
+        }
+    }, [showRoute, routeOrigin, routeDestination, isLoaded, calculateAndDisplayRoute])
 
     // Handle initial bounds fitting when deliveryLocation first appears
     useEffect(() => {
@@ -167,16 +251,18 @@ export default function GoogleMapsTracking({
                     />
                 )}
 
-                {/* Route Polyline */}
-                <Polyline
-                    path={path}
-                    options={{
-                        strokeColor: '#16a34a',
-                        strokeOpacity: 0.7,
-                        strokeWeight: 4,
-                        geodesic: true,
-                    }}
-                />
+                {/* Route using Directions API (rendered programmatically) or simple polyline */}
+                {!showRoute && (
+                    <Polyline
+                        path={path}
+                        options={{
+                            strokeColor: '#16a34a',
+                            strokeOpacity: 0.7,
+                            strokeWeight: 4,
+                            geodesic: true,
+                        }}
+                    />
+                )}
             </GoogleMap>
 
             {/* Live Tracking Indicator */}
@@ -188,6 +274,23 @@ export default function GoogleMapsTracking({
                         transition={{ duration: 2, repeat: Infinity }}
                     />
                     <span className="text-sm font-medium text-gray-900">Live Tracking</span>
+                </div>
+            )}
+
+            {/* Route Info Display */}
+            {routeInfo && showRoute && (
+                <div className="absolute bottom-3 right-3 z-10 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg border border-gray-200">
+                    <div className="flex items-center gap-3 text-xs">
+                        <div>
+                            <p className="text-gray-500 font-medium">Distance</p>
+                            <p className="text-gray-900 font-bold">{routeInfo.distance}</p>
+                        </div>
+                        <div className="w-px h-6 bg-gray-200"></div>
+                        <div>
+                            <p className="text-gray-500 font-medium">ETA</p>
+                            <p className="text-gray-900 font-bold">{routeInfo.duration}</p>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

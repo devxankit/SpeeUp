@@ -7,6 +7,7 @@ import { OrderStatus } from "../../types/order";
 import GoogleMapsTracking from "../../components/GoogleMapsTracking";
 import { useDeliveryTracking } from "../../hooks/useDeliveryTracking";
 import DeliveryPartnerCard from "../../components/DeliveryPartnerCard";
+import { getSellerLocationsForOrder } from "../../services/api/customerOrderService";
 
 // Icon Components
 const ArrowLeftIcon = ({ className }: { className?: string }) => (
@@ -667,6 +668,10 @@ export default function OrderDetail() {
     reconnect,
   } = useDeliveryTracking(id);
 
+  // Seller locations for the order
+  const [sellerLocations, setSellerLocations] = useState<any[]>([]);
+  const [loadingSellerLocations, setLoadingSellerLocations] = useState(false);
+
   // Fetch order if not in context
   useEffect(() => {
     const loadOrder = async () => {
@@ -691,6 +696,36 @@ export default function OrderDetail() {
 
     loadOrder();
   }, [id, getOrderById, fetchOrderById]);
+
+  // Fetch seller locations when order is loaded
+  useEffect(() => {
+    const fetchSellerLocations = async () => {
+      if (!id || !order) return;
+
+      // Only fetch if order has delivery boy assigned and status is before "Picked up" or "Out for Delivery"
+      const shouldFetch = order.status &&
+        order.status !== 'Delivered' &&
+        order.status !== 'Cancelled' &&
+        order.status !== 'Picked up' &&
+        order.status !== 'Out for Delivery';
+
+      if (shouldFetch) {
+        try {
+          setLoadingSellerLocations(true);
+          const response = await getSellerLocationsForOrder(id);
+          if (response.success && response.data) {
+            setSellerLocations(response.data || []);
+          }
+        } catch (err) {
+          console.error('Failed to fetch seller locations:', err);
+        } finally {
+          setLoadingSellerLocations(false);
+        }
+      }
+    };
+
+    fetchSellerLocations();
+  }, [id, order?.status]);
 
   // Update orderStatus when order state changes
   useEffect(() => {
@@ -989,13 +1024,46 @@ export default function OrderDetail() {
       {/* Map Section */}
       {!showConfirmation && (
         <GoogleMapsTracking
-          storeLocation={{ lat: 28.6139, lng: 77.209 }}
+          storeLocation={
+            sellerLocations.length > 0
+              ? {
+                  lat: sellerLocations[0].latitude,
+                  lng: sellerLocations[0].longitude,
+                }
+              : { lat: 28.6139, lng: 77.209 } // Fallback
+          }
           customerLocation={{
-            lat: order?.address?.latitude || 28.7041,
-            lng: order?.address?.longitude || 77.1025,
+            lat: order?.deliveryAddress?.latitude || order?.address?.latitude || 28.7041,
+            lng: order?.deliveryAddress?.longitude || order?.address?.longitude || 77.1025,
           }}
           deliveryLocation={deliveryLocation || undefined}
           isTracking={isConnected && !!deliveryLocation}
+          showRoute={
+            isConnected &&
+            !!deliveryLocation &&
+            (orderStatus === 'Picked up' ||
+              orderStatus === 'Out for Delivery' ||
+              (sellerLocations.length > 0 &&
+                orderStatus !== 'Delivered' &&
+                orderStatus !== 'Picked up' &&
+                orderStatus !== 'Out for Delivery'))
+          }
+          routeOrigin={deliveryLocation || undefined}
+          routeDestination={
+            // If order is picked up, show route to customer
+            // Otherwise, show route to seller shop
+            orderStatus === 'Picked up' || orderStatus === 'Out for Delivery'
+              ? {
+                  lat: order?.deliveryAddress?.latitude || order?.address?.latitude || 28.7041,
+                  lng: order?.deliveryAddress?.longitude || order?.address?.longitude || 77.1025,
+                }
+              : sellerLocations.length > 0
+              ? {
+                  lat: sellerLocations[0].latitude,
+                  lng: sellerLocations[0].longitude,
+                }
+              : undefined
+          }
         />
       )}
 
