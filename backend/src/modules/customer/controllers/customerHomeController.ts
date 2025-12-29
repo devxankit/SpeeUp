@@ -482,7 +482,7 @@ export const getHomeContent = async (req: Request, res: Response) => {
       endDate: { $gte: now },
     })
       .populate("categoryCards.categoryId", "name slug image")
-      .populate("featuredProducts", "productName mainImage price mrp discount rating reviewsCount")
+      .populate("featuredProducts", "productName mainImage mainImageUrl galleryImageUrls galleryImages price mrp compareAtPrice discount rating reviewsCount")
       .sort({ order: 1 })
       .lean();
 

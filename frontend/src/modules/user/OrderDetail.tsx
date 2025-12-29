@@ -1041,18 +1041,18 @@ export default function OrderDetail() {
           showRoute={
             isConnected &&
             !!deliveryLocation &&
-            (orderStatus === 'Picked up' ||
-              orderStatus === 'Out for Delivery' ||
+            (order?.status === 'Picked up' ||
+              order?.status === 'Out for Delivery' ||
               (sellerLocations.length > 0 &&
-                orderStatus !== 'Delivered' &&
-                orderStatus !== 'Picked up' &&
-                orderStatus !== 'Out for Delivery'))
+                order?.status !== 'Delivered' &&
+                order?.status !== 'Picked up' &&
+                order?.status !== 'Out for Delivery'))
           }
           routeOrigin={deliveryLocation || undefined}
           routeDestination={
             // If order is picked up, show route to customer
             // Otherwise, show route to seller shop
-            orderStatus === 'Picked up' || orderStatus === 'Out for Delivery'
+            order?.status === 'Picked up' || order?.status === 'Out for Delivery'
               ? {
                   lat: order?.deliveryAddress?.latitude || order?.address?.latitude || 28.7041,
                   lng: order?.deliveryAddress?.longitude || order?.address?.longitude || 77.1025,

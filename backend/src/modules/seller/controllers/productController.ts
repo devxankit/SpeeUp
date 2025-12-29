@@ -219,6 +219,15 @@ export const getProductById = asyncHandler(
     const sellerId = (req as any).user.userId;
     const { id } = req.params;
 
+    // Prevent reserved route names from being treated as product IDs
+    const reservedRoutes = ["shops", "brands"];
+    if (reservedRoutes.includes(id)) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
     const product = await Product.findOne({ _id: id, seller: sellerId })
       .populate("category", "name")
       .populate("subcategory", "subcategoryName")
@@ -543,14 +552,15 @@ export const bulkUpdateStock = asyncHandler(
 /**
  * Get all active shops (for seller to select when creating shop-by-store-only products)
  */
-export const getShops = asyncHandler(async (req: Request, res: Response) => {
+export const getShops = asyncHandler(async (_req: Request, res: Response) => {
   const shops = await Shop.find({ isActive: true })
     .select("_id name storeId image")
-    .sort({ order: 1, name: 1 });
+    .sort({ order: 1, name: 1 })
+    .lean();
 
   return res.status(200).json({
     success: true,
     message: "Shops fetched successfully",
-    data: shops,
+    data: shops || [],
   });
 });

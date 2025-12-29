@@ -6,6 +6,7 @@ import Customer from "../../../models/Customer";
 import mongoose from "mongoose";
 import { notifyDeliveryBoysOfNewOrder } from "../../../services/orderNotificationService";
 import { Server as SocketIOServer } from "socket.io";
+import { deductWalletForOrder, checkWalletBalance } from "../../../services/customerWalletService";
 
 // Create a new order
 export const createOrder = async (req: Request, res: Response) => {
@@ -267,6 +268,29 @@ export const createOrder = async (req: Request, res: Response) => {
         newOrder.total = Number(finalTotal.toFixed(2));
         newOrder.items = orderItemIds;
 
+        // Handle wallet payment for prepaid orders
+        let walletPaymentResult = null;
+        if (paymentMethod === 'Wallet' || paymentMethod === 'wallet') {
+            // Check if customer has sufficient wallet balance
+            const balanceCheck = await checkWalletBalance(userId, finalTotal);
+
+            if (!balanceCheck.sufficient) {
+                if (session) await session.abortTransaction();
+                return res.status(400).json({
+                    success: false,
+                    message: `Insufficient wallet balance. Available: ₹${balanceCheck.balance.toFixed(2)}, Required: ₹${finalTotal.toFixed(2)}`,
+                    data: {
+                        availableBalance: balanceCheck.balance,
+                        requiredAmount: finalTotal,
+                    }
+                });
+            }
+
+            // Deduct from wallet (we need orderNumber which is generated on save, so we'll do this after save)
+            // For now, mark payment as pending and process after save
+            newOrder.paymentStatus = 'Processing';
+        }
+
         if (session) {
             await newOrder.save({ session });
             await session.commitTransaction();
@@ -278,6 +302,54 @@ export const createOrder = async (req: Request, res: Response) => {
                 throw validationError;
             }
             await newOrder.save();
+        }
+
+        // Process wallet payment after order is saved (now we have orderNumber)
+        if (paymentMethod === 'Wallet' || paymentMethod === 'wallet') {
+            const savedOrder = await Order.findById(newOrder._id);
+            if (savedOrder) {
+                walletPaymentResult = await deductWalletForOrder(
+                    userId,
+                    finalTotal,
+                    savedOrder._id.toString(),
+                    savedOrder.orderNumber || ''
+                );
+
+                if (walletPaymentResult.success) {
+                    // Update order payment status to completed
+                    await Order.findByIdAndUpdate(newOrder._id, {
+                        paymentStatus: 'Completed',
+                        paidAt: new Date(),
+                    });
+                    console.log(`✅ Wallet payment successful for order ${savedOrder.orderNumber}`);
+                } else {
+                    // Payment failed - rollback order
+                    console.error(`❌ Wallet payment failed for order ${savedOrder.orderNumber}: ${walletPaymentResult.message}`);
+
+                    // Mark order as payment failed
+                    await Order.findByIdAndUpdate(newOrder._id, {
+                        paymentStatus: 'Failed',
+                        status: 'Cancelled',
+                        cancellationReason: 'Payment failed: ' + walletPaymentResult.message,
+                    });
+
+                    // Restore stock for all items
+                    for (const itemId of orderItemIds) {
+                        const orderItem = await OrderItem.findById(itemId);
+                        if (orderItem) {
+                            await Product.findByIdAndUpdate(
+                                orderItem.product,
+                                { $inc: { stock: orderItem.quantity } }
+                            );
+                        }
+                    }
+
+                    return res.status(400).json({
+                        success: false,
+                        message: `Wallet payment failed: ${walletPaymentResult.message}`,
+                    });
+                }
+            }
         }
 
         // Emit notification to all available delivery boys
@@ -295,10 +367,20 @@ export const createOrder = async (req: Request, res: Response) => {
             console.error("Error notifying delivery boys:", notificationError);
         }
 
+        // Prepare response message
+        let responseMessage = "Order placed successfully";
+        if (walletPaymentResult?.success) {
+            responseMessage = `Order placed and ₹${finalTotal.toFixed(2)} paid from wallet. New balance: ₹${walletPaymentResult.newBalance?.toFixed(2)}`;
+        }
+
         return res.status(201).json({
             success: true,
-            message: "Order placed successfully",
+            message: responseMessage,
             data: newOrder,
+            walletPayment: walletPaymentResult ? {
+                transactionId: walletPaymentResult.transactionId,
+                newBalance: walletPaymentResult.newBalance,
+            } : undefined,
         });
 
     } catch (error: any) {

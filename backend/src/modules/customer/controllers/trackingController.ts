@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../../../utils/asyncHandler";
 import DeliveryTracking from "../../../models/DeliveryTracking";
 import Order from "../../../models/Order";
+import OrderItem from "../../../models/OrderItem";
+import Seller from "../../../models/Seller";
 
 /**
  * Get tracking information for an order
@@ -202,6 +204,53 @@ export const getActiveOrdersTracking = asyncHandler(
     return res.status(200).json({
       success: true,
       data: trackings,
+    });
+  }
+);
+
+/**
+ * Get Seller Locations for Order (Customer endpoint)
+ * Returns all unique seller shop locations for items in this order
+ * GET /api/v1/customer/orders/:orderId/seller-locations
+ */
+export const getSellerLocationsForOrder = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { orderId } = req.params;
+    const customerId = (req as any).user.id;
+
+    // Verify order exists and belongs to this customer
+    const order = await Order.findOne({ _id: orderId, customer: customerId });
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // Get all unique seller IDs from order items
+    const orderItems = await OrderItem.find({ order: orderId });
+    const sellerIds = [...new Set(orderItems.map((item) => item.seller.toString()))];
+
+    // Get seller details including locations
+    const sellers = await Seller.find({ _id: { $in: sellerIds } }).select(
+      "storeName address city latitude longitude"
+    );
+
+    // Format seller locations
+    const sellerLocations = sellers
+      .filter((seller) => seller.latitude && seller.longitude) // Only include sellers with location data
+      .map((seller) => ({
+        sellerId: seller._id.toString(),
+        storeName: seller.storeName,
+        address: seller.address,
+        city: seller.city,
+        latitude: parseFloat(seller.latitude || "0"),
+        longitude: parseFloat(seller.longitude || "0"),
+      }));
+
+    return res.status(200).json({
+      success: true,
+      data: sellerLocations,
     });
   }
 );

@@ -1,6 +1,8 @@
 import { Server as SocketIOServer } from 'socket.io';
 import Delivery from '../models/Delivery';
 import Order from '../models/Order';
+import Seller from '../models/Seller';
+import DeliveryTracking from '../models/DeliveryTracking';
 import mongoose from 'mongoose';
 
 // Track order notification state
@@ -12,6 +14,29 @@ interface OrderNotificationState {
 }
 
 const notificationStates = new Map<string, OrderNotificationState>();
+
+/**
+ * Calculate distance between two coordinates using Haversine formula
+ * Returns distance in kilometers
+ */
+function calculateDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+): number {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
 
 /**
  * Find all available delivery boys (online and active)
@@ -31,17 +56,177 @@ export async function findAvailableDeliveryBoys(): Promise<mongoose.Types.Object
 }
 
 /**
- * Emit new order notification to all available delivery boys
+ * Find delivery boys near a specific location within a radius
+ * Uses the delivery boy's last known location from DeliveryTracking
+ */
+export async function findDeliveryBoysNearLocation(
+    latitude: number,
+    longitude: number,
+    radiusKm: number = 10
+): Promise<{ deliveryBoyId: mongoose.Types.ObjectId; distance: number }[]> {
+    try {
+        // Get all active and online delivery boys
+        const deliveryBoys = await Delivery.find({
+            isOnline: true,
+            status: 'Active',
+        }).select('_id');
+
+        if (deliveryBoys.length === 0) {
+            return [];
+        }
+
+        // Get latest locations for these delivery boys from DeliveryTracking
+        const deliveryBoyIds = deliveryBoys.map(db => db._id);
+
+        // Get the most recent tracking record for each delivery boy
+        const trackingRecords = await DeliveryTracking.aggregate([
+            {
+                $match: {
+                    deliveryBoy: { $in: deliveryBoyIds },
+                    'currentLocation.lat': { $exists: true },
+                    'currentLocation.lng': { $exists: true },
+                }
+            },
+            {
+                $sort: { 'currentLocation.timestamp': -1 }
+            },
+            {
+                $group: {
+                    _id: '$deliveryBoy',
+                    latestLocation: { $first: '$currentLocation' }
+                }
+            }
+        ]);
+
+        // Calculate distance and filter by radius
+        const nearbyDeliveryBoys: { deliveryBoyId: mongoose.Types.ObjectId; distance: number }[] = [];
+
+        for (const record of trackingRecords) {
+            const deliveryLat = record.latestLocation?.lat;
+            const deliveryLng = record.latestLocation?.lng;
+
+            if (deliveryLat && deliveryLng) {
+                const distance = calculateDistance(latitude, longitude, deliveryLat, deliveryLng);
+
+                if (distance <= radiusKm) {
+                    nearbyDeliveryBoys.push({
+                        deliveryBoyId: record._id,
+                        distance,
+                    });
+                }
+            }
+        }
+
+        // Also include delivery boys who don't have tracking data yet (they might be new)
+        // but give them a default distance
+        const trackedIds = new Set(trackingRecords.map(r => r._id.toString()));
+        for (const db of deliveryBoys) {
+            if (!trackedIds.has(db._id.toString())) {
+                // Include untracked delivery boys with a default distance
+                nearbyDeliveryBoys.push({
+                    deliveryBoyId: db._id,
+                    distance: radiusKm / 2, // Default to half the radius
+                });
+            }
+        }
+
+        // Sort by distance (nearest first)
+        nearbyDeliveryBoys.sort((a, b) => a.distance - b.distance);
+
+        console.log(`📍 Found ${nearbyDeliveryBoys.length} delivery boys within ${radiusKm}km`);
+        return nearbyDeliveryBoys;
+    } catch (error) {
+        console.error('Error finding nearby delivery boys:', error);
+        return [];
+    }
+}
+
+/**
+ * Find delivery boys near seller locations for an order
+ * Aggregates all unique sellers from order items and finds delivery boys within their service radius
+ */
+export async function findDeliveryBoysNearSellerLocations(
+    order: any
+): Promise<mongoose.Types.ObjectId[]> {
+    try {
+        // Get unique seller IDs from order items
+        const sellerIds = [...new Set(
+            order.items
+                ?.map((item: any) => item.seller?.toString())
+                .filter((id: string) => id) || []
+        )];
+
+        if (sellerIds.length === 0) {
+            console.log('No sellers found in order, falling back to all available delivery boys');
+            return findAvailableDeliveryBoys();
+        }
+
+        // Get seller locations
+        const sellers = await Seller.find({
+            _id: { $in: sellerIds },
+        }).select('latitude longitude serviceRadiusKm storeName');
+
+        if (sellers.length === 0) {
+            console.log('No seller data found, falling back to all available delivery boys');
+            return findAvailableDeliveryBoys();
+        }
+
+        // Find delivery boys near each seller location
+        const nearbyDeliveryBoyMap = new Map<string, { distance: number }>();
+
+        for (const seller of sellers) {
+            const lat = seller.latitude ? parseFloat(seller.latitude) : null;
+            const lng = seller.longitude ? parseFloat(seller.longitude) : null;
+
+            if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+                console.log(`Seller ${seller.storeName} has no valid location, skipping`);
+                continue;
+            }
+
+            const radius = seller.serviceRadiusKm || 10; // Default 10km
+            const nearbyBoys = await findDeliveryBoysNearLocation(lat, lng, radius);
+
+            for (const boy of nearbyBoys) {
+                const boyId = boy.deliveryBoyId.toString();
+                // Keep the smallest distance if same delivery boy is near multiple sellers
+                if (!nearbyDeliveryBoyMap.has(boyId) || nearbyDeliveryBoyMap.get(boyId)!.distance > boy.distance) {
+                    nearbyDeliveryBoyMap.set(boyId, { distance: boy.distance });
+                }
+            }
+        }
+
+        if (nearbyDeliveryBoyMap.size === 0) {
+            console.log('No delivery boys found near seller locations, falling back to all available');
+            return findAvailableDeliveryBoys();
+        }
+
+        // Sort by distance and return IDs
+        const sortedBoys = Array.from(nearbyDeliveryBoyMap.entries())
+            .sort((a, b) => a[1].distance - b[1].distance)
+            .map(([id]) => new mongoose.Types.ObjectId(id));
+
+        console.log(`📍 Found ${sortedBoys.length} delivery boys near seller locations`);
+        return sortedBoys;
+    } catch (error) {
+        console.error('Error finding delivery boys near seller locations:', error);
+        return findAvailableDeliveryBoys();
+    }
+}
+
+/**
+ * Emit new order notification to delivery boys near seller locations
+ * Prioritizes delivery boys within the seller's service radius
  */
 export async function notifyDeliveryBoysOfNewOrder(
     io: SocketIOServer,
     order: any
 ): Promise<void> {
     try {
-        const availableDeliveryBoyIds = await findAvailableDeliveryBoys();
+        // Find delivery boys near seller locations (within service radius)
+        const nearbyDeliveryBoyIds = await findDeliveryBoysNearSellerLocations(order);
 
-        if (availableDeliveryBoyIds.length === 0) {
-            console.log('No available delivery boys to notify');
+        if (nearbyDeliveryBoyIds.length === 0) {
+            console.log('No available delivery boys to notify (including fallback)');
             return;
         }
 
@@ -49,7 +234,7 @@ export async function notifyDeliveryBoysOfNewOrder(
         const orderId = order._id.toString();
         notificationStates.set(orderId, {
             orderId,
-            notifiedDeliveryBoys: new Set(availableDeliveryBoyIds.map(id => id.toString())),
+            notifiedDeliveryBoys: new Set(nearbyDeliveryBoyIds.map(id => id.toString())),
             rejectedDeliveryBoys: new Set(),
             acceptedBy: null,
         });
@@ -78,11 +263,11 @@ export async function notifyDeliveryBoysOfNewOrder(
         io.to('delivery-notifications').emit('new-order', orderData);
 
         // Also emit to individual delivery boy rooms
-        for (const deliveryBoyId of availableDeliveryBoyIds) {
+        for (const deliveryBoyId of nearbyDeliveryBoyIds) {
             io.to(`delivery-${deliveryBoyId}`).emit('new-order', orderData);
         }
 
-        console.log(`📢 Notified ${availableDeliveryBoyIds.length} delivery boys about order ${order.orderNumber}`);
+        console.log(`📢 Notified ${nearbyDeliveryBoyIds.length} delivery boys near seller locations about order ${order.orderNumber}`);
     } catch (error) {
         console.error('Error notifying delivery boys:', error);
     }

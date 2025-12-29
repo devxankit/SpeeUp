@@ -240,6 +240,11 @@ router.post("/wallet/transfer", walletController.processFundTransfer);
 router.get("/wallet/seller/:sellerId", walletController.getSellerTransactions);
 router.post("/wallet/withdrawal", walletController.processWithdrawal);
 
+// ==================== Financial Dashboard Routes ====================
+router.get("/financial/dashboard", walletController.getFinancialDashboard);
+router.get("/financial/order-transactions", walletController.getAllOrderTransactions);
+router.get("/financial/delivery-charges", walletController.getDeliveryChargesReport);
+
 // ==================== Tax Routes ====================
 router.get("/taxes", taxController.getTaxes);
 router.get("/taxes/:id", taxController.getTaxById);

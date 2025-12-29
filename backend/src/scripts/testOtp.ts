@@ -6,13 +6,13 @@ import path from 'path';
 const envPath = path.resolve(__dirname, '../../.env');
 dotenv.config({ path: envPath });
 
-import { sendCallOtp } from '../services/otpService';
+import { sendSmsOtp } from '../services/otpService';
 import mongoose from 'mongoose';
 
 async function test() {
-  console.log('--- Testing sendCallOtp ---');
+  console.log('--- Testing sendSmsOtp ---');
   console.log('Env Path:', envPath);
-  console.log('TWOFACTOR_API_KEY:', process.env.TWOFACTOR_API_KEY ? '*****' + process.env.TWOFACTOR_API_KEY.slice(-4) : 'NOT SET');
+  console.log('SMS_INDIA_HUB_API_KEY:', process.env.SMS_INDIA_HUB_API_KEY ? '*****' + process.env.SMS_INDIA_HUB_API_KEY.slice(-4) : 'NOT SET');
 
   // Connect to DB if needed (otpService saves to DB)
   // We need a dummy mongo connection or mock the DB call if we don't want to rely on real DB
@@ -35,12 +35,12 @@ async function test() {
   try {
     // Use a dummy number or the user's number if known.
     // Using a random 10 digit number to avoid spamming real people unless it's a test number.
-    // 2Factor might reject invalid numbers.
+    // SMS India HUB might reject invalid numbers.
     // Let's use a standard test number if possible, or just a random one.
     const testMobile = '9876543210';
     console.log(`Sending OTP to ${testMobile}...`);
 
-    const result = await sendCallOtp(testMobile, 'Customer');
+    const result = await sendSmsOtp(testMobile, 'Customer');
     console.log('Result:', result);
 
   } catch (error: any) {
