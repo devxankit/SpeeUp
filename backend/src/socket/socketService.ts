@@ -53,6 +53,9 @@ export const initializeSocket = (httpServer: HttpServer) => {
 
                     if (!isAllowed) {
                         console.warn(`⚠️ Socket.io connection rejected from origin: ${origin}. Allowed origins: ${allAllowedOrigins.join(', ')}`);
+                        console.warn(`⚠️ Normalized origin: ${normalizedOrigin}`);
+                    } else {
+                        console.log(`✅ Socket.io connection allowed from origin: ${origin}`);
                     }
 
                     return callback(null, isAllowed);
@@ -127,15 +130,20 @@ export const initializeSocket = (httpServer: HttpServer) => {
 
         // Delivery boy joins notification room
         socket.on('join-delivery-notifications', (deliveryBoyId: string) => {
-            console.log(`🔔 Delivery boy ${deliveryBoyId} joined notifications room`);
+            // Normalize deliveryBoyId to string to ensure consistent room naming
+            const normalizedDeliveryBoyId = String(deliveryBoyId).trim();
+            console.log(`🔔 Delivery boy ${normalizedDeliveryBoyId} joined notifications room`);
+
             socket.join('delivery-notifications');
-            socket.join(`delivery-${deliveryBoyId}`);
+            socket.join(`delivery-${normalizedDeliveryBoyId}`);
+
+            console.log(`✅ Delivery boy ${normalizedDeliveryBoyId} joined rooms: delivery-notifications, delivery-${normalizedDeliveryBoyId}`);
 
             // Send confirmation that they joined successfully
             socket.emit('joined-notifications-room', {
                 success: true,
                 message: 'Successfully joined delivery notifications room',
-                deliveryBoyId
+                deliveryBoyId: normalizedDeliveryBoyId
             });
         });
 

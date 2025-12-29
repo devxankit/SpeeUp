@@ -263,8 +263,11 @@ export async function notifyDeliveryBoysOfNewOrder(
         io.to('delivery-notifications').emit('new-order', orderData);
 
         // Also emit to individual delivery boy rooms
+        // Convert ObjectId to string to ensure proper room matching
         for (const deliveryBoyId of nearbyDeliveryBoyIds) {
-            io.to(`delivery-${deliveryBoyId}`).emit('new-order', orderData);
+            const deliveryBoyIdString = deliveryBoyId.toString();
+            io.to(`delivery-${deliveryBoyIdString}`).emit('new-order', orderData);
+            console.log(`📤 Emitted new-order to room: delivery-${deliveryBoyIdString}`);
         }
 
         console.log(`📢 Notified ${nearbyDeliveryBoyIds.length} delivery boys near seller locations about order ${order.orderNumber}`);
@@ -329,9 +332,10 @@ export async function handleOrderAcceptance(
             acceptedBy: deliveryBoyId,
         });
 
-        // Also emit to individual rooms
+        // Also emit to individual rooms (notifiedId is already a string from Set)
         for (const notifiedId of state.notifiedDeliveryBoys) {
-            io.to(`delivery-${notifiedId}`).emit('order-accepted', {
+            const notifiedIdString = String(notifiedId).trim();
+            io.to(`delivery-${notifiedIdString}`).emit('order-accepted', {
                 orderId,
                 acceptedBy: deliveryBoyId,
             });
