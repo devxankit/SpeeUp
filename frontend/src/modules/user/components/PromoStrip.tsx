@@ -99,6 +99,9 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
         // Pass activeTab (header category slug) to filter categories
         const response = await getHomeContent(activeTab);
 
+        // Reset current product index when fetching new data
+        setCurrentProductIndex(0);
+
         let fetchedCards: PromoCard[] = [];
         let fetchedProducts: any[] = [];
         let newHeadingText = theme.bannerText;
@@ -147,12 +150,27 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
             if (promoStrip.featuredProducts && promoStrip.featuredProducts.length > 0) {
               fetchedProducts = promoStrip.featuredProducts.map((p: any) => {
                 const product = typeof p === 'object' ? p : null;
+                const price = Number(product?.price) || 0;
+                const mrp = Number(product?.mrp) || Number(product?.compareAtPrice) || 0;
+                const originalPrice = mrp > 0 ? mrp : (price > 0 ? Math.round(price * 1.2) : 999);
+                const discountedPrice = price > 0 ? price : 499;
+
+                // Try multiple image field names and fallbacks
+                const imageUrl =
+                  product?.mainImage ||
+                  product?.mainImageUrl ||
+                  product?.image ||
+                  product?.imageUrl ||
+                  (product?.galleryImageUrls && product.galleryImageUrls.length > 0 ? product.galleryImageUrls[0] : null) ||
+                  (product?.galleryImages && product.galleryImages.length > 0 ? product.galleryImages[0] : null) ||
+                  null;
+
                 return {
                   id: product?._id || p,
                   name: product?.productName || product?.name || "Product",
-                  originalPrice: product?.mrp || product?.compareAtPrice || Math.round((product?.price || 0) * 1.2),
-                  discountedPrice: product?.price || 0,
-                  imageUrl: product?.mainImage || product?.image,
+                  originalPrice: isNaN(originalPrice) ? 999 : originalPrice,
+                  discountedPrice: isNaN(discountedPrice) ? 499 : discountedPrice,
+                  imageUrl: imageUrl,
                 };
               });
             }
@@ -179,13 +197,31 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
 
           // Fallback: Map bestsellers to FeaturedProducts if no PromoStrip featured products
           if (fetchedProducts.length === 0 && response.data.bestsellers && response.data.bestsellers.length > 0) {
-            fetchedProducts = response.data.bestsellers.map((p: any) => ({
-              id: p._id,
-              name: p.productName || p.name,
-              originalPrice: p.mrp || Math.round(p.price * 1.2),
-              discountedPrice: p.price,
-              imageUrl: p.mainImage || p.image,
-            }));
+            fetchedProducts = response.data.bestsellers.map((p: any) => {
+              const price = Number(p.price) || 0;
+              const mrp = Number(p.mrp) || 0;
+              const originalPrice = mrp > 0 ? mrp : (price > 0 ? Math.round(price * 1.2) : 999);
+              const discountedPrice = price > 0 ? price : 499;
+
+              // Try multiple image field names and fallbacks
+              const imageUrl =
+                p.mainImage ||
+                p.mainImageUrl ||
+                p.image ||
+                p.imageUrl ||
+                (p.galleryImageUrls && p.galleryImageUrls.length > 0 ? p.galleryImageUrls[0] : null) ||
+                (p.galleryImages && p.galleryImages.length > 0 ? p.galleryImages[0] : null) ||
+                (p.productImages && p.productImages.length > 0 ? p.productImages[0] : null) ||
+                null;
+
+              return {
+                id: p._id,
+                name: p.productName || p.name,
+                originalPrice: isNaN(originalPrice) ? 999 : originalPrice,
+                discountedPrice: isNaN(discountedPrice) ? 499 : discountedPrice,
+                imageUrl: imageUrl,
+              };
+            });
           }
         }
 
@@ -214,6 +250,14 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
       }
     };
     fetchData();
+
+    // Set up polling to refresh data every 30 seconds
+    const intervalId = setInterval(() => {
+      fetchData();
+    }, 30000);
+
+    return () => clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, theme.bannerText, theme.saleText]);
 
   // Reset product index when activeTab changes or featuredProducts change
@@ -435,6 +479,14 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
     imageUrl: undefined,
   };
 
+  // Ensure prices are valid numbers
+  const safeOriginalPrice = Number.isFinite(displayProduct.originalPrice)
+    ? Math.round(displayProduct.originalPrice)
+    : 999;
+  const safeDiscountedPrice = Number.isFinite(displayProduct.discountedPrice)
+    ? Math.round(displayProduct.discountedPrice)
+    : 499;
+
   return (
     <div
       className="relative"
@@ -650,7 +702,7 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                     paddingBottom: "2px",
                   }}>
                   <span className="text-white text-[8px] font-medium line-through leading-none">
-                    ₹{displayProduct.originalPrice}
+                    ₹{safeOriginalPrice}
                   </span>
                 </div>
                 {/* Discounted Price - Bright Green Banner */}
@@ -663,7 +715,7 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                     paddingBottom: "2px",
                   }}>
                   <span className="text-white text-[9px] font-bold leading-none">
-                    ₹{displayProduct.discountedPrice}
+                    ₹{safeDiscountedPrice}
                   </span>
                 </div>
               </div>
@@ -681,7 +733,7 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                 className="flex-1 flex items-end justify-center w-full"
                 style={{ minHeight: "50px", maxHeight: "65px" }}>
                 <div
-                  className="w-12 h-16 rounded flex items-center justify-center overflow-visible"
+                  className="w-12 h-16 rounded flex items-center justify-center overflow-hidden"
                   style={{ background: "transparent" }}>
                   {displayProduct.imageUrl ? (
                     <img
@@ -691,6 +743,25 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                       style={{
                         mixBlendMode: "normal",
                         backgroundColor: "transparent",
+                      }}
+                      referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        // Hide broken image and show fallback
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent && !parent.querySelector('.product-fallback')) {
+                          const fallback = document.createElement('div');
+                          fallback.className = 'product-fallback w-full h-full bg-gradient-to-b from-yellow-100 to-yellow-50 flex items-center justify-center';
+                          const icon = document.createElement('div');
+                          icon.className = 'w-7 h-9 bg-yellow-200 rounded-sm relative';
+                          icon.innerHTML = `
+                            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-2.5 h-2.5 bg-blue-400 rounded-full"></div>
+                            <div class="absolute bottom-0 left-0 right-0 h-1.5 bg-white/80"></div>
+                          `;
+                          fallback.appendChild(icon);
+                          parent.appendChild(fallback);
+                        }
                       }}
                     />
                   ) : (
