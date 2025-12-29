@@ -500,6 +500,8 @@ export default function SellerAddProduct() {
               totalAllowedQuantity: "10",
               mainImageUrl: "",
               galleryImageUrls: [],
+              isShopByStoreOnly: "No",
+              shopId: "",
             });
             setVariations([]);
             setMainImageFile(null);

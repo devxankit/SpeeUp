@@ -87,8 +87,11 @@ export default function DeliveryOrderDetail() {
     const directionsServiceRef = useRef<any>(null);
     const directionsRendererRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
+    const originMarkerRef = useRef<any>(null);
+    const destMarkerRef = useRef<any>(null);
     const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
     const hasInitialRouteFitted = useRef<boolean>(false);
+    const userHasInteracted = useRef<boolean>(false);
 
     const fetchOrder = async () => {
         if (!id) return;
@@ -172,6 +175,34 @@ export default function DeliveryOrderDetail() {
                     }
                 ]
             });
+
+            // Track user interaction with the map (pan, zoom, drag)
+            let isProgrammaticChange = false;
+
+            const trackInteraction = () => {
+                if (!isProgrammaticChange) {
+                    userHasInteracted.current = true;
+                }
+            };
+
+            // Add event listeners to track user interaction
+            googleMapRef.current.addListener('dragstart', trackInteraction);
+            googleMapRef.current.addListener('zoom_changed', () => {
+                // Track zoom changes that are likely user-initiated
+                if (!isProgrammaticChange) {
+                    // Use a small delay to allow programmatic changes to set the flag
+                    setTimeout(() => {
+                        if (!isProgrammaticChange) {
+                            trackInteraction();
+                        }
+                    }, 100);
+                }
+            });
+
+            // Store the flag setter for use in route calculation
+            (googleMapRef.current as any)._setProgrammaticChange = (value: boolean) => {
+                isProgrammaticChange = value;
+            };
         }
     }, [isMapLoaded, deliveryBoyLocation]);
 
@@ -185,6 +216,8 @@ export default function DeliveryOrderDetail() {
                 directionsRendererRef.current.setMap(null);
             }
             markersRef.current.forEach(marker => marker.setMap(null));
+            originMarkerRef.current = null;
+            destMarkerRef.current = null;
             if (googleMapRef.current) {
                 googleMapRef.current = null;
             }
@@ -285,14 +318,25 @@ export default function DeliveryOrderDetail() {
             (result: any, status: any) => {
                 if (status === 'OK' && directionsRendererRef.current && result.routes && result.routes[0]) {
                     // Only fit bounds on initial route calculation, preserve zoom for subsequent updates
-                    if (!hasInitialRouteFitted.current) {
-                        // For initial load, allow DirectionsRenderer to fit bounds
+                    if (!hasInitialRouteFitted.current && !userHasInteracted.current) {
+                        // For initial load, allow DirectionsRenderer to fit bounds only if user hasn't interacted
+                        // Mark this as a programmatic change to avoid tracking it as user interaction
+                        if (googleMapRef.current && (googleMapRef.current as any)._setProgrammaticChange) {
+                            (googleMapRef.current as any)._setProgrammaticChange(true);
+                        }
                         directionsRendererRef.current.setOptions({ preserveViewport: false });
                         directionsRendererRef.current.setDirections(result);
                         directionsRendererRef.current.setOptions({ preserveViewport: true });
                         hasInitialRouteFitted.current = true;
+                        // Reset the flag after a delay to allow for the change to complete
+                        setTimeout(() => {
+                            if (googleMapRef.current && (googleMapRef.current as any)._setProgrammaticChange) {
+                                (googleMapRef.current as any)._setProgrammaticChange(false);
+                            }
+                        }, 500);
                     } else {
-                        // For subsequent updates, preserve the current viewport/zoom
+                        // For subsequent updates or if user has interacted, always preserve the current viewport/zoom
+                        directionsRendererRef.current.setOptions({ preserveViewport: true });
                         directionsRendererRef.current.setDirections(result);
                     }
 
@@ -306,37 +350,46 @@ export default function DeliveryOrderDetail() {
                         });
                     }
 
-                    // Clear existing markers
-                    markersRef.current.forEach(marker => marker.setMap(null));
-                    markersRef.current = [];
+                    // Update or create origin marker (delivery boy location)
+                    if (originMarkerRef.current) {
+                        // Update existing marker position
+                        originMarkerRef.current.setPosition(origin);
+                    } else {
+                        // Create new marker if it doesn't exist
+                        originMarkerRef.current = new (window as any).google.maps.Marker({
+                            position: origin,
+                            map: googleMapRef.current,
+                            icon: {
+                                url: '/assets/deliveryboy/deliveryIcon.png',
+                                scaledSize: new (window as any).google.maps.Size(60, 60),
+                                anchor: new (window as any).google.maps.Point(40, 40),
+                            },
+                            title: 'Your Location',
+                        });
+                        markersRef.current.push(originMarkerRef.current);
+                    }
 
-                    // Add custom markers for origin (delivery boy) and destination
-                    const originMarker = new (window as any).google.maps.Marker({
-                        position: origin,
-                        map: googleMapRef.current,
-                        icon: {
-                            url: '/assets/deliveryboy/deliveryIcon.png',
-                            scaledSize: new (window as any).google.maps.Size(60, 60),
-                            anchor: new (window as any).google.maps.Point(40, 40),
-                        },
-                        title: 'Your Location',
-                    });
-
-                    const destMarker = new (window as any).google.maps.Marker({
-                        position: destination,
-                        map: googleMapRef.current,
-                        icon: {
-                            path: (window as any).google.maps.SymbolPath.CIRCLE,
-                            scale: 10,
-                            fillColor: '#3b82f6', // Blue for destination
-                            fillOpacity: 1,
-                            strokeWeight: 3,
-                            strokeColor: '#ffffff',
-                        },
-                        title: 'Destination',
-                    });
-
-                    markersRef.current.push(originMarker, destMarker);
+                    // Update or create destination marker
+                    if (destMarkerRef.current) {
+                        // Update existing marker position
+                        destMarkerRef.current.setPosition(destination);
+                    } else {
+                        // Create new marker if it doesn't exist
+                        destMarkerRef.current = new (window as any).google.maps.Marker({
+                            position: destination,
+                            map: googleMapRef.current,
+                            icon: {
+                                path: (window as any).google.maps.SymbolPath.CIRCLE,
+                                scale: 10,
+                                fillColor: '#3b82f6', // Blue for destination
+                                fillOpacity: 1,
+                                strokeWeight: 3,
+                                strokeColor: '#ffffff',
+                            },
+                            title: 'Destination',
+                        });
+                        markersRef.current.push(destMarkerRef.current);
+                    }
                 } else {
                     console.error('Directions request failed:', status);
                     setRouteInfo(null);
@@ -353,6 +406,8 @@ export default function DeliveryOrderDetail() {
         }
         markersRef.current.forEach(marker => marker.setMap(null));
         markersRef.current = [];
+        originMarkerRef.current = null;
+        destMarkerRef.current = null;
         setRouteInfo(null);
         hasInitialRouteFitted.current = false; // Reset flag when route is cleared
     }, []);

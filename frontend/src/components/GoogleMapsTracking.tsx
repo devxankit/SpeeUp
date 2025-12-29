@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useRef, useEffect } from 'react'
 // @ts-ignore - @react-google-maps/api types may not be available
 import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api'
 import { motion } from 'framer-motion'
@@ -27,6 +27,9 @@ export default function GoogleMapsTracking({
     isTracking
 }: GoogleMapsTrackingProps) {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+    const mapRef = useRef<any>(null)
+    const hasInitialBoundsFitted = useRef<boolean>(false)
+    const userHasInteracted = useRef<boolean>(false)
 
     const { isLoaded, loadError } = useJsApiLoader({
         id: 'google-map-script',
@@ -45,14 +48,52 @@ export default function GoogleMapsTracking({
     ]
 
     const onLoad = useCallback((map: any) => {
-        if (window.google && window.google.maps) {
-            const bounds = new window.google.maps.LatLngBounds()
-            bounds.extend(storeLocation)
-            bounds.extend(customerLocation)
-            if (deliveryLocation) bounds.extend(deliveryLocation)
-            map.fitBounds(bounds)
+        mapRef.current = map
+
+        // Only fit bounds on initial load, not on subsequent updates
+        if (!hasInitialBoundsFitted.current && !userHasInteracted.current) {
+            if (window.google && window.google.maps) {
+                const bounds = new window.google.maps.LatLngBounds()
+                bounds.extend(storeLocation)
+                bounds.extend(customerLocation)
+                if (deliveryLocation) bounds.extend(deliveryLocation)
+                map.fitBounds(bounds)
+                hasInitialBoundsFitted.current = true
+            }
         }
-    }, [storeLocation, customerLocation, deliveryLocation])
+
+        // Track user interaction with the map
+        const trackInteraction = () => {
+            userHasInteracted.current = true
+        }
+
+        // Add event listeners to track user interaction (pan, zoom, drag)
+        map.addListener('dragstart', trackInteraction)
+        map.addListener('zoom_changed', () => {
+            // Use a small delay to distinguish user zoom from programmatic zoom
+            setTimeout(() => {
+                if (!userHasInteracted.current) {
+                    trackInteraction()
+                }
+            }, 100)
+        })
+    }, [storeLocation, customerLocation])
+
+    // Handle initial bounds fitting when deliveryLocation first appears
+    useEffect(() => {
+        if (mapRef.current && !hasInitialBoundsFitted.current && !userHasInteracted.current && deliveryLocation) {
+            if (window.google && window.google.maps) {
+                const bounds = new window.google.maps.LatLngBounds()
+                bounds.extend(storeLocation)
+                bounds.extend(customerLocation)
+                bounds.extend(deliveryLocation)
+                mapRef.current.fitBounds(bounds)
+                hasInitialBoundsFitted.current = true
+            }
+        }
+        // Note: When deliveryLocation updates after initial load, we don't reset viewport
+        // The Marker component will automatically update its position
+    }, [deliveryLocation, storeLocation, customerLocation])
 
     if (loadError) {
         return (
