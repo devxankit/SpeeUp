@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getOrderDetails, updateOrderStatus, getSellerLocationsForOrder, sendDeliveryOtp, verifyDeliveryOtp, updateDeliveryLocation } from '../../../services/api/delivery/deliveryService';
-import deliveryIcon from '../../../assets/deliveryboy/deliveryIcon.png';
+import deliveryIcon from '@assets/deliveryboy/deliveryIcon.png';
 
 // Helper to get delivery icon URL (works in both dev and production)
 const getDeliveryIconUrl = () => {

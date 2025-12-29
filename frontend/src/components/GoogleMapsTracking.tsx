@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect, useState } from 'react'
 // @ts-ignore - @react-google-maps/api types may not be available
 import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api'
 import { motion } from 'framer-motion'
-import deliveryIcon from '../../assets/deliveryboy/deliveryIcon.png'
+import deliveryIcon from '@assets/deliveryboy/deliveryIcon.png'
 
 // Helper to get delivery icon URL (works in both dev and production)
 const getDeliveryIconUrl = () => {
