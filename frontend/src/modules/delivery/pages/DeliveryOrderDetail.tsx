@@ -1,6 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getOrderDetails, updateOrderStatus, getSellerLocationsForOrder, sendDeliveryOtp, verifyDeliveryOtp, updateDeliveryLocation } from '../../../services/api/delivery/deliveryService';
+import deliveryIcon from '../../../assets/deliveryboy/deliveryIcon.png';
+
+// Helper to get delivery icon URL (works in both dev and production)
+const getDeliveryIconUrl = () => {
+    // Try imported path first (Vite will process this in production)
+    if (deliveryIcon && typeof deliveryIcon === 'string') {
+        return deliveryIcon;
+    }
+    // Fallback to public path
+    return '/assets/deliveryboy/deliveryIcon.png';
+};
 
 // Icons components to avoid external dependency issues
 const Icons = {
@@ -258,23 +269,50 @@ export default function DeliveryOrderDetail() {
         }
     };
 
+    // Track if location permission was denied
+    const locationPermissionDeniedRef = useRef<boolean>(false);
+
     // Get delivery boy's current location
     useEffect(() => {
         const getCurrentLocation = () => {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        setDeliveryBoyLocation({
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude,
-                        });
-                    },
-                    (error) => {
-                        console.error('Error getting location:', error);
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
+            if (!navigator.geolocation) {
+                console.warn('Geolocation is not supported by this browser');
+                return;
             }
+
+            if (locationPermissionDeniedRef.current) {
+                // Don't retry if permission was denied
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setDeliveryBoyLocation({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                    });
+                    locationPermissionDeniedRef.current = false; // Reset on success
+                },
+                (error: GeolocationPositionError) => {
+                    // Handle different error types
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            locationPermissionDeniedRef.current = true;
+                            console.warn('Location permission denied. Please enable location access in your browser settings.');
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            console.warn('Location information unavailable. Please check your device settings.');
+                            break;
+                        case error.TIMEOUT:
+                            console.warn('Location request timed out. Please try again.');
+                            break;
+                        default:
+                            console.warn('Error getting location:', error.message);
+                            break;
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
         };
 
         getCurrentLocation();
@@ -361,7 +399,7 @@ export default function DeliveryOrderDetail() {
                             position: origin,
                             map: googleMapRef.current,
                             icon: {
-                                url: '/assets/deliveryboy/deliveryIcon.png',
+                                url: getDeliveryIconUrl(),
                                 scaledSize: new (window as any).google.maps.Size(60, 60),
                                 anchor: new (window as any).google.maps.Point(40, 40),
                             },
@@ -462,28 +500,54 @@ export default function DeliveryOrderDetail() {
 
         if (shouldTrack) {
             const updateLocation = async () => {
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                        async (position) => {
-                            const newLocation = {
-                                lat: position.coords.latitude,
-                                lng: position.coords.longitude,
-                            };
-                            // Update state for route recalculation
-                            setDeliveryBoyLocation(newLocation);
-                            // Update backend
-                            try {
-                                await updateDeliveryLocation(id, position.coords.latitude, position.coords.longitude);
-                            } catch (err) {
-                                console.error('Failed to update location:', err);
-                            }
-                        },
-                        (error) => {
-                            console.error('Error getting location:', error);
-                        },
-                        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-                    );
+                if (!navigator.geolocation) {
+                    return;
                 }
+
+                if (locationPermissionDeniedRef.current) {
+                    // Don't retry if permission was denied
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const newLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude,
+                        };
+                        // Update state for route recalculation
+                        setDeliveryBoyLocation(newLocation);
+                        // Update backend
+                        try {
+                            await updateDeliveryLocation(id, position.coords.latitude, position.coords.longitude);
+                        } catch (err) {
+                            console.error('Failed to update location:', err);
+                        }
+                        locationPermissionDeniedRef.current = false; // Reset on success
+                    },
+                    (error: GeolocationPositionError) => {
+                        // Handle different error types silently to avoid console spam
+                        switch (error.code) {
+                            case error.PERMISSION_DENIED:
+                                if (!locationPermissionDeniedRef.current) {
+                                    locationPermissionDeniedRef.current = true;
+                                    console.warn('Location permission denied. Location tracking disabled.');
+                                }
+                                break;
+                            case error.POSITION_UNAVAILABLE:
+                                // Silent - position might be temporarily unavailable
+                                break;
+                            case error.TIMEOUT:
+                                // Silent - timeout is expected sometimes
+                                break;
+                            default:
+                                // Only log unexpected errors
+                                console.warn('Location update error:', error.message);
+                                break;
+                        }
+                    },
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                );
             };
 
             // Send initial location update

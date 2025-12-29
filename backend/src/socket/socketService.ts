@@ -29,20 +29,31 @@ export const initializeSocket = (httpServer: HttpServer) => {
                         ? [...allowedOrigins, ...defaultOrigins]
                         : defaultOrigins;
 
+                    // Normalize origins for comparison (remove trailing slash, lowercase)
+                    const normalizeUrl = (url: string) => url.replace(/\/$/, '').toLowerCase();
+                    const normalizedOrigin = normalizeUrl(origin);
+
                     // Check if origin matches any allowed origin
                     const isAllowed = allAllowedOrigins.some((allowedOrigin) => {
+                        const normalizedAllowed = normalizeUrl(allowedOrigin);
+
                         // Exact match
-                        if (origin === allowedOrigin) return true;
+                        if (normalizedOrigin === normalizedAllowed) return true;
+
                         // Support for www and non-www variants
-                        if (allowedOrigin.includes("www.")) {
-                            const nonWww = allowedOrigin.replace("www.", "");
-                            if (origin === nonWww) return true;
+                        if (normalizedAllowed.includes("www.")) {
+                            const nonWww = normalizedAllowed.replace("www.", "");
+                            if (normalizedOrigin === nonWww) return true;
                         } else {
-                            const withWww = allowedOrigin.replace(/^(https?:\/\/)/, "$1www.");
-                            if (origin === withWww) return true;
+                            const withWww = normalizedAllowed.replace(/^(https?:\/\/)/, "$1www.");
+                            if (normalizedOrigin === withWww) return true;
                         }
                         return false;
                     });
+
+                    if (!isAllowed) {
+                        console.warn(`⚠️ Socket.io connection rejected from origin: ${origin}. Allowed origins: ${allAllowedOrigins.join(', ')}`);
+                    }
 
                     return callback(null, isAllowed);
                 }
@@ -61,6 +72,12 @@ export const initializeSocket = (httpServer: HttpServer) => {
             methods: ['GET', 'POST'],
             credentials: true,
         },
+        // Production-specific Socket.io configuration
+        allowEIO3: true, // Allow Engine.IO v3 clients
+        pingTimeout: 60000, // 60 seconds
+        pingInterval: 25000, // 25 seconds
+        transports: ['websocket', 'polling'], // Allow both transports
+        upgradeTimeout: 30000, // 30 seconds for upgrade
     });
 
     // Authentication middleware
@@ -82,7 +99,7 @@ export const initializeSocket = (httpServer: HttpServer) => {
     });
 
     io.on('connection', (socket) => {
-        console.log('✅ Socket connected:', socket.id);
+        console.log('✅ Socket connected:', socket.id, 'User:', (socket as any).user?.userId || 'Unauthenticated');
 
         // Customer subscribes to order tracking
         socket.on('track-order', (orderId: string) => {
@@ -113,6 +130,13 @@ export const initializeSocket = (httpServer: HttpServer) => {
             console.log(`🔔 Delivery boy ${deliveryBoyId} joined notifications room`);
             socket.join('delivery-notifications');
             socket.join(`delivery-${deliveryBoyId}`);
+
+            // Send confirmation that they joined successfully
+            socket.emit('joined-notifications-room', {
+                success: true,
+                message: 'Successfully joined delivery notifications room',
+                deliveryBoyId
+            });
         });
 
         // Handle order acceptance
@@ -130,13 +154,18 @@ export const initializeSocket = (httpServer: HttpServer) => {
         });
 
         // Handle disconnection
-        socket.on('disconnect', () => {
-            console.log('❌ Socket disconnected:', socket.id);
+        socket.on('disconnect', (reason) => {
+            console.log('❌ Socket disconnected:', socket.id, 'Reason:', reason);
         });
 
         // Error handling
         socket.on('error', (error) => {
             console.error('Socket error:', error);
+        });
+
+        // Handle connection errors
+        socket.on('connect_error', (error) => {
+            console.error('Socket connection error:', error.message);
         });
     });
 

@@ -222,6 +222,26 @@ function copySpeeUpLogo() {
   }
 }
 
+// Copy delivery boy icon
+function copyDeliveryIcon() {
+  const deliveryboyDir = path.join(assetsDir, 'deliveryboy');
+  if (!fs.existsSync(deliveryboyDir)) return;
+
+  const publicDeliveryboyDir = path.join(publicAssetsDir, 'deliveryboy');
+  if (!fs.existsSync(publicDeliveryboyDir)) {
+    fs.mkdirSync(publicDeliveryboyDir, { recursive: true });
+  }
+
+  const iconPath = path.join(deliveryboyDir, 'deliveryIcon.png');
+  if (fs.existsSync(iconPath)) {
+    const destPath = path.join(publicDeliveryboyDir, 'deliveryIcon.png');
+    if (!fs.existsSync(destPath)) {
+      fs.copyFileSync(iconPath, destPath);
+      console.log('Copied delivery icon: deliveryIcon.png');
+    }
+  }
+}
+
 // Main execution
 console.log('Starting image copy process...');
 copyCategoryImages();
@@ -230,5 +250,6 @@ copyBannerImage();
 copyShopByStoreImages();
 copyLoginVideo();
 copySpeeUpLogo();
+copyDeliveryIcon();
 console.log('Image copy completed!');
 

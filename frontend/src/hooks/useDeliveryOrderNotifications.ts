@@ -66,6 +66,27 @@ export const useDeliveryOrderNotifications = () => {
             socket.emit('join-delivery-notifications', user.id);
         });
 
+        socket.on('joined-notifications-room', (data: any) => {
+            console.log('✅ Successfully joined notifications room:', data);
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('❌ Socket connection error:', error.message);
+            setState(prev => ({
+                ...prev,
+                isConnected: false,
+                error: `Connection failed: ${error.message}`,
+            }));
+        });
+
+        socket.on('disconnect', (reason) => {
+            console.warn('⚠️ Socket disconnected:', reason);
+            setState(prev => ({
+                ...prev,
+                isConnected: false,
+            }));
+        });
+
         socket.on('new-order', (orderData: OrderNotificationData) => {
             console.log('📦 New order notification received:', orderData);
 

@@ -2,6 +2,17 @@ import { useCallback, useRef, useEffect, useState } from 'react'
 // @ts-ignore - @react-google-maps/api types may not be available
 import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api'
 import { motion } from 'framer-motion'
+import deliveryIcon from '../../assets/deliveryboy/deliveryIcon.png'
+
+// Helper to get delivery icon URL (works in both dev and production)
+const getDeliveryIconUrl = () => {
+    // Try imported path first (Vite will process this in production)
+    if (deliveryIcon && typeof deliveryIcon === 'string') {
+        return deliveryIcon;
+    }
+    // Fallback to public path
+    return '/assets/deliveryboy/deliveryIcon.png';
+};
 
 interface Location {
     lat: number
@@ -243,7 +254,7 @@ export default function GoogleMapsTracking({
                     <Marker
                         position={deliveryLocation}
                         icon={{
-                            url: '/assets/deliveryboy/deliveryIcon.png',
+                            url: getDeliveryIconUrl(),
                             scaledSize: window.google?.maps?.Size ? new window.google.maps.Size(60, 60) : undefined,
                             anchor: window.google?.maps?.Point ? new window.google.maps.Point(30, 30) : undefined
                         } as any}
