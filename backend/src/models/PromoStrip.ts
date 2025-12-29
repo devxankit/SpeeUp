@@ -111,9 +111,9 @@ const PromoStripSchema = new Schema<IPromoStrip>(
 );
 
 // Indexes for better query performance
-PromoStripSchema.index({ headerCategorySlug: 1, isActive: 1 });
+// Compound index for the most common query: headerCategorySlug + isActive + date range
+PromoStripSchema.index({ headerCategorySlug: 1, isActive: 1, startDate: 1, endDate: 1 });
 PromoStripSchema.index({ order: 1 });
-PromoStripSchema.index({ startDate: 1, endDate: 1 });
 
 const PromoStrip = mongoose.model<IPromoStrip>("PromoStrip", PromoStripSchema);
 

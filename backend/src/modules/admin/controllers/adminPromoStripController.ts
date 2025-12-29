@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../../../utils/asyncHandler";
 import PromoStrip from "../../../models/PromoStrip";
+import { cache } from "../../../utils/cache";
 import Category from "../../../models/Category";
 import Product from "../../../models/Product";
 import HeaderCategory from "../../../models/HeaderCategory";
@@ -97,6 +98,9 @@ export const createPromoStrip = asyncHandler(async (req: Request, res: Response)
   const populated = await PromoStrip.findById(promoStrip._id)
     .populate("categoryCards.categoryId", "name slug image")
     .populate("featuredProducts", "productName mainImage price mrp");
+
+  // Invalidate cache for this header category slug
+  cache.delete(`promoStrip-${headerCategorySlug.toLowerCase()}`);
 
   return res.status(201).json({
     success: true,
@@ -259,6 +263,9 @@ export const updatePromoStrip = asyncHandler(async (req: Request, res: Response)
     .populate("categoryCards.categoryId", "name slug image")
     .populate("featuredProducts", "productName mainImage price mrp");
 
+  // Invalidate cache for this header category slug
+  cache.delete(`promoStrip-${promoStrip.headerCategorySlug.toLowerCase()}`);
+
   return res.status(200).json({
     success: true,
     message: "PromoStrip updated successfully",
@@ -279,6 +286,9 @@ export const deletePromoStrip = asyncHandler(async (req: Request, res: Response)
       message: "PromoStrip not found",
     });
   }
+
+  // Invalidate cache for this header category slug
+  cache.delete(`promoStrip-${promoStrip.headerCategorySlug.toLowerCase()}`);
 
   return res.status(200).json({
     success: true,

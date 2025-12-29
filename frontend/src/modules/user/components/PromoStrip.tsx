@@ -108,7 +108,8 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
       setLoading(true);
       try {
         // Pass activeTab (header category slug) to filter categories
-        const response = await getHomeContent(activeTab);
+        // Use cache with 5 minute TTL for faster loading
+        const response = await getHomeContent(activeTab, true, 5 * 60 * 1000);
 
         // Reset current product index when fetching new data
         setCurrentProductIndex(0);

@@ -9,6 +9,7 @@ import BestsellerCard from "../../../models/BestsellerCard";
 import LowestPricesProduct from "../../../models/LowestPricesProduct";
 import PromoStrip from "../../../models/PromoStrip";
 import mongoose from "mongoose";
+import { cache } from "../../../utils/cache";
 
 // Helper function to calculate distance between two coordinates (Haversine formula)
 // function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -472,19 +473,34 @@ export const getHomeContent = async (req: Request, res: Response) => {
       })
     );
 
-    // 10. Fetch PromoStrip for the current header category
+    // 10. Fetch PromoStrip for the current header category (with caching)
     const currentHeaderCategorySlug = (headerCategorySlug as string) || "all";
-    const now = new Date();
-    const promoStrip = await PromoStrip.findOne({
-      headerCategorySlug: currentHeaderCategorySlug.toLowerCase(),
-      isActive: true,
-      startDate: { $lte: now },
-      endDate: { $gte: now },
-    })
-      .populate("categoryCards.categoryId", "name slug image")
-      .populate("featuredProducts", "productName mainImage mainImageUrl galleryImageUrls galleryImages price mrp compareAtPrice discount rating reviewsCount")
-      .sort({ order: 1 })
-      .lean();
+    const promoStripCacheKey = `promoStrip-${currentHeaderCategorySlug.toLowerCase()}`;
+
+    // Try to get from cache first
+    let promoStrip = cache.get(promoStripCacheKey);
+
+    if (!promoStrip) {
+      const now = new Date();
+      promoStrip = await PromoStrip.findOne({
+        headerCategorySlug: currentHeaderCategorySlug.toLowerCase(),
+        isActive: true,
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+      })
+        .populate("categoryCards.categoryId", "name slug image")
+        .populate("featuredProducts", "productName mainImage mainImageUrl galleryImageUrls galleryImages price mrp compareAtPrice discount rating reviewsCount")
+        .sort({ order: 1 })
+        .lean();
+
+      // Cache for 3 minutes (PromoStrip data doesn't change frequently)
+      if (promoStrip) {
+        cache.set(promoStripCacheKey, promoStrip, 3 * 60 * 1000);
+      } else {
+        // Cache null result for 1 minute to prevent repeated DB queries
+        cache.set(promoStripCacheKey, null, 60 * 1000);
+      }
+    }
 
     res.status(200).json({
       success: true,
