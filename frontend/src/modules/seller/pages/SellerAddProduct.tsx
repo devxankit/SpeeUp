@@ -93,24 +93,49 @@ export default function SellerAddProduct() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [catRes, taxRes, brandRes, headerCatRes, shopsRes] = await Promise.all([
+        // Use Promise.allSettled to ensure one failing API doesn't break all others
+        const results = await Promise.allSettled([
           getCategories(),
           getActiveTaxes(),
           getBrands(),
           getHeaderCategoriesPublic(),
           getShops(),
         ]);
-        if (catRes.success) setCategories(catRes.data);
-        if (taxRes.success) setTaxes(taxRes.data);
-        if (brandRes.success) setBrands(brandRes.data);
-        if (headerCatRes && Array.isArray(headerCatRes)) {
-          // Filter only Published header categories
-          const published = headerCatRes.filter(
-            (hc: HeaderCategory) => hc.status === "Published"
-          );
-          setHeaderCategories(published);
+
+        // Handle categories
+        if (results[0].status === "fulfilled" && results[0].value.success) {
+          setCategories(results[0].value.data);
         }
-        if (shopsRes.success) setShops(shopsRes.data);
+
+        // Handle taxes
+        if (results[1].status === "fulfilled" && results[1].value.success) {
+          setTaxes(results[1].value.data);
+        }
+
+        // Handle brands
+        if (results[2].status === "fulfilled" && results[2].value.success) {
+          setBrands(results[2].value.data);
+        }
+
+        // Handle header categories
+        if (results[3].status === "fulfilled") {
+          const headerCatRes = results[3].value;
+          if (headerCatRes && Array.isArray(headerCatRes)) {
+            // Filter only Published header categories
+            const published = headerCatRes.filter(
+              (hc: HeaderCategory) => hc.status === "Published"
+            );
+            setHeaderCategories(published);
+          }
+        }
+
+        // Handle shops (optional - for Shop By Store feature)
+        if (results[4].status === "fulfilled" && results[4].value.success) {
+          setShops(results[4].value.data);
+        } else if (results[4].status === "rejected") {
+          // Shops API failed - this is non-critical, log and continue
+          console.warn("Failed to fetch shops (Shop By Store feature may be unavailable):", results[4].reason?.message || "Unknown error");
+        }
       } catch (err) {
         console.error("Error fetching form data:", err);
       }
