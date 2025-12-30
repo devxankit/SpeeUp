@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { useRef, useEffect, useState } from 'react';
 import { Product } from '../../../types/domain';
@@ -44,6 +44,8 @@ export default function ProductCard({
   const imageRef = useRef<HTMLImageElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  // Single ref to track any cart operation in progress for this product
+  const isOperationPendingRef = useRef(false);
 
   useEffect(() => {
     // Only check wishlist if user is authenticated
@@ -105,24 +107,64 @@ export default function ProductCard({
     navigate(`/product/${((product as any).id || product._id) as string}`);
   };
 
-  const handleAdd = (e: React.MouseEvent) => {
+  const handleAdd = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    addToCart(product, addButtonRef.current);
-  };
+    e.preventDefault();
 
-  const handleDecrease = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (inCartQty > 0) {
-      updateQuantity(((product as any).id || product._id) as string, inCartQty - 1);
+    // Prevent any operation while another is in progress
+    if (isOperationPendingRef.current) {
+      return;
+    }
+
+    isOperationPendingRef.current = true;
+
+    try {
+      await addToCart(product, addButtonRef.current);
+    } finally {
+      // Reset the flag after the operation truly completes
+      isOperationPendingRef.current = false;
     }
   };
 
-  const handleIncrease = (e: React.MouseEvent) => {
+  const handleDecrease = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (inCartQty > 0) {
-      updateQuantity(((product as any).id || product._id) as string, inCartQty + 1);
-    } else {
-      addToCart(product, addButtonRef.current);
+    e.preventDefault();
+
+    // Prevent any operation while another is in progress
+    if (isOperationPendingRef.current || inCartQty <= 0) {
+      return;
+    }
+
+    isOperationPendingRef.current = true;
+
+    try {
+      await updateQuantity(((product as any).id || product._id) as string, inCartQty - 1);
+    } finally {
+      // Reset the flag after the operation truly completes
+      isOperationPendingRef.current = false;
+    }
+  };
+
+  const handleIncrease = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    // Prevent any operation while another is in progress
+    if (isOperationPendingRef.current) {
+      return;
+    }
+
+    isOperationPendingRef.current = true;
+
+    try {
+      if (inCartQty > 0) {
+        await updateQuantity(((product as any).id || product._id) as string, inCartQty + 1);
+      } else {
+        await addToCart(product, addButtonRef.current);
+      }
+    } finally {
+      // Reset the flag after the operation truly completes
+      isOperationPendingRef.current = false;
     }
   };
 
@@ -218,78 +260,52 @@ export default function ProductCard({
 
         {categoryStyle && (
           <div className="px-2.5 pt-1.5 pb-0">
-            <AnimatePresence mode="wait">
-              {inCartQty === 0 ? (
-                <motion.div
-                  key="add-button"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex justify-center w-full"
+            {inCartQty === 0 ? (
+              <div className="flex justify-center w-full">
+                <Button
+                  ref={addButtonRef}
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAdd(e);
+                  }}
+                  className="w-full border border-green-600 text-green-600 bg-transparent hover:bg-green-50 rounded-full font-semibold text-xs h-7 px-3 flex items-center justify-center uppercase tracking-wide"
                 >
-                  <Button
-                    ref={addButtonRef}
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAdd(e);
-                    }}
-                    className="w-full border border-green-600 text-green-600 bg-transparent hover:bg-green-50 rounded-full font-semibold text-xs h-7 px-3 flex items-center justify-center uppercase tracking-wide"
-                  >
-                    ADD
-                  </Button>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="stepper"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex items-center justify-center gap-1.5 bg-white border border-green-600 rounded-full px-1.5 py-0.5 h-7 w-full"
+                  ADD
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-1.5 bg-white border border-green-600 rounded-full px-1.5 py-0.5 h-7 w-full">
+                <Button
+                  variant="default"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDecrease(e);
+                  }}
+                  className="w-5 h-5 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
+                  aria-label="Decrease quantity"
                 >
-                  <motion.div whileTap={{ scale: 0.9 }}>
-                    <Button
-                      variant="default"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDecrease(e);
-                      }}
-                      className="w-5 h-5 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
-                      aria-label="Decrease quantity"
-                    >
-                      −
-                    </Button>
-                  </motion.div>
-                  <motion.span
-                    key={inCartQty}
-                    initial={{ scale: 1.2, y: -4 }}
-                    animate={{ scale: 1, y: 0 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 15 }}
-                    className="text-xs font-bold text-green-600 min-w-[1rem] text-center"
-                  >
-                    {inCartQty}
-                  </motion.span>
-                  <motion.div whileTap={{ scale: 0.9 }}>
-                    <Button
-                      variant="default"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleIncrease(e);
-                      }}
-                      className="w-5 h-5 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
-                      aria-label="Increase quantity"
-                    >
-                      +
-                    </Button>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  −
+                </Button>
+                <span className="text-xs font-bold text-green-600 min-w-[1rem] text-center">
+                  {inCartQty}
+                </span>
+                <Button
+                  variant="default"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleIncrease(e);
+                  }}
+                  className="w-5 h-5 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
+                  aria-label="Increase quantity"
+                >
+                  +
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -404,82 +420,52 @@ export default function ProductCard({
 
       {!categoryStyle && (
         <div className={`${compact ? 'px-3 pb-3' : 'px-4 pb-4'}`}>
-          <motion.div
-            layout
-            className="mt-auto"
-          >
-            <AnimatePresence mode="wait">
-              {inCartQty === 0 ? (
-                <motion.div
-                  key="add-button"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.2 }}
+          <div className="mt-auto">
+            {inCartQty === 0 ? (
+              <div>
+                <Button
+                  ref={addButtonRef}
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAdd}
+                  className="w-full border-green-600 text-green-600 hover:bg-green-50 h-8 text-xs font-semibold uppercase tracking-wide"
                 >
-                  <div>
-                    <Button
-                      ref={addButtonRef}
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAdd}
-                      className="w-full border-green-600 text-green-600 hover:bg-green-50 h-8 text-xs font-semibold uppercase tracking-wide"
-                    >
-                      Add
-                    </Button>
-                    <div className="h-4 mt-1">
-                      {showOptionsText && (
-                        <p className="text-xs text-neutral-500 text-center">
-                          {optionsCount} options
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="stepper"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex items-center justify-center gap-2 bg-white border border-green-600 rounded-full px-2 py-0.5 h-8"
+                  Add
+                </Button>
+                <div className="h-4 mt-1">
+                  {showOptionsText && (
+                    <p className="text-xs text-neutral-500 text-center">
+                      {optionsCount} options
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2 bg-white border border-green-600 rounded-full px-2 py-0.5 h-8">
+                <Button
+                  variant="default"
+                  size="icon"
+                  onClick={handleDecrease}
+                  className="w-6 h-6 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
+                  aria-label="Decrease quantity"
                 >
-                  <motion.div whileTap={{ scale: 0.9 }}>
-                    <Button
-                      variant="default"
-                      size="icon"
-                      onClick={handleDecrease}
-                      className="w-6 h-6 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
-                      aria-label="Decrease quantity"
-                    >
-                      −
-                    </Button>
-                  </motion.div>
-                  <motion.span
-                    key={inCartQty}
-                    initial={{ scale: 1.2, y: -4 }}
-                    animate={{ scale: 1, y: 0 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 15 }}
-                    className="text-xs font-bold text-green-600 min-w-[1.5rem] text-center"
-                  >
-                    {inCartQty}
-                  </motion.span>
-                  <motion.div whileTap={{ scale: 0.9 }}>
-                    <Button
-                      variant="default"
-                      size="icon"
-                      onClick={handleIncrease}
-                      className="w-6 h-6 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
-                      aria-label="Increase quantity"
-                    >
-                      +
-                    </Button>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+                  −
+                </Button>
+                <span className="text-xs font-bold text-green-600 min-w-[1.5rem] text-center">
+                  {inCartQty}
+                </span>
+                <Button
+                  variant="default"
+                  size="icon"
+                  onClick={handleIncrease}
+                  className="w-6 h-6 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
+                  aria-label="Increase quantity"
+                >
+                  +
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </motion.div>

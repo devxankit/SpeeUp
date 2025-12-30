@@ -90,6 +90,25 @@ class APICache {
       }
     }
   }
+
+  /**
+   * Check if data is cached and not expired (synchronous)
+   */
+  has(key: string): boolean {
+    const cached = this.cache.get(key);
+    return cached !== undefined && Date.now() < cached.expiresAt;
+  }
+
+  /**
+   * Get cached data synchronously (returns null if not cached or expired)
+   */
+  getSync<T>(key: string): T | null {
+    const cached = this.cache.get(key);
+    if (cached && Date.now() < cached.expiresAt) {
+      return cached.data as T;
+    }
+    return null;
+  }
 }
 
 // Singleton instance

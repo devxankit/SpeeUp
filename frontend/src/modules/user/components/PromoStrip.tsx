@@ -1,9 +1,10 @@
 import { useLayoutEffect, useRef, useState, useEffect, useCallback } from "react";
 import { gsap } from "gsap";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getTheme } from "../../../utils/themes";
 import { getHomeContent } from "../../../services/api/customerHomeService";
 import { getSubcategories } from "../../../services/api/categoryService";
+import { apiCache } from "../../../utils/apiCache";
 
 interface PromoCard {
   id: string;
@@ -40,6 +41,7 @@ interface PromoStripProps {
 
 export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
   const theme = getTheme(activeTab);
+  const navigate = useNavigate();
   const [categoryCards, setCategoryCards] = useState<PromoCard[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [headingText, setHeadingText] = useState(theme.bannerText);
@@ -105,7 +107,15 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
+      // Check cache first before showing loading state
+      const cacheKey = `home-content-${activeTab || 'all'}`;
+      const cachedData = apiCache.getSync(cacheKey);
+
+      // Only show loading if data is not cached
+      if (!cachedData) {
+        setLoading(true);
+      }
+
       try {
         // Pass activeTab (header category slug) to filter categories
         // Use cache with 5 minute TTL for faster loading
@@ -177,9 +187,16 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                   (product?.galleryImages && product.galleryImages.length > 0 ? product.galleryImages[0] : null) ||
                   null;
 
+                // Always prioritize productName to avoid showing category names
+                const productName = product?.productName || product?.name || "Product";
+
                 return {
                   id: product?._id || p,
-                  name: product?.productName || product?.name || "Product",
+                  _id: product?._id || p,
+                  name: productName,
+                  productName: productName, // Always use productName, never category name
+                  price: price,
+                  mrp: mrp,
                   originalPrice: isNaN(originalPrice) ? 999 : originalPrice,
                   discountedPrice: isNaN(discountedPrice) ? 499 : discountedPrice,
                   imageUrl: imageUrl,
@@ -226,9 +243,16 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                 (p.productImages && p.productImages.length > 0 ? p.productImages[0] : null) ||
                 null;
 
+              // Always prioritize productName to avoid showing category names
+              const productName = p.productName || p.name || "Product";
+
               return {
                 id: p._id,
-                name: p.productName || p.name,
+                _id: p._id,
+                name: productName,
+                productName: productName, // Always use productName, never category name
+                price: price,
+                mrp: mrp,
                 originalPrice: isNaN(originalPrice) ? 999 : originalPrice,
                 discountedPrice: isNaN(discountedPrice) ? 499 : discountedPrice,
                 imageUrl: imageUrl,
@@ -491,13 +515,41 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
     imageUrl: undefined,
   };
 
+  // Calculate prices from actual product data - prioritize mrp/price fields, fallback to mapped originalPrice/discountedPrice
+  const productMrp = Number(displayProduct.mrp) || Number(displayProduct.compareAtPrice) || 0;
+  const productPrice = Number(displayProduct.price) || 0;
+
+  // Use actual product fields if available, otherwise use mapped values
+  const originalPrice = productMrp > 0
+    ? productMrp
+    : (productPrice > 0
+      ? Math.round(productPrice * 1.2)
+      : (Number.isFinite(displayProduct.originalPrice) ? displayProduct.originalPrice : 999));
+
+  const discountedPrice = productPrice > 0
+    ? productPrice
+    : (Number.isFinite(displayProduct.discountedPrice) ? displayProduct.discountedPrice : 499);
+
   // Ensure prices are valid numbers
-  const safeOriginalPrice = Number.isFinite(displayProduct.originalPrice)
-    ? Math.round(displayProduct.originalPrice)
-    : 999;
-  const safeDiscountedPrice = Number.isFinite(displayProduct.discountedPrice)
-    ? Math.round(displayProduct.discountedPrice)
-    : 499;
+  const safeOriginalPrice = Number.isFinite(originalPrice) ? Math.round(originalPrice) : 999;
+  const safeDiscountedPrice = Number.isFinite(discountedPrice) ? Math.round(discountedPrice) : 499;
+
+  // Helper function to handle product navigation
+  const handleProductClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    // Get product ID - handle both string and ObjectId formats
+    const productId = displayProduct?.id || displayProduct?._id;
+
+    if (productId && productId !== 'fallback') {
+      // Convert to string if it's an object
+      const idString = typeof productId === 'string' ? productId : String(productId);
+      if (idString && idString !== 'fallback' && idString.length > 0) {
+        navigate(`/product/${idString}`);
+      }
+    }
+  };
 
   return (
     <div
@@ -732,11 +784,13 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                 </div>
               </div>
 
-              {/* Product Name - Compact */}
+              {/* Product Name - Compact - Clickable */}
               <div
                 ref={productNameRef}
-                className="text-neutral-900 font-black text-[9px] text-center mb-0.5">
-                {displayProduct.name}
+                onClick={handleProductClick}
+                className="text-neutral-900 font-black text-[9px] text-center mb-0.5 cursor-pointer hover:underline line-clamp-2"
+                title={displayProduct.productName || displayProduct.name}>
+                {displayProduct.productName || displayProduct.name}
               </div>
 
               {/* Product Thumbnail - Bottom Center, sized to container */}
@@ -745,7 +799,8 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
                 className="flex-1 flex items-end justify-center w-full"
                 style={{ minHeight: "50px", maxHeight: "65px" }}>
                 <div
-                  className="w-12 h-16 rounded flex items-center justify-center overflow-hidden"
+                  onClick={handleProductClick}
+                  className="w-12 h-16 rounded flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                   style={{ background: "transparent" }}>
                   {displayProduct.imageUrl ? (
                     <img

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { Cart, CartItem } from '../types/cart';
 import { Product } from '../types/domain';
@@ -19,10 +19,10 @@ interface AddToCartEvent {
 
 interface CartContextType {
   cart: Cart;
-  addToCart: (product: Product, sourceElement?: HTMLElement | null) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number, variantId?: string, variantTitle?: string) => void;
-  clearCart: () => void;
+  addToCart: (product: Product, sourceElement?: HTMLElement | null) => Promise<void>;
+  removeFromCart: (productId: string) => Promise<void>;
+  updateQuantity: (productId: string, quantity: number, variantId?: string, variantTitle?: string) => Promise<void>;
+  clearCart: () => Promise<void>;
   lastAddEvent: AddToCartEvent | null;
   loading: boolean;
 }
@@ -51,6 +51,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   });
   const [lastAddEvent, setLastAddEvent] = useState<AddToCartEvent | null>(null);
   const [loading, setLoading] = useState(true);
+  const pendingOperationsRef = useRef<Set<string>>(new Set());
 
   const { isAuthenticated, user } = useAuth();
 
@@ -125,6 +126,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addToCart = async (product: Product, sourceElement?: HTMLElement | null) => {
     // Get consistent product ID - MongoDB returns _id, frontend expects id
     const productId = product._id || product.id;
+
+    // Prevent concurrent operations on the same product
+    if (pendingOperationsRef.current.has(productId)) {
+      return;
+    }
+    pendingOperationsRef.current.add(productId);
 
     // Normalize product to always have 'id' property for consistency
     const normalizedProduct: Product = {
@@ -203,12 +210,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
         console.error("Add to cart failed", error);
         // Revert on error
         setItems(previousItems);
+      } finally {
+        // Remove from pending operations
+        pendingOperationsRef.current.delete(productId);
       }
+    } else {
+      // For unregistered users, the optimistic update is already saved to localStorage
+      // Remove from pending operations immediately
+      pendingOperationsRef.current.delete(productId);
     }
-    // For unregistered users, the optimistic update is already saved to localStorage
   };
 
   const removeFromCart = async (productId: string) => {
+    // Prevent concurrent operations on the same product
+    if (pendingOperationsRef.current.has(productId)) {
+      return;
+    }
+    pendingOperationsRef.current.add(productId);
+
     // Find item matching either id or _id
     const itemToRemove = items.find(item => item?.product && (item.product.id === productId || item.product._id === productId));
 
@@ -225,9 +244,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error("Remove from cart failed", error);
         setItems(previousItems);
+      } finally {
+        // Remove from pending operations
+        pendingOperationsRef.current.delete(productId);
       }
+    } else {
+      // For unregistered users, remove from pending operations immediately
+      pendingOperationsRef.current.delete(productId);
     }
-    // For unregistered users, the optimistic update is already saved to localStorage
   };
 
   const updateQuantity = async (productId: string, quantity: number, variantId?: string, variantTitle?: string) => {
@@ -235,6 +259,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart(productId);
       return;
     }
+
+    // Create a unique operation key for this product/variant combination
+    const operationKey = variantId ? `${productId}-${variantId}` : (variantTitle ? `${productId}-${variantTitle}` : productId);
+
+    // Prevent concurrent operations on the same product
+    if (pendingOperationsRef.current.has(operationKey)) {
+      return;
+    }
+    pendingOperationsRef.current.add(operationKey);
 
     // Find item matching product ID and variant (if variant info provided)
     const itemToUpdate = items.find(item => {
@@ -290,9 +323,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error("Update quantity failed", error);
         setItems(previousItems);
+      } finally {
+        // Remove from pending operations
+        pendingOperationsRef.current.delete(operationKey);
       }
+    } else {
+      // For unregistered users, remove from pending operations immediately
+      pendingOperationsRef.current.delete(operationKey);
     }
-    // For unregistered users, the optimistic update is already saved to localStorage
   };
 
 
