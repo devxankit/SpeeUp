@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getOrderDetails, updateOrderStatus, getSellerLocationsForOrder, sendDeliveryOtp, verifyDeliveryOtp, updateDeliveryLocation } from '../../../services/api/delivery/deliveryService';
 import deliveryIcon from '@assets/deliveryboy/deliveryIcon.png';
+import GoogleMapsTracking from '../../../components/GoogleMapsTracking';
 
 // Helper to get delivery icon URL (works in both dev and production)
 const getDeliveryIconUrl = () => {
@@ -85,9 +86,6 @@ export default function DeliveryOrderDetail() {
     const [order, setOrder] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [isMapLoaded, setIsMapLoaded] = useState(false);
-    const mapRef = useRef<HTMLDivElement>(null);
-    const googleMapRef = useRef<any>(null);
     const [sellerLocations, setSellerLocations] = useState<any[]>([]);
     const [showOtpInput, setShowOtpInput] = useState(false);
     const [otpValue, setOtpValue] = useState('');
@@ -95,14 +93,7 @@ export default function DeliveryOrderDetail() {
     const [otpVerifying, setOtpVerifying] = useState(false);
     const locationIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [deliveryBoyLocation, setDeliveryBoyLocation] = useState<{ lat: number; lng: number } | null>(null);
-    const directionsServiceRef = useRef<any>(null);
-    const directionsRendererRef = useRef<any>(null);
-    const markersRef = useRef<any[]>([]);
-    const originMarkerRef = useRef<any>(null);
-    const destMarkerRef = useRef<any>(null);
     const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
-    const hasInitialRouteFitted = useRef<boolean>(false);
-    const userHasInteracted = useRef<boolean>(false);
 
     const fetchOrder = async () => {
         if (!id) return;
@@ -138,99 +129,11 @@ export default function DeliveryOrderDetail() {
         fetchSellerLocations();
     }, [id, order?.status]);
 
-    // Load Google Maps Script
-    useEffect(() => {
-        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-        if (!apiKey) {
-            console.warn('Google Maps API Key missing');
-            return;
-        }
-
-        if ((window as any).google?.maps) {
-            setIsMapLoaded(true);
-            return;
-        }
-
-        if (!document.querySelector(`script[src*="maps.googleapis.com"]`)) {
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&loading=async`;
-            script.async = true;
-            script.defer = true;
-            script.onload = () => setIsMapLoaded(true);
-            document.head.appendChild(script);
-        } else {
-            const checkInterval = setInterval(() => {
-                if ((window as any).google?.maps) {
-                    clearInterval(checkInterval);
-                    setIsMapLoaded(true);
-                }
-            }, 500);
-            return () => clearInterval(checkInterval);
-        }
-    }, []);
-
-    // Initialize Map
-    useEffect(() => {
-        if (isMapLoaded && mapRef.current && !googleMapRef.current) {
-            const defaultCenter = deliveryBoyLocation || { lat: 22.7196, lng: 75.8577 };
-
-            googleMapRef.current = new (window as any).google.maps.Map(mapRef.current, {
-                center: defaultCenter,
-                zoom: 13,
-                disableDefaultUI: true,
-                styles: [
-                    {
-                        featureType: "poi",
-                        elementType: "labels",
-                        stylers: [{ visibility: "off" }]
-                    }
-                ]
-            });
-
-            // Track user interaction with the map (pan, zoom, drag)
-            let isProgrammaticChange = false;
-
-            const trackInteraction = () => {
-                if (!isProgrammaticChange) {
-                    userHasInteracted.current = true;
-                }
-            };
-
-            // Add event listeners to track user interaction
-            googleMapRef.current.addListener('dragstart', trackInteraction);
-            googleMapRef.current.addListener('zoom_changed', () => {
-                // Track zoom changes that are likely user-initiated
-                if (!isProgrammaticChange) {
-                    // Use a small delay to allow programmatic changes to set the flag
-                    setTimeout(() => {
-                        if (!isProgrammaticChange) {
-                            trackInteraction();
-                        }
-                    }, 100);
-                }
-            });
-
-            // Store the flag setter for use in route calculation
-            (googleMapRef.current as any)._setProgrammaticChange = (value: boolean) => {
-                isProgrammaticChange = value;
-            };
-        }
-    }, [isMapLoaded, deliveryBoyLocation]);
-
     // Clean up when component unmounts
     useEffect(() => {
         return () => {
             if (locationIntervalRef.current) {
                 clearInterval(locationIntervalRef.current);
-            }
-            if (directionsRendererRef.current) {
-                directionsRendererRef.current.setMap(null);
-            }
-            markersRef.current.forEach(marker => marker.setMap(null));
-            originMarkerRef.current = null;
-            destMarkerRef.current = null;
-            if (googleMapRef.current) {
-                googleMapRef.current = null;
             }
         };
     }, []);
@@ -318,179 +221,7 @@ export default function DeliveryOrderDetail() {
         getCurrentLocation();
     }, []);
 
-    // Calculate and display route using Google Maps Directions Service
-    const calculateAndDisplayRoute = useCallback((origin: { lat: number; lng: number }, destination: { lat: number; lng: number }) => {
-        if (!isMapLoaded || !googleMapRef.current || !(window as any).google?.maps) return;
 
-        // Initialize DirectionsService if not already initialized
-        if (!directionsServiceRef.current) {
-            directionsServiceRef.current = new (window as any).google.maps.DirectionsService();
-        }
-
-        // Clear previous directions renderer
-        if (directionsRendererRef.current) {
-            directionsRendererRef.current.setMap(null);
-            directionsRendererRef.current = null;
-        }
-
-        // Initialize DirectionsRenderer (suppress default markers, we'll add custom ones)
-        // preserveViewport: true prevents automatic zoom/bounds adjustment when route is updated
-        directionsRendererRef.current = new (window as any).google.maps.DirectionsRenderer({
-            map: googleMapRef.current,
-            suppressMarkers: true,
-            preserveViewport: true, // Prevent automatic zoom/bounds adjustment
-            polylineOptions: {
-                strokeColor: '#2563eb',
-                strokeWeight: 5,
-                strokeOpacity: 0.8,
-            },
-        });
-
-        // Calculate route
-        directionsServiceRef.current.route(
-            {
-                origin: origin,
-                destination: destination,
-                travelMode: (window as any).google.maps.TravelMode.DRIVING,
-            },
-            (result: any, status: any) => {
-                if (status === 'OK' && directionsRendererRef.current && result.routes && result.routes[0]) {
-                    // Only fit bounds on initial route calculation, preserve zoom for subsequent updates
-                    if (!hasInitialRouteFitted.current && !userHasInteracted.current) {
-                        // For initial load, allow DirectionsRenderer to fit bounds only if user hasn't interacted
-                        // Mark this as a programmatic change to avoid tracking it as user interaction
-                        if (googleMapRef.current && (googleMapRef.current as any)._setProgrammaticChange) {
-                            (googleMapRef.current as any)._setProgrammaticChange(true);
-                        }
-                        directionsRendererRef.current.setOptions({ preserveViewport: false });
-                        directionsRendererRef.current.setDirections(result);
-                        directionsRendererRef.current.setOptions({ preserveViewport: true });
-                        console.log('fit bounds');
-                        hasInitialRouteFitted.current = true;
-                        // Reset the flag after a delay to allow for the change to complete
-                        setTimeout(() => {
-                            if (googleMapRef.current && (googleMapRef.current as any)._setProgrammaticChange) {
-                                (googleMapRef.current as any)._setProgrammaticChange(false);
-                            }
-                        }, 500);
-                    } else {
-                        // For subsequent updates or if user has interacted, always preserve the current viewport/zoom
-                        directionsRendererRef.current.setOptions({ preserveViewport: true });
-                        directionsRendererRef.current.setDirections(result);
-                    }
-
-                    // Extract route information
-                    const route = result.routes[0];
-                    const leg = route.legs[0];
-                    if (leg) {
-                        setRouteInfo({
-                            distance: leg.distance?.text || '0 km',
-                            duration: leg.duration?.text || '0 mins',
-                        });
-                    }
-
-                    // Update or create origin marker (delivery boy location)
-                    if (originMarkerRef.current) {
-                        // Update existing marker position
-                        originMarkerRef.current.setPosition(origin);
-                    } else {
-                        // Create new marker if it doesn't exist
-                        originMarkerRef.current = new (window as any).google.maps.Marker({
-                            position: origin,
-                            map: googleMapRef.current,
-                            icon: {
-                                url: getDeliveryIconUrl(),
-                                scaledSize: new (window as any).google.maps.Size(60, 60),
-                                anchor: new (window as any).google.maps.Point(40, 40),
-                            },
-                            title: 'Your Location',
-                        });
-                        markersRef.current.push(originMarkerRef.current);
-                    }
-
-                    // Update or create destination marker
-                    if (destMarkerRef.current) {
-                        // Update existing marker position
-                        destMarkerRef.current.setPosition(destination);
-                    } else {
-                        // Create new marker if it doesn't exist
-                        destMarkerRef.current = new (window as any).google.maps.Marker({
-                            position: destination,
-                            map: googleMapRef.current,
-                            icon: {
-                                path: (window as any).google.maps.SymbolPath.CIRCLE,
-                                scale: 10,
-                                fillColor: '#3b82f6', // Blue for destination
-                                fillOpacity: 1,
-                                strokeWeight: 3,
-                                strokeColor: '#ffffff',
-                            },
-                            title: 'Destination',
-                        });
-                        markersRef.current.push(destMarkerRef.current);
-                    }
-                } else {
-                    console.error('Directions request failed:', status);
-                    setRouteInfo(null);
-                }
-            }
-        );
-    }, [isMapLoaded]);
-
-    // Clear route and markers
-    const clearRoute = useCallback(() => {
-        if (directionsRendererRef.current) {
-            directionsRendererRef.current.setMap(null);
-            directionsRendererRef.current = null;
-        }
-        markersRef.current.forEach(marker => marker.setMap(null));
-        markersRef.current = [];
-        originMarkerRef.current = null;
-        destMarkerRef.current = null;
-        setRouteInfo(null);
-        hasInitialRouteFitted.current = false; // Reset flag when route is cleared
-    }, []);
-
-    // Calculate route when location or order status changes
-    useEffect(() => {
-        if (!deliveryBoyLocation || !order || !googleMapRef.current || !isMapLoaded) return;
-
-        // Calculate route immediately when dependencies change (location updates happen every 10 seconds)
-        if (order.status === 'Picked up' || order.status === 'Out for Delivery') {
-                // Show route to customer
-                if (order.deliveryAddress?.latitude && order.deliveryAddress?.longitude) {
-                    calculateAndDisplayRoute(
-                        deliveryBoyLocation,
-                        { lat: order.deliveryAddress.latitude, lng: order.deliveryAddress.longitude }
-                    );
-                } else if (order.address) {
-                    // Geocode address if coordinates not available
-                    const geocoder = new (window as any).google.maps.Geocoder();
-                    geocoder.geocode({ address: order.address }, (results: any, status: any) => {
-                        if (status === 'OK' && results && results[0]) {
-                            const location = results[0].geometry.location;
-                            calculateAndDisplayRoute(
-                                deliveryBoyLocation,
-                                { lat: location.lat(), lng: location.lng() }
-                            );
-                        }
-                    });
-                }
-            } else if (sellerLocations.length > 0 && order.status !== 'Delivered') {
-                // Show route to first/nearest seller
-                const firstSeller = sellerLocations[0];
-                if (firstSeller.latitude && firstSeller.longitude) {
-                    calculateAndDisplayRoute(
-                        deliveryBoyLocation,
-                        { lat: firstSeller.latitude, lng: firstSeller.longitude }
-                    );
-                }
-            } else {
-                // Clear route if no destination available
-                clearRoute();
-            }
-
-    }, [deliveryBoyLocation, order?.status, sellerLocations, order?.deliveryAddress, order?.address, isMapLoaded, calculateAndDisplayRoute, clearRoute]);
 
     // Socket.io connection
     const [socket, setSocket] = useState<any>(null);
@@ -688,55 +419,41 @@ export default function DeliveryOrderDetail() {
                 </div>
             </div>
 
-            {/* Google Maps View - Seller Locations (before picked up) or Customer Location (after picked up) */}
+            {/* Google Maps View - Shared Component for Parity */}
             {isMapVisible && (
-                <div className="w-full h-80 bg-neutral-100 relative border-b border-neutral-200">
-                    {/* Map Container */}
-                    <div ref={mapRef} className="w-full h-full" />
-
-                    {!isMapLoaded && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-neutral-100 text-neutral-500 text-sm">
-                            Loading Map...
-                        </div>
-                    )}
-
-
-                    {showCustomerLocation && (
-                        <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl shadow-md border border-neutral-100 z-10">
-                            <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">Destination</p>
-                            <p className="text-xs font-bold text-neutral-800 truncate max-w-[200px]">{order.address?.split(',')[0]}</p>
-                        </div>
-                    )}
-
-                    {showSellerLocations && sellerLocations.length > 0 && (
-                        <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl shadow-md border border-neutral-100 z-10">
-                            <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">Seller Locations</p>
-                            <p className="text-xs font-bold text-neutral-800">{sellerLocations.length} Shop(s)</p>
-                        </div>
-                    )}
-
-                    {/* Route Info Display */}
-                    {routeInfo && (
-                        <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm px-4 py-3 rounded-xl shadow-lg border border-neutral-100 z-10">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div>
-                                        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">Distance</p>
-                                        <p className="text-sm font-bold text-neutral-900">{routeInfo.distance}</p>
-                                    </div>
-                                    <div className="w-px h-8 bg-neutral-200"></div>
-                                    <div>
-                                        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">ETA</p>
-                                        <p className="text-sm font-bold text-neutral-900">{routeInfo.duration}</p>
-                                    </div>
-                                </div>
-                                <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
-                                    <Icons.Navigation size={20} className="text-white rotate-45" />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                <GoogleMapsTracking
+                    sellerLocations={sellerLocations.map(s => ({
+                        lat: s.latitude,
+                        lng: s.longitude,
+                        name: s.storeName
+                    }))}
+                    customerLocation={{
+                        lat: order.deliveryAddress?.latitude || order.address?.latitude || 0,
+                        lng: order.deliveryAddress?.longitude || order.address?.longitude || 0
+                    }}
+                    deliveryLocation={deliveryBoyLocation || undefined}
+                    isTracking={!!deliveryBoyLocation}
+                    showRoute={!!routeInfo}
+                    routeOrigin={deliveryBoyLocation || undefined}
+                    routeDestination={
+                        order.status === 'Picked up' || order.status === 'Out for Delivery'
+                            ? {
+                                lat: order.deliveryAddress?.latitude || order.address?.latitude || 0,
+                                lng: order.deliveryAddress?.longitude || order.address?.longitude || 0
+                            }
+                            : sellerLocations.length > 0
+                                ? { lat: sellerLocations[0].latitude, lng: sellerLocations[0].longitude }
+                                : undefined
+                    }
+                    destinationName={
+                        order.status === 'Picked up' || order.status === 'Out for Delivery'
+                            ? order.address?.split(',')[0]
+                            : sellerLocations.length > 0
+                                ? sellerLocations[0].storeName
+                                : undefined
+                    }
+                    onRouteInfoUpdate={setRouteInfo}
+                />
             )}
 
             {/* Seller Locations Card (before picked up) */}

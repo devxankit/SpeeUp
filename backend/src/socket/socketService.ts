@@ -138,15 +138,37 @@ export const initializeSocket = (httpServer: HttpServer) => {
         console.log('✅ Socket connected:', socket.id, 'User:', (socket as any).user?.userId || 'Unauthenticated');
 
         // Customer subscribes to order tracking
-        socket.on('track-order', (orderId: string) => {
-            console.log(`📦 Customer tracking order: ${orderId}`);
-            socket.join(`order-${orderId}`);
+        socket.on('track-order', async (orderId: string) => {
+            const user = (socket as any).user;
 
-            // Send acknowledgment
-            socket.emit('tracking-started', {
-                orderId,
-                message: 'Live tracking started',
-            });
+            if (!user) {
+                console.warn(`⚠️ Unauthenticated socket tried to track order: ${orderId}`);
+                socket.emit('tracking-error', { message: 'Authentication required' });
+                return;
+            }
+
+            try {
+                // Verify order belongs to this customer
+                const order = await Order.findOne({ _id: orderId, customer: user.userId });
+
+                if (!order) {
+                    console.warn(`⚠️ User ${user.userId} tried to track unauthorized order: ${orderId}`);
+                    socket.emit('tracking-error', { message: 'Unauthorized or order not found' });
+                    return;
+                }
+
+                console.log(`📦 Customer ${user.userId} tracking order: ${orderId}`);
+                socket.join(`order-${orderId}`);
+
+                // Send acknowledgment
+                socket.emit('tracking-started', {
+                    orderId,
+                    message: 'Live tracking started',
+                });
+            } catch (error) {
+                console.error(`❌ Error in track-order for order ${orderId}:`, error);
+                socket.emit('tracking-error', { message: 'Internal server error' });
+            }
         });
 
         // Customer unsubscribes from order tracking
@@ -215,24 +237,28 @@ export const initializeSocket = (httpServer: HttpServer) => {
             if (!deliveryBoyId || !orderId || !latitude || !longitude) return;
 
             try {
-                // 1. Get Destination (from cache or DB)
-                let destination = orderDestinationsCache.get(orderId);
-
-                if (!destination) {
-                    const order = await Order.findById(orderId).select('deliveryAddress status');
-                    if (order && order.deliveryAddress) {
-                        destination = {
-                            latitude: order.deliveryAddress.latitude || 0,
-                            longitude: order.deliveryAddress.longitude || 0
-                        };
-                        orderDestinationsCache.set(orderId, destination);
-
-                        // Clear cache after 2 hours (cleanup)
-                        setTimeout(() => orderDestinationsCache.delete(orderId), 2 * 60 * 60 * 1000);
-                    }
+                // 1. Verify Delivery Boy is assigned to this order
+                const order = await Order.findOne({ _id: orderId, deliveryBoy: deliveryBoyId }).select('deliveryAddress status');
+                if (!order) {
+                    console.warn(`⚠️ Unauthorized location update attempt from ${deliveryBoyId} for order ${orderId}`);
+                    return;
                 }
 
-                // 2. Calculate Distance & ETA
+                // 2. Get Destination (from cache or DB)
+                let destination = orderDestinationsCache.get(orderId);
+
+                if (!destination && order.deliveryAddress) {
+                    destination = {
+                        latitude: order.deliveryAddress.latitude || 0,
+                        longitude: order.deliveryAddress.longitude || 0
+                    };
+                    orderDestinationsCache.set(orderId, destination);
+
+                    // Clear cache after 2 hours (cleanup)
+                    setTimeout(() => orderDestinationsCache.delete(orderId), 2 * 60 * 60 * 1000);
+                }
+
+                // 3. Calculate Distance & ETA
                 let distance = 0;
                 let eta = 0;
                 if (destination) {
@@ -240,12 +266,12 @@ export const initializeSocket = (httpServer: HttpServer) => {
                     eta = calculateETA(distance);
                 }
 
-                // 3. Determine Status (Simplified)
+                // 4. Determine Status (Simplified)
                 let status = 'in_transit';
                 if (distance < 100) status = 'nearby';
                 // Note: We don't change to 'picked_up'/'delivered' here as those are state transitions, not just location updates
 
-                // 4. Broadcast Immediately (Fast Path)
+                // 5. Broadcast Immediately (Fast Path)
                 const locationUpdatePayload = {
                     orderId,
                     location: { latitude, longitude, timestamp: new Date() },
@@ -256,17 +282,12 @@ export const initializeSocket = (httpServer: HttpServer) => {
 
                 io.to(`order-${orderId}`).emit('location-update', locationUpdatePayload);
 
-                // 5. Throttled DB Update (Slow Path)
+                // 6. Throttled DB Update (Slow Path)
                 const lastUpdate = locationUpdateThrottler.get(orderId) || 0;
                 const now = Date.now();
 
                 if (now - lastUpdate > 30000) { // 30 seconds throttle
                     locationUpdateThrottler.set(orderId, now);
-
-                    // Async DB update (don't await to block socket?)
-                    // Better to await to catch errors, but keep it fast.
-                    // We run it effectively "in background" relative to other operations if we didn't await,
-                    // but inside async function it's fine.
 
                     try {
                         let tracking = await DeliveryTracking.findOne({ order: orderId });
@@ -322,6 +343,12 @@ export const initializeSocket = (httpServer: HttpServer) => {
 
     console.log('🔌 Socket.io initialized');
     return io;
+};
+
+// Helper function to clear order cache when status changes
+export const clearOrderCache = (orderId: string) => {
+    orderDestinationsCache.delete(orderId);
+    locationUpdateThrottler.delete(orderId);
 };
 
 // Helper function to emit location updates

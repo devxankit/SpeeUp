@@ -4,6 +4,7 @@ import Inventory from "../models/Inventory";
 import Commission from "../models/Commission";
 import Seller from "../models/Seller";
 import WalletTransaction from "../models/WalletTransaction";
+import { clearOrderCache } from "../socket/socketService";
 
 /**
  * Process order status transition
@@ -17,6 +18,11 @@ export const processOrderStatusTransition = async (
 
   if (!order) {
     throw new Error("Order not found");
+  }
+
+  // Clear tracking cache if order is completed or cancelled
+  if (["Delivered", "Cancelled", "Returned", "Failed"].includes(newStatus)) {
+    clearOrderCache(orderId);
   }
 
   // Handle status-specific logic

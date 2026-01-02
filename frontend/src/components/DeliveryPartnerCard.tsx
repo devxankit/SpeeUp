@@ -12,6 +12,7 @@ interface DeliveryPartnerCardProps {
     eta: number
     distance: number
     isTracking: boolean
+    deliveryOtp?: string
     onCall?: () => void
     onMessage?: () => void
 }
@@ -21,6 +22,7 @@ export default function DeliveryPartnerCard({
     eta,
     distance,
     isTracking,
+    deliveryOtp,
     onCall,
     onMessage
 }: DeliveryPartnerCardProps) {
@@ -146,6 +148,19 @@ export default function DeliveryPartnerCard({
                             animate={{ width: `${Math.max(10, Math.min(90, 100 - (distance / 50)))}%` }}
                             transition={{ duration: 0.5 }}
                         />
+                    </div>
+                </div>
+            )}
+
+            {/* Delivery OTP Section */}
+            {deliveryOtp && (
+                <div className="mx-4 mb-4 p-3 bg-neutral-50 rounded-xl border border-dashed border-neutral-200 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">Delivery OTP</p>
+                        <p className="text-xs text-neutral-600 leading-tight">Share this with the delivery partner only at the time of delivery</p>
+                    </div>
+                    <div className="bg-white px-4 py-2 rounded-lg border border-neutral-100 shadow-sm">
+                        <span className="text-xl font-black tracking-[0.2em] text-green-700">{deliveryOtp}</span>
                     </div>
                 </div>
             )}

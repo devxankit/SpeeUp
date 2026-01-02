@@ -217,91 +217,6 @@ const CircleSlashIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// Delivery partner marker component
-const DeliveryPartnerMarker = ({ isVisible }: { isVisible: boolean }) => {
-  const [deliveryPos, setDeliveryPos] = useState({ left: 330, top: 190 });
-  const [storePos, setStorePos] = useState({ left: 60, top: 70 });
-
-  useEffect(() => {
-    if (isVisible) {
-      // Calculate delivery location position
-      // Delivery marker is at right: 50px, bottom: 40px, width: 40px (w-10)
-      // Partner marker is width: 32px (w-8)
-      // We need to calculate the center position
-      const timer = setTimeout(() => {
-        const mapContainer = document.querySelector(
-          "[data-map-container]"
-        ) as HTMLElement;
-        const deliveryMarker = document.querySelector(
-          "[data-delivery-marker]"
-        ) as HTMLElement;
-        const storeMarker = document.querySelector(
-          "[data-store-marker]"
-        ) as HTMLElement;
-        if (mapContainer && deliveryMarker) {
-          const containerRect = mapContainer.getBoundingClientRect();
-          const markerRect = deliveryMarker.getBoundingClientRect();
-          // Calculate center position of delivery marker relative to container
-          const left =
-            markerRect.left - containerRect.left + markerRect.width / 2 - 16; // 16px = half of partner marker (w-8)
-          const top =
-            markerRect.top - containerRect.top + markerRect.height / 2 - 16;
-          setDeliveryPos({ left, top });
-        }
-        if (mapContainer && storeMarker) {
-          const containerRect = mapContainer.getBoundingClientRect();
-          const markerRect = storeMarker.getBoundingClientRect();
-          // Calculate center position of store marker relative to container
-          const left =
-            markerRect.left - containerRect.left + markerRect.width / 2 - 16;
-          const top =
-            markerRect.top - containerRect.top + markerRect.height / 2 - 16;
-          setStorePos({ left, top });
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isVisible]);
-
-  return (
-    <motion.div
-      className="absolute z-10"
-      initial={{ x: storePos.left, y: storePos.top }}
-      animate={{
-        x: [
-          storePos.left,
-          storePos.left + (deliveryPos.left - storePos.left) * 0.3,
-          storePos.left + (deliveryPos.left - storePos.left) * 0.7,
-          deliveryPos.left,
-          deliveryPos.left,
-          storePos.left + (deliveryPos.left - storePos.left) * 0.7,
-          storePos.left + (deliveryPos.left - storePos.left) * 0.3,
-          storePos.left,
-        ],
-        y: [
-          storePos.top,
-          storePos.top + (deliveryPos.top - storePos.top) * 0.3,
-          storePos.top + (deliveryPos.top - storePos.top) * 0.7,
-          deliveryPos.top,
-          deliveryPos.top,
-          storePos.top + (deliveryPos.top - storePos.top) * 0.7,
-          storePos.top + (deliveryPos.top - storePos.top) * 0.3,
-          storePos.top,
-        ],
-      }}
-      transition={{
-        duration: 16, // Total duration for round trip
-        repeat: Infinity,
-        ease: "linear",
-        times: [0, 0.25, 0.5, 0.5, 0.625, 0.75, 0.875, 1], // Pause at delivery location
-      }}>
-      <div className="w-8 h-8 bg-green-700 rounded-full shadow-lg flex items-center justify-center">
-        <span className="text-white text-xs">🛵</span>
-      </div>
-    </motion.div>
-  );
-};
-
 // Animated checkmark component
 const AnimatedCheckmark = ({ delay = 0 }) => (
   <motion.svg
@@ -334,105 +249,6 @@ const AnimatedCheckmark = ({ delay = 0 }) => (
       transition={{ duration: 0.4, delay: delay + 0.4, ease: "easeOut" }}
     />
   </motion.svg>
-);
-
-// Map placeholder component with animated route
-const DeliveryMap = ({ isVisible }: { isVisible: boolean }) => (
-  <motion.div
-    data-map-container
-    className="relative h-64 bg-gradient-to-b from-gray-100 to-gray-200 overflow-hidden"
-    initial={{ opacity: 0 }}
-    animate={{ opacity: isVisible ? 1 : 0 }}
-    transition={{ duration: 0.5 }}>
-    {/* Stylized map background */}
-    <div
-      className="absolute inset-0"
-      style={{
-        backgroundImage: `
-        linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)
-      `,
-        backgroundSize: "40px 40px",
-      }}
-    />
-
-    {/* Roads */}
-    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 256">
-      {/* Main roads */}
-      <path d="M0 128 L400 128" stroke="#e5e7eb" strokeWidth="12" fill="none" />
-      <path d="M200 0 L200 256" stroke="#e5e7eb" strokeWidth="8" fill="none" />
-      <path d="M0 64 L400 200" stroke="#e5e7eb" strokeWidth="6" fill="none" />
-
-      {/* Animated delivery route */}
-      <motion.path
-        d="M60 70 Q 120 90, 160 120 T 280 160 T 340 200"
-        stroke="#166534"
-        strokeWidth="3"
-        strokeDasharray="8 4"
-        fill="none"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: isVisible ? 1 : 0 }}
-        transition={{ duration: 2, delay: 0.5, ease: "easeInOut" }}
-      />
-    </svg>
-    {/* Store marker */}
-    <motion.div
-      data-store-marker
-      className="absolute flex items-center justify-center"
-      style={{ left: "50px", top: "50px" }}
-      initial={{ scale: 0, y: -20 }}
-      animate={{ scale: isVisible ? 1 : 0, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.3, type: "spring" }}>
-      <div className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-green-700">
-        <HomeIcon className="w-5 h-5 text-green-700" />
-      </div>
-    </motion.div>
-    {/* Delivery location marker */}
-    <motion.div
-      data-delivery-marker
-      className="absolute flex flex-col items-center"
-      style={{ right: "50px", bottom: "40px" }}
-      initial={{ scale: 0, y: -20 }}
-      animate={{ scale: isVisible ? 1 : 0, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.6, type: "spring" }}>
-      <div className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-green-700">
-        <MapPinIcon className="w-5 h-5 text-green-700" />
-      </div>
-    </motion.div>
-    {/* Delivery partner marker (animated along route) */}
-    {isVisible && <DeliveryPartnerMarker isVisible={isVisible} />}
-    {/* Expand button */}
-    <motion.button
-      className="absolute top-3 right-3 w-8 h-8 bg-white rounded-lg shadow flex items-center justify-center"
-      whileHover={{ scale: 1.1 }}
-      whileTap={{ scale: 0.95 }}>
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2">
-        <polyline points="15 3 21 3 21 9" />
-        <polyline points="9 21 3 21 3 15" />
-        <line x1="21" y1="3" x2="14" y2="10" />
-        <line x1="3" y1="21" x2="10" y2="14" />
-      </svg>
-    </motion.button>
-    {/* Current location button */}
-    <motion.button
-      className="absolute bottom-3 right-3 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center"
-      whileHover={{ scale: 1.1 }}
-      whileTap={{ scale: 0.95 }}>
-      <div className="w-6 h-6 rounded-full border-2 border-green-600 flex items-center justify-center">
-        <div className="w-2 h-2 rounded-full bg-green-600" />
-      </div>
-    </motion.button>
-    {/* Google attribution */}
-    <div className="absolute bottom-3 left-3 text-xs text-gray-500 font-medium">
-      Google
-    </div>
-  </motion.div>
 );
 
 // Promotional banner carousel
@@ -1024,14 +840,11 @@ export default function OrderDetail() {
       {/* Map Section */}
       {!showConfirmation && (
         <GoogleMapsTracking
-          storeLocation={
-            sellerLocations.length > 0
-              ? {
-                  lat: sellerLocations[0].latitude,
-                  lng: sellerLocations[0].longitude,
-                }
-              : { lat: 28.6139, lng: 77.209 } // Fallback
-          }
+          sellerLocations={sellerLocations.map(s => ({
+            lat: s.latitude,
+            lng: s.longitude,
+            name: s.storeName
+          }))}
           customerLocation={{
             lat: order?.deliveryAddress?.latitude || order?.address?.latitude || 28.7041,
             lng: order?.deliveryAddress?.longitude || order?.address?.longitude || 77.1025,
@@ -1066,18 +879,21 @@ export default function OrderDetail() {
                 }
               : undefined
           }
+          destinationName={
+            order?.status === 'Picked up' || order?.status === 'Out for Delivery'
+              ? order?.deliveryAddress?.address?.split(',')[0] || order?.address?.split(',')[0] || "Delivery Address"
+              : sellerLocations.length > 0
+              ? sellerLocations[0].storeName
+              : undefined
+          }
         />
       )}
 
-      {/* WebSocket Connection Status */}
-      {isConnected && lastUpdate && (
-        <div className="px-4 py-2 bg-green-50 text-green-800 text-sm text-center">
-          🔴 Live tracking active · Last update:{" "}
-          {lastUpdate instanceof Date
-            ? lastUpdate.toLocaleTimeString()
-            : typeof lastUpdate === 'string'
-            ? new Date(lastUpdate).toLocaleTimeString()
-            : new Date().toLocaleTimeString()}
+      {/* Tracking Error Display */}
+      {trackingError && (
+        <div className="mx-4 mt-2 px-4 py-2 bg-red-50 text-red-700 text-xs rounded-lg border border-red-100 flex items-center gap-2">
+          <span>⚠️</span>
+          <span>{trackingError}</span>
         </div>
       )}
 
@@ -1093,6 +909,7 @@ export default function OrderDetail() {
           eta={eta}
           distance={distance}
           isTracking={isConnected}
+          deliveryOtp={order?.deliveryOtp}
           onCall={() => {
             const phone = order?.deliveryPartner?.phone || "1234567890";
             window.location.href = `tel:${phone}`;
@@ -1126,21 +943,25 @@ export default function OrderDetail() {
         {/* Promo Carousel */}
         <PromoCarousel />
 
-        {/* Delivery Partner Assignment */}
-        <motion.div
-          className="bg-white rounded-xl p-4 shadow-sm"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
-              <span className="text-2xl">👨‍🍳</span>
+        {/* Delivery Partner Assignment - Only show if no partner assigned yet */}
+        {!order?.deliveryPartner && (
+          <motion.div
+            className="bg-white rounded-xl p-4 shadow-sm"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+                <span className="text-2xl">👨‍🍳</span>
+              </div>
+              <p className="font-semibold text-gray-900">
+                {order?.status === 'Placed' || order?.status === 'Accepted'
+                  ? "Assigning delivery partner shortly"
+                  : "Preparing your order"}
+              </p>
             </div>
-            <p className="font-semibold text-gray-900">
-              Assigning delivery partner shortly
-            </p>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
 
         {/* Tip Section */}
         <TipSection />

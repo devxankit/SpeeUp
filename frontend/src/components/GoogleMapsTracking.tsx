@@ -17,16 +17,20 @@ const getDeliveryIconUrl = () => {
 interface Location {
     lat: number
     lng: number
+    name?: string
 }
 
 interface GoogleMapsTrackingProps {
-    storeLocation: Location
+    storeLocation?: Location
+    sellerLocations?: Location[]
     customerLocation: Location
     deliveryLocation?: Location
     isTracking: boolean
     showRoute?: boolean // Whether to show actual route using Directions API
     routeOrigin?: Location // Origin for route (delivery partner location)
     routeDestination?: Location // Destination for route (seller shop or customer)
+    destinationName?: string // Name of the destination for the overlay
+    onRouteInfoUpdate?: (info: { distance: string; duration: string } | null) => void
 }
 
 const mapContainerStyle = {
@@ -36,12 +40,15 @@ const mapContainerStyle = {
 
 export default function GoogleMapsTracking({
     storeLocation,
+    sellerLocations = [],
     customerLocation,
     deliveryLocation,
     isTracking,
     showRoute = false,
     routeOrigin,
-    routeDestination
+    routeDestination,
+    destinationName,
+    onRouteInfoUpdate
 }: GoogleMapsTrackingProps) {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
     const mapRef = useRef<any>(null)
@@ -51,19 +58,29 @@ export default function GoogleMapsTracking({
     const userHasInteracted = useRef<boolean>(false)
     const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null)
 
+    // Sync routeInfo with parent
+    useEffect(() => {
+        if (onRouteInfoUpdate) {
+            onRouteInfoUpdate(routeInfo);
+        }
+    }, [routeInfo, onRouteInfoUpdate]);
+
     const { isLoaded, loadError } = useJsApiLoader({
         id: 'google-map-script',
         googleMapsApiKey: apiKey || ''
     })
 
+    // Combine storeLocation with sellerLocations
+    const allSellers = storeLocation ? [storeLocation, ...sellerLocations] : sellerLocations;
+
     // Center will be updated dynamically based on deliveryLocation
-    const center = deliveryLocation || {
-        lat: (storeLocation.lat + customerLocation.lat) / 2,
-        lng: (storeLocation.lng + customerLocation.lng) / 2
-    }
+    const center = deliveryLocation || (allSellers.length > 0 ? {
+        lat: (allSellers[0].lat + customerLocation.lat) / 2,
+        lng: (allSellers[0].lng + customerLocation.lng) / 2
+    } : customerLocation)
 
     const path = [
-        storeLocation,
+        ...allSellers,
         ...(deliveryLocation ? [deliveryLocation] : []),
         customerLocation
     ]
@@ -71,39 +88,48 @@ export default function GoogleMapsTracking({
     const onLoad = useCallback((map: any) => {
         mapRef.current = map
 
-        // Only fit bounds on initial load, not on subsequent updates
-        // This should only run once when map first loads
+        // Track user interaction with the map (pan, zoom, drag)
+        let isProgrammaticChange = false;
+
+        const trackInteraction = () => {
+            if (!isProgrammaticChange) {
+                userHasInteracted.current = true;
+            }
+        };
+
+        // Add event listeners to track user interaction
+        map.addListener('dragstart', trackInteraction);
+        map.addListener('zoom_changed', () => {
+            if (!isProgrammaticChange) {
+                setTimeout(() => {
+                    if (!isProgrammaticChange) {
+                        trackInteraction();
+                    }
+                }, 100);
+            }
+        });
+
+        // Store the flag setter for use in route calculation
+        map._setProgrammaticChange = (value: boolean) => {
+            isProgrammaticChange = value;
+        };
+
+        // Only fit bounds on initial load
         if (!hasInitialBoundsFitted.current && !userHasInteracted.current) {
             if (window.google && window.google.maps) {
                 const bounds = new window.google.maps.LatLngBounds()
-                bounds.extend(storeLocation)
+                if (storeLocation) bounds.extend(storeLocation)
                 bounds.extend(customerLocation)
                 if (deliveryLocation) bounds.extend(deliveryLocation)
+
+                map._setProgrammaticChange(true);
                 map.fitBounds(bounds)
+                setTimeout(() => map._setProgrammaticChange(false), 500);
+
                 hasInitialBoundsFitted.current = true
             }
         }
-
-        // Track user interaction with the map
-        const trackInteraction = () => {
-            userHasInteracted.current = true
-        }
-
-        // Add event listeners to track user interaction (pan, zoom, drag)
-        // Only add listeners once, not on every callback recreation
-        if (!map._interactionListenersAdded) {
-            map.addListener('dragstart', trackInteraction)
-            map.addListener('zoom_changed', () => {
-                // Use a small delay to distinguish user zoom from programmatic zoom
-                setTimeout(() => {
-                    if (!userHasInteracted.current) {
-                        trackInteraction()
-                    }
-                }, 100)
-            })
-            map._interactionListenersAdded = true
-        }
-    }, []) // Empty deps - this should only run once when map loads
+    }, [storeLocation, customerLocation, deliveryLocation])
 
     // Calculate and display route using Google Directions Service
     const calculateAndDisplayRoute = useCallback((origin: Location, destination: Location) => {
@@ -149,10 +175,6 @@ export default function GoogleMapsTracking({
             },
             (result: any, status: any) => {
                 if (status === 'OK' && result.routes && result.routes[0]) {
-                    // Always preserve viewport - we center on delivery boy separately
-                    directionsRendererRef.current.setOptions({ preserveViewport: true })
-                    directionsRendererRef.current.setDirections(result)
-
                     // Extract route information
                     const route = result.routes[0]
                     const leg = route.legs[0]
@@ -161,6 +183,27 @@ export default function GoogleMapsTracking({
                             distance: leg.distance?.text || '0 km',
                             duration: leg.duration?.text || '0 mins',
                         })
+                    }
+
+                    // Handle viewport fitting - match DeliveryOrderDetail logic
+                    if (!hasInitialBoundsFitted.current && !userHasInteracted.current) {
+                        if (mapRef.current && mapRef.current._setProgrammaticChange) {
+                            mapRef.current._setProgrammaticChange(true);
+                        }
+                        directionsRendererRef.current.setOptions({ preserveViewport: false });
+                        directionsRendererRef.current.setDirections(result);
+                        directionsRendererRef.current.setOptions({ preserveViewport: true });
+
+                        hasInitialBoundsFitted.current = true;
+
+                        setTimeout(() => {
+                            if (mapRef.current && mapRef.current._setProgrammaticChange) {
+                                mapRef.current._setProgrammaticChange(false);
+                            }
+                        }, 500);
+                    } else {
+                        directionsRendererRef.current.setOptions({ preserveViewport: true })
+                        directionsRendererRef.current.setDirections(result)
                     }
                 } else {
                     console.error('❌ Directions request failed:', status, { origin, destination })
@@ -247,7 +290,7 @@ export default function GoogleMapsTracking({
         if (mapRef.current && !hasInitialBoundsFitted.current && deliveryLocation && isLoaded && window.google?.maps) {
             // On initial load, fit bounds to show all important locations
             const bounds = new window.google.maps.LatLngBounds()
-            bounds.extend(storeLocation)
+            allSellers.forEach(seller => bounds.extend(seller))
             bounds.extend(customerLocation)
             bounds.extend(deliveryLocation)
             mapRef.current.fitBounds(bounds)
@@ -288,31 +331,56 @@ export default function GoogleMapsTracking({
                 zoom={13}
                 onLoad={onLoad}
                 options={{
-                    zoomControl: true,
+                    zoomControl: false,
                     streetViewControl: false,
                     mapTypeControl: false,
-                    fullscreenControl: true,
+                    fullscreenControl: false,
+                    disableDefaultUI: true,
+                    styles: [
+                        {
+                            featureType: "poi",
+                            elementType: "labels",
+                            stylers: [{ visibility: "off" }]
+                        }
+                    ]
                 }}
             >
-                {/* Store Marker */}
-                <Marker
-                    position={storeLocation}
-                    icon={{
-                        url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text x="8" y="32" font-size="32">🏪</text></svg>')}`,
-                        scaledSize: window.google?.maps?.Size ? new window.google.maps.Size(40, 40) : undefined
-                    } as any}
-                    title="Store Location"
-                />
-
                 {/* Customer Marker */}
                 <Marker
                     position={customerLocation}
-                    icon={{
+                    icon={showRoute && routeDestination?.lat === customerLocation.lat ? {
+                        path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
+                        scale: 10,
+                        fillColor: '#3b82f6',
+                        fillOpacity: 1,
+                        strokeWeight: 3,
+                        strokeColor: '#ffffff',
+                    } : {
                         url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text x="8" y="32" font-size="32">📍</text></svg>')}`,
                         scaledSize: window.google?.maps?.Size ? new window.google.maps.Size(40, 40) : undefined
                     } as any}
                     title="Delivery Address"
                 />
+
+                {/* Seller Markers */}
+                {allSellers.map((seller, index) => (
+                    <Marker
+                        key={`seller-${index}`}
+                        position={seller}
+                        icon={showRoute && routeDestination?.lat === seller.lat ? {
+                            path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
+                            scale: 10,
+                            fillColor: '#ef4444',
+                            fillOpacity: 1,
+                            strokeWeight: 3,
+                            strokeColor: '#ffffff',
+                        } : {
+                            url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text x="8" y="32" font-size="32">🏪</text></svg>')}`,
+                            scaledSize: window.google?.maps?.Size ? new window.google.maps.Size(40, 40) : undefined
+                        } as any}
+                        title={seller.name || "Seller Shop"}
+                    />
+                ))}
 
                 {/* Delivery Partner Marker (Animated) */}
                 {animatedDeliveryLocation && (
@@ -341,28 +409,43 @@ export default function GoogleMapsTracking({
 
             {/* Live Tracking Indicator */}
             {isTracking && (
-                <div className="absolute bottom-3 left-3 z-10 bg-white px-3 py-2 rounded-lg shadow-lg flex items-center gap-2">
+                <div className="absolute top-3 right-3 z-10 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md border border-neutral-100 flex items-center gap-2">
                     <motion.div
                         className="w-2 h-2 rounded-full bg-green-500"
                         animate={{ opacity: [1, 0.3, 1] }}
                         transition={{ duration: 2, repeat: Infinity }}
                     />
-                    <span className="text-sm font-medium text-gray-900">Live Tracking</span>
+                    <span className="text-[10px] font-bold text-gray-900 uppercase tracking-wider">Live</span>
                 </div>
             )}
 
-            {/* Route Info Display */}
+            {/* Destination Overlay - Matches Delivery Interface */}
+            {destinationName && (
+                <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl shadow-md border border-neutral-100 z-10">
+                    <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">Destination</p>
+                    <p className="text-xs font-bold text-neutral-800 truncate max-w-[200px]">{destinationName}</p>
+                </div>
+            )}
+
+            {/* Route Info Display - Matches Delivery Interface Styling */}
             {routeInfo && showRoute && (
-                <div className="absolute bottom-3 right-3 z-10 bg-white/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg border border-gray-200">
-                    <div className="flex items-center gap-3 text-xs">
-                        <div>
-                            <p className="text-gray-500 font-medium">Distance</p>
-                            <p className="text-gray-900 font-bold">{routeInfo.distance}</p>
+                <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm px-4 py-3 rounded-xl shadow-lg border border-neutral-100 z-10">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div>
+                                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">Distance</p>
+                                <p className="text-sm font-bold text-neutral-900">{routeInfo.distance}</p>
+                            </div>
+                            <div className="w-px h-8 bg-neutral-200"></div>
+                            <div>
+                                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">ETA</p>
+                                <p className="text-sm font-bold text-neutral-900">{routeInfo.duration}</p>
+                            </div>
                         </div>
-                        <div className="w-px h-6 bg-gray-200"></div>
-                        <div>
-                            <p className="text-gray-500 font-medium">ETA</p>
-                            <p className="text-gray-900 font-bold">{routeInfo.duration}</p>
+                        <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shadow-sm">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white rotate-45">
+                                <polygon points="3 11 22 2 13 21 11 13 3 11" />
+                            </svg>
                         </div>
                     </div>
                 </div>

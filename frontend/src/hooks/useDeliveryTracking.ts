@@ -88,6 +88,14 @@ export const useDeliveryTracking = (orderId: string | undefined) => {
             console.log('📡 Tracking started:', data)
         })
 
+        socket.on('tracking-error', (data: any) => {
+            console.error('❌ Tracking error:', data)
+            setTrackingData(prev => ({
+                ...prev,
+                error: data.message || 'Tracking error'
+            }))
+        })
+
         socket.on('delivery-boy-accepted', (data: any) => {
             console.log('✅ Delivery boy accepted order:', data)
             // Start tracking when delivery boy accepts
