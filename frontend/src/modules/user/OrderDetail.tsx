@@ -872,12 +872,22 @@ export default function OrderDetail() {
                   lat: order?.deliveryAddress?.latitude || order?.address?.latitude || 28.7041,
                   lng: order?.deliveryAddress?.longitude || order?.address?.longitude || 77.1025,
                 }
-              : sellerLocations.length > 0 && sellerLocations[0].latitude && sellerLocations[0].longitude
+              : sellerLocations.length > 0 && sellerLocations[sellerLocations.length - 1].latitude && sellerLocations[sellerLocations.length - 1].longitude
               ? {
-                  lat: sellerLocations[0].latitude,
-                  lng: sellerLocations[0].longitude,
+                  lat: sellerLocations[sellerLocations.length - 1].latitude,
+                  lng: sellerLocations[sellerLocations.length - 1].longitude,
                 }
               : undefined
+          }
+          routeWaypoints={
+            order?.status === 'Picked up' || order?.status === 'Out for Delivery'
+              ? []
+              : sellerLocations.length > 1
+              ? sellerLocations.slice(0, -1).map(s => ({
+                  lat: s.latitude,
+                  lng: s.longitude,
+                }))
+              : []
           }
           destinationName={
             order?.status === 'Picked up' || order?.status === 'Out for Delivery'

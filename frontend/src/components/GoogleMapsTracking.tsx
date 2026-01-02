@@ -29,6 +29,7 @@ interface GoogleMapsTrackingProps {
     showRoute?: boolean // Whether to show actual route using Directions API
     routeOrigin?: Location // Origin for route (delivery partner location)
     routeDestination?: Location // Destination for route (seller shop or customer)
+    routeWaypoints?: Location[] // Intermediate waypoints for the route
     destinationName?: string // Name of the destination for the overlay
     onRouteInfoUpdate?: (info: { distance: string; duration: string } | null) => void
 }
@@ -47,6 +48,7 @@ export default function GoogleMapsTracking({
     showRoute = false,
     routeOrigin,
     routeDestination,
+    routeWaypoints = [],
     destinationName,
     onRouteInfoUpdate
 }: GoogleMapsTrackingProps) {
@@ -57,6 +59,7 @@ export default function GoogleMapsTracking({
     const hasInitialBoundsFitted = useRef<boolean>(false)
     const userHasInteracted = useRef<boolean>(false)
     const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null)
+    const [routeError, setRouteError] = useState<string | null>(null)
 
     // Sync routeInfo with parent
     useEffect(() => {
@@ -132,7 +135,7 @@ export default function GoogleMapsTracking({
     }, [storeLocation, customerLocation, deliveryLocation])
 
     // Calculate and display route using Google Directions Service
-    const calculateAndDisplayRoute = useCallback((origin: Location, destination: Location) => {
+    const calculateAndDisplayRoute = useCallback((origin: Location, destination: Location, waypoints: Location[] = []) => {
         if (!isLoaded || !mapRef.current || !window.google?.maps) {
             console.log('⚠️ Cannot calculate route: map not loaded or not ready')
             return
@@ -156,9 +159,9 @@ export default function GoogleMapsTracking({
                 suppressMarkers: true, // We'll use custom markers
                 preserveViewport: true, // Preserve viewport - we'll center manually
                 polylineOptions: {
-                    strokeColor: '#2563eb',
-                    strokeWeight: 5,
-                    strokeOpacity: 0.8,
+                    strokeColor: '#3b82f6',
+                    strokeWeight: 6,
+                    strokeOpacity: 0.9,
                 },
             })
         } else {
@@ -166,15 +169,28 @@ export default function GoogleMapsTracking({
             directionsRendererRef.current.setOptions({ preserveViewport: true })
         }
 
+        // Prepare waypoints
+        const googleWaypoints = waypoints.map(wp => ({
+            location: new window.google.maps.LatLng(wp.lat, wp.lng),
+            stopover: true
+        }));
+
         // Calculate route
         directionsServiceRef.current.route(
             {
                 origin: origin,
                 destination: destination,
+                waypoints: googleWaypoints,
                 travelMode: window.google.maps.TravelMode.DRIVING,
+                drivingOptions: {
+                    departureTime: new Date(),
+                    trafficModel: 'bestguess'
+                },
+                optimizeWaypoints: true,
             },
             (result: any, status: any) => {
                 if (status === 'OK' && result.routes && result.routes[0]) {
+                    setRouteError(null)
                     // Extract route information
                     const route = result.routes[0]
                     const leg = route.legs[0]
@@ -208,6 +224,15 @@ export default function GoogleMapsTracking({
                 } else {
                     console.error('❌ Directions request failed:', status, { origin, destination })
                     setRouteInfo(null)
+
+                    // Fallback to straight line if route fails
+                    if (status === 'ZERO_RESULTS') {
+                        setRouteError('No road route found. Showing straight line.')
+                    } else if (status === 'OVER_QUERY_LIMIT') {
+                        setRouteError('Map service busy. Showing straight line.')
+                    } else {
+                        setRouteError('Navigation error. Showing straight line.')
+                    }
                 }
             }
         )
@@ -216,15 +241,15 @@ export default function GoogleMapsTracking({
     // Handle route calculation when routeOrigin and routeDestination are provided
     useEffect(() => {
         if (showRoute && routeOrigin && routeDestination && isLoaded && mapRef.current) {
-            // Recalculate route when origin or destination changes
-            calculateAndDisplayRoute(routeOrigin, routeDestination)
+            // Recalculate route when origin, destination or waypoints change
+            calculateAndDisplayRoute(routeOrigin, routeDestination, routeWaypoints)
         } else if (!showRoute && directionsRendererRef.current) {
             // Clear route if showRoute is false
             directionsRendererRef.current.setMap(null)
             directionsRendererRef.current = null
             setRouteInfo(null)
         }
-    }, [showRoute, routeOrigin, routeDestination, isLoaded, calculateAndDisplayRoute])
+    }, [showRoute, routeOrigin, routeDestination, routeWaypoints, isLoaded, calculateAndDisplayRoute])
 
     // Interpolation State
     const [animatedDeliveryLocation, setAnimatedDeliveryLocation] = useState<Location | undefined>(deliveryLocation);
@@ -394,11 +419,11 @@ export default function GoogleMapsTracking({
                         title="Delivery Partner"
                     />
                 )}
-                {!showRoute && (
+                {( !showRoute || routeError ) && (
                     <Polyline
                         path={path}
                         options={{
-                            strokeColor: '#16a34a',
+                            strokeColor: routeError ? '#ef4444' : '#16a34a',
                             strokeOpacity: 0.7,
                             strokeWeight: 4,
                             geodesic: true,
@@ -406,6 +431,13 @@ export default function GoogleMapsTracking({
                     />
                 )}
             </GoogleMap>
+
+            {/* Error Overlay */}
+            {routeError && (
+                <div className="absolute top-16 left-4 right-4 bg-red-50/95 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm border border-red-100 z-10 flex items-center gap-2">
+                    <span className="text-[10px] text-red-600 font-bold uppercase tracking-wider">{routeError}</span>
+                </div>
+            )}
 
             {/* Live Tracking Indicator */}
             {isTracking && (

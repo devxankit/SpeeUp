@@ -433,7 +433,11 @@ export default function DeliveryOrderDetail() {
                     }}
                     deliveryLocation={deliveryBoyLocation || undefined}
                     isTracking={!!deliveryBoyLocation}
-                    showRoute={!!routeInfo}
+                    showRoute={!!deliveryBoyLocation && (
+                        order.status === 'Picked up' ||
+                        order.status === 'Out for Delivery' ||
+                        (sellerLocations.length > 0 && order.status !== 'Delivered')
+                    )}
                     routeOrigin={deliveryBoyLocation || undefined}
                     routeDestination={
                         order.status === 'Picked up' || order.status === 'Out for Delivery'
@@ -442,8 +446,15 @@ export default function DeliveryOrderDetail() {
                                 lng: order.deliveryAddress?.longitude || order.address?.longitude || 0
                             }
                             : sellerLocations.length > 0
-                                ? { lat: sellerLocations[0].latitude, lng: sellerLocations[0].longitude }
+                                ? { lat: sellerLocations[sellerLocations.length - 1].latitude, lng: sellerLocations[sellerLocations.length - 1].longitude }
                                 : undefined
+                    }
+                    routeWaypoints={
+                        order.status === 'Picked up' || order.status === 'Out for Delivery'
+                            ? []
+                            : sellerLocations.length > 1
+                                ? sellerLocations.slice(0, -1).map(s => ({ lat: s.latitude, lng: s.longitude }))
+                                : []
                     }
                     destinationName={
                         order.status === 'Picked up' || order.status === 'Out for Delivery'
