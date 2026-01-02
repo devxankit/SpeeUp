@@ -43,6 +43,7 @@ export interface ProductListResponse {
 
 export interface ProductDetailResponse {
     success: boolean;
+    message?: string;
     data: Product & { similarProducts?: Product[] };
 }
 

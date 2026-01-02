@@ -1,6 +1,5 @@
 import { Server as SocketIOServer } from 'socket.io';
 import OrderItem from '../models/OrderItem';
-import { IOrder } from '../models/Order';
 import mongoose from 'mongoose';
 
 /**

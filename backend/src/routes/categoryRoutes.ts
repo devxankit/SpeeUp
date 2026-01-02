@@ -7,7 +7,6 @@ import {
   getAllSubcategories,
   getSubSubCategories,
 } from "../modules/seller/controllers/categoryController";
-import { authenticate } from "../middleware/auth";
 
 const router = Router();
 

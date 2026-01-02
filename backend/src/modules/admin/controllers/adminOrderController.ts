@@ -107,14 +107,6 @@ export const getOrderById = asyncHandler(
       });
     }
 
-    // Trigger notification if status is "Processed" (Confirmed) or if paymentStatus changed to "Paid"
-    if (status === "Processed" || order.paymentStatus === "Paid") {
-      const io: SocketIOServer = req.app.get("io");
-      if (io) {
-        notifySellersOfOrderUpdate(io, order, "STATUS_UPDATE");
-      }
-    }
-
     return res.status(200).json({
       success: true,
       message: "Order fetched successfully",
@@ -174,6 +166,14 @@ export const updateOrderStatus = asyncHandler(
         success: false,
         message: "Order not found",
       });
+    }
+
+    // Trigger notification if status is "Processed" (Confirmed) or if paymentStatus changed to "Paid"
+    if (status === "Processed" || order.paymentStatus === "Paid") {
+      const io: SocketIOServer = req.app.get("io");
+      if (io) {
+        notifySellersOfOrderUpdate(io, order, "STATUS_UPDATE");
+      }
     }
 
     return res.status(200).json({
