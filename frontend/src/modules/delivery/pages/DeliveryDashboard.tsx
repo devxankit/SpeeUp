@@ -5,9 +5,11 @@ import SummaryBar from '../components/SummaryBar';
 import DashboardCard from '../components/DashboardCard';
 import DeliveryBottomNav from '../components/DeliveryBottomNav';
 import { getDashboardStats } from '../../../services/api/delivery/deliveryService';
+import { useDeliveryStatus } from '../context/DeliveryStatusContext';
 
 export default function DeliveryDashboard() {
   const navigate = useNavigate();
+  const { isOnline, sellersInRangeCount, locationError } = useDeliveryStatus();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -150,6 +152,52 @@ export default function DeliveryDashboard() {
           rightValue={`₹ ${stats?.cashBalance?.toFixed(2) || '0.00'}`}
           accentColor="#FFC94A"
         />
+
+        {/* Real-time Seller Radius Indicator */}
+        <div
+          onClick={() => isOnline && navigate('/delivery/sellers-in-range')}
+          className={`p-4 rounded-xl border cursor-pointer transition-all active:scale-95 ${isOnline ? 'bg-teal-50 border-teal-100 hover:bg-teal-100' : 'bg-neutral-50 border-neutral-200'}`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-full ${isOnline ? 'bg-teal-100 text-teal-600' : 'bg-neutral-200 text-neutral-400'}`}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+              </div>
+              <div>
+                <h3 className={`text-sm font-semibold ${isOnline ? 'text-teal-900' : 'text-neutral-500'}`}>
+                  {isOnline ? 'Active Service Areas' : 'Offline'}
+                </h3>
+                <p className="text-xs text-neutral-500">
+                  {isOnline
+                    ? `You are currently in ${sellersInRangeCount} seller radius`
+                    : 'Go online to track service areas'}
+                </p>
+              </div>
+            </div>
+            {isOnline && (
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-teal-500"></span>
+                </span>
+                <span className="text-xl font-bold text-teal-600">{sellersInRangeCount}</span>
+              </div>
+            )}
+          </div>
+          {locationError && isOnline && (
+            <div className="mt-3 p-2 bg-red-50 border border-red-100 rounded text-xs text-red-600 flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              {locationError}
+            </div>
+          )}
+        </div>
 
         {/* Dashboard Cards Grid */}
         <div className="grid grid-cols-2 gap-4">

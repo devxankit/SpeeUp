@@ -106,6 +106,27 @@ export const verifyDeliveryOtp = async (id: string, otp: string) => {
     }
 };
 
+// --- Tracking ---
+export const updateGeneralLocation = async (latitude: number, longitude: number) => {
+    try {
+        const response = await api.post(`${BASE_URL}/location/general`, { latitude, longitude });
+        return response.data;
+    } catch (error) {
+        throw handleApiError(error);
+    }
+};
+
+export const getSellersInRadius = async (latitude: number, longitude: number) => {
+    try {
+        const response = await api.get(`${BASE_URL}/location/sellers-in-radius`, {
+            params: { latitude, longitude }
+        });
+        return response.data.data;
+    } catch (error) {
+        throw handleApiError(error);
+    }
+};
+
 export const updateDeliveryLocation = async (orderId: string, latitude: number, longitude: number) => {
     try {
         const response = await api.post('/delivery/location', { orderId, latitude, longitude });

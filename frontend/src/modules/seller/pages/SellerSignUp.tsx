@@ -4,7 +4,7 @@ import { register, sendOTP, verifyOTP } from '../../../services/api/auth/sellerA
 import OTPInput from '../../../components/OTPInput';
 import GoogleMapsAutocomplete from '../../../components/GoogleMapsAutocomplete';
 import { useAuth } from '../../../context/AuthContext';
-import { getCategories as getCustomerCategories } from '../../../services/api/customerProductService';
+import { getHeaderCategoriesPublic, HeaderCategory } from '../../../services/api/headerCategoryService';
 import { useEffect } from 'react';
 
 export default function SellerSignUp() {
@@ -35,14 +35,14 @@ export default function SellerSignUp() {
   const [showOTP, setShowOTP] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<HeaderCategory[]>([]);
 
   useEffect(() => {
     const fetchCats = async () => {
       try {
-        const res = await getCustomerCategories();
-        if (res.success && res.data) {
-          setCategories(res.data);
+        const res = await getHeaderCategoriesPublic();
+        if (Array.isArray(res)) {
+          setCategories(res.filter(cat => cat.status === 'Published'));
         }
       } catch (err) {
         console.error('Error fetching categories:', err);
@@ -58,6 +58,17 @@ export default function SellerSignUp() {
       setFormData(prev => ({
         ...prev,
         [name]: value.replace(/\D/g, '').slice(0, 10),
+      }));
+    } else if (name === 'serviceRadiusKm') {
+      // Allow only numbers and a single decimal point
+      const cleanedValue = value.replace(/[^0-9.]/g, '');
+      // Ensure only one decimal point
+      const parts = cleanedValue.split('.');
+      const finalValue = parts.length > 2 ? `${parts[0]}.${parts[1]}` : cleanedValue;
+
+      setFormData(prev => ({
+        ...prev,
+        [name]: finalValue,
       }));
     } else {
       setFormData(prev => ({
@@ -297,23 +308,21 @@ export default function SellerSignUp() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto p-2 border border-neutral-200 rounded-lg">
-                      {categories
-                        .filter((cat) => !cat.parent || cat.parent === null) // Only show parent categories
-                        .map((cat) => {
-                          const checked = formData.categories.includes(cat.name);
-                          return (
-                            <label key={cat._id} className="flex items-center gap-2 text-sm text-neutral-700">
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleCategory(cat.name)}
-                                disabled={loading}
-                                className="h-4 w-4 text-teal-600 border-neutral-300 rounded focus:ring-teal-500"
-                              />
-                              <span>{cat.name}</span>
-                            </label>
-                          );
-                        })}
+                      {categories.map((cat) => {
+                        const checked = formData.categories.includes(cat.name);
+                        return (
+                          <label key={cat._id} className="flex items-center gap-2 text-sm text-neutral-700">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleCategory(cat.name)}
+                              disabled={loading}
+                              className="h-4 w-4 text-teal-600 border-neutral-300 rounded focus:ring-teal-500"
+                            />
+                            <span>{cat.name}</span>
+                          </label>
+                        );
+                      })}
                     </div>
                   )}
                   {formData.categories.length === 0 && categories.length > 0 && (
@@ -353,24 +362,24 @@ export default function SellerSignUp() {
                     Delivery/Service Radius (KM) <span className="text-red-500">*</span>
                     <span className="text-xs font-normal text-neutral-500 ml-1">(Distance you can deliver)</span>
                   </label>
-                  <select
+                  <input
+                    type="number"
                     name="serviceRadiusKm"
                     value={formData.serviceRadiusKm}
                     onChange={handleInputChange}
+                    onKeyDown={(e) => {
+                      if (['e', 'E', '+', '-'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    placeholder="Enter service radius in KM (e.g. 10)"
                     required
+                    min="0.1"
+                    max="100"
+                    step="0.1"
                     className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
                     disabled={loading}
-                  >
-                    <option value="1">1 km</option>
-                    <option value="2">2 km</option>
-                    <option value="5">5 km</option>
-                    <option value="10">10 km</option>
-                    <option value="15">15 km</option>
-                    <option value="20">20 km</option>
-                    <option value="25">25 km</option>
-                    <option value="30">30 km</option>
-                    <option value="50">50 km</option>
-                  </select>
+                  />
                   <p className="mt-1 text-xs text-neutral-500">
                     Only customers within this radius can see and order your products
                   </p>

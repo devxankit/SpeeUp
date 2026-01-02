@@ -492,69 +492,101 @@ export default function DeliveryOrderDetail() {
 
     }, [deliveryBoyLocation, order?.status, sellerLocations, order?.deliveryAddress, order?.address, isMapLoaded, calculateAndDisplayRoute, clearRoute]);
 
-    // Update delivery boy location from geolocation updates
+    // Socket.io connection
+    const [socket, setSocket] = useState<any>(null);
+
+    // Initialize Socket
+    useEffect(() => {
+        // Connect to Socket.io
+        import('socket.io-client').then(({ io }) => {
+            const socketUrl = import('../../../services/api/config').then(module => {
+                const baseURL = module.getSocketBaseURL();
+                const token = module.getAuthToken();
+
+                const newSocket = io(baseURL, {
+                    auth: { token },
+                    transports: ['websocket', 'polling']
+                });
+
+                newSocket.on('connect', () => {
+                    console.log('✅ Delivery Socket Connected:', newSocket.id);
+                    // Join delivery room if we have ID (delivery boy ID is in token, but we might need to emit join event)
+                    // The backend automatically adds user to rooms based on token?
+                    // No, backend expects 'join-delivery-room' event or similar.
+                    // Let's check socketService.ts: socket.on('join-delivery-room')
+                    // We should emit it.
+                    // But wait, we don't have deliveryBoyId easily available here without decoding token or from user state?
+                    // socketService says: socket.on('join-delivery-room', (deliveryPartnerId))
+                    // Actually, for location updates, we just emit 'update-location' and backend gets ID from token.
+                    // So we don't strictly need to join a room to *send* data, only to *receive*.
+                    // But let's keep it simple.
+                });
+
+                setSocket(newSocket);
+            });
+        });
+
+        return () => {
+             if (socket) socket.disconnect();
+        }
+    }, []);
+
+    // Clean up socket when component unmounts - handled in useEffect return but socket ref might change
+    useEffect(() => {
+        return () => {
+            if (socket) {
+                socket.disconnect();
+            }
+        };
+    }, [socket]);
+
+
+    // Update delivery boy location from geolocation updates (Socket)
     useEffect(() => {
         if (!id || !order) return;
 
         const shouldTrack = order.status && order.status !== 'Delivered' && order.status !== 'Cancelled' && order.status !== 'Returned';
 
-        if (shouldTrack) {
+        if (shouldTrack && socket) {
             const updateLocation = async () => {
-                if (!navigator.geolocation) {
-                    return;
-                }
-
-                if (locationPermissionDeniedRef.current) {
-                    // Don't retry if permission was denied
-                    return;
-                }
+                if (!navigator.geolocation) return;
+                if (locationPermissionDeniedRef.current) return;
 
                 navigator.geolocation.getCurrentPosition(
-                    async (position) => {
+                    (position) => {
                         const newLocation = {
                             lat: position.coords.latitude,
                             lng: position.coords.longitude,
                         };
-                        // Update state for route recalculation
                         setDeliveryBoyLocation(newLocation);
-                        // Update backend
-                        try {
-                            await updateDeliveryLocation(id, position.coords.latitude, position.coords.longitude);
-                        } catch (err) {
-                            console.error('Failed to update location:', err);
-                        }
-                        locationPermissionDeniedRef.current = false; // Reset on success
+
+                        // Emit via Socket
+                        socket.emit('update-location', {
+                            orderId: id,
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                        });
+
+                        locationPermissionDeniedRef.current = false;
                     },
                     (error: GeolocationPositionError) => {
-                        // Handle different error types silently to avoid console spam
-                        switch (error.code) {
-                            case error.PERMISSION_DENIED:
-                                if (!locationPermissionDeniedRef.current) {
-                                    locationPermissionDeniedRef.current = true;
-                                    console.warn('Location permission denied. Location tracking disabled.');
-                                }
-                                break;
-                            case error.POSITION_UNAVAILABLE:
-                                // Silent - position might be temporarily unavailable
-                                break;
-                            case error.TIMEOUT:
-                                // Silent - timeout is expected sometimes
-                                break;
-                            default:
-                                // Only log unexpected errors
-                                console.warn('Location update error:', error.message);
-                                break;
+                        // ... error handling ...
+                         if (error.code === error.PERMISSION_DENIED) {
+                            if (!locationPermissionDeniedRef.current) {
+                                locationPermissionDeniedRef.current = true;
+                                console.warn('Location permission denied.');
+                            }
                         }
                     },
                     { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
                 );
             };
 
-            // Send initial location update
+            // Initial update
             updateLocation();
 
-            // Set up interval for continuous updates (every 10 seconds)
-            locationIntervalRef.current = setInterval(updateLocation, 10000);
+            // Interval (4 seconds)
+            locationIntervalRef.current = setInterval(updateLocation, 4000);
 
             return () => {
                 if (locationIntervalRef.current) {
@@ -568,7 +600,7 @@ export default function DeliveryOrderDetail() {
                 locationIntervalRef.current = null;
             }
         }
-    }, [id, order?.status]);
+    }, [id, order?.status, socket]);
 
 
     if (loading) {

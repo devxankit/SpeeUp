@@ -112,7 +112,12 @@ const ProductSchema = new Schema<IProduct>(
     category: {
       type: Schema.Types.ObjectId,
       ref: "Category",
-      required: [true, "Category is required"],
+      required: [
+        function (this: any) {
+          return !this.isShopByStoreOnly;
+        },
+        "Category is required",
+      ],
     },
     subcategory: {
       type: Schema.Types.ObjectId,

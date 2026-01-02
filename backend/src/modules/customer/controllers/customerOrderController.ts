@@ -3,8 +3,10 @@ import Order from "../../../models/Order";
 import Product from "../../../models/Product";
 import OrderItem from "../../../models/OrderItem";
 import Customer from "../../../models/Customer";
+import Seller from "../../../models/Seller";
 import mongoose from "mongoose";
 import { notifyDeliveryBoysOfNewOrder } from "../../../services/orderNotificationService";
+import { notifySellersOfOrderUpdate } from "../../../services/sellerNotificationService";
 import { Server as SocketIOServer } from "socket.io";
 
 // Create a new order
@@ -153,16 +155,26 @@ export const createOrder = async (req: Request, res: Response) => {
                 throw new Error("Invalid item structure: product.id is missing");
             }
 
-            const product = session
-                ? await Product.findById(item.product.id).session(session)
-                : await Product.findById(item.product.id);
-
-            if (!product) {
-                throw new Error(`Product not found: ${item.product.name || 'ID: ' + item.product.id}`);
+            const qty = Number(item.quantity) || 0;
+            if (qty <= 0) {
+                throw new Error("Invalid item quantity");
             }
 
-            if (product.stock < item.quantity) {
-                throw new Error(`Insufficient stock for ${product.productName}. Available: ${product.stock}, Requested: ${item.quantity}`);
+            // Atomically check stock and decrement to prevent race conditions
+            const product = session
+                ? await Product.findOneAndUpdate(
+                    { _id: item.product.id, stock: { $gte: qty } },
+                    { $inc: { stock: -qty } },
+                    { session, new: false }
+                  )
+                : await Product.findOneAndUpdate(
+                    { _id: item.product.id, stock: { $gte: qty } },
+                    { $inc: { stock: -qty } },
+                    { new: false }
+                  );
+
+            if (!product) {
+                throw new Error(`Insufficient stock or product not found: ${item.product.name || 'ID: ' + item.product.id}`);
             }
 
             // Track seller IDs to validate location
@@ -171,7 +183,7 @@ export const createOrder = async (req: Request, res: Response) => {
             }
 
             const itemPrice = product.price;
-            const itemTotal = itemPrice * item.quantity;
+            const itemTotal = itemPrice * qty;
             calculatedSubtotal += itemTotal;
 
             // Create OrderItem
@@ -183,7 +195,7 @@ export const createOrder = async (req: Request, res: Response) => {
                 productImage: product.mainImage,
                 sku: product.sku,
                 unitPrice: itemPrice,
-                quantity: item.quantity,
+                quantity: qty,
                 total: itemTotal,
                 variation: item.variant,
                 status: 'Pending'
@@ -196,19 +208,9 @@ export const createOrder = async (req: Request, res: Response) => {
                 await newOrderItem.save();
             }
             orderItemIds.push(newOrderItem._id as mongoose.Types.ObjectId);
-
-            // Decrease stock
-            const updateOptions = session ? { session } : {};
-            await Product.findByIdAndUpdate(
-                item.product.id,
-                { $inc: { stock: -item.quantity } },
-                updateOptions
-            );
         }
 
-        // LOCATION VALIDATION DISABLED: Allow customers to order from any seller regardless of location
         // Validate all sellers can deliver to user's location
-        /*
         if (sellerIds.size > 0) {
             const uniqueSellerIds = Array.from(sellerIds).map(id => new mongoose.Types.ObjectId(id));
 
@@ -255,7 +257,6 @@ export const createOrder = async (req: Request, res: Response) => {
                 }
             }
         }
-        */
 
         // Apply fees
         const platformFee = Number(fees?.platformFee) || 0;
@@ -290,6 +291,7 @@ export const createOrder = async (req: Request, res: Response) => {
                 const savedOrder = await Order.findById(newOrder._id).lean();
                 if (savedOrder) {
                     await notifyDeliveryBoysOfNewOrder(io, savedOrder);
+                    await notifySellersOfOrderUpdate(io, savedOrder, 'NEW_ORDER');
                 }
             }
         } catch (notificationError) {

@@ -48,6 +48,9 @@ async function findSellersWithinRange(
       serviceRadiusKm: { $exists: true, $gt: 0 },
     }).select("_id location serviceRadiusKm");
 
+    // Log for debugging
+    console.log(`Found ${sellers.length} approved sellers with location in products.`);
+
     // Filter sellers where user is within their service radius
     const nearbySellerIds: mongoose.Types.ObjectId[] = [];
 
@@ -90,8 +93,8 @@ export const getProducts = async (req: Request, res: Response) => {
       maxPrice,
       brand,
       minDiscount,
-      // latitude, // User location latitude
-      // longitude, // User location longitude
+      latitude, // User location latitude
+      longitude, // User location longitude
     } = req.query;
 
     const query: any = {
@@ -105,12 +108,9 @@ export const getProducts = async (req: Request, res: Response) => {
     };
 
     // Location-based filtering: Only show products from sellers within user's range
-    // TEMPORARILY DISABLED: Allow all products regardless of location
-    // const userLat = latitude ? parseFloat(latitude as string) : null;
-    // const userLng = longitude ? parseFloat(longitude as string) : null;
+    const userLat = latitude ? parseFloat(latitude as string) : null;
+    const userLng = longitude ? parseFloat(longitude as string) : null;
 
-    /*
-    // Original Location Logic - Commented out
     if (userLat && userLng && !isNaN(userLat) && !isNaN(userLng)) {
       // Find sellers within user's location range
       const nearbySellerIds = await findSellersWithinRange(userLat, userLng);
@@ -134,21 +134,10 @@ export const getProducts = async (req: Request, res: Response) => {
       // Filter products by sellers within range
       query.seller = { $in: nearbySellerIds };
     } else {
-      // If no location provided, return empty (require location for marketplace)
-      return res.status(200).json({
-        success: true,
-        data: [],
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total: 0,
-          pages: 0,
-        },
-        message:
-          "Location is required to view products. Please enable location access.",
-      });
+      // If no location provided, allow viewing products without filtering
+      // This ensures products are visible initially, but we show a hint
+      // query.seller is NOT set, so all active products are returned
     }
-    */
 
     // Helper to resolve category/subcategory ID from slug or ID
     const resolveId = async (

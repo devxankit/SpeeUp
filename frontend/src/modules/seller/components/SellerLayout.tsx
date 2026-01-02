@@ -1,6 +1,8 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useCallback } from 'react';
 import SellerHeader from './SellerHeader';
 import SellerSidebar from './SellerSidebar';
+import { useSellerSocket, SellerNotification } from '../hooks/useSellerSocket';
+import SellerNotificationAlert from './SellerNotificationAlert';
 
 interface SellerLayoutProps {
   children: ReactNode;
@@ -8,13 +10,30 @@ interface SellerLayoutProps {
 
 export default function SellerLayout({ children }: SellerLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeNotification, setActiveNotification] = useState<SellerNotification | null>(null);
+
+  const handleNotificationReceived = useCallback((notification: SellerNotification) => {
+    setActiveNotification(notification);
+  }, []);
+
+  useSellerSocket(handleNotificationReceived);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  const closeNotification = () => {
+    setActiveNotification(null);
+  };
+
   return (
     <div className="flex min-h-screen bg-neutral-50">
+      {/* Real-time Notification Alert */}
+      <SellerNotificationAlert
+        notification={activeNotification}
+        onClose={closeNotification}
+      />
+
       {/* Overlay for mobile */}
       {isSidebarOpen && (
         <div

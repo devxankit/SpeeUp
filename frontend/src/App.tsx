@@ -5,6 +5,10 @@ import { OrdersProvider } from "./context/OrdersContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { LocationProvider } from "./context/LocationContext";
+import { LoadingProvider } from "./context/LoadingContext";
+import { AxiosLoadingInterceptor } from "./context/AxiosLoadingInterceptor";
+import IconLoader from "./components/loaders/IconLoader";
+import RouteLoaderTrigger from "./components/loaders/RouteLoaderTrigger";
 import AppLayout from "./components/AppLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
@@ -59,6 +63,7 @@ const DeliveryEarnings = lazy(() => import("./modules/delivery/pages/DeliveryEar
 const DeliverySettings = lazy(() => import("./modules/delivery/pages/DeliverySettings"));
 const DeliveryHelp = lazy(() => import("./modules/delivery/pages/DeliveryHelp"));
 const DeliveryAbout = lazy(() => import("./modules/delivery/pages/DeliveryAbout"));
+const DeliverySellersInRange = lazy(() => import("./modules/delivery/pages/DeliverySellersInRange"));
 const DeliveryLogin = lazy(() => import("./modules/delivery/pages/DeliveryLogin"));
 const DeliverySignUp = lazy(() => import("./modules/delivery/pages/DeliverySignUp"));
 
@@ -129,23 +134,27 @@ const AdminProfile = lazy(() => import("./modules/admin/pages/AdminProfile"));
 function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <ThemeProvider>
-          <LocationProvider>
-            <CartProvider>
-              <OrdersProvider>
-                <BrowserRouter
-                  future={{
-                    v7_startTransition: true,
-                    v7_relativeSplatPath: true,
-                  }}>
-                  <Routes>
+      <LoadingProvider>
+        <AxiosLoadingInterceptor>
+          <IconLoader />
+          <AuthProvider>
+            <ThemeProvider>
+              <LocationProvider>
+                <CartProvider>
+                  <OrdersProvider>
+                    <BrowserRouter
+                      future={{
+                        v7_startTransition: true,
+                        v7_relativeSplatPath: true,
+                      }}>
+                      <RouteLoaderTrigger />
+                      <Routes>
                   {/* Public Routes */}
                   <Route
                     path="/login"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={null}>
+                        <Suspense fallback={<IconLoader forceShow />}>
                           <Login />
                         </Suspense>
                       </PublicRoute>
@@ -155,7 +164,7 @@ function App() {
                     path="/signup"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={null}>
+                        <Suspense fallback={<IconLoader forceShow />}>
                           <SignUp />
                         </Suspense>
                       </PublicRoute>
@@ -165,7 +174,7 @@ function App() {
                     path="/seller/login"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={null}>
+                        <Suspense fallback={<IconLoader forceShow />}>
                           <SellerLogin />
                         </Suspense>
                       </PublicRoute>
@@ -175,7 +184,7 @@ function App() {
                     path="/seller/signup"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={null}>
+                        <Suspense fallback={<IconLoader forceShow />}>
                           <SellerSignUp />
                         </Suspense>
                       </PublicRoute>
@@ -185,7 +194,7 @@ function App() {
                     path="/delivery/login"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={null}>
+                        <Suspense fallback={<IconLoader forceShow />}>
                           <DeliveryLogin />
                         </Suspense>
                       </PublicRoute>
@@ -195,7 +204,7 @@ function App() {
                     path="/delivery/signup"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={null}>
+                        <Suspense fallback={<IconLoader forceShow />}>
                           <DeliverySignUp />
                         </Suspense>
                       </PublicRoute>
@@ -205,7 +214,7 @@ function App() {
                     path="/admin/login"
                     element={
                       <PublicRoute>
-                        <Suspense fallback={null}>
+                        <Suspense fallback={<IconLoader forceShow />}>
                           <AdminLogin />
                         </Suspense>
                       </PublicRoute>
@@ -217,7 +226,7 @@ function App() {
                     path="/delivery/*"
                     element={
                       <ProtectedRoute requiredUserType="Delivery" redirectTo="/delivery/login">
-                        <Suspense fallback={null}>
+                        <Suspense fallback={<IconLoader forceShow />}>
                           <DeliveryLayout>
                             <Routes>
                               <Route path="" element={<DeliveryDashboard />} />
@@ -233,6 +242,7 @@ function App() {
                               <Route path="settings" element={<DeliverySettings />} />
                               <Route path="help" element={<DeliveryHelp />} />
                               <Route path="about" element={<DeliveryAbout />} />
+                              <Route path="sellers-in-range" element={<DeliverySellersInRange />} />
                             </Routes>
                           </DeliveryLayout>
                         </Suspense>
@@ -245,7 +255,7 @@ function App() {
                     path="/seller/*"
                     element={
                       <ProtectedRoute requiredUserType="Seller" redirectTo="/seller/login">
-                        <Suspense fallback={null}>
+                        <Suspense fallback={<IconLoader forceShow />}>
                           <SellerLayout>
                             <Routes>
                               <Route path="" element={<SellerDashboard />} />
@@ -275,7 +285,7 @@ function App() {
                     path="/admin/*"
                     element={
                       <ProtectedRoute requiredUserType="Admin" redirectTo="/admin/login">
-                        <Suspense fallback={null}>
+                        <Suspense fallback={<IconLoader forceShow />}>
                           <AdminLayout>
                             <Routes>
                             <Route path="" element={<AdminDashboard />} />
@@ -333,7 +343,7 @@ function App() {
                     path="/*"
                     element={
                       <AppLayout>
-                        <Suspense fallback={null}>
+                        <Suspense fallback={<IconLoader forceShow />}>
                           <Routes>
                             <Route path="/" element={<Home />} />
                             <Route path="/user/home" element={<Home />} />
@@ -370,11 +380,13 @@ function App() {
                   />
                   </Routes>
                 </BrowserRouter>
-              </OrdersProvider>
-            </CartProvider>
-          </LocationProvider>
-        </ThemeProvider>
-      </AuthProvider>
+                  </OrdersProvider>
+                </CartProvider>
+              </LocationProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </AxiosLoadingInterceptor>
+      </LoadingProvider>
     </ErrorBoundary>
   );
 }

@@ -20,6 +20,7 @@ export default function Home() {
 
   // State for dynamic data
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [homeData, setHomeData] = useState<any>({
     bestsellers: [],
     categories: [],
@@ -36,6 +37,7 @@ export default function Home() {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
         const response = await getHomeContent();
         if (response.success && response.data) {
           setHomeData(response.data);
@@ -43,9 +45,12 @@ export default function Home() {
           if (response.data.bestsellers) {
             setProducts(response.data.bestsellers);
           }
+        } else {
+          setError("Failed to load content. Please try again.");
         }
       } catch (error) {
         console.error("Failed to fetch home content", error);
+        setError("Network error. Please check your connection.");
       } finally {
         setLoading(false);
       }
@@ -107,15 +112,31 @@ export default function Home() {
   );
 
   if (loading && !products.length) {
+    return null; // Let the global IconLoader handle the initial loading state
+  }
+
+  if (error && !loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center">
+        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-4">
+          <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Oops! Something went wrong</h3>
+        <p className="text-gray-600 mb-6 max-w-xs">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-2 bg-green-600 text-white rounded-full font-medium hover:bg-green-700 transition-colors"
+        >
+          Try Refreshing
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="pb-4 md:pb-8">
+    <div className="bg-white min-h-screen pb-20 md:pb-0" ref={contentRef}>
       {/* Hero Header with Gradient and Tabs */}
       <HomeHero activeTab={activeTab} onTabChange={setActiveTab} />
 

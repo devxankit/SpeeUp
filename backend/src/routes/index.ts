@@ -81,10 +81,11 @@ router.post(
     next();
   },
   authenticate,
+  requireUserType("Customer"),
   createOrder
 );
-router.get("/customer/orders", authenticate, getMyOrders);
-router.get("/customer/orders/:id", authenticate, getOrderById);
+router.get("/customer/orders", authenticate, requireUserType("Customer"), getMyOrders);
+router.get("/customer/orders/:id", authenticate, requireUserType("Customer"), getOrderById);
 
 router.use("/customer/coupons", customerCouponRoutes);
 router.use("/customer/addresses", customerAddressRoutes);

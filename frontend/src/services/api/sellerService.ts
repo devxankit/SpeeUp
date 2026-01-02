@@ -27,6 +27,7 @@ export interface Seller {
   searchLocation?: string;
   latitude?: string;
   longitude?: string;
+  serviceRadiusKm?: number;
   accountName?: string;
   bankName?: string;
   branch?: string;
@@ -59,6 +60,7 @@ export interface CreateSellerData {
   searchLocation?: string;
   latitude?: string;
   longitude?: string;
+  serviceRadiusKm?: number;
   panCard?: string;
   taxName?: string;
   taxNumber?: string;

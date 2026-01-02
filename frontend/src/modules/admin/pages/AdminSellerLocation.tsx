@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAllSellers, Seller as SellerType } from '../../../services/api/sellerService';
+import SellerServiceMap from '../components/SellerServiceMap';
 
 interface Seller {
   _id: string;
@@ -12,6 +13,7 @@ interface Seller {
   searchLocation?: string;
   latitude?: string;
   longitude?: string;
+  serviceRadiusKm?: number;
   status: 'Approved' | 'Pending' | 'Rejected';
 }
 
@@ -38,6 +40,7 @@ export default function AdminSellerLocation() {
             searchLocation: seller.searchLocation,
             latitude: seller.latitude,
             longitude: seller.longitude,
+            serviceRadiusKm: seller.serviceRadiusKm,
             status: seller.status || 'Pending',
           }));
 
@@ -73,30 +76,6 @@ export default function AdminSellerLocation() {
 
     return matchesSearch && matchesStatus;
   });
-
-  // Generate Google Maps embed URL with markers
-  const generateMapUrl = () => {
-    // If a seller is selected, center on that seller with a marker
-    if (selectedSeller && selectedSeller.latitude && selectedSeller.longitude) {
-      const lat = selectedSeller.latitude;
-      const lng = selectedSeller.longitude;
-      // Use Google Maps embed with a place marker
-      return `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${lat},${lng}&zoom=16`;
-    }
-
-    if (filteredSellers.length === 0) {
-      // Default map location (India center)
-      return 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3771.5!2d77.2090!3d28.6139!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390cfd5b347eb62d%3A0x52c2b7494e204dce!2sNew%20Delhi%2C%20Delhi!5e0!3m2!1sen!2sin!4v1234567890123!5m2!1sen!2sin';
-    }
-
-    // If we have sellers with locations, create a map with markers
-    // Use Google Maps Static API or embed with markers
-    // For now, use embed with center point
-    const centerLat = filteredSellers[0]?.latitude || '28.6139';
-    const centerLng = filteredSellers[0]?.longitude || '77.2090';
-
-    return `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3771.5!2d${centerLng}!3d${centerLat}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjgrMzYnNDkuMSJOIDc3KzEyJzMyLjQiRQ!5e0!3m2!1sen!2sin!4v1234567890123!5m2!1sen!2sin`;
-  };
 
   const handleSellerClick = (seller: Seller) => {
     setSelectedSeller(seller);
@@ -171,17 +150,23 @@ export default function AdminSellerLocation() {
             <h2 className="text-white text-lg font-semibold">Seller Locations Map</h2>
           </div>
           <div className="h-96 sm:h-[600px] w-full">
-            <iframe
-              src={generateMapUrl()}
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              allowFullScreen
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              title="Seller Locations Map"
-              className="w-full h-full"
-            ></iframe>
+            {selectedSeller && selectedSeller.latitude && selectedSeller.longitude ? (
+              <SellerServiceMap
+                latitude={parseFloat(selectedSeller.latitude)}
+                longitude={parseFloat(selectedSeller.longitude)}
+                radiusKm={selectedSeller.serviceRadiusKm || 10}
+                storeName={selectedSeller.storeName}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full bg-neutral-50 text-neutral-500">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mb-4 text-neutral-300">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <p className="text-lg font-medium">Select a seller to view service area</p>
+                <p className="text-sm mt-1">Only sellers with coordinates are listed</p>
+              </div>
+            )}
           </div>
           {selectedSeller && (
             <div className="p-4 sm:p-6 border-t border-neutral-200 bg-teal-50">

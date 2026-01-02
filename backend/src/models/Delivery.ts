@@ -30,6 +30,10 @@ export interface IDelivery extends Document {
   bonusType?: string; // 'Fixed' | 'Salaried' | 'Commission Based'
   status: 'Active' | 'Inactive';
   isOnline: boolean; // Availability status
+  location?: {
+    type: "Point";
+    coordinates: [number, number]; // [longitude, latitude]
+  };
   balance: number;
   cashCollected: number;
   settings: {
@@ -151,6 +155,17 @@ const DeliverySchema = new Schema<IDelivery>(
     isOnline: {
       type: Boolean,
       default: false,
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        index: "2dsphere",
+      },
     },
     balance: {
       type: Number,

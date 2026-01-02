@@ -397,13 +397,17 @@ export default function SellerAddProduct() {
       setUploadError("Please enter a product name.");
       return;
     }
-    if (!formData.headerCategory) {
-      setUploadError("Please select a header category.");
-      return;
-    }
-    if (!formData.category) {
-      setUploadError("Please select a category.");
-      return;
+
+    // Only validate categories if NOT shop by store only
+    if (formData.isShopByStoreOnly !== "Yes") {
+      if (!formData.headerCategory) {
+        setUploadError("Please select a header category.");
+        return;
+      }
+      if (!formData.category) {
+        setUploadError("Please select a category.");
+        return;
+      }
     }
 
     setUploading(true);

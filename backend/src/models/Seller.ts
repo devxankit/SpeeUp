@@ -193,7 +193,6 @@ const SellerSchema = new Schema<ISeller>(
       },
       coordinates: {
         type: [Number], // [longitude, latitude]
-        index: '2dsphere',
       },
     },
     // Service radius in kilometers (default: 10km if not specified)

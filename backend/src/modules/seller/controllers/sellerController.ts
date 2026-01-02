@@ -106,6 +106,46 @@ export const updateSeller = asyncHandler(
     // Remove password from update data if present
     delete updateData.password;
 
+    // Handle location update (convert lat/lng to GeoJSON)
+    if (updateData.latitude && updateData.longitude) {
+      const latitude = parseFloat(updateData.latitude);
+      const longitude = parseFloat(updateData.longitude);
+
+      if (!isNaN(latitude) && !isNaN(longitude)) {
+        updateData.location = {
+          type: "Point",
+          coordinates: [longitude, latitude], // MongoDB GeoJSON: [longitude, latitude]
+        };
+      }
+    }
+
+    // Handle serviceRadiusKm update
+    if (
+      updateData.serviceRadiusKm !== undefined &&
+      updateData.serviceRadiusKm !== null &&
+      updateData.serviceRadiusKm !== ""
+    ) {
+      const radius =
+        typeof updateData.serviceRadiusKm === "string"
+          ? parseFloat(updateData.serviceRadiusKm)
+          : Number(updateData.serviceRadiusKm);
+
+      if (!isNaN(radius) && radius >= 0.1 && radius <= 100) {
+        updateData.serviceRadiusKm = radius; // Ensure it's saved as a number
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "Service radius must be between 0.1 and 100 kilometers",
+        });
+      }
+    } else if (
+      updateData.serviceRadiusKm === "" ||
+      updateData.serviceRadiusKm === null
+    ) {
+      // If empty string or null is sent, remove it from updates to keep existing value
+      delete updateData.serviceRadiusKm;
+    }
+
     const seller = await Seller.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,

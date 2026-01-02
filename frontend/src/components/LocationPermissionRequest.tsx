@@ -15,14 +15,16 @@ export default function LocationPermissionRequest({
   title = 'Location Access Required',
   description = 'We need your location to show you products available near you and enable delivery services.',
 }: LocationPermissionRequestProps) {
-  const { requestLocation, updateLocation, isLocationEnabled, isLocationLoading, locationError } = useLocation();
+  const { requestLocation, updateLocation, isLocationEnabled, isLocationLoading, locationError, locationPermissionStatus, clearLocation } = useLocation();
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualAddress, setManualAddress] = useState('');
   const [manualLat, setManualLat] = useState(0);
   const [manualLng, setManualLng] = useState(0);
 
+  // Auto-grant if already enabled or session permission exists
   useEffect(() => {
     if (isLocationEnabled) {
+      console.log('[LocationPermissionRequest] Location is enabled, notifying parent.');
       onLocationGranted();
     }
   }, [isLocationEnabled, onLocationGranted]);
@@ -154,6 +156,20 @@ export default function LocationPermissionRequest({
                 >
                   Skip for now
                 </button>
+              )}
+
+              {locationPermissionStatus === 'session_granted' && !isLocationEnabled && (
+                <div className="mt-4 pt-4 border-t border-neutral-100">
+                  <p className="text-xs text-neutral-500 mb-2">
+                    Permission granted for this session, but location data is missing.
+                  </p>
+                  <button
+                    onClick={clearLocation}
+                    className="text-xs text-orange-600 font-medium hover:underline"
+                  >
+                    Reset and ask again
+                  </button>
+                </div>
               )}
             </div>
           </>

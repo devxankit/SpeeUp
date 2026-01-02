@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getAllSellers, updateSellerStatus, deleteSeller, Seller as SellerType } from '../../../services/api/sellerService';
+import { getAllSellers, updateSellerStatus, deleteSeller, Seller as SellerType, updateSeller } from '../../../services/api/sellerService';
+import SellerServiceMap from '../components/SellerServiceMap';
 
 interface Seller {
     _id: string;
@@ -27,6 +28,7 @@ interface Seller {
     searchLocation?: string;
     latitude?: string;
     longitude?: string;
+    serviceRadiusKm?: number;
     accountName?: string;
     bankName?: string;
     branch?: string;
@@ -66,6 +68,7 @@ const mapSellerToFrontend = (seller: SellerType): Seller => {
         searchLocation: seller.searchLocation,
         latitude: seller.latitude,
         longitude: seller.longitude,
+        serviceRadiusKm: seller.serviceRadiusKm,
         accountName: seller.accountName,
         bankName: seller.bankName,
         branch: seller.branch,
@@ -103,6 +106,8 @@ export default function AdminManageSellerList() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSeller, setEditingSeller] = useState<Seller | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isUpdatingRadius, setIsUpdatingRadius] = useState(false);
+    const [newRadius, setNewRadius] = useState<number>(10);
 
     // Fetch sellers from backend
     useEffect(() => {
@@ -235,7 +240,30 @@ export default function AdminManageSellerList() {
         const seller = sellers.find(s => s._id === sellerId);
         if (seller) {
             setEditingSeller(seller);
+            setNewRadius(seller.serviceRadiusKm || 10);
             setIsEditModalOpen(true);
+        }
+    };
+
+    const handleUpdateRadius = async () => {
+        if (!editingSeller) return;
+
+        try {
+            setIsUpdatingRadius(true);
+            const response = await updateSeller(editingSeller._id, { serviceRadiusKm: newRadius });
+            if (response.success) {
+                setEditingSeller({ ...editingSeller, serviceRadiusKm: newRadius });
+                // Also update the seller in the main list
+                setSellers(sellers.map(s => s._id === editingSeller._id ? { ...s, serviceRadiusKm: newRadius } : s));
+                setSuccessMessage('Service radius updated successfully');
+                setTimeout(() => setSuccessMessage(''), 3000);
+            }
+        } catch (error) {
+            console.error('Error updating radius:', error);
+            setError('Failed to update service radius');
+            setTimeout(() => setError(''), 3000);
+        } finally {
+            setIsUpdatingRadius(false);
         }
     };
 
@@ -855,6 +883,54 @@ export default function AdminManageSellerList() {
                                             </div>
                                         )}
                                     </div>
+                                </div>
+
+                                {/* Service Area Map */}
+                                <div className="bg-neutral-50 rounded-lg p-4">
+                                    <h4 className="text-sm font-semibold text-neutral-700 mb-3">Service Area Visualization</h4>
+                                    {editingSeller.latitude && editingSeller.longitude ? (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                                <div>
+                                                    <label className="text-xs text-neutral-500 mb-1 block">Service Radius (km)</label>
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="number"
+                                                            min="0.1"
+                                                            max="100"
+                                                            step="0.1"
+                                                            value={newRadius}
+                                                            onChange={(e) => setNewRadius(parseFloat(e.target.value))}
+                                                            className="w-full px-3 py-2 border border-neutral-300 rounded text-sm focus:ring-teal-500 focus:border-teal-500"
+                                                        />
+                                                        <button
+                                                            onClick={handleUpdateRadius}
+                                                            disabled={isUpdatingRadius || newRadius === editingSeller.serviceRadiusKm}
+                                                            className="px-4 py-2 bg-teal-600 text-white rounded text-sm font-medium hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                                                        >
+                                                            {isUpdatingRadius ? 'Updating...' : 'Update Radius'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="h-[300px] w-full">
+                                                <SellerServiceMap
+                                                    latitude={parseFloat(editingSeller.latitude)}
+                                                    longitude={parseFloat(editingSeller.longitude)}
+                                                    radiusKm={newRadius}
+                                                    storeName={editingSeller.storeName}
+                                                />
+                                            </div>
+                                            <p className="text-xs text-neutral-500 italic">
+                                                * Adjust the radius above to see the service area change dynamically.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="p-8 text-center border-2 border-dashed border-neutral-200 rounded-lg">
+                                            <p className="text-sm text-neutral-500">No coordinates available for this seller.</p>
+                                            <p className="text-xs text-neutral-400 mt-1">Please update the seller's latitude and longitude to see the service map.</p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Tax Information */}

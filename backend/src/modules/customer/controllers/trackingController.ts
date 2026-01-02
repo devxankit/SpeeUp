@@ -4,6 +4,7 @@ import DeliveryTracking from "../../../models/DeliveryTracking";
 import Order from "../../../models/Order";
 import OrderItem from "../../../models/OrderItem";
 import Seller from "../../../models/Seller";
+import Delivery from "../../../models/Delivery";
 
 /**
  * Get tracking information for an order
@@ -161,6 +162,14 @@ export const updateDeliveryLocation = asyncHandler(
 
     await tracking.save();
 
+    // Also update the delivery partner's general location
+    await Delivery.findByIdAndUpdate(deliveryBoyId, {
+      location: {
+        type: "Point",
+        coordinates: [longitude, latitude],
+      },
+    });
+
     // Emit update via Socket.io (will be handled in socket service)
     const io = (req.app as any).get("io");
     if (io) {
@@ -180,6 +189,49 @@ export const updateDeliveryLocation = asyncHandler(
         distance,
         eta,
         status: tracking.status,
+      },
+    });
+  }
+);
+
+/**
+ * Update general delivery partner location (when not on a specific order)
+ * POST /api/v1/delivery/location/general
+ */
+export const updateGeneralLocation = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { latitude, longitude } = req.body;
+    const deliveryBoyId = req.user?.userId;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        message: "Latitude and longitude are required",
+      });
+    }
+
+    const deliveryBoy = await Delivery.findById(deliveryBoyId);
+
+    if (!deliveryBoy) {
+      return res.status(404).json({
+        success: false,
+        message: "Delivery partner not found",
+      });
+    }
+
+    // Update delivery partner's current location
+    deliveryBoy.location = {
+      type: "Point",
+      coordinates: [longitude, latitude],
+    };
+
+    await deliveryBoy.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "General location updated successfully",
+      data: {
+        location: deliveryBoy.location,
       },
     });
   }
@@ -251,6 +303,78 @@ export const getSellerLocationsForOrder = asyncHandler(
     return res.status(200).json({
       success: true,
       data: sellerLocations,
+    });
+  }
+);
+
+/**
+ * Get count of sellers whose service radius includes the delivery boy's location
+ * GET /api/v1/delivery/location/sellers-in-radius
+ */
+export const getSellersInRadius = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { latitude, longitude } = req.query;
+
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        message: "Latitude and longitude are required",
+      });
+    }
+
+    const lat = parseFloat(latitude as string);
+    const lng = parseFloat(longitude as string);
+
+    if (isNaN(lat) || isNaN(lng)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid latitude or longitude",
+      });
+    }
+
+    // Use aggregation to find sellers whose radius covers the current point
+    // 1. Get all sellers with locations
+    // 2. Filter by distance <= serviceRadiusKm
+    const sellersInRange = await Seller.aggregate([
+      {
+        $geoNear: {
+          near: { type: "Point", coordinates: [lng, lat] },
+          distanceField: "distanceFromDeliveryBoy", // in meters
+          spherical: true,
+          key: "location",
+          // We can't filter by a field's value in $geoNear directly for maxDistance
+          // so we'll filter in the next stage
+        },
+      },
+      {
+        $addFields: {
+          // serviceRadiusKm is in kilometers, distanceFromDeliveryBoy is in meters
+          radiusInMeters: { $multiply: ["$serviceRadiusKm", 1000] },
+        },
+      },
+      {
+        $match: {
+          $expr: {
+            $lte: ["$distanceFromDeliveryBoy", "$radiusInMeters"],
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          storeName: 1,
+          serviceRadiusKm: 1,
+          distanceFromDeliveryBoy: 1,
+        },
+      },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        count: sellersInRange.length,
+        sellers: sellersInRange,
+      },
     });
   }
 );

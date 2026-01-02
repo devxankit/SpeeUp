@@ -183,16 +183,64 @@ export default function GoogleMapsTracking({
         }
     }, [showRoute, routeOrigin, routeDestination, isLoaded, calculateAndDisplayRoute])
 
-    // Center map on delivery boy location whenever it updates
+    // Interpolation State
+    const [animatedDeliveryLocation, setAnimatedDeliveryLocation] = useState<Location | undefined>(deliveryLocation);
+    const animationRef = useRef<number>();
+    const lastDeliveryLocationRef = useRef<Location | undefined>(deliveryLocation);
+
+    // Animation Logic
     useEffect(() => {
-        if (mapRef.current && deliveryLocation && isLoaded && window.google?.maps) {
-            // Center map on delivery boy's location with smooth pan
-            mapRef.current.panTo({
-                lat: deliveryLocation.lat,
-                lng: deliveryLocation.lng
-            })
+        if (!deliveryLocation) return;
+
+        // If no previous location, snap to current (initial load)
+        if (!lastDeliveryLocationRef.current) {
+            setAnimatedDeliveryLocation(deliveryLocation);
+            lastDeliveryLocationRef.current = deliveryLocation;
+            return;
         }
-    }, [deliveryLocation, isLoaded])
+
+        // If location hasn't changed (deep check), do nothing
+        if (deliveryLocation.lat === lastDeliveryLocationRef.current.lat &&
+            deliveryLocation.lng === lastDeliveryLocationRef.current.lng) {
+            return;
+        }
+
+        const startLocation = animatedDeliveryLocation || lastDeliveryLocationRef.current;
+        const targetLocation = deliveryLocation;
+        const startTime = performance.now();
+        const duration = 3800; // Slightly less than 4s interval to ensure completion
+
+        const animate = (currentTime: number) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Ease out slightly for more natural movement (optional, linear is fine for tracking)
+            // const ease = 1 - Math.pow(1 - progress, 3);
+            const ease = progress; // Linear for constant speed prediction
+
+            const lat = startLocation.lat + (targetLocation.lat - startLocation.lat) * ease;
+            const lng = startLocation.lng + (targetLocation.lng - startLocation.lng) * ease;
+
+            setAnimatedDeliveryLocation({ lat, lng });
+
+            if (progress < 1) {
+                animationRef.current = requestAnimationFrame(animate);
+            } else {
+                lastDeliveryLocationRef.current = targetLocation;
+            }
+        };
+
+        cancelAnimationFrame(animationRef.current!);
+        animationRef.current = requestAnimationFrame(animate);
+
+        // Update ref for next comparison
+        lastDeliveryLocationRef.current = deliveryLocation;
+
+        return () => {
+            if (animationRef.current) cancelAnimationFrame(animationRef.current);
+        };
+    }, [deliveryLocation]);
+
 
     // Handle initial bounds fitting when map first loads
     useEffect(() => {
@@ -266,10 +314,10 @@ export default function GoogleMapsTracking({
                     title="Delivery Address"
                 />
 
-                {/* Delivery Partner Marker */}
-                {deliveryLocation && (
+                {/* Delivery Partner Marker (Animated) */}
+                {animatedDeliveryLocation && (
                     <Marker
-                        position={deliveryLocation}
+                        position={animatedDeliveryLocation}
                         icon={{
                             url: getDeliveryIconUrl(),
                             scaledSize: window.google?.maps?.Size ? new window.google.maps.Size(60, 60) : undefined,
@@ -278,8 +326,6 @@ export default function GoogleMapsTracking({
                         title="Delivery Partner"
                     />
                 )}
-
-                {/* Route using Directions API (rendered programmatically) or simple polyline */}
                 {!showRoute && (
                     <Polyline
                         path={path}

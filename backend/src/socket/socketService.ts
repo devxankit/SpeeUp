@@ -2,6 +2,39 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Server as HttpServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { handleOrderAcceptance, handleOrderRejection } from '../services/orderNotificationService';
+import Order from '../models/Order';
+import DeliveryTracking from '../models/DeliveryTracking';
+
+// In-memory cache for order destinations (lat, lng) to avoid DB reads on every update
+// Key: orderId, Value: { latitude, longitude }
+const orderDestinationsCache = new Map<string, { latitude: number; longitude: number }>();
+
+// Throttler for DB updates
+// Key: orderId, Value: last timestamp
+const locationUpdateThrottler = new Map<string, number>();
+
+// Haversine formula to calculate distance
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+        Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+        Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distance in meters
+};
+
+// Calculate ETA (assuming 30 km/h)
+const calculateETA = (distanceInMeters: number): number => {
+    const averageSpeedKmh = 30;
+    const averageSpeedMs = (averageSpeedKmh * 1000) / 60; // meters per minute
+    return Math.ceil(distanceInMeters / averageSpeedMs);
+};
 
 export const initializeSocket = (httpServer: HttpServer) => {
     const io = new SocketIOServer(httpServer, {
@@ -128,6 +161,19 @@ export const initializeSocket = (httpServer: HttpServer) => {
             socket.join(`delivery-${deliveryPartnerId}`);
         });
 
+        // Seller joins their notification room
+        socket.on('join-seller-room', (sellerId: string) => {
+            const normalizedSellerId = String(sellerId).trim();
+            console.log(`🏪 Seller ${normalizedSellerId} joined notifications room`);
+            socket.join(`seller-${normalizedSellerId}`);
+
+            socket.emit('joined-seller-room', {
+                success: true,
+                message: 'Successfully joined seller notifications room',
+                sellerId: normalizedSellerId
+            });
+        });
+
         // Delivery boy joins notification room
         socket.on('join-delivery-notifications', (deliveryBoyId: string) => {
             // Normalize deliveryBoyId to string to ensure consistent room naming
@@ -159,6 +205,103 @@ export const initializeSocket = (httpServer: HttpServer) => {
             console.log(`❌ Delivery boy ${data.deliveryBoyId} rejecting order ${data.orderId}`);
             const result = await handleOrderRejection(io, data.orderId, data.deliveryBoyId);
             socket.emit('reject-order-response', result);
+        });
+
+        // Handle delivery location update (optimized)
+        socket.on('update-location', async (data: { orderId: string; latitude: number; longitude: number }) => {
+            const { orderId, latitude, longitude } = data;
+            const deliveryBoyId = (socket as any).user?.userId;
+
+            if (!deliveryBoyId || !orderId || !latitude || !longitude) return;
+
+            try {
+                // 1. Get Destination (from cache or DB)
+                let destination = orderDestinationsCache.get(orderId);
+
+                if (!destination) {
+                    const order = await Order.findById(orderId).select('deliveryAddress status');
+                    if (order && order.deliveryAddress) {
+                        destination = {
+                            latitude: order.deliveryAddress.latitude || 0,
+                            longitude: order.deliveryAddress.longitude || 0
+                        };
+                        orderDestinationsCache.set(orderId, destination);
+
+                        // Clear cache after 2 hours (cleanup)
+                        setTimeout(() => orderDestinationsCache.delete(orderId), 2 * 60 * 60 * 1000);
+                    }
+                }
+
+                // 2. Calculate Distance & ETA
+                let distance = 0;
+                let eta = 0;
+                if (destination) {
+                    distance = calculateDistance(latitude, longitude, destination.latitude, destination.longitude);
+                    eta = calculateETA(distance);
+                }
+
+                // 3. Determine Status (Simplified)
+                let status = 'in_transit';
+                if (distance < 100) status = 'nearby';
+                // Note: We don't change to 'picked_up'/'delivered' here as those are state transitions, not just location updates
+
+                // 4. Broadcast Immediately (Fast Path)
+                const locationUpdatePayload = {
+                    orderId,
+                    location: { latitude, longitude, timestamp: new Date() },
+                    eta,
+                    distance,
+                    status
+                };
+
+                io.to(`order-${orderId}`).emit('location-update', locationUpdatePayload);
+
+                // 5. Throttled DB Update (Slow Path)
+                const lastUpdate = locationUpdateThrottler.get(orderId) || 0;
+                const now = Date.now();
+
+                if (now - lastUpdate > 30000) { // 30 seconds throttle
+                    locationUpdateThrottler.set(orderId, now);
+
+                    // Async DB update (don't await to block socket?)
+                    // Better to await to catch errors, but keep it fast.
+                    // We run it effectively "in background" relative to other operations if we didn't await,
+                    // but inside async function it's fine.
+
+                    try {
+                        let tracking = await DeliveryTracking.findOne({ order: orderId });
+
+                        if (!tracking) {
+                            tracking = new DeliveryTracking({
+                                order: orderId,
+                                deliveryBoy: deliveryBoyId,
+                                latitude,
+                                longitude,
+                                currentLocation: { latitude, longitude, timestamp: new Date() },
+                                route: [{ lat: latitude, lng: longitude }],
+                                status: status as any
+                            });
+                        } else {
+                            tracking.currentLocation = { latitude, longitude, timestamp: new Date() };
+                            tracking.latitude = latitude;
+                            tracking.longitude = longitude;
+                            tracking.route.push({ lat: latitude, lng: longitude });
+                            if (tracking.route.length > 50) tracking.route = tracking.route.slice(-50);
+                            tracking.distance = distance;
+                            tracking.eta = eta;
+                            // Only update status if it's a spatial status (nearby/in_transit), don't override Delivered/Picked Up
+                            if (tracking.status !== 'delivered' && tracking.status !== 'picked_up' && tracking.status !== 'idle') {
+                                 tracking.status = status as any;
+                            }
+                        }
+                        await tracking.save();
+                    } catch (dbError) {
+                         console.error('Error syncing location to DB:', dbError);
+                    }
+                }
+            } catch (err) {
+                console.error('Error in socket location update:', err);
+            }
         });
 
         // Handle disconnection

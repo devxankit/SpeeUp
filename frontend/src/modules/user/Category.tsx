@@ -25,11 +25,13 @@ export default function CategoryPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryLoading, setCategoryLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch Category Details
   useEffect(() => {
     const fetchCategoryDetails = async () => {
       setCategoryLoading(true);
+      setError(null);
       try {
         const response = await getCategoryById(id!);
         if (response.success && response.data) {
@@ -60,9 +62,12 @@ export default function CategoryPage() {
               currentSubcategory._id || currentSubcategory.id
             );
           }
+        } else {
+          setError("Category not found or failed to load details.");
         }
       } catch (error) {
         console.error("Error fetching category details:", error);
+        setError("Failed to load category information.");
       } finally {
         setCategoryLoading(false);
       }
@@ -77,6 +82,7 @@ export default function CategoryPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
+      setError(null);
       try {
         // If the ID in the URL is actually for a subcategory, we should use the parent category ID
         // which we fetch in the other useEffect and store in 'category'.
@@ -98,15 +104,16 @@ export default function CategoryPage() {
           // Ensure products have default tags/name array for filtering logic if missing
           const safeProducts = response.data.map((p: any) => ({
             ...p,
-            id: p._id || p.id,
-            tags: p.tags || [],
-            name: p.productName || p.name,
-            imageUrl: p.mainImage || p.imageUrl,
+            tags: Array.isArray(p.tags) ? p.tags : [],
+            nameParts: p.name ? p.name.toLowerCase().split(" ") : [],
           }));
           setProducts(safeProducts);
+        } else {
+          setError("Failed to fetch products for this category.");
         }
       } catch (error) {
-        console.error("Error fetching category products:", error);
+        console.error("Error fetching products:", error);
+        setError("Network error while loading products.");
       } finally {
         setLoading(false);
       }
@@ -120,20 +127,31 @@ export default function CategoryPage() {
   // Client-side filtering removed in favor of backend subcategory filtering
   const categoryProducts = products;
 
-  // Show loading state while fetching category details
-  if (categoryLoading) {
+  if ((categoryLoading || loading) && !products.length && !category) {
+    return null; // Let global IconLoader handle it
+  }
+
+  if (error && !products.length && !category) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-neutral-600">Loading category...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center bg-white">
+        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-4">
+          <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
         </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Oops! Something went wrong</h3>
+        <p className="text-gray-600 mb-6 max-w-xs">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-2 bg-green-600 text-white rounded-full font-medium hover:bg-green-700 transition-colors"
+        >
+          Try Refreshing
+        </button>
       </div>
     );
   }
 
-  // Only show "not found" if loading is complete and category is still null
-  if (!category) {
+  if (!category && !categoryLoading) {
     return (
       <div className="px-4 md:px-6 lg:px-8 py-6 md:py-8">
         <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 mb-4">

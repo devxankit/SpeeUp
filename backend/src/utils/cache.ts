@@ -74,6 +74,17 @@ class Cache {
       keys: Array.from(this.cache.keys()),
     };
   }
+
+  /**
+   * Invalidate cache entries by key pattern
+   */
+  invalidatePattern(pattern: RegExp): void {
+    for (const key of this.cache.keys()) {
+      if (pattern.test(key)) {
+        this.cache.delete(key);
+      }
+    }
+  }
 }
 
 // Singleton instance
@@ -83,4 +94,3 @@ export const cache = new Cache();
 setInterval(() => {
   cache.cleanExpired();
 }, 5 * 60 * 1000);
-

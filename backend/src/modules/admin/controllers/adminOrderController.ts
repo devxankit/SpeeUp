@@ -5,6 +5,8 @@ import OrderItem from "../../../models/OrderItem";
 import Delivery from "../../../models/Delivery";
 import DeliveryAssignment from "../../../models/DeliveryAssignment";
 import Return from "../../../models/Return";
+import { notifySellersOfOrderUpdate } from "../../../services/sellerNotificationService";
+import { Server as SocketIOServer } from "socket.io";
 
 /**
  * Get all orders with filters
@@ -103,6 +105,14 @@ export const getOrderById = asyncHandler(
         success: false,
         message: "Order not found",
       });
+    }
+
+    // Trigger notification if status is "Processed" (Confirmed) or if paymentStatus changed to "Paid"
+    if (status === "Processed" || order.paymentStatus === "Paid") {
+      const io: SocketIOServer = req.app.get("io");
+      if (io) {
+        notifySellersOfOrderUpdate(io, order, "STATUS_UPDATE");
+      }
     }
 
     return res.status(200).json({
@@ -381,7 +391,7 @@ export const getReturnRequests = asyncHandler(
     // Transform logic to match frontend expectations if necessary
     // AdminReturnRequest.tsx expects: _id, orderItemId, userName, productName, variant, price, quantity, total, status, requestedAt
     // It seems flattened. Let's send structured data and let frontend handle it, or flatten it here.
-    // The frontend uses "request.orderItemId", "request.userName", "request.productName" etc. 
+    // The frontend uses "request.orderItemId", "request.userName", "request.productName" etc.
     // This implies a flattened structure.
 
     const transformedRequests = requests.map((req: any) => ({

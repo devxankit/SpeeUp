@@ -62,28 +62,67 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   const [isLocationEnabled, setIsLocationEnabled] = useState(false);
   const [isLocationLoading, setIsLocationLoading] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationPermissionStatus, setLocationPermissionStatus] = useState<'granted' | 'denied' | 'prompt' | 'session_granted'>('prompt');
 
+  // Constants for storage
+  const SESSION_PERMISSION_KEY = 'location_permission_granted_session';
+  const LOCATION_STORAGE_KEY = 'userLocation';
 
   // Refs for request cancellation and preventing race conditions
   const abortControllerRef = useRef<AbortController | null>(null);
   const isRequestingRef = useRef(false);
 
-  // Initialize location state - DO NOT auto-load from localStorage
-  // Location must be explicitly requested by user on every app open
+  // Initialize location state and check session permission
   useEffect(() => {
-    // Reset location state on app load to force modal
-    setLocation(null);
-    setIsLocationEnabled(false);
-    setIsLocationLoading(false);
+    const checkInitialPermission = async () => {
+      console.log('[LocationContext] Checking initial permission status...');
 
-    // Clear any previous location flags to ensure modal shows
-    // We use sessionStorage to track if user has confirmed in THIS session only
-    // This ensures modal shows on every app open (new session)
+      try {
+        // 1. Check sessionStorage for session-level permission
+        const sessionGranted = sessionStorage.getItem(SESSION_PERMISSION_KEY);
+
+        if (sessionGranted === 'true') {
+          console.log('[LocationContext] Permission already granted in this session.');
+
+          // 2. Check for cached location in localStorage
+          const cachedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+          if (cachedLocation) {
+            try {
+              const parsedLocation = JSON.parse(cachedLocation);
+              console.log('[LocationContext] Using cached location from this session:', parsedLocation.address);
+              setLocation(parsedLocation);
+              setIsLocationEnabled(true);
+              setLocationPermissionStatus('session_granted');
+            } catch (e) {
+              console.error('[LocationContext] Failed to parse cached location:', e);
+            }
+          } else {
+            // Permission granted but no location? Prompt to refresh it
+            console.log('[LocationContext] Session permission exists but no cached location.');
+            setLocationPermissionStatus('session_granted');
+          }
+        } else {
+          console.log('[LocationContext] No session-level permission found. User will be prompted.');
+          setLocation(null);
+          setIsLocationEnabled(false);
+          setLocationPermissionStatus('prompt');
+        }
+      } catch (error) {
+        console.error('[LocationContext] Error checking session storage:', error);
+        // Fallback to prompt if storage is unavailable
+        setLocationPermissionStatus('prompt');
+      } finally {
+        setIsLocationLoading(false);
+      }
+    };
+
+    checkInitialPermission();
   }, []);
 
   // Request user's current location - OPTIMIZED for speed and accuracy
   const requestLocation = useCallback(async (): Promise<void> => {
     if (!navigator.geolocation) {
+      console.error('[LocationContext] Geolocation is not supported');
       setLocationError('Geolocation is not supported by your browser');
       setIsLocationLoading(false);
       return;
@@ -107,16 +146,29 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     setLocationError(null);
     abortControllerRef.current = new AbortController();
 
+    console.log('[LocationContext] Requesting geolocation from browser...');
+
     return new Promise((resolve, reject) => {
       // Optimized geolocation options - force fresh, high-accuracy location
       const geoOptions = {
-        enableHighAccuracy: true, // Use GPS if available for better accuracy (forces GPS, not network location)
-        timeout: 30000, // 30 seconds timeout - gives enough time for GPS to acquire signal
-        maximumAge: 0, // Don't use cached position - always get fresh location (0 = no cache)
+        enableHighAccuracy: true,
+        timeout: 30000,
+        maximumAge: 0,
       };
 
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          console.log('[LocationContext] Geolocation granted by browser.');
+
+          // 1. Mark permission as granted in this session
+          try {
+            sessionStorage.setItem(SESSION_PERMISSION_KEY, 'true');
+            setLocationPermissionStatus('session_granted');
+            console.log('[LocationContext] Permission status stored in sessionStorage.');
+          } catch (e) {
+            console.warn('[LocationContext] Failed to save to sessionStorage:', e);
+          }
+
           // Check if request was cancelled
           if (abortControllerRef.current?.signal.aborted) {
             isRequestingRef.current = false;
@@ -125,6 +177,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
           try {
             const { latitude, longitude, accuracy } = position.coords;
+            console.log(`[LocationContext] Received coords: ${latitude}, ${longitude} (Accuracy: ${accuracy}m)`);
 
             // Validate coordinates
             if (!latitude || !longitude || isNaN(latitude) || isNaN(longitude)) {
@@ -246,9 +299,12 @@ export function LocationProvider({ children }: { children: ReactNode }) {
           }
 
           let errorMessage = 'Failed to get your location';
+          console.error(`[LocationContext] Geolocation error (${error.code}): ${error.message}`);
+
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
+              errorMessage = 'Location permission was denied. Please enable it in your browser settings to use this feature.';
+              setLocationPermissionStatus('denied');
               break;
             case error.POSITION_UNAVAILABLE:
               errorMessage = 'Location information unavailable. Please check your device location settings.';
@@ -267,7 +323,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         geoOptions
       );
     });
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, SESSION_PERMISSION_KEY, LOCATION_STORAGE_KEY]);
 
   // Helper function to save location to backend (non-blocking)
   const saveLocationToBackend = async (locationData: Location): Promise<void> => {
@@ -472,6 +528,8 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
   // Update location manually - OPTIMIZED for instant UI update
   const updateLocation = useCallback(async (newLocation: Location): Promise<void> => {
+    console.log('[LocationContext] Updating location manually:', newLocation.address);
+
     // Validate location data
     if (!newLocation.latitude || !newLocation.longitude ||
       isNaN(newLocation.latitude) || isNaN(newLocation.longitude)) {
@@ -479,10 +537,19 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       throw new Error('Invalid location coordinates');
     }
 
+    // 1. Mark permission as granted in this session (manual selection counts as consent)
+    try {
+      sessionStorage.setItem(SESSION_PERMISSION_KEY, 'true');
+      setLocationPermissionStatus('session_granted');
+    } catch (e) {
+      console.warn('[LocationContext] Failed to save to sessionStorage:', e);
+    }
+
     // Update UI immediately (instant feedback)
     setLocation(newLocation);
     setIsLocationEnabled(true);
-    localStorage.setItem('userLocation', JSON.stringify(newLocation));
+    setLocationError(null);
+    localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(newLocation));
 
     // Cache geocoding result if we have full address
     if (newLocation.address && newLocation.latitude && newLocation.longitude) {
@@ -498,19 +565,17 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       });
     }
 
-    // Save to backend in background (non-blocking - only for customers)
-
     // Save to backend in background (non-blocking)
     if (isAuthenticated && user && user.userType === 'Customer') {
       saveLocationToBackend(newLocation).catch(err => {
-        console.error('Failed to save location to backend:', err);
-        // Don't fail - location is already saved locally
+        console.error('[LocationContext] Background location save failed:', err);
       });
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, SESSION_PERMISSION_KEY, LOCATION_STORAGE_KEY]);
 
   // Clear location
   const clearLocation = useCallback(() => {
+    console.log('[LocationContext] Clearing location and session permission.');
     // Cancel any ongoing requests
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -519,9 +584,10 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
     setLocation(null);
     setIsLocationEnabled(false);
-    localStorage.removeItem('userLocation');
-    // Modal will automatically show again on next check since isLocationEnabled is false
-  }, []);
+    setLocationPermissionStatus('prompt');
+    localStorage.removeItem(LOCATION_STORAGE_KEY);
+    sessionStorage.removeItem(SESSION_PERMISSION_KEY);
+  }, [SESSION_PERMISSION_KEY, LOCATION_STORAGE_KEY]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -540,6 +606,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         isLocationEnabled,
         isLocationLoading,
         locationError,
+        locationPermissionStatus,
         requestLocation,
         updateLocation,
         clearLocation,

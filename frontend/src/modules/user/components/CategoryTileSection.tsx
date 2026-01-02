@@ -82,7 +82,7 @@ export default function CategoryTileSection({
   };
 
   const gridCols = getGridCols();
-  const gapClass = columns >= 6 ? "gap-1 md:gap-2" : "gap-2 md:gap-3";
+  const gapClass = columns >= 6 ? "gap-1.5 md:gap-2.5" : "gap-2.5 md:gap-4";
 
   return (
     <div className="mb-6 md:mb-8 mt-0 overflow-visible">
@@ -90,7 +90,7 @@ export default function CategoryTileSection({
         {title}
       </h2>
       <div className="px-4 md:px-6 lg:px-8 overflow-visible">
-        <div className={`grid ${gridCols} ${gapClass} overflow-visible`}>
+        <div className={`grid ${gridCols} ${gapClass} overflow-visible auto-rows-fr`}>
           {tiles.map((tile) => {
             const images =
               tile.productImages || (tile.image ? [tile.image] : []);
@@ -140,7 +140,7 @@ export default function CategoryTileSection({
                       handleTileClick(tile);
                     }
                   }}
-                  className={`block bg-white rounded-xl shadow-sm border border-neutral-200 hover:shadow-md transition-shadow ${showProductCount ? "px-2.5" : "px-1.5"
+                  className={`block bg-white rounded-xl shadow-sm border border-neutral-200 hover:shadow-md transition-shadow h-full ${showProductCount ? "px-2.5" : "px-1.5"
                     }`}>
                   {/* Image - Single image for non-bestsellers, 2x2 grid for bestsellers */}
                   <div

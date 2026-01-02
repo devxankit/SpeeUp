@@ -40,18 +40,7 @@ export default function DeliverySignUp() {
   const [sessionId, setSessionId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const cities = [
-    "Select City",
-    "Mumbai",
-    "Delhi",
-    "Bangalore",
-    "Hyderabad",
-    "Chennai",
-    "Kolkata",
-    "Pune",
-    "Indore",
-  ];
+  const [isCityLoading, setIsCityLoading] = useState(false);
 
   const bonusTypes = [
     "Select Bonus Type",
@@ -76,6 +65,45 @@ export default function DeliverySignUp() {
         [name]: value,
       }));
     }
+  };
+
+  const fetchCityFromLocation = () => {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setIsCityLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const response = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`
+          );
+          const data = await response.json();
+          if (data.status === "OK") {
+            const addressComponents = data.results[0].address_components;
+            const cityComponent = addressComponents.find((c: any) =>
+              c.types.includes("locality") || c.types.includes("administrative_area_level_2")
+            );
+            if (cityComponent) {
+              setFormData((prev) => ({ ...prev, city: cityComponent.long_name }));
+            }
+          } else {
+            setError("Could not fetch city from your location");
+          }
+        } catch (err) {
+          setError("Failed to fetch city details");
+        } finally {
+          setIsCityLoading(false);
+        }
+      },
+      (err) => {
+        setError("Location access denied. Please type your city manually.");
+        setIsCityLoading(false);
+      }
+    );
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -386,21 +414,34 @@ export default function DeliverySignUp() {
                   <label className="block text-sm font-medium text-neutral-700 mb-2">
                     City <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
-                    disabled={loading}>
-                    {cities.map((city) => (
-                      <option
-                        key={city}
-                        value={city === "Select City" ? "" : city}>
-                        {city}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      placeholder="Enter your city"
+                      required
+                      className="w-full px-3 py-2.5 text-sm border border-neutral-300 rounded-lg focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                      disabled={loading || isCityLoading}
+                    />
+                    <button
+                      type="button"
+                      onClick={fetchCityFromLocation}
+                      disabled={isCityLoading || loading}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-teal-600 hover:bg-teal-50 rounded-md transition-colors disabled:text-neutral-400"
+                      title="Fetch current location"
+                    >
+                      {isCityLoading ? (
+                        <div className="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                          <circle cx="12" cy="10" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div>

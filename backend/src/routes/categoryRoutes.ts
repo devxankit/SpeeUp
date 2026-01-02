@@ -11,8 +11,8 @@ import { authenticate } from "../middleware/auth";
 
 const router = Router();
 
-// All routes require authentication
-router.use(authenticate);
+// Category routes - Public for retrieval
+// Admin/Seller specific management routes are in their respective route files
 
 // Get all categories (parent categories only by default)
 router.get("/", getCategories);

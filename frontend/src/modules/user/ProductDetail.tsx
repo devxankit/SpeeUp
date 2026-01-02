@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 // import { categories } from '../../data/categories'; // REMOVED
 import { useCart } from '../../context/CartContext';
 import { useLocation } from '../../hooks/useLocation';
+import { useLoading } from '../../context/LoadingContext';
 import Button from '../../components/ui/button';
 import Badge from '../../components/ui/badge';
 import { getProductById } from '../../services/api/customerProductService';
@@ -20,6 +21,7 @@ export default function ProductDetail() {
   const routerLocation = useRouterLocation();
   const { cart, addToCart, updateQuantity } = useCart();
   const { location } = useLocation();
+  const { startLoading, stopLoading } = useLoading();
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const [isProductDetailsExpanded, setIsProductDetailsExpanded] =
     useState(false);
@@ -29,6 +31,7 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<any>(null);
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isAvailableAtLocation, setIsAvailableAtLocation] =
     useState<boolean>(true);
 
@@ -44,6 +47,8 @@ export default function ProductDetail() {
     const fetchProduct = async () => {
       if (!id) return;
       setLoading(true);
+      setError(null);
+      startLoading();
       try {
         // Check if navigation came from store page
         const fromStore = (routerLocation.state as any)?.fromStore === true;
@@ -93,12 +98,15 @@ export default function ProductDetail() {
           fetchReviews(id);
         } else {
           setProduct(null);
+          setError(response.message || "Product not found");
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch product", error);
         setProduct(null);
+        setError(error.message || "Something went wrong while fetching product details");
       } finally {
         setLoading(false);
+        stopLoading();
       }
     };
 
@@ -195,10 +203,26 @@ export default function ProductDetail() {
     : null;
   const inCartQty = cartItem?.quantity || 0;
 
-  if (loading) {
+  if (loading && !product) {
+    return null; // Let the global IconLoader handle this
+  }
+
+  if (error && !product) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-4 text-center bg-white">
+        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-4">
+          <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Oops! Something went wrong</h3>
+        <p className="text-gray-600 mb-6 max-w-xs">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-2 bg-green-600 text-white rounded-full font-medium hover:bg-green-700 transition-colors"
+        >
+          Try Refreshing
+        </button>
       </div>
     );
   }
