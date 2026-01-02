@@ -31,7 +31,12 @@ interface GoogleMapsTrackingProps {
     routeDestination?: Location // Destination for route (seller shop or customer)
     routeWaypoints?: Location[] // Intermediate waypoints for the route
     destinationName?: string // Name of the destination for the overlay
-    onRouteInfoUpdate?: (info: { distance: string; duration: string } | null) => void
+    onRouteInfoUpdate?: (info: {
+        distance: string;
+        duration: string;
+        durationValue: number; // raw seconds
+        distanceValue: number; // raw meters
+    } | null) => void
     lastUpdate?: Date | null // Last location update timestamp
 }
 
@@ -62,7 +67,12 @@ export default function GoogleMapsTracking({
     const hasInitialBoundsFitted = useRef<boolean>(false)
     const [userHasInteracted, setUserHasInteracted] = useState<boolean>(false)
     const [isFullScreen, setIsFullScreen] = useState<boolean>(false)
-    const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null)
+    const [routeInfo, setRouteInfo] = useState<{
+        distance: string;
+        duration: string;
+        durationValue: number;
+        distanceValue: number;
+    } | null>(null)
     const [routeError, setRouteError] = useState<string | null>(null)
     const [isGPSWeak, setIsGPSWeak] = useState<boolean>(false)
 
@@ -311,11 +321,37 @@ export default function GoogleMapsTracking({
                     setRouteError(null)
                     // Extract route information
                     const route = result.routes[0]
-                    const leg = route.legs[0]
-                    if (leg) {
+                    if (route.legs && route.legs.length > 0) {
+                        let totalDistance = 0
+                        let totalDurationSeconds = 0
+
+                        route.legs.forEach((leg: any) => {
+                            totalDistance += leg.distance?.value || 0
+                            totalDurationSeconds += leg.duration?.value || 0
+                        })
+
+                        // Add 2-minute buffer (120 seconds) as requested
+                        totalDurationSeconds += 120
+
+                        const formatDuration = (seconds: number) => {
+                            if (seconds < 60) return `${Math.ceil(seconds)} sec`
+                            const mins = Math.ceil(seconds / 60)
+                            if (mins < 60) return `${mins} mins`
+                            const hours = Math.floor(mins / 60)
+                            const remainingMins = mins % 60
+                            return `${hours}h ${remainingMins}m`
+                        }
+
+                        const formatDistance = (meters: number) => {
+                            if (meters < 1000) return `${meters}m`
+                            return `${(meters / 1000).toFixed(1)} km`
+                        }
+
                         setRouteInfo({
-                            distance: leg.distance?.text || '0 km',
-                            duration: leg.duration?.text || '0 mins',
+                            distance: formatDistance(totalDistance),
+                            duration: formatDuration(totalDurationSeconds),
+                            durationValue: totalDurationSeconds,
+                            distanceValue: totalDistance,
                         })
                     }
 

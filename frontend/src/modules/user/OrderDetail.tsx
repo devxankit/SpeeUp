@@ -7,7 +7,7 @@ import { OrderStatus } from "../../types/order";
 import GoogleMapsTracking from "../../components/GoogleMapsTracking";
 import { useDeliveryTracking } from "../../hooks/useDeliveryTracking";
 import DeliveryPartnerCard from "../../components/DeliveryPartnerCard";
-import { getSellerLocationsForOrder } from "../../services/api/customerOrderService";
+import { getSellerLocationsForOrder, refreshDeliveryOtp } from "../../services/api/customerOrderService";
 
 // Icon Components
 const ArrowLeftIcon = ({ className }: { className?: string }) => (
@@ -455,6 +455,12 @@ export default function OrderDetail() {
     order?.status || "Placed"
   );
   const [estimatedTime, setEstimatedTime] = useState(29);
+  const [routeInfo, setRouteInfo] = useState<{
+    distance: string;
+    duration: string;
+    durationValue: number;
+    distanceValue: number;
+  } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Modal states
@@ -573,15 +579,33 @@ export default function OrderDetail() {
 
   // Handler functions
   const handleRefresh = async () => {
+    if (!id) return;
     setIsRefreshing(true);
-    if (id) {
+    const fetchedOrder = await fetchOrderById(id);
+    if (fetchedOrder) {
+      setOrder(fetchedOrder);
+      setOrderStatus(fetchedOrder.status);
+    }
+    // Add a small delay for the animation
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
+
+  const handleRefreshOtp = async () => {
+    if (!id || isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await refreshDeliveryOtp(id);
+      // Re-fetch order to get updated OTP and expiry
       const fetchedOrder = await fetchOrderById(id);
       if (fetchedOrder) {
         setOrder(fetchedOrder);
         setOrderStatus(fetchedOrder.status);
       }
+    } catch (error) {
+      console.error("Failed to refresh OTP:", error);
+    } finally {
+      setIsRefreshing(false);
     }
-    setTimeout(() => setIsRefreshing(false), 1000);
   };
 
   const handleShare = async () => {
@@ -854,48 +878,31 @@ export default function OrderDetail() {
           showRoute={
             isConnected &&
             !!deliveryLocation &&
-            (order?.status === 'Picked up' ||
-              order?.status === 'Out for Delivery' ||
-              (sellerLocations.length > 0 &&
-                order?.status !== 'Delivered' &&
-                order?.status !== 'Cancelled' &&
-                order?.status !== 'Returned' &&
-                order?.status !== 'Picked up' &&
-                order?.status !== 'Out for Delivery'))
+            order?.status !== 'Delivered' &&
+            order?.status !== 'Cancelled' &&
+            order?.status !== 'Returned'
           }
           routeOrigin={deliveryLocation || undefined}
-          routeDestination={
-            // If order is picked up or out for delivery, show route to customer
-            // Otherwise (Pending, Ready for pickup, etc.), show route to seller shop
-            order?.status === 'Picked up' || order?.status === 'Out for Delivery'
-              ? {
-                  lat: order?.deliveryAddress?.latitude || order?.address?.latitude || 28.7041,
-                  lng: order?.deliveryAddress?.longitude || order?.address?.longitude || 77.1025,
-                }
-              : sellerLocations.length > 0 && sellerLocations[sellerLocations.length - 1].latitude && sellerLocations[sellerLocations.length - 1].longitude
-              ? {
-                  lat: sellerLocations[sellerLocations.length - 1].latitude,
-                  lng: sellerLocations[sellerLocations.length - 1].longitude,
-                }
-              : undefined
-          }
+          routeDestination={{
+            lat: order?.deliveryAddress?.latitude || order?.address?.latitude || 28.7041,
+            lng: order?.deliveryAddress?.longitude || order?.address?.longitude || 77.1025,
+          }}
           routeWaypoints={
             order?.status === 'Picked up' || order?.status === 'Out for Delivery'
               ? []
-              : sellerLocations.length > 1
-              ? sellerLocations.slice(0, -1).map(s => ({
+              : sellerLocations.map(s => ({
                   lat: s.latitude,
                   lng: s.longitude,
                 }))
-              : []
           }
           destinationName={
             order?.status === 'Picked up' || order?.status === 'Out for Delivery'
               ? order?.deliveryAddress?.address?.split(',')[0] || order?.address?.split(',')[0] || "Delivery Address"
               : sellerLocations.length > 0
-              ? sellerLocations[0].storeName
-              : undefined
+              ? "Sellers & Delivery Address"
+              : "Delivery Address"
           }
+          onRouteInfoUpdate={setRouteInfo}
           lastUpdate={lastUpdate}
         />
       )}
@@ -917,10 +924,12 @@ export default function OrderDetail() {
             profileImage: order?.deliveryPartner?.profileImage,
             vehicleNumber: order?.deliveryPartner?.vehicleNumber,
           }}
-          eta={eta}
-          distance={distance}
+          eta={routeInfo ? Math.ceil(routeInfo.durationValue / 60) : eta}
+          distance={routeInfo ? routeInfo.distanceValue : distance}
           isTracking={isConnected}
           deliveryOtp={order?.deliveryOtp}
+          otpExpiryTime={order?.deliveryOtpExpiresAt}
+          onRefreshOtp={handleRefreshOtp}
           onCall={() => {
             const phone = order?.deliveryPartner?.phone || "1234567890";
             window.location.href = `tel:${phone}`;

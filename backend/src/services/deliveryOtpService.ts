@@ -20,7 +20,7 @@ export async function generateDeliveryOtp(orderId: string, customerPhone: string
 
     // Store OTP in order
     order.deliveryOtp = otp;
-    order.deliveryOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+    order.deliveryOtpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes expiry
     order.deliveryOtpVerified = false;
     await order.save();
 

@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useCallback } from 'react'
 
 interface DeliveryPartner {
     name?: string
@@ -13,8 +14,10 @@ interface DeliveryPartnerCardProps {
     distance: number
     isTracking: boolean
     deliveryOtp?: string
+    otpExpiryTime?: string | Date // Added to track when OTP actually expires
     onCall?: () => void
     onMessage?: () => void
+    onRefreshOtp?: () => void // Added to handle OTP refresh
 }
 
 export default function DeliveryPartnerCard({
@@ -23,9 +26,59 @@ export default function DeliveryPartnerCard({
     distance,
     isTracking,
     deliveryOtp,
+    otpExpiryTime,
     onCall,
-    onMessage
+    onMessage,
+    onRefreshOtp
 }: DeliveryPartnerCardProps) {
+    const [timeLeft, setTimeLeft] = useState<number>(0)
+    const [isCopied, setIsCopied] = useState(false)
+
+    // Calculate initial time left and start countdown
+    useEffect(() => {
+        if (!otpExpiryTime) {
+            // Default to 15 minutes if no expiry time provided
+            setTimeLeft(15 * 60)
+            return
+        }
+
+        const calculateTimeLeft = () => {
+            const expiry = new Date(otpExpiryTime).getTime()
+            const now = new Date().getTime()
+            const diff = Math.max(0, Math.floor((expiry - now) / 1000))
+            setTimeLeft(diff)
+        }
+
+        calculateTimeLeft()
+        const timer = setInterval(calculateTimeLeft, 1000)
+
+        return () => clearInterval(timer)
+    }, [otpExpiryTime])
+
+    // Auto-refresh OTP when timer hits zero
+    useEffect(() => {
+        if (timeLeft === 0 && deliveryOtp && onRefreshOtp) {
+            onRefreshOtp()
+        }
+    }, [timeLeft, deliveryOtp, onRefreshOtp])
+
+    const handleCopyOtp = useCallback(async () => {
+        if (!deliveryOtp) return
+        try {
+            await navigator.clipboard.writeText(deliveryOtp)
+            setIsCopied(true)
+            setTimeout(() => setIsCopied(false), 2000)
+        } catch (err) {
+            console.error('Failed to copy OTP:', err)
+        }
+    }, [deliveryOtp])
+
+    const formatTime = (seconds: number): string => {
+        const mins = Math.floor(seconds / 60)
+        const secs = seconds % 60
+        return `${mins}:${secs.toString().padStart(2, '0')}`
+    }
+
     if (!partner && !isTracking) return null
 
     const formatDistance = (meters: number): string => {
@@ -154,13 +207,83 @@ export default function DeliveryPartnerCard({
 
             {/* Delivery OTP Section */}
             {deliveryOtp && (
-                <div className="mx-4 mb-4 p-3 bg-neutral-50 rounded-xl border border-dashed border-neutral-200 flex items-center justify-between">
-                    <div>
-                        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">Delivery OTP</p>
-                        <p className="text-xs text-neutral-600 leading-tight">Share this with the delivery partner only at the time of delivery</p>
+                <div className="mx-4 mb-4 p-3 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
+                    <div className="flex items-center justify-between mb-2">
+                        <div>
+                            <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">Delivery OTP</p>
+                            <p className="text-[11px] text-neutral-600 leading-tight">Share this with the partner at delivery</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold ${
+                                timeLeft < 60 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+                            }`}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                {formatTime(timeLeft)}
+                            </div>
+                        </div>
                     </div>
-                    <div className="bg-white px-4 py-2 rounded-lg border border-neutral-100 shadow-sm">
-                        <span className="text-xl font-black tracking-[0.2em] text-green-700">{deliveryOtp}</span>
+
+                    <div className="flex items-center gap-3">
+                        <div className="flex-1 bg-white px-4 py-2.5 rounded-lg border border-neutral-100 shadow-sm flex items-center justify-between group">
+                            <span className="text-2xl font-black tracking-[0.25em] text-green-700">{deliveryOtp}</span>
+                            <motion.button
+                                onClick={handleCopyOtp}
+                                className="p-1.5 hover:bg-neutral-50 rounded-md transition-colors relative"
+                                whileTap={{ scale: 0.9 }}
+                            >
+                                <AnimatePresence mode="wait">
+                                    {isCopied ? (
+                                        <motion.svg
+                                            key="check"
+                                            initial={{ opacity: 0, scale: 0.5 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.5 }}
+                                            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3"
+                                        >
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </motion.svg>
+                                    ) : (
+                                        <motion.svg
+                                            key="copy"
+                                            initial={{ opacity: 0, scale: 0.5 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.5 }}
+                                            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2.5"
+                                        >
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </motion.svg>
+                                    )}
+                                </AnimatePresence>
+                                {isCopied && (
+                                    <motion.span
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 10 }}
+                                        className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap"
+                                    >
+                                        Copied!
+                                    </motion.span>
+                                )}
+                            </motion.button>
+                        </div>
+
+                        {onRefreshOtp && (
+                            <motion.button
+                                onClick={onRefreshOtp}
+                                className="p-2.5 bg-white border border-neutral-100 rounded-lg shadow-sm hover:bg-neutral-50 text-neutral-500"
+                                whileTap={{ rotate: 180 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <path d="M23 4v6h-6"></path>
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                                </svg>
+                            </motion.button>
+                        )}
                     </div>
                 </div>
             )}

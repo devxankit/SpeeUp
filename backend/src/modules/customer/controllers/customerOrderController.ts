@@ -7,6 +7,7 @@ import Seller from "../../../models/Seller";
 import mongoose from "mongoose";
 import { notifyDeliveryBoysOfNewOrder } from "../../../services/orderNotificationService";
 import { notifySellersOfOrderUpdate } from "../../../services/sellerNotificationService";
+import { generateDeliveryOtp } from "../../../services/deliveryOtpService";
 import { Server as SocketIOServer } from "socket.io";
 
 // Create a new order
@@ -457,6 +458,47 @@ export const getOrderById = async (req: Request, res: Response) => {
             success: false,
             message: "Error fetching order detail",
             error: error.message,
+        });
+    }
+};
+
+/**
+ * Refresh Delivery OTP
+ */
+export const refreshDeliveryOtp = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user!.userId;
+
+        const order = await Order.findOne({ _id: id, customer: userId });
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found" });
+        }
+
+        if (order.status === 'Delivered') {
+            return res.status(400).json({ success: false, message: "Order is already delivered" });
+        }
+
+        // Generate and send new OTP
+        const result = await generateDeliveryOtp(id, order.customerPhone);
+
+        // Emit socket event if needed (customer room)
+        const io = (req.app as any).get("io");
+        if (io) {
+            io.to(`order-${id}`).emit('delivery-otp-refreshed', {
+                orderId: id,
+                deliveryOtp: order.deliveryOtp, // The service saves it to the order
+                expiresAt: order.deliveryOtpExpiresAt
+            });
+        }
+
+        return res.status(200).json(result);
+    } catch (error: any) {
+        console.error('Error refreshing delivery OTP:', error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to refresh delivery OTP",
+            error: error.message
         });
     }
 };

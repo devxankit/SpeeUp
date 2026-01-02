@@ -71,3 +71,11 @@ export const getSellerLocationsForOrder = async (id: string): Promise<any> => {
     const response = await api.get(`/customer/orders/${id}/seller-locations`);
     return response.data;
 };
+
+/**
+ * Refresh delivery OTP for an order
+ */
+export const refreshDeliveryOtp = async (id: string): Promise<OrderResponse> => {
+    const response = await api.post<OrderResponse>(`/customer/orders/${id}/refresh-otp`);
+    return response.data;
+};
