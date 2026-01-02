@@ -10,23 +10,30 @@ export const AxiosLoadingInterceptor: React.FC<{ children: React.ReactNode }> = 
       (config) => {
         // Skip loader for specific requests if needed
         if (!(config as any).skipLoader) {
+          (config as any)._hasStartedLoading = true;
           startLoading();
         }
         return config;
       },
       (error) => {
-        stopLoading();
+        if ((error.config as any)?._hasStartedLoading) {
+          stopLoading();
+        }
         return Promise.reject(error);
       }
     );
 
     const responseInterceptor = api.interceptors.response.use(
       (response) => {
-        stopLoading();
+        if ((response.config as any)?._hasStartedLoading) {
+          stopLoading();
+        }
         return response;
       },
       (error) => {
-        stopLoading();
+        if ((error.config as any)?._hasStartedLoading) {
+          stopLoading();
+        }
         return Promise.reject(error);
       }
     );

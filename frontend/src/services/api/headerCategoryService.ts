@@ -12,8 +12,10 @@ export interface HeaderCategory {
     order?: number;
 }
 
-export const getHeaderCategoriesPublic = async (): Promise<HeaderCategory[]> => {
-    const response = await api.get<HeaderCategory[]>('/header-categories');
+export const getHeaderCategoriesPublic = async (skipLoader = false): Promise<HeaderCategory[]> => {
+    const response = await api.get<HeaderCategory[]>('/header-categories', {
+        skipLoader
+    } as any);
     return response.data;
 };
 

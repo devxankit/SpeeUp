@@ -65,7 +65,7 @@ export default function Home() {
         // Wait a bit after initial load to not interfere with main content
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        const headerCategories = await getHeaderCategoriesPublic();
+        const headerCategories = await getHeaderCategoriesPublic(true);
         // Preload data for each header category (including 'all')
         const slugsToPreload = ['all', ...headerCategories.map(cat => cat.slug)];
 
@@ -75,7 +75,7 @@ export default function Home() {
           const batch = slugsToPreload.slice(i, i + batchSize);
           await Promise.all(
             batch.map(slug =>
-              getHomeContent(slug, true, 5 * 60 * 1000).catch(err => {
+              getHomeContent(slug, true, 5 * 60 * 1000, true).catch(err => {
                 // Silently fail - this is just preloading
                 console.debug(`Failed to preload data for ${slug}:`, err);
               })

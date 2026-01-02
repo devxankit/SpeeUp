@@ -1,51 +1,75 @@
 import { useEffect, useState, useRef } from 'react';
 
 /**
- * Initial loader screen that prevents page blinking/flash
- * Always shows for minimum 300ms even if content loads earlier
+ * Initial loader screen that prevents page blinking/flash during initial mount.
+ *
+ * Timing Specifications:
+ * 1. Minimum duration: 1000ms (1 second) to ensure brand visibility and smooth transition.
+ * 2. Maximum duration: 2000ms (2 seconds) as a fallback to prevent blocking the user.
+ * 3. Smooth fade-out transition: 300ms.
  */
 export default function InitialLoader() {
   const [isVisible, setIsVisible] = useState(true);
   const [isFading, setIsFading] = useState(false);
   const startTimeRef = useRef<number>(Date.now());
-  const minDisplayTime = 300; // Minimum 300ms display time
+
+  // Timing constants
+  const MIN_DISPLAY_TIME = 1000; // 1 second minimum
+  const MAX_DISPLAY_TIME = 2000; // 2 seconds maximum fallback
+  const FADE_DURATION = 300;     // 300ms fade animation
 
   useEffect(() => {
-    // Record when component mounted
+    // Record the exact time when the loader was mounted
     startTimeRef.current = Date.now();
+    let hasHidden = false;
 
-    // Wait for DOM to be ready and React to mount
+    /**
+     * Precisely controls the disappearance of the loader.
+     * Ensures it stays within the [MIN_DISPLAY_TIME, MAX_DISPLAY_TIME] range.
+     */
     const hideLoader = () => {
-      const elapsed = Date.now() - startTimeRef.current;
-      const remainingTime = Math.max(0, minDisplayTime - elapsed);
+      if (hasHidden) return;
+      hasHidden = true;
 
-      // Wait for remaining minimum time, then fade out
+      const elapsed = Date.now() - startTimeRef.current;
+      // Ensure we stay at least MIN_DISPLAY_TIME but don't exceed MAX_DISPLAY_TIME
+      const remainingTime = Math.max(0, MIN_DISPLAY_TIME - elapsed);
+
+      // Stage 1: Wait for the remaining minimum time
       setTimeout(() => {
+        // Stage 2: Start fade-out transition
         setIsFading(true);
-        // Wait for fade animation, then remove from DOM
+
+        // Stage 3: Wait for fade animation to complete, then remove from DOM
         setTimeout(() => {
           setIsVisible(false);
-        }, 300);
+        }, FADE_DURATION);
       }, remainingTime);
     };
 
-    // Check if app has mounted
+    // Scenario 2: Fallback / Error Handling
+    // Guarantees loader disappears after MAX_DISPLAY_TIME even if load event fails
+    const fallbackTimeout = setTimeout(() => {
+      if (!hasHidden) {
+        console.log('[InitialLoader] Maximum display time reached (fallback).');
+        hideLoader();
+      }
+    }, MAX_DISPLAY_TIME);
+
+    // Scenario 1: Page finishes loading normally
+    const handleLoad = () => hideLoader();
+
     if (document.readyState === 'complete') {
-      // DOM is already loaded, but still wait minimum time
-      setTimeout(hideLoader, 0);
+      // If already complete, still initiate hideLoader to respect MIN_DISPLAY_TIME
+      hideLoader();
     } else {
-      // Wait for DOM to load, then ensure minimum display time
-      window.addEventListener('load', () => {
-        setTimeout(hideLoader, 0);
-      });
+      // Wait for the window load event
+      window.addEventListener('load', handleLoad);
     }
 
-    // Fallback: hide after max 2 seconds (but still respect minimum)
-    const fallback = setTimeout(hideLoader, 2000);
-
     return () => {
-      clearTimeout(fallback);
-      window.removeEventListener('load', hideLoader);
+      clearTimeout(fallbackTimeout);
+      window.removeEventListener('load', handleLoad);
     };
   }, []);
 

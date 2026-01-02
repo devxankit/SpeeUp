@@ -25,30 +25,25 @@ export interface HomeContentResponse {
 export const getHomeContent = async (
   headerCategorySlug?: string,
   useCache: boolean = true,
-  cacheTTL: number = 5 * 60 * 1000 // 5 minutes
+  cacheTTL: number = 5 * 60 * 1000, // 5 minutes
+  skipLoader: boolean = false
 ): Promise<HomeContentResponse> => {
   const cacheKey = `home-content-${headerCategorySlug || 'all'}`;
 
+  const fetchFn = async () => {
+    const params = headerCategorySlug ? { headerCategorySlug } : {};
+    const response = await api.get<HomeContentResponse>("/customer/home", {
+      params,
+      skipLoader
+    } as any);
+    return response.data;
+  };
+
   if (useCache) {
-    return apiCache.getOrFetch(
-      cacheKey,
-      async () => {
-        const params = headerCategorySlug ? { headerCategorySlug } : {};
-        const response = await api.get<HomeContentResponse>("/customer/home", {
-          params,
-        });
-        return response.data;
-      },
-      cacheTTL
-    );
+    return apiCache.getOrFetch(cacheKey, fetchFn, cacheTTL);
   }
 
-  // Fetch without cache
-  const params = headerCategorySlug ? { headerCategorySlug } : {};
-  const response = await api.get<HomeContentResponse>("/customer/home", {
-    params,
-  });
-  return response.data;
+  return fetchFn();
 };
 
 /**
