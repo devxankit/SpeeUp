@@ -896,6 +896,7 @@ export default function OrderDetail() {
               ? sellerLocations[0].storeName
               : undefined
           }
+          lastUpdate={lastUpdate}
         />
       )}
 

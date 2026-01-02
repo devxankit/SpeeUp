@@ -39,7 +39,7 @@ export const useDeliveryOrderNotifications = () => {
             reconnectTimeoutRef.current = null;
         }
 
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('authToken');
         const socket = io(getSocketBaseURL(), {
             auth: {
                 token,

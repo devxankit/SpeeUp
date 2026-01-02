@@ -32,6 +32,7 @@ interface GoogleMapsTrackingProps {
     routeWaypoints?: Location[] // Intermediate waypoints for the route
     destinationName?: string // Name of the destination for the overlay
     onRouteInfoUpdate?: (info: { distance: string; duration: string } | null) => void
+    lastUpdate?: Date | null // Last location update timestamp
 }
 
 const mapContainerStyle = {
@@ -50,16 +51,35 @@ export default function GoogleMapsTracking({
     routeDestination,
     routeWaypoints = [],
     destinationName,
-    onRouteInfoUpdate
+    onRouteInfoUpdate,
+    lastUpdate
 }: GoogleMapsTrackingProps) {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
     const mapRef = useRef<any>(null)
     const directionsServiceRef = useRef<any>(null)
     const directionsRendererRef = useRef<any>(null)
+    const lastRouteCalcRef = useRef<{ time: number, origin: Location }>({ time: 0, origin: { lat: 0, lng: 0 } })
     const hasInitialBoundsFitted = useRef<boolean>(false)
     const userHasInteracted = useRef<boolean>(false)
     const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null)
     const [routeError, setRouteError] = useState<string | null>(null)
+    const [isGPSWeak, setIsGPSWeak] = useState<boolean>(false)
+
+    // Check for weak GPS signal (no updates for > 45 seconds)
+    useEffect(() => {
+        if (!lastUpdate) return;
+
+        const checkGPS = () => {
+            const now = new Date().getTime();
+            const lastTime = new Date(lastUpdate).getTime();
+            setIsGPSWeak(now - lastTime > 45000); // 45 seconds threshold
+        };
+
+        const interval = setInterval(checkGPS, 10000); // Check every 10 seconds
+        checkGPS(); // Initial check
+
+        return () => clearInterval(interval);
+    }, [lastUpdate]);
 
     // Sync routeInfo with parent
     useEffect(() => {
@@ -146,6 +166,24 @@ export default function GoogleMapsTracking({
             console.log('⚠️ Cannot calculate route: invalid origin or destination', { origin, destination })
             return
         }
+
+        // Optimization: Throttle route calculation (min 5 seconds between calls)
+        // unless origin has moved significantly (> 50m)
+        const now = Date.now()
+        const lastCalc = lastRouteCalcRef.current
+        const timeDiff = now - lastCalc.time
+
+        if (timeDiff < 5000) {
+            // Check if origin moved significantly
+            const latDiff = Math.abs(origin.lat - lastCalc.origin.lat)
+            const lngDiff = Math.abs(origin.lng - lastCalc.origin.lng)
+            // Rough approximation: 0.0005 degrees is ~50m
+            if (latDiff < 0.0005 && lngDiff < 0.0005) {
+                return // Skip calculation
+            }
+        }
+
+        lastRouteCalcRef.current = { time: now, origin: { ...origin } }
 
         // Initialize DirectionsService if not already initialized
         if (!directionsServiceRef.current) {
@@ -434,8 +472,27 @@ export default function GoogleMapsTracking({
 
             {/* Error Overlay */}
             {routeError && (
-                <div className="absolute top-16 left-4 right-4 bg-red-50/95 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm border border-red-100 z-10 flex items-center gap-2">
-                    <span className="text-[10px] text-red-600 font-bold uppercase tracking-wider">{routeError}</span>
+                <div className="absolute top-16 left-4 right-4 bg-red-50/95 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm border border-red-100 z-10 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-red-600 font-bold uppercase tracking-wider">{routeError}</span>
+                    </div>
+                    <button
+                        onClick={() => setRouteError(null)}
+                        className="text-red-400 hover:text-red-600 font-bold px-1 text-xs"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
+
+            {/* GPS Signal Warning Overlay */}
+            {isGPSWeak && isTracking && (
+                <div className="absolute bottom-16 left-4 right-4 bg-yellow-50/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-md border border-yellow-100 z-10 flex items-center gap-2 animate-pulse">
+                    <span className="flex-shrink-0 text-sm">🛰️</span>
+                    <div>
+                        <p className="text-[10px] font-bold text-yellow-800 uppercase tracking-wider">GPS Signal Weak</p>
+                        <p className="text-[10px] text-yellow-700">Waiting for real-time location updates...</p>
+                    </div>
                 </div>
             )}
 

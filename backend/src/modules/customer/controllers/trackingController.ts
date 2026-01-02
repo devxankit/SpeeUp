@@ -13,7 +13,7 @@ import Delivery from "../../../models/Delivery";
 export const getOrderTracking = asyncHandler(
   async (req: Request, res: Response) => {
     const { orderId } = req.params;
-    const customerId = (req as any).user.id;
+    const customerId = (req as any).user.userId;
 
     // Verify order belongs to customer
     const order = await Order.findOne({ _id: orderId, customer: customerId });
@@ -243,7 +243,7 @@ export const updateGeneralLocation = asyncHandler(
  */
 export const getActiveOrdersTracking = asyncHandler(
   async (req: Request, res: Response) => {
-    const deliveryBoyId = (req as any).user.id;
+    const deliveryBoyId = (req as any).user.userId;
 
     const trackings = await DeliveryTracking.find({
       deliveryBoy: deliveryBoyId,
@@ -268,7 +268,7 @@ export const getActiveOrdersTracking = asyncHandler(
 export const getSellerLocationsForOrder = asyncHandler(
   async (req: Request, res: Response) => {
     const { orderId } = req.params;
-    const customerId = (req as any).user.id;
+    const customerId = (req as any).user.userId;
 
     // Verify order exists and belongs to this customer
     const order = await Order.findOne({ _id: orderId, customer: customerId });

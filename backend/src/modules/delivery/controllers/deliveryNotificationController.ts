@@ -8,7 +8,7 @@ import Notification from "../../../models/Notification";
  * Fetches notifications for the logged-in delivery partner
  */
 export const getNotifications = asyncHandler(async (req: Request, res: Response) => {
-    const deliveryId = (req.user as any)?.userId || (req.user as any)?.id;
+    const deliveryId = req.user?.userId;
 
     const notifications = await Notification.find({
         recipientType: "Delivery",
@@ -31,7 +31,7 @@ export const getNotifications = asyncHandler(async (req: Request, res: Response)
  */
 export const markNotificationRead = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const deliveryId = (req.user as any)?.userId || (req.user as any)?.id;
+    const deliveryId = req.user?.userId;
 
     const notification = await Notification.findOneAndUpdate(
         { _id: id, recipientType: "Delivery", recipientId: deliveryId },

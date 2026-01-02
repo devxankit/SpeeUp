@@ -78,7 +78,7 @@ const Icons = {
     )
 };
 
-type DeliveryOrderStatus = 'Pending' | 'Ready for pickup' | 'Picked up' | 'Delivered' | 'Cancelled' | 'Returned';
+type DeliveryOrderStatus = 'Pending' | 'Ready for pickup' | 'Picked up' | 'Out for Delivery' | 'Delivered' | 'Cancelled' | 'Returned';
 
 export default function DeliveryOrderDetail() {
     const { id } = useParams();
@@ -92,7 +92,8 @@ export default function DeliveryOrderDetail() {
     const [otpSending, setOtpSending] = useState(false);
     const [otpVerifying, setOtpVerifying] = useState(false);
     const locationIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const [deliveryBoyLocation, setDeliveryBoyLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const [deliveryBoyLocation, setDeliveryBoyLocation] = useState<{ lat: number; lng: number } | undefined>(undefined);
+    const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
     const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
 
     const fetchOrder = async () => {
@@ -290,6 +291,7 @@ export default function DeliveryOrderDetail() {
                             lng: position.coords.longitude,
                         };
                         setDeliveryBoyLocation(newLocation);
+                        setLastUpdate(new Date());
 
                         // Emit via Socket
                         socket.emit('update-location', {
@@ -356,7 +358,7 @@ export default function DeliveryOrderDetail() {
         );
     }
 
-    const statusFlow: DeliveryOrderStatus[] = ['Pending', 'Ready for pickup', 'Picked up', 'Delivered'];
+    const statusFlow: DeliveryOrderStatus[] = ['Pending', 'Ready for pickup', 'Picked up', 'Out for Delivery', 'Delivered'];
 
     let currentStatusIndex = statusFlow.indexOf(order.status as DeliveryOrderStatus);
     // Handle cases where status might not be in the flow (e.g. Cancelled)
@@ -464,6 +466,7 @@ export default function DeliveryOrderDetail() {
                                 : undefined
                     }
                     onRouteInfoUpdate={setRouteInfo}
+                    lastUpdate={lastUpdate}
                 />
             )}
 

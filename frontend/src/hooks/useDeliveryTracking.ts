@@ -55,7 +55,7 @@ export const useDeliveryTracking = (orderId: string | undefined) => {
             reconnectTimeoutRef.current = null
         }
 
-        const token = localStorage.getItem('token')
+        const token = localStorage.getItem('authToken')
         const socket = io(getSocketBaseURL(), {
             auth: {
                 token,

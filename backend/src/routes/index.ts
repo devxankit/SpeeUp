@@ -72,6 +72,9 @@ router.use(
 router.use("/customer/products", customerProductRoutes);
 router.use("/customer/categories", customerCategoryRoutes);
 
+// Tracking routes (must be before general /customer/orders/:id route)
+router.use("/customer", customerTrackingRoutes);
+
 // Customer orders route - direct registration to avoid module loading issue
 console.log("🔥 REGISTERING CUSTOMER ORDER ROUTES");
 router.post(
@@ -93,8 +96,6 @@ router.use("/customer/home", customerHomeRoutes);
 router.use("/customer/cart", customerCartRoutes);
 router.use("/customer/wishlist", wishlistRoutes);
 router.use("/customer/reviews", productReviewRoutes);
-// Tracking routes (must be before general /customer route)
-router.use("/customer", customerTrackingRoutes);
 // General customer route (must be last to avoid intercepting specific routes)
 router.use("/customer", customerRoutes);
 

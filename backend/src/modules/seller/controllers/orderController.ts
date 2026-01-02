@@ -190,7 +190,7 @@ export const getOrderById = asyncHandler(
  */
 export const updateOrderStatus = asyncHandler(
   async (req: Request, res: Response) => {
-    const sellerId = (req as any).user.id;
+    const sellerId = (req as any).user.userId;
     const { id } = req.params;
     const { status } = req.body;
 

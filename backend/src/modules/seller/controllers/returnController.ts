@@ -6,7 +6,7 @@ import OrderItem from "../../../models/OrderItem";
 
 export const getReturnRequests = asyncHandler(
   async (req: Request, res: Response) => {
-    const sellerId = (req.user as any)?.userId || (req.user as any)?.id;
+    const sellerId = req.user?.userId;
     const { status, page = 1, limit = 10 } = req.query;
 
     const query: any = {};
