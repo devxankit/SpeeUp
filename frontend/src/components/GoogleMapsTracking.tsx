@@ -60,7 +60,7 @@ export default function GoogleMapsTracking({
     const directionsRendererRef = useRef<any>(null)
     const lastRouteCalcRef = useRef<{ time: number, origin: Location }>({ time: 0, origin: { lat: 0, lng: 0 } })
     const hasInitialBoundsFitted = useRef<boolean>(false)
-    const userHasInteracted = useRef<boolean>(false)
+    const [userHasInteracted, setUserHasInteracted] = useState<boolean>(false)
     const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null)
     const [routeError, setRouteError] = useState<string | null>(null)
     const [isGPSWeak, setIsGPSWeak] = useState<boolean>(false)
@@ -108,6 +108,87 @@ export default function GoogleMapsTracking({
         customerLocation
     ]
 
+    // Auto-center and fit bounds when location or route changes
+    useEffect(() => {
+        if (!isLoaded || !mapRef.current || userHasInteracted || !window.google?.maps) return;
+
+        const bounds = new window.google.maps.LatLngBounds();
+        let hasPoints = false;
+
+        // Add delivery location (focus point)
+        if (deliveryLocation) {
+            bounds.extend(deliveryLocation);
+            hasPoints = true;
+        }
+
+        // Add route points if visible
+        if (showRoute && routeOrigin && routeDestination) {
+            bounds.extend(routeOrigin);
+            bounds.extend(routeDestination);
+            routeWaypoints.forEach(wp => bounds.extend(wp));
+            hasPoints = true;
+        } else {
+            // Add other locations if route not showing
+            if (storeLocation) {
+                bounds.extend(storeLocation);
+                hasPoints = true;
+            }
+            sellerLocations.forEach(s => {
+                bounds.extend(s);
+                hasPoints = true;
+            });
+            bounds.extend(customerLocation);
+            hasPoints = true;
+        }
+
+        if (hasPoints) {
+            if (mapRef.current._setProgrammaticChange) {
+                mapRef.current._setProgrammaticChange(true);
+            }
+
+            // If we only have delivery location, just pan and zoom
+            if (deliveryLocation && !showRoute) {
+                mapRef.current.panTo(deliveryLocation);
+                if (!hasInitialBoundsFitted.current) {
+                    mapRef.current.setZoom(15);
+                    hasInitialBoundsFitted.current = true;
+                }
+            } else {
+                // Fit to include everything (route + locations)
+                mapRef.current.fitBounds(bounds, {
+                    top: 50,
+                    bottom: 50,
+                    left: 50,
+                    right: 50
+                });
+                hasInitialBoundsFitted.current = true;
+            }
+
+            if (mapRef.current._setProgrammaticChange) {
+                setTimeout(() => mapRef.current._setProgrammaticChange(false), 500);
+            }
+        }
+    }, [isLoaded, deliveryLocation, showRoute, routeOrigin, routeDestination, routeWaypoints, storeLocation, sellerLocations, customerLocation, userHasInteracted]);
+
+    const handleRecenter = () => {
+        setUserHasInteracted(false);
+        hasInitialBoundsFitted.current = false;
+        if (mapRef.current) {
+            const bounds = new window.google.maps.LatLngBounds();
+            if (deliveryLocation) bounds.extend(deliveryLocation);
+            if (showRoute && routeOrigin && routeDestination) {
+                bounds.extend(routeOrigin);
+                bounds.extend(routeDestination);
+                routeWaypoints.forEach(wp => bounds.extend(wp));
+            } else {
+                if (storeLocation) bounds.extend(storeLocation);
+                sellerLocations.forEach(s => bounds.extend(s));
+                bounds.extend(customerLocation);
+            }
+            mapRef.current.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
+        }
+    };
+
     const onLoad = useCallback((map: any) => {
         mapRef.current = map
 
@@ -116,7 +197,7 @@ export default function GoogleMapsTracking({
 
         const trackInteraction = () => {
             if (!isProgrammaticChange) {
-                userHasInteracted.current = true;
+                setUserHasInteracted(true);
             }
         };
 
@@ -136,23 +217,7 @@ export default function GoogleMapsTracking({
         map._setProgrammaticChange = (value: boolean) => {
             isProgrammaticChange = value;
         };
-
-        // Only fit bounds on initial load
-        if (!hasInitialBoundsFitted.current && !userHasInteracted.current) {
-            if (window.google && window.google.maps) {
-                const bounds = new window.google.maps.LatLngBounds()
-                if (storeLocation) bounds.extend(storeLocation)
-                bounds.extend(customerLocation)
-                if (deliveryLocation) bounds.extend(deliveryLocation)
-
-                map._setProgrammaticChange(true);
-                map.fitBounds(bounds)
-                setTimeout(() => map._setProgrammaticChange(false), 500);
-
-                hasInitialBoundsFitted.current = true
-            }
-        }
-    }, [storeLocation, customerLocation, deliveryLocation])
+    }, [])
 
     // Calculate and display route using Google Directions Service
     const calculateAndDisplayRoute = useCallback((origin: Location, destination: Location, waypoints: Location[] = []) => {
@@ -239,26 +304,7 @@ export default function GoogleMapsTracking({
                         })
                     }
 
-                    // Handle viewport fitting - match DeliveryOrderDetail logic
-                    if (!hasInitialBoundsFitted.current && !userHasInteracted.current) {
-                        if (mapRef.current && mapRef.current._setProgrammaticChange) {
-                            mapRef.current._setProgrammaticChange(true);
-                        }
-                        directionsRendererRef.current.setOptions({ preserveViewport: false });
-                        directionsRendererRef.current.setDirections(result);
-                        directionsRendererRef.current.setOptions({ preserveViewport: true });
-
-                        hasInitialBoundsFitted.current = true;
-
-                        setTimeout(() => {
-                            if (mapRef.current && mapRef.current._setProgrammaticChange) {
-                                mapRef.current._setProgrammaticChange(false);
-                            }
-                        }, 500);
-                    } else {
-                        directionsRendererRef.current.setOptions({ preserveViewport: true })
-                        directionsRendererRef.current.setDirections(result)
-                    }
+                    directionsRendererRef.current.setDirections(result);
                 } else {
                     console.error('❌ Directions request failed:', status, { origin, destination })
                     setRouteInfo(null)
@@ -484,6 +530,22 @@ export default function GoogleMapsTracking({
                     </button>
                 </div>
             )}
+
+            {/* Floating Map Controls */}
+             <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+                 {userHasInteracted && (
+                     <button
+                        onClick={handleRecenter}
+                        className="bg-white p-2.5 rounded-full shadow-lg border border-neutral-200 text-blue-600 hover:bg-blue-50 transition-colors"
+                        title="Re-center on delivery"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                            <circle cx="12" cy="12" r="2" />
+                        </svg>
+                    </button>
+                )}
+            </div>
 
             {/* GPS Signal Warning Overlay */}
             {isGPSWeak && isTracking && (
