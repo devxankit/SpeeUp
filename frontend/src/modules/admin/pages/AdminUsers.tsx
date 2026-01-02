@@ -97,7 +97,7 @@ export default function AdminUsers() {
             'totalSpent': 'totalSpent',
         };
         const backendColumn = columnMap[column] || column;
-        
+
         if (sortColumn === backendColumn) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
         } else {
@@ -175,7 +175,7 @@ export default function AdminUsers() {
             'totalSpent': 'totalSpent',
         };
         const backendColumn = columnMap[column] || column;
-        
+
         return (
             <span className="text-neutral-400 text-xs ml-1">
                 {sortColumn === backendColumn ? (sortDirection === 'asc' ? '↑' : '↓') : '⇅'}

@@ -4,23 +4,26 @@ import { useLoading } from '../context/LoadingContext';
 
 const useRouteLoader = () => {
   const location = useLocation();
-  const { startLoading, stopLoading } = useLoading();
+  const { startRouteLoading, stopRouteLoading } = useLoading();
   const isInitialMount = useRef(true);
 
   useEffect(() => {
-    // Skip loader on initial mount as it's handled by InitialLoader
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
+    // Start loader on navigation
+    // On initial mount, the LoadingProvider already started it (count=1)
+    if (!isInitialMount.current) {
+      startRouteLoading();
     }
 
-    // Start loader on route change
-    startLoading();
+    // Small delay to simulate route processing and ensure loader visibility
+    const timer = setTimeout(() => {
+      stopRouteLoading(); // This will decrement the count (to 0 on initial mount, or matching the startRouteLoading on navigation)
+      if (isInitialMount.current) {
+        isInitialMount.current = false;
+      }
+    }, 100);
 
-    // Stop loader after route has "changed"
-    // The stopLoading function handles the 1s minimum logic
-    stopLoading();
-  }, [location.pathname, startLoading, stopLoading]);
+    return () => clearTimeout(timer);
+  }, [location.pathname, startRouteLoading, stopRouteLoading]);
 };
 
 export default useRouteLoader;

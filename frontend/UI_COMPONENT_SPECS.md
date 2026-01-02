@@ -2,36 +2,40 @@
 
 ## Loaders
 
-### 1. Initial Loader (`InitialLoader.tsx`)
-The `InitialLoader` is the first component rendered in `main.tsx`. Its purpose is to prevent visual flashing during the initial React mount and brand assets loading.
+### 1. Exclusive Route & Reload Loader (`IconLoader.tsx` + `useRouteLoader.ts`)
+This is the primary Lottie-based animation loader that triggers exclusively during route changes and full page reloads.
 
 **Behavior:**
-- **Mount Point:** Renders at the root level in `main.tsx`, outside the main `App` component.
+- **Trigger Points:**
+  - **Full Page Reload:** Visible immediately upon page load (initialized to `true` in `LoadingProvider`).
+  - **In-App Navigation:** Triggers on every `location.pathname` change detected by `useRouteLoader`.
+- **Inactivity (Hidden):**
+  - Component-level state changes.
+  - API requests (unless specifically part of a route transition).
+  - Modal openings/closings.
 - **Timing:**
-  - **Minimum Duration:** 1000ms (1 second). Even if the page loads instantly, the loader stays for 1s to ensure a smooth brand presentation.
-  - **Maximum Duration (Fallback):** 2000ms (2 seconds). If the window `load` event hasn't fired by this time, the loader will force itself to hide to avoid blocking the user.
+  - **Minimum Duration:** 1000ms (1 second) to ensure smooth transition and brand visibility.
   - **Fade Duration:** 300ms smooth opacity transition.
-- **Trigger:** Disappears when `window.onload` fires, or when the 2-second fallback is reached.
+- **Asset Optimization:**
+  - Uses `loading.json` fetched from `/animations/`.
+  - Preloaded in `index.html` via `<link rel="preload">`.
 
-### 2. Global Route Loader (`useRouteLoader.ts` & `IconLoader.tsx`)
-Used for transitions between different routes within the application.
-
-**Behavior:**
-- **Initial Mount:** Skips the loader on the very first page load (since `InitialLoader` is already active).
-- **Transitions:** Triggers on every `location.pathname` change.
-- **Minimum Duration:** 1000ms (enforced by `LoadingContext`).
-
-### 3. API Request Loader (`AxiosLoadingInterceptor.tsx`)
-Automatically shows the `IconLoader` during background API requests.
+### 2. API Request State (`LoadingContext.tsx`)
+The application maintains a separate `isLoading` state for background API requests.
 
 **Behavior:**
 - **Inclusion:** Triggers for all requests made via the standard `api` axios instance.
-- **Exclusion:** Specific requests can skip the loader by passing `skipLoader: true` in the request config (e.g., background preloading tasks).
-- **Concurrency:** Uses a counter (`activeRequests`) to ensure the loader only hides when ALL concurrent requests have finished.
-- **Timing:** Enforces a 1000ms minimum display time to prevent "flickering" for very fast API responses.
+- **Exclusion:** Does NOT trigger the global Lottie `IconLoader`. This state can be used for smaller, local UI indicators (like skeletons or progress bars) without interrupting the main navigation flow.
+- **Concurrency:** Uses a counter (`activeRequests`) to track overlapping API calls.
+- **Timing:** 1000ms minimum display time (if UI indicators are implemented for this state).
 
 ---
 
+## Performance Targets
+- **Time to Interactive (Initial):** < 1500ms on 3G networks.
+- **Route Transition:** < 1200ms (including animation duration).
+- **Transition Smoothness:** 60fps for Lottie and fade animations.
+
 ## Performance Notes
-- **Preloading:** Background preloading (like in `Home.tsx`) must always use `skipLoader: true` to avoid interrupting the user experience with unexpected loaders.
-- **Singleton Pattern:** `InitialLoader` is designed to run once per full page refresh.
+- **Preloading:** The Lottie JSON is preloaded to ensure zero delay on the first route change.
+- **State Separation:** By separating `isRouteLoading` from `isLoading`, we ensure that background data syncs don't cause unexpected full-screen overlays.

@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import './styles/anti-flash.css'
-import InitialLoader from './components/InitialLoader'
 
 // Set background immediately to prevent flash
 if (document.documentElement) {
@@ -17,7 +16,6 @@ if (rootElement) {
 
 ReactDOM.createRoot(rootElement!).render(
   <React.StrictMode>
-    <InitialLoader />
     <App />
   </React.StrictMode>,
 )

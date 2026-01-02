@@ -95,7 +95,7 @@ const SellerAccountSettings = () => {
     try {
       setSaveLoading(true);
       setError('');
-      
+
       // Validate location if address is being updated
       if (sellerData.searchLocation && (!sellerData.latitude || !sellerData.longitude)) {
         setError('Please select a valid location using the map picker');
@@ -433,7 +433,7 @@ const SellerAccountSettings = () => {
                           </div>
 
                           <InputGroup label="City" name="city" value={sellerData.city} onChange={handleInputChange} disabled={!isEditing} />
-                          
+
                           <div className="space-y-1.5">
                             <label className="text-sm font-semibold text-gray-700 ml-1">
                               Service Radius (KM) <span className="text-red-500">*</span>
@@ -458,7 +458,7 @@ const SellerAccountSettings = () => {
                               </p>
                             )}
                           </div>
-                          
+
                         </div>
                       </div>
                     )}
