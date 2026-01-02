@@ -50,7 +50,11 @@ export default function Search() {
   useEffect(() => {
     const fetchInitialContent = async () => {
       try {
-        const response = await getHomeContent();
+        const response = await getHomeContent(
+          undefined,
+          location?.latitude,
+          location?.longitude
+        );
         if (response.success && response.data) {
           setTrendingItems(response.data.trending || []);
           setCookingIdeas(response.data.cookingIdeas || []);
@@ -65,7 +69,7 @@ export default function Search() {
     if (!searchQuery.trim()) {
       fetchInitialContent();
     }
-  }, [searchQuery]);
+  }, [searchQuery, location?.latitude, location?.longitude]);
 
   return (
     <div className="pb-24 md:pb-8 bg-white min-h-screen">

@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { getHomeContent } from "../../services/api/customerHomeService";
+import { useLocation } from "../../hooks/useLocation";
 import CategoryTileSection from "./components/CategoryTileSection";
 import ProductCard from "./components/ProductCard";
 
 export default function Categories() {
+  const { location } = useLocation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [homeData, setHomeData] = useState<any>({
@@ -15,7 +17,11 @@ export default function Categories() {
       try {
         setLoading(true);
         setError(null);
-        const response = await getHomeContent();
+        const response = await getHomeContent(
+          undefined,
+          location?.latitude,
+          location?.longitude
+        );
         if (response.success && response.data) {
           setHomeData(response.data);
         } else {
@@ -30,7 +36,7 @@ export default function Categories() {
     };
 
     fetchData();
-  }, []);
+  }, [location?.latitude, location?.longitude]);
 
   if (loading && !homeData.homeSections.length) {
     return null; // Let global IconLoader handle it

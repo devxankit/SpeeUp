@@ -5,6 +5,7 @@ import { getTheme } from "../../../utils/themes";
 import { getHomeContent } from "../../../services/api/customerHomeService";
 import { getSubcategories } from "../../../services/api/categoryService";
 import { apiCache } from "../../../utils/apiCache";
+import { useLocation } from "../../../hooks/useLocation";
 
 interface PromoCard {
   id: string;
@@ -40,6 +41,7 @@ interface PromoStripProps {
 }
 
 export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
+  const { location } = useLocation();
   const theme = getTheme(activeTab);
   const navigate = useNavigate();
   const [categoryCards, setCategoryCards] = useState<PromoCard[]>([]);
@@ -117,9 +119,15 @@ export default function PromoStrip({ activeTab = "all" }: PromoStripProps) {
       }
 
       try {
-        // Pass activeTab (header category slug) to filter categories
+        // Pass activeTab (header category slug) and location to filter categories
         // Use cache with 5 minute TTL for faster loading
-        const response = await getHomeContent(activeTab, true, 5 * 60 * 1000);
+        const response = await getHomeContent(
+          activeTab,
+          location?.latitude,
+          location?.longitude,
+          true,
+          5 * 60 * 1000
+        );
 
         // Reset current product index when fetching new data
         setCurrentProductIndex(0);

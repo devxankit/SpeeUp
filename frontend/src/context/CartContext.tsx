@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
+import { useLocation } from '../hooks/useLocation';
 import { Cart, CartItem } from '../types/cart';
 import { Product } from '../types/domain';
 import {
@@ -54,6 +55,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const pendingOperationsRef = useRef<Set<string>>(new Set());
 
   const { isAuthenticated, user } = useAuth();
+  const { location } = useLocation();
 
   // Helper to map API cart items to internal CartItem structure
   const mapApiItemsToState = (apiItems: any[]): ExtendedCartItem[] => {
@@ -69,9 +71,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
           imageUrl: item.product.mainImage || item.product.imageUrl,
           pack: item.product.pack || '1 unit',
           categoryId: item.product.category || '',
-          description: item.product.description
+          description: item.product.description,
+          variantId: item.variation // Preserving variation ID/value
         },
-        quantity: item.quantity
+        quantity: item.quantity,
+        variant: item.variation // Also preserve it here for order placement
       }));
   };
 
@@ -92,7 +96,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const response = await getCart();
+      const response = await getCart({
+        latitude: location?.latitude,
+        longitude: location?.longitude
+      });
       if (response && response.data && response.data.items) {
         setItems(mapApiItemsToState(response.data.items));
       } else {
@@ -113,7 +120,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       // Guest cart is already in 'items' from localStorage if it existed
       setLoading(false);
     }
-  }, [isAuthenticated, user?.userType]);
+  }, [isAuthenticated, user?.userType, location?.latitude, location?.longitude]);
 
   const cart: Cart = useMemo(() => {
     // Filter out any items with null products before computing totals
@@ -201,7 +208,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // Only sync to API if user is authenticated
     if (isAuthenticated && user?.userType === 'Customer') {
       try {
-        const response = await apiAddToCart(productId);
+        // Pass variation info to API if available
+        const variation = (product as any).variantId || (product as any).selectedVariant?._id || (product as any).variantTitle || (product as any).pack;
+        const response = await apiAddToCart(
+          productId,
+          1,
+          variation,
+          location?.latitude,
+          location?.longitude
+        );
         if (response && response.data && response.data.items) {
           // Atomic update from server response
           setItems(mapApiItemsToState(response.data.items));
@@ -237,7 +252,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // Only sync to API if user is authenticated and item has CartItemID
     if (isAuthenticated && user?.userType === 'Customer' && itemToRemove?.id) {
       try {
-        const response = await apiRemoveFromCart(itemToRemove.id);
+        const response = await apiRemoveFromCart(
+          itemToRemove.id,
+          location?.latitude,
+          location?.longitude
+        );
         if (response && response.data && response.data.items) {
           setItems(mapApiItemsToState(response.data.items));
         }
@@ -316,7 +335,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // Only sync to API if user is authenticated and item has CartItemID
     if (isAuthenticated && user?.userType === 'Customer' && itemToUpdate?.id) {
       try {
-        const response = await apiUpdateCartItem(itemToUpdate.id, quantity);
+        const response = await apiUpdateCartItem(
+          itemToUpdate.id,
+          quantity,
+          location?.latitude,
+          location?.longitude
+        );
         if (response && response.data && response.data.items) {
           setItems(mapApiItemsToState(response.data.items));
         }

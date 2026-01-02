@@ -2,82 +2,8 @@ import { Request, Response } from "express";
 import Product from "../../../models/Product";
 import Category from "../../../models/Category";
 import SubCategory from "../../../models/SubCategory";
-import Seller from "../../../models/Seller";
 import mongoose from "mongoose";
-
-// Helper function to calculate distance between two coordinates (Haversine formula)
-function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // Earth radius in kilometers
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-// Helper function to find sellers within user's location range
-async function findSellersWithinRange(
-  userLat: number,
-  userLng: number
-): Promise<mongoose.Types.ObjectId[]> {
-  if (!userLat || !userLng || isNaN(userLat) || isNaN(userLng)) {
-    // If no location provided, return empty array (no sellers)
-    return [];
-  }
-
-  // Validate coordinates
-  if (userLat < -90 || userLat > 90 || userLng < -180 || userLng > 180) {
-    return [];
-  }
-
-  try {
-    // Fetch all approved sellers with location
-    const sellers = await Seller.find({
-      status: "Approved",
-      location: { $exists: true, $ne: null },
-      serviceRadiusKm: { $exists: true, $gt: 0 },
-    }).select("_id location serviceRadiusKm");
-
-    // Log for debugging
-    console.log(`Found ${sellers.length} approved sellers with location in products.`);
-
-    // Filter sellers where user is within their service radius
-    const nearbySellerIds: mongoose.Types.ObjectId[] = [];
-
-    for (const seller of sellers) {
-      if (seller.location && seller.location.coordinates) {
-        const sellerLng = seller.location.coordinates[0];
-        const sellerLat = seller.location.coordinates[1];
-        const distance = calculateDistance(
-          userLat,
-          userLng,
-          sellerLat,
-          sellerLng
-        );
-        const serviceRadius = seller.serviceRadiusKm || 10;
-
-        if (distance <= serviceRadius) {
-          nearbySellerIds.push(seller._id);
-        }
-      }
-    }
-
-    return nearbySellerIds;
-  } catch (error) {
-    console.error("Error finding nearby sellers:", error);
-    return [];
-  }
-}
+import { findSellersWithinRange } from "../../../utils/locationHelper";
 
 // Get products with filtering options (public)
 export const getProducts = async (req: Request, res: Response) => {
@@ -134,9 +60,18 @@ export const getProducts = async (req: Request, res: Response) => {
       // Filter products by sellers within range
       query.seller = { $in: nearbySellerIds };
     } else {
-      // If no location provided, allow viewing products without filtering
-      // This ensures products are visible initially, but we show a hint
-      // query.seller is NOT set, so all active products are returned
+      // If no location provided, return empty result (strictly enforce location)
+      return res.status(200).json({
+        success: true,
+        data: [],
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total: 0,
+          pages: 0,
+        },
+        message: "Please provide your location to see products available in your area.",
+      });
     }
 
     // Helper to resolve category/subcategory ID from slug or ID
@@ -287,7 +222,7 @@ export const getProducts = async (req: Request, res: Response) => {
 export const getProductById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { latitude, longitude, skipLocationCheck } = req.query; // User location and optional skip flag
+    const { latitude, longitude } = req.query; // User location
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -316,11 +251,9 @@ export const getProductById = async (req: Request, res: Response) => {
       });
     }
 
-    // Parse location and skipLocationCheck flag
+    // Parse location
     const userLat = latitude ? parseFloat(latitude as string) : null;
     const userLng = longitude ? parseFloat(longitude as string) : null;
-    const shouldSkipLocationCheck =
-      typeof skipLocationCheck === "string" && skipLocationCheck.toLowerCase() === "true";
     const seller = product.seller as any;
 
     // Initialize availability flag
@@ -329,13 +262,13 @@ export const getProductById = async (req: Request, res: Response) => {
     // Safely get seller ID - handle both populated and unpopulated cases
     let sellerId: mongoose.Types.ObjectId | null = null;
     if (seller) {
-      if (typeof seller === 'object' && seller._id) {
+      if (typeof seller === "object" && seller._id) {
         // Seller is populated
         sellerId = seller._id;
       } else if (seller instanceof mongoose.Types.ObjectId) {
         // Seller is an ObjectId (not populated)
         sellerId = seller;
-      } else if (typeof seller === 'string') {
+      } else if (typeof seller === "string") {
         // Seller is a string ID
         sellerId = new mongoose.Types.ObjectId(seller);
       }
@@ -351,10 +284,12 @@ export const getProductById = async (req: Request, res: Response) => {
       seller?.location
     ) {
       const nearbySellerIds = await findSellersWithinRange(userLat, userLng);
-      isAvailableAtLocation = nearbySellerIds.some(id => id.toString() === sellerId!.toString());
+      isAvailableAtLocation = nearbySellerIds.some(
+        (id) => id.toString() === sellerId!.toString()
+      );
 
-      // If location check is NOT skipped and product is not available, return 403
-      if (!shouldSkipLocationCheck && !isAvailableAtLocation) {
+      // Strictly enforce location: if product is not available, return 403
+      if (!isAvailableAtLocation) {
         return res.status(403).json({
           success: false,
           message:
@@ -362,19 +297,15 @@ export const getProductById = async (req: Request, res: Response) => {
         });
       }
     } else if (!userLat || !userLng) {
-      // If no location provided and location check is NOT skipped, return 400
-      if (!shouldSkipLocationCheck) {
-        return res.status(400).json({
-          success: false,
-          message: "Location is required to view product details",
-        });
-      }
-      // If location check is skipped, we can't determine availability
-      isAvailableAtLocation = false;
+      // Strictly enforce location: If no location provided, return 400
+      return res.status(400).json({
+        success: false,
+        message: "Location is required to view product details",
+      });
     }
 
     // Find similar products (by category)
-    // Filter by location if coordinates are provided and location check is not skipped
+    // Filter by location
     const similarProductsQuery: any = {
       _id: { $ne: product._id },
       status: "Active",
@@ -389,13 +320,16 @@ export const getProductById = async (req: Request, res: Response) => {
     // Safely get category ID - handle both populated and unpopulated cases
     let categoryId: mongoose.Types.ObjectId | null = null;
     if (product.category) {
-      if (typeof product.category === 'object' && (product.category as any)._id) {
+      if (
+        typeof product.category === "object" &&
+        (product.category as any)._id
+      ) {
         // Category is populated
         categoryId = (product.category as any)._id;
       } else if (product.category instanceof mongoose.Types.ObjectId) {
         // Category is an ObjectId (not populated)
         categoryId = product.category;
-      } else if (typeof product.category === 'string') {
+      } else if (typeof product.category === "string") {
         // Category is a string ID
         categoryId = new mongoose.Types.ObjectId(product.category);
       }
@@ -406,14 +340,8 @@ export const getProductById = async (req: Request, res: Response) => {
       similarProductsQuery.category = categoryId;
     }
 
-    // Filter similar products by location if available and location check is not skipped
-    if (
-      userLat &&
-      userLng &&
-      !isNaN(userLat) &&
-      !isNaN(userLng) &&
-      !shouldSkipLocationCheck
-    ) {
+    // Filter similar products by location
+    if (userLat && userLng && !isNaN(userLat) && !isNaN(userLng)) {
       const nearbySellerIds = await findSellersWithinRange(userLat, userLng);
       if (nearbySellerIds.length > 0) {
         similarProductsQuery.seller = { $in: nearbySellerIds };
@@ -422,11 +350,12 @@ export const getProductById = async (req: Request, res: Response) => {
         similarProductsQuery.seller = { $in: [] };
       }
     }
-    // If shouldSkipLocationCheck is true, show all similar products regardless of location
 
     const similarProducts = await Product.find(similarProductsQuery)
       .limit(6)
-      .select("productName price mainImage pack discount _id rating reviewsCount");
+      .select(
+        "productName price mainImage pack discount _id rating reviewsCount"
+      );
 
     return res.status(200).json({
       success: true,

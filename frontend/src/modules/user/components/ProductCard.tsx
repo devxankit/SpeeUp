@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from 'react';
 import { Product } from '../../../types/domain';
 import { useCart } from '../../../context/CartContext';
 import { useAuth } from '../../../context/AuthContext';
+import { useLocation } from '../../../hooks/useLocation';
 import { addToWishlist, removeFromWishlist, getWishlist } from '../../../services/api/customerWishlistService';
 import Button from '../../../components/ui/button';
 import Badge from '../../../components/ui/badge';
@@ -41,6 +42,7 @@ export default function ProductCard({
   const navigate = useNavigate();
   const { cart, addToCart, updateQuantity } = useCart();
   const { isAuthenticated } = useAuth();
+  const { location } = useLocation();
   const imageRef = useRef<HTMLImageElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -56,7 +58,10 @@ export default function ProductCard({
 
     const checkWishlist = async () => {
       try {
-        const res = await getWishlist();
+        const res = await getWishlist({
+          latitude: location?.latitude,
+          longitude: location?.longitude
+        });
         if (res.success && res.data) {
           const exists = res.data.products.some(p => p._id === (product.id || product._id) || (p as any).id === (product.id || product._id));
           setIsWishlisted(exists);
@@ -67,7 +72,7 @@ export default function ProductCard({
       }
     };
     checkWishlist();
-  }, [product.id, product._id, isAuthenticated]);
+  }, [product.id, product._id, isAuthenticated, location?.latitude, location?.longitude]);
 
   const toggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -84,7 +89,11 @@ export default function ProductCard({
         await removeFromWishlist(((product as any).id || product._id) as string);
         setIsWishlisted(false);
       } else {
-        await addToWishlist(((product as any).id || product._id) as string);
+        await addToWishlist(
+          ((product as any).id || product._id) as string,
+          location?.latitude,
+          location?.longitude
+        );
         setIsWishlisted(true);
       }
     } catch (e) {

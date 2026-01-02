@@ -11,13 +11,23 @@ export interface WishlistResponse {
   };
 }
 
-export const getWishlist = async (): Promise<WishlistResponse> => {
-  const res = await api.get<WishlistResponse>("/customer/wishlist");
+export interface GetWishlistParams {
+  latitude?: number;
+  longitude?: number;
+}
+
+export const getWishlist = async (params?: GetWishlistParams): Promise<WishlistResponse> => {
+  const res = await api.get<WishlistResponse>("/customer/wishlist", { params });
   return res.data;
 };
 
-export const addToWishlist = async (productId: string): Promise<WishlistResponse> => {
-  const res = await api.post<WishlistResponse>("/customer/wishlist", { productId });
+export const addToWishlist = async (productId: string, latitude?: number, longitude?: number): Promise<WishlistResponse> => {
+  const params: any = {};
+  if (latitude !== undefined && longitude !== undefined) {
+    params.latitude = latitude;
+    params.longitude = longitude;
+  }
+  const res = await api.post<WishlistResponse>("/customer/wishlist", { productId }, { params });
   return res.data;
 };
 

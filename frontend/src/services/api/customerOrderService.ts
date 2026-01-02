@@ -20,7 +20,15 @@ export interface CreateOrderData {
         quantity: number;
         variant?: string;
     }[];
-    address: any; // We'll refine this type based on the address object structure
+    address: {
+        addressLine?: string;
+        city: string;
+        state?: string;
+        pincode: string;
+        latitude: number;
+        longitude: number;
+        [key: string]: any;
+    };
     paymentMethod: string;
     fees?: {
         deliveryFee: number;

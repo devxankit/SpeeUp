@@ -8,11 +8,13 @@ import FeaturedThisWeek from "./components/FeaturedThisWeek";
 import ProductCard from "./components/ProductCard";
 import { getHomeContent } from "../../services/api/customerHomeService";
 import { getHeaderCategoriesPublic } from "../../services/api/headerCategoryService";
+import { useLocation } from "../../hooks/useLocation";
 
 import { useThemeContext } from "../../context/ThemeContext";
 
 export default function Home() {
   const navigate = useNavigate();
+  const { location } = useLocation();
   const { activeCategory, setActiveCategory } = useThemeContext();
   const activeTab = activeCategory; // mapping for existing code compatibility
   const setActiveTab = setActiveCategory;
@@ -38,7 +40,11 @@ export default function Home() {
       try {
         setLoading(true);
         setError(null);
-        const response = await getHomeContent();
+        const response = await getHomeContent(
+          undefined,
+          location?.latitude,
+          location?.longitude
+        );
         if (response.success && response.data) {
           setHomeData(response.data);
 
@@ -75,7 +81,14 @@ export default function Home() {
           const batch = slugsToPreload.slice(i, i + batchSize);
           await Promise.all(
             batch.map(slug =>
-              getHomeContent(slug, true, 5 * 60 * 1000, true).catch(err => {
+              getHomeContent(
+                slug,
+                location?.latitude,
+                location?.longitude,
+                true,
+                5 * 60 * 1000,
+                true
+              ).catch(err => {
                 // Silently fail - this is just preloading
                 console.debug(`Failed to preload data for ${slug}:`, err);
               })
@@ -93,7 +106,7 @@ export default function Home() {
     };
 
     preloadHeaderCategories();
-  }, []);
+  }, [location?.latitude, location?.longitude]);
 
   const getFilteredProducts = (tabId: string) => {
     if (tabId === "all") {

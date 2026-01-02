@@ -105,8 +105,8 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
           state: order.address.state || "",
           pincode: order.address.pincode,
           landmark: order.address.landmark || "",
-          latitude: order.address.latitude,
-          longitude: order.address.longitude,
+          latitude: order.address.latitude ?? 0,
+          longitude: order.address.longitude ?? 0,
         },
         paymentMethod: order.paymentMethod || "COD",
         items: order.items.map((item) => ({

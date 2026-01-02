@@ -24,14 +24,20 @@ export interface HomeContentResponse {
  */
 export const getHomeContent = async (
   headerCategorySlug?: string,
+  latitude?: number,
+  longitude?: number,
   useCache: boolean = true,
   cacheTTL: number = 5 * 60 * 1000, // 5 minutes
   skipLoader: boolean = false
 ): Promise<HomeContentResponse> => {
-  const cacheKey = `home-content-${headerCategorySlug || 'all'}`;
+  const cacheKey = `home-content-${headerCategorySlug || 'all'}-${latitude || 0}-${longitude || 0}`;
 
   const fetchFn = async () => {
-    const params = headerCategorySlug ? { headerCategorySlug } : {};
+    const params: any = headerCategorySlug ? { headerCategorySlug } : {};
+    if (latitude !== undefined && longitude !== undefined) {
+      params.latitude = latitude;
+      params.longitude = longitude;
+    }
     const response = await api.get<HomeContentResponse>("/customer/home", {
       params,
       skipLoader

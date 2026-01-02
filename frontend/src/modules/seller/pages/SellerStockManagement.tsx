@@ -97,7 +97,7 @@ export default function SellerStockManagement() {
                                 seller: user?.storeName || '',
                                 image: resolveImageUrl(product.mainImage || product.mainImageUrl),
                                 variation: variation.title || variation.value || variation.name || 'Default',
-                                stock: variation.stock === 0 ? 'Unlimited' : variation.stock,
+                                stock: variation.stock,
                                 status: product.publish ? 'Published' : 'Unpublished',
                                 category: (product.category as any)?.name || 'Uncategorized',
                             });
@@ -118,6 +118,11 @@ export default function SellerStockManagement() {
         };
 
         fetchStockItems();
+
+        // Implement real-time updates by polling every 30 seconds
+        const intervalId = setInterval(fetchStockItems, 30000);
+
+        return () => clearInterval(intervalId);
     }, [currentPage, rowsPerPage, categoryFilter, statusFilter, user]);
 
     // Handle stock update
@@ -129,7 +134,7 @@ export default function SellerStockManagement() {
                 // Update local state
                 setStockItems(prev => prev.map(item =>
                     item.variationId === variationId
-                        ? { ...item, stock: newStock === 0 ? 'Unlimited' : newStock }
+                        ? { ...item, stock: newStock }
                         : item
                 ));
             } else {
@@ -151,7 +156,7 @@ export default function SellerStockManagement() {
             (statusFilter === 'Published' && item.status === 'Published') ||
             (statusFilter === 'Unpublished' && item.status === 'Unpublished');
         const matchesStock = stockFilter === 'All Products' ||
-            (stockFilter === 'In Stock' && (item.stock === 'Unlimited' || (typeof item.stock === 'number' && item.stock > 0))) ||
+            (stockFilter === 'In Stock' && (typeof item.stock === 'number' && item.stock > 0)) ||
             (stockFilter === 'Out of Stock' && item.stock === 0);
         return matchesSearch && matchesCategory && matchesStatus && matchesStock;
     });
@@ -166,9 +171,9 @@ export default function SellerStockManagement() {
                 bVal = bVal.toLowerCase();
             }
             if (sortColumn === 'stock') {
-                // Handle 'Unlimited' stock
-                if (aVal === 'Unlimited') aVal = Infinity;
-                if (bVal === 'Unlimited') bVal = Infinity;
+                // Stock is now always a number
+                aVal = Number(aVal);
+                bVal = Number(bVal);
             }
             if (sortDirection === 'asc') {
                 return aVal > bVal ? 1 : -1;
@@ -398,11 +403,9 @@ export default function SellerStockManagement() {
                                     <td className="p-4 align-middle border border-neutral-200">{item.variation}</td>
                                     <td className="p-4 align-middle border border-neutral-200">
                                         <div className="flex items-center gap-2">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.stock === 'Unlimited'
-                                                ? 'bg-blue-50 text-blue-600'
-                                                : item.stock === 0
-                                                    ? 'bg-red-50 text-red-600'
-                                                    : 'bg-green-50 text-green-600'
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.stock === 0
+                                                ? 'bg-red-50 text-red-600'
+                                                : 'bg-green-50 text-green-600'
                                                 }`}>
                                                 {item.stock}
                                             </span>
@@ -413,7 +416,7 @@ export default function SellerStockManagement() {
                                             <input
                                                 type="number"
                                                 min="0"
-                                                defaultValue={item.stock === 'Unlimited' ? 0 : item.stock}
+                                                defaultValue={item.stock}
                                                 className="w-20 px-2 py-1 border border-neutral-300 rounded text-sm focus:ring-1 focus:ring-teal-500 outline-none"
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {

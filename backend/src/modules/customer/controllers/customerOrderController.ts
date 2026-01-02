@@ -5,6 +5,7 @@ import OrderItem from "../../../models/OrderItem";
 import Customer from "../../../models/Customer";
 import Seller from "../../../models/Seller";
 import mongoose from "mongoose";
+import { calculateDistance } from "../../../utils/locationHelper";
 import { notifyDeliveryBoysOfNewOrder } from "../../../services/orderNotificationService";
 import { notifySellersOfOrderUpdate } from "../../../services/sellerNotificationService";
 import { generateDeliveryOtp } from "../../../services/deliveryOtpService";
@@ -162,20 +163,94 @@ export const createOrder = async (req: Request, res: Response) => {
             }
 
             // Atomically check stock and decrement to prevent race conditions
-            const product = session
-                ? await Product.findOneAndUpdate(
-                    { _id: item.product.id, stock: { $gte: qty } },
-                    { $inc: { stock: -qty } },
-                    { session, new: false }
-                  )
-                : await Product.findOneAndUpdate(
-                    { _id: item.product.id, stock: { $gte: qty } },
-                    { $inc: { stock: -qty } },
-                    { new: false }
-                  );
+            let product;
+            // The frontend sends variation info as 'variant' or 'variation'
+            // In the product model, it's stored in 'variations' array
+            const variationValue = item.variant || item.variation;
+
+            if (variationValue) {
+                // Try to decrement stock for the specific variation first
+                // We check variations._id, variations.value, variations.title, or variations.pack
+                product = session
+                    ? await Product.findOneAndUpdate(
+                        {
+                            _id: item.product.id,
+                            $or: [
+                                { "variations._id": mongoose.isValidObjectId(variationValue) ? variationValue : new mongoose.Types.ObjectId() },
+                                { "variations.value": variationValue },
+                                { "variations.title": variationValue },
+                                { "variations.pack": variationValue }
+                            ],
+                            "variations.stock": { $gte: qty }
+                        },
+                        { $inc: { "variations.$.stock": -qty, stock: -qty } },
+                        { session, new: true }
+                    )
+                    : await Product.findOneAndUpdate(
+                        {
+                            _id: item.product.id,
+                            $or: [
+                                { "variations._id": mongoose.isValidObjectId(variationValue) ? variationValue : new mongoose.Types.ObjectId() },
+                                { "variations.value": variationValue },
+                                { "variations.title": variationValue },
+                                { "variations.pack": variationValue }
+                            ],
+                            "variations.stock": { $gte: qty }
+                        },
+                        { $inc: { "variations.$.stock": -qty, stock: -qty } },
+                        { new: true }
+                    );
+            }
 
             if (!product) {
-                throw new Error(`Insufficient stock or product not found: ${item.product.name || 'ID: ' + item.product.id}`);
+                // If we are here, either variationValue wasn't provided, or it didn't match any variation with enough stock.
+                // We'll try to find the product first to see if it has variations.
+                const checkProduct = await Product.findById(item.product.id);
+
+                if (checkProduct && checkProduct.variations && checkProduct.variations.length > 0) {
+                    // Product has variations, but we didn't match one.
+                    // If a variation was provided, it means that specific variation is out of stock.
+                    if (variationValue) {
+                         throw new Error(`Insufficient stock for variation: ${variationValue}`);
+                    }
+
+                    // No variation was provided, but the product has them.
+                    // To maintain data consistency, we'll try to decrement from the first variation.
+                    product = session
+                        ? await Product.findOneAndUpdate(
+                            {
+                                _id: item.product.id,
+                                "variations.0.stock": { $gte: qty }
+                            },
+                            { $inc: { "variations.0.stock": -qty, stock: -qty } },
+                            { session, new: true }
+                        )
+                        : await Product.findOneAndUpdate(
+                            {
+                                _id: item.product.id,
+                                "variations.0.stock": { $gte: qty }
+                            },
+                            { $inc: { "variations.0.stock": -qty, stock: -qty } },
+                            { new: true }
+                        );
+                } else {
+                    // No variations, just decrement top-level stock
+                    product = session
+                        ? await Product.findOneAndUpdate(
+                            { _id: item.product.id, stock: { $gte: qty } },
+                            { $inc: { stock: -qty } },
+                            { session, new: true }
+                          )
+                        : await Product.findOneAndUpdate(
+                            { _id: item.product.id, stock: { $gte: qty } },
+                            { $inc: { stock: -qty } },
+                            { new: true }
+                          );
+                }
+            }
+
+            if (!product) {
+                throw new Error(`Insufficient stock or product not found: ${item.product.name || 'ID: ' + item.product.id}${variationValue ? ' (' + variationValue + ')' : ''}`);
             }
 
             // Track seller IDs to validate location
@@ -221,18 +296,6 @@ export const createOrder = async (req: Request, res: Response) => {
                 status: "Approved",
                 location: { $exists: true, $ne: null },
             });
-
-            // Helper function to calculate distance between two coordinates (Haversine formula)
-            function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-                const R = 6371; // Earth radius in kilometers
-                const dLat = (lat2 - lat1) * Math.PI / 180;
-                const dLon = (lon2 - lon1) * Math.PI / 180;
-                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                return R * c;
-            }
 
             // Check each seller can deliver to user's location
             for (const seller of sellers) {

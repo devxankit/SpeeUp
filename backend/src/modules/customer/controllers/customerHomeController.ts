@@ -8,84 +8,9 @@ import HomeSection from "../../../models/HomeSection";
 import BestsellerCard from "../../../models/BestsellerCard";
 import LowestPricesProduct from "../../../models/LowestPricesProduct";
 import PromoStrip from "../../../models/PromoStrip";
-import Seller from "../../../models/Seller";
 import mongoose from "mongoose";
 import { cache } from "../../../utils/cache";
-
-// Helper function to calculate distance between two coordinates (Haversine formula)
-function calculateDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371; // Earth radius in kilometers
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-// Helper function to find sellers within user's location range
-async function findSellersWithinRange(
-  userLat: number,
-  userLng: number
-): Promise<mongoose.Types.ObjectId[]> {
-  if (!userLat || !userLng || isNaN(userLat) || isNaN(userLng)) {
-    return [];
-  }
-
-  // Validate coordinates
-  if (userLat < -90 || userLat > 90 || userLng < -180 || userLng > 180) {
-    return [];
-  }
-
-  try {
-    // Fetch all approved sellers with location
-    // Note: If you registered a new seller, ensure their status is "Approved"
-    // and they have a valid location and serviceRadiusKm set.
-    const sellers = await Seller.find({
-      status: "Approved",
-      location: { $exists: true, $ne: null },
-      serviceRadiusKm: { $exists: true, $gt: 0 },
-    }).select("_id location serviceRadiusKm");
-
-    // Log for debugging (remove in production)
-    console.log(`Found ${sellers.length} approved sellers with location.`);
-
-    // Filter sellers where user is within their service radius
-    const nearbySellerIds: mongoose.Types.ObjectId[] = [];
-
-    for (const seller of sellers) {
-      if (seller.location && seller.location.coordinates) {
-        const sellerLng = seller.location.coordinates[0];
-        const sellerLat = seller.location.coordinates[1];
-        const distance = calculateDistance(
-          userLat,
-          userLng,
-          sellerLat,
-          sellerLng
-        );
-        const serviceRadius = seller.serviceRadiusKm || 10;
-
-        if (distance <= serviceRadius) {
-          nearbySellerIds.push(seller._id as mongoose.Types.ObjectId);
-        }
-      }
-    }
-
-    return nearbySellerIds;
-  } catch (error) {
-    console.error("Error finding nearby sellers:", error);
-    return [];
-  }
-}
+import { findSellersWithinRange } from "../../../utils/locationHelper";
 
 // Helper function to fetch data for a home section based on its configuration
 async function fetchSectionData(
@@ -134,9 +59,12 @@ async function fetchSectionData(
         ],
       };
 
-      // Apply location filtering if nearbySellerIds is provided
+      // We fetch these irrespective of location radius to show preview images on home page
+      // Location validation still happens at cart/order level
       if (nearbySellerIds && nearbySellerIds.length > 0) {
-        query.seller = { $in: nearbySellerIds };
+        // If we have nearby sellers, we can still filter by them if we want to prioritize
+        // But the user requested to show them irrespective of location radius
+        // For now, let's keep it simple and show all active products for the section
       }
 
       if (categories && categories.length > 0) {
@@ -236,9 +164,7 @@ export const getHomeContent = async (req: Request, res: Response) => {
     if (userLat !== null && userLng !== null) {
       nearbySellerIds = await findSellersWithinRange(userLat, userLng);
     } else {
-      // If no location provided, fetch products without location filtering
-      // This ensures products are visible if the user hasn't shared location yet
-      // but we still want to encourage location sharing for better accuracy
+      // If no location provided, return empty sellers list to enforce filtering
       nearbySellerIds = [];
     }
 
@@ -256,22 +182,18 @@ export const getHomeContent = async (req: Request, res: Response) => {
       bestsellerCards.map(async (card: any) => {
         const categoryId = card.category?._id || card.category;
 
-        // Build product query
+        // Build product query for images (ignore location to show category preview)
         const productQuery: any = {
           category: categoryId,
           status: "Active",
           publish: true,
         };
 
-        // Apply location filtering if nearbySellerIds is available
-        if (nearbySellerIds.length > 0) {
-          productQuery.seller = { $in: nearbySellerIds };
-        }
-
-        // Fetch 4 active products from the category (newest first)
+        // Fetch 4 active products from the category for preview images
+        // We fetch these irrespective of location radius to show category preview
         const categoryProducts = await Product.find(productQuery)
           .select("productName mainImage galleryImages")
-          .sort({ createdAt: -1 }) // Show newest products first
+          .sort({ createdAt: -1 })
           .limit(4)
           .lean();
 
@@ -312,6 +234,7 @@ export const getHomeContent = async (req: Request, res: Response) => {
     );
 
     // 2. Lowest Prices Products - Get admin-selected products
+    // We fetch these irrespective of location radius to show preview on home page
     const lowestPricesProductsQuery: any = {
       isActive: true,
     };
@@ -326,10 +249,8 @@ export const getHomeContent = async (req: Request, res: Response) => {
         match: {
           status: "Active",
           publish: true,
-          ...(nearbySellerIds.length > 0
-            ? { seller: { $in: nearbySellerIds } }
-            : {}),
-        }, // Only include active, published products within range
+          // Removed location filter to show preview images irrespective of radius
+        },
       })
       .sort({ order: 1 })
       .lean();
@@ -369,16 +290,35 @@ export const getHomeContent = async (req: Request, res: Response) => {
       .sort({ order: 1, createdAt: -1 })
       .lean();
 
-    // Transform shop data to match frontend expected format
-    const shops = shopDocuments.map((shop: any) => ({
-      id: shop.storeId || shop._id.toString(),
-      name: shop.name,
-      image: shop.image,
-      slug: shop.storeId || shop._id.toString(),
-      category: shop.category,
-      productIds: shop.products?.map((p: any) => p.toString()) || [],
-      bgColor: shop.bgColor || "bg-neutral-50",
-    }));
+    // Transform shop data to match frontend expected format and include preview images
+    const shops = await Promise.all(
+      shopDocuments.map(async (shop: any) => {
+        let productImages: string[] = [];
+
+        if (shop.products && shop.products.length > 0) {
+          const shopProducts = await Product.find({
+            _id: { $in: shop.products.slice(0, 4) },
+            status: "Active",
+            publish: true,
+          })
+            .select("mainImage")
+            .lean();
+
+          productImages = shopProducts.map((p: any) => p.mainImage).filter(Boolean);
+        }
+
+        return {
+          id: shop.storeId || shop._id.toString(),
+          name: shop.name,
+          image: shop.image,
+          productImages, // Include preview images irrespective of location
+          slug: shop.storeId || shop._id.toString(),
+          category: shop.category,
+          productIds: shop.products?.map((p: any) => p.toString()) || [],
+          bgColor: shop.bgColor || "bg-neutral-50",
+        };
+      })
+    );
 
     // 5. Trending Items (Fetch some popular categories or products)
     const trendingCategories = await Category.find({
@@ -397,15 +337,11 @@ export const getHomeContent = async (req: Request, res: Response) => {
     // 6. Personal Care Subcategories - Now handled by dynamic sections
 
     // 7. Cooking Ideas (Fetch some products from 'Food' or 'Grocery' categories)
+    // We fetch these irrespective of location radius to show preview images
     const foodProductsQuery: any = {
       status: "Active",
       publish: true,
     };
-
-    // Apply location filtering if nearbySellerIds is available
-    if (nearbySellerIds.length > 0) {
-      foodProductsQuery.seller = { $in: nearbySellerIds };
-    }
 
     const foodProducts = await Product.find(foodProductsQuery)
       .limit(3)

@@ -53,13 +53,11 @@ export default function ProductDetail() {
         // Check if navigation came from store page
         const fromStore = (routerLocation.state as any)?.fromStore === true;
 
-        // Always skip location check to allow viewing product details
-        // Availability will still be checked and shown via isAvailableAtLocation flag
+        // Fetch product details with location
         const response = await getProductById(
           id,
           location?.latitude,
-          location?.longitude,
-          true // Skip location check - allow viewing product details regardless of location
+          location?.longitude
         );
         if (response.success && response.data) {
           const productData = response.data as any;

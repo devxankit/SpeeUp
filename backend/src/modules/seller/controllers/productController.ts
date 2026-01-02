@@ -344,18 +344,8 @@ export const updateProduct = asyncHandler(
       updateData.shopId = null;
     }
 
-    const product = await Product.findOneAndUpdate(
-      { _id: id, seller: sellerId },
-      updateData,
-      { new: true, runValidators: true }
-    )
-      .populate("category", "name")
-      .populate("subcategory", "subcategoryName")
-      .populate("headerCategoryId", "name slug")
-      .populate("brand", "name")
-      .populate("tax", "name rate");
-
-    console.log("DEBUG updateProduct: product found?", product ? "Yes" : "No");
+    // Use findOne and then save to trigger pre-save hooks
+    const product = await Product.findOne({ _id: id, seller: sellerId });
 
     if (!product) {
       // Check if product exists at all
@@ -372,10 +362,30 @@ export const updateProduct = asyncHandler(
       });
     }
 
+    // Apply updates
+    Object.assign(product, updateData);
+
+    // If variations were updated, mark as modified
+    if (updateData.variations) {
+      product.markModified("variations");
+    }
+
+    await product.save();
+
+    // Re-populate for response
+    const populatedProduct = await Product.findById(product._id)
+      .populate("category", "name")
+      .populate("subcategory", "subcategoryName")
+      .populate("headerCategoryId", "name slug")
+      .populate("brand", "name")
+      .populate("tax", "name rate");
+
+    console.log("DEBUG updateProduct: product updated successfully");
+
     return res.status(200).json({
       success: true,
       message: "Product updated successfully",
-      data: product,
+      data: populatedProduct,
     });
   }
 );
@@ -439,11 +449,19 @@ export const updateStock = asyncHandler(async (req: Request, res: Response) => {
 
   if (stock !== undefined) {
     variation.stock = stock;
+    // Automatically update status based on stock
+    if (stock === 0) {
+      variation.status = "Sold out";
+    } else if (stock > 0 && variation.status === "Sold out") {
+      variation.status = "Available";
+    }
   }
   if (status) {
     variation.status = status;
   }
 
+  // Mark variations as modified since we updated a sub-document field
+  product.markModified("variations");
   await product.save();
 
   return res.status(200).json({
