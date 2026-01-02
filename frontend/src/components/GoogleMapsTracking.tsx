@@ -37,7 +37,7 @@ interface GoogleMapsTrackingProps {
 
 const mapContainerStyle = {
     width: '100%',
-    height: '16rem'
+    height: '22rem'
 }
 
 export default function GoogleMapsTracking({
@@ -61,6 +61,7 @@ export default function GoogleMapsTracking({
     const lastRouteCalcRef = useRef<{ time: number, origin: Location }>({ time: 0, origin: { lat: 0, lng: 0 } })
     const hasInitialBoundsFitted = useRef<boolean>(false)
     const [userHasInteracted, setUserHasInteracted] = useState<boolean>(false)
+    const [isFullScreen, setIsFullScreen] = useState<boolean>(false)
     const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null)
     const [routeError, setRouteError] = useState<string | null>(null)
     const [isGPSWeak, setIsGPSWeak] = useState<boolean>(false)
@@ -146,11 +147,11 @@ export default function GoogleMapsTracking({
                 mapRef.current._setProgrammaticChange(true);
             }
 
-            // If we only have delivery location, just pan and zoom
-            if (deliveryLocation && !showRoute) {
+            // If in full screen or only have delivery location, focus on delivery boy
+            if (deliveryLocation && (isFullScreen || !showRoute)) {
                 mapRef.current.panTo(deliveryLocation);
-                if (!hasInitialBoundsFitted.current) {
-                    mapRef.current.setZoom(15);
+                if (!hasInitialBoundsFitted.current || isFullScreen) {
+                    mapRef.current.setZoom(isFullScreen ? 17 : 15);
                     hasInitialBoundsFitted.current = true;
                 }
             } else {
@@ -168,25 +169,39 @@ export default function GoogleMapsTracking({
                 setTimeout(() => mapRef.current._setProgrammaticChange(false), 500);
             }
         }
-    }, [isLoaded, deliveryLocation, showRoute, routeOrigin, routeDestination, routeWaypoints, storeLocation, sellerLocations, customerLocation, userHasInteracted]);
+    }, [isLoaded, deliveryLocation, showRoute, routeOrigin, routeDestination, routeWaypoints, storeLocation, sellerLocations, customerLocation, userHasInteracted, isFullScreen]);
 
     const handleRecenter = () => {
         setUserHasInteracted(false);
         hasInitialBoundsFitted.current = false;
         if (mapRef.current) {
-            const bounds = new window.google.maps.LatLngBounds();
-            if (deliveryLocation) bounds.extend(deliveryLocation);
-            if (showRoute && routeOrigin && routeDestination) {
-                bounds.extend(routeOrigin);
-                bounds.extend(routeDestination);
-                routeWaypoints.forEach(wp => bounds.extend(wp));
+            if (deliveryLocation && (isFullScreen || !showRoute)) {
+                mapRef.current.panTo(deliveryLocation);
+                mapRef.current.setZoom(isFullScreen ? 17 : 15);
+                hasInitialBoundsFitted.current = true;
             } else {
-                if (storeLocation) bounds.extend(storeLocation);
-                sellerLocations.forEach(s => bounds.extend(s));
-                bounds.extend(customerLocation);
+                const bounds = new window.google.maps.LatLngBounds();
+                if (deliveryLocation) bounds.extend(deliveryLocation);
+                if (showRoute && routeOrigin && routeDestination) {
+                    bounds.extend(routeOrigin);
+                    bounds.extend(routeDestination);
+                    routeWaypoints.forEach(wp => bounds.extend(wp));
+                } else {
+                    if (storeLocation) bounds.extend(storeLocation);
+                    sellerLocations.forEach(s => bounds.extend(s));
+                    bounds.extend(customerLocation);
+                }
+                mapRef.current.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
+                hasInitialBoundsFitted.current = true;
             }
-            mapRef.current.fitBounds(bounds, { top: 50, bottom: 50, left: 50, right: 50 });
         }
+    };
+
+    const toggleFullScreen = () => {
+        setIsFullScreen(!isFullScreen);
+        // Reset interaction/bounds to force re-fit in new size
+        setUserHasInteracted(false);
+        hasInitialBoundsFitted.current = false;
     };
 
     const onLoad = useCallback((map: any) => {
@@ -340,6 +355,9 @@ export default function GoogleMapsTracking({
     const animationRef = useRef<number>();
     const lastDeliveryLocationRef = useRef<Location | undefined>(deliveryLocation);
 
+    // Center is only for initial load, we use panTo/fitBounds for updates
+    const [initialCenter] = useState(center);
+
     // Animation Logic
     useEffect(() => {
         if (!deliveryLocation) return;
@@ -394,22 +412,13 @@ export default function GoogleMapsTracking({
     }, [deliveryLocation]);
 
 
-    // Handle initial bounds fitting when map first loads
-    useEffect(() => {
-        if (mapRef.current && !hasInitialBoundsFitted.current && deliveryLocation && isLoaded && window.google?.maps) {
-            // On initial load, fit bounds to show all important locations
-            const bounds = new window.google.maps.LatLngBounds()
-            allSellers.forEach(seller => bounds.extend(seller))
-            bounds.extend(customerLocation)
-            bounds.extend(deliveryLocation)
-            mapRef.current.fitBounds(bounds)
-            hasInitialBoundsFitted.current = true
-        }
-    }, [deliveryLocation, storeLocation, customerLocation, isLoaded])
+    const containerClasses = isFullScreen
+        ? "fixed inset-0 z-[100] bg-white w-screen h-screen flex flex-col"
+        : "relative mx-4 mt-4 rounded-lg overflow-hidden shadow-sm";
 
     if (loadError) {
         return (
-            <div className="mx-4 mt-4 bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+            <div className={containerClasses + " bg-red-50 border border-red-200 p-4 text-center"}>
                 <p className="text-red-800 text-sm">❌ Failed to load Google Maps</p>
             </div>
         )
@@ -417,8 +426,8 @@ export default function GoogleMapsTracking({
 
     if (!isLoaded) {
         return (
-            <div className="mx-4 mt-4 bg-gray-100 rounded-lg p-8 text-center">
-                <div className="animate-spin">🗺️</div>
+            <div className={containerClasses + " bg-gray-100 p-8 text-center"}>
+                <div className="animate-spin text-2xl">🗺️</div>
                 <p className="text-gray-600 text-sm mt-2">Loading map...</p>
             </div>
         )
@@ -426,17 +435,87 @@ export default function GoogleMapsTracking({
 
     if (!apiKey) {
         return (
-            <div className="mx-4 mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+            <div className={containerClasses + " bg-yellow-50 border border-yellow-200 p-4 text-center"}>
                 <p className="text-yellow-800 text-sm">⚠️ Google Maps API key not configured</p>
             </div>
         )
     }
 
     return (
-        <div className="relative mx-4 mt-4 rounded-lg overflow-hidden shadow-sm">
+        <div className={containerClasses}>
+            {/* Map UI Overlays */}
+            <div className={`absolute ${isFullScreen ? 'left-6 top-6' : 'left-3 top-3'} flex flex-col gap-2 z-10`}>
+                {isTracking && (
+                    <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse"></div>
+                        <span className="text-white bg-black/70 px-2 py-1 rounded text-sm font-medium">Live</span>
+                    </div>
+                )}
+
+                {isGPSWeak && isTracking && (
+                    <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="bg-red-600 text-white px-3 py-1.5 rounded-md text-xs font-semibold shadow-lg flex items-center gap-2"
+                    >
+                        <span className="animate-pulse">⚠️</span>
+                        GPS Signal Weak
+                    </motion.div>
+                )}
+
+                {routeInfo && isFullScreen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white p-3 rounded-lg shadow-xl border border-gray-100 min-w-[150px]"
+                    >
+                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Estimated Arrival</div>
+                        <div className="flex items-end gap-2">
+                            <span className="text-xl font-bold text-gray-900">{routeInfo.duration}</span>
+                            <span className="text-sm text-gray-500 mb-0.5">({routeInfo.distance})</span>
+                        </div>
+                        {destinationName && (
+                            <div className="text-xs text-blue-600 mt-1 font-medium truncate">
+                                to {destinationName}
+                            </div>
+                        )}
+                    </motion.div>
+                )}
+            </div>
+
+            <div className={`absolute ${isFullScreen ? 'right-6 top-6' : 'right-3 top-3'} flex flex-col gap-2 z-10`}>
+                <button
+                    onClick={toggleFullScreen}
+                    className="p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors"
+                    title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+                >
+                    {isFullScreen ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                    )}
+                </button>
+                <button
+                    onClick={handleRecenter}
+                    className="p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors"
+                    title="Recenter"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M3 12h3m12 0h3M12 3v3m0 12v3"/></svg>
+                </button>
+            </div>
+
+            {routeError && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+                    <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-2 rounded-full text-xs font-medium shadow-lg flex items-center gap-2">
+                        <span>⚠️</span>
+                        {routeError}
+                    </div>
+                </div>
+            )}
+
             <GoogleMap
-                mapContainerStyle={mapContainerStyle}
-                center={center}
+                mapContainerStyle={isFullScreen ? { width: '100%', height: '100%' } : mapContainerStyle}
+                center={initialCenter}
                 zoom={13}
                 onLoad={onLoad}
                 options={{
@@ -515,92 +594,6 @@ export default function GoogleMapsTracking({
                     />
                 )}
             </GoogleMap>
-
-            {/* Error Overlay */}
-            {routeError && (
-                <div className="absolute top-16 left-4 right-4 bg-red-50/95 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm border border-red-100 z-10 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-red-600 font-bold uppercase tracking-wider">{routeError}</span>
-                    </div>
-                    <button
-                        onClick={() => setRouteError(null)}
-                        className="text-red-400 hover:text-red-600 font-bold px-1 text-xs"
-                    >
-                        ✕
-                    </button>
-                </div>
-            )}
-
-            {/* Floating Map Controls */}
-             <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-                 {userHasInteracted && (
-                     <button
-                        onClick={handleRecenter}
-                        className="bg-white p-2.5 rounded-full shadow-lg border border-neutral-200 text-blue-600 hover:bg-blue-50 transition-colors"
-                        title="Re-center on delivery"
-                    >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-                            <circle cx="12" cy="12" r="2" />
-                        </svg>
-                    </button>
-                )}
-            </div>
-
-            {/* GPS Signal Warning Overlay */}
-            {isGPSWeak && isTracking && (
-                <div className="absolute bottom-16 left-4 right-4 bg-yellow-50/95 backdrop-blur-sm px-3 py-2 rounded-lg shadow-md border border-yellow-100 z-10 flex items-center gap-2 animate-pulse">
-                    <span className="flex-shrink-0 text-sm">🛰️</span>
-                    <div>
-                        <p className="text-[10px] font-bold text-yellow-800 uppercase tracking-wider">GPS Signal Weak</p>
-                        <p className="text-[10px] text-yellow-700">Waiting for real-time location updates...</p>
-                    </div>
-                </div>
-            )}
-
-            {/* Live Tracking Indicator */}
-            {isTracking && (
-                <div className="absolute top-3 right-3 z-10 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md border border-neutral-100 flex items-center gap-2">
-                    <motion.div
-                        className="w-2 h-2 rounded-full bg-green-500"
-                        animate={{ opacity: [1, 0.3, 1] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                    />
-                    <span className="text-[10px] font-bold text-gray-900 uppercase tracking-wider">Live</span>
-                </div>
-            )}
-
-            {/* Destination Overlay - Matches Delivery Interface */}
-            {destinationName && (
-                <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl shadow-md border border-neutral-100 z-10">
-                    <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">Destination</p>
-                    <p className="text-xs font-bold text-neutral-800 truncate max-w-[200px]">{destinationName}</p>
-                </div>
-            )}
-
-            {/* Route Info Display - Matches Delivery Interface Styling */}
-            {routeInfo && showRoute && (
-                <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm px-4 py-3 rounded-xl shadow-lg border border-neutral-100 z-10">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div>
-                                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">Distance</p>
-                                <p className="text-sm font-bold text-neutral-900">{routeInfo.distance}</p>
-                            </div>
-                            <div className="w-px h-8 bg-neutral-200"></div>
-                            <div>
-                                <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider mb-0.5">ETA</p>
-                                <p className="text-sm font-bold text-neutral-900">{routeInfo.duration}</p>
-                            </div>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shadow-sm">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white rotate-45">
-                                <polygon points="3 11 22 2 13 21 11 13 3 11" />
-                            </svg>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     )
 }
