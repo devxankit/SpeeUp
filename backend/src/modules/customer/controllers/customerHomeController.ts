@@ -90,29 +90,38 @@ async function fetchSectionData(
       const products = await Product.find(query)
         .sort({ createdAt: -1 }) // Show newest items first
         .limit(limit || 8)
-        .select("productName mainImage price mrp discount rating reviewsCount pack")
+        .select("productName mainImage price mrp discount rating reviewsCount pack seller")
         .lean();
 
-      return products.map((p: any) => ({
-        id: p._id.toString(),
-        productId: p._id.toString(),
-        name: p.productName,
-        productName: p.productName,
-        image: p.mainImage,
-        mainImage: p.mainImage,
-        price: p.price,
-        discount:
-          p.discount ||
-          (p.mrp && p.price
-            ? Math.round(((p.mrp - p.price) / p.mrp) * 100)
-            : 0),
-        productImages: p.mainImage ? [p.mainImage] : [],
-        rating: p.rating || 0,
-        reviewsCount: p.reviewsCount || 0,
-        reviews: p.reviewsCount || 0,
-        pack: p.pack || "",
-        type: "product",
-      }));
+      return products.map((p: any) => {
+        // Check if the product's seller is within range
+        const isAvailable = nearbySellerIds && nearbySellerIds.length > 0 && p.seller
+          ? nearbySellerIds.some(id => id.toString() === p.seller.toString())
+          : false;
+
+        return {
+          id: p._id.toString(),
+          productId: p._id.toString(),
+          name: p.productName,
+          productName: p.productName,
+          image: p.mainImage,
+          mainImage: p.mainImage,
+          price: p.price,
+          discount:
+            p.discount ||
+            (p.mrp && p.price
+              ? Math.round(((p.mrp - p.price) / p.mrp) * 100)
+              : 0),
+          productImages: p.mainImage ? [p.mainImage] : [],
+          rating: p.rating || 0,
+          reviewsCount: p.reviewsCount || 0,
+          reviews: p.reviewsCount || 0,
+          pack: p.pack || "",
+          type: "product",
+          isAvailable,
+          seller: p.seller,
+        };
+      });
     }
 
     // If displayType is "categories", fetch the selected categories themselves
@@ -260,6 +269,11 @@ export const getHomeContent = async (req: Request, res: Response) => {
       .filter((item: any) => item.product !== null)
       .map((item: any) => {
         const product = item.product;
+        // Check if the product's seller is within range
+        const isAvailable = nearbySellerIds && nearbySellerIds.length > 0 && product.seller
+          ? nearbySellerIds.some(id => id.toString() === product.seller.toString())
+          : false;
+
         return {
           id: product._id.toString(),
           _id: product._id.toString(),
@@ -274,6 +288,8 @@ export const getHomeContent = async (req: Request, res: Response) => {
           subcategory: product.subcategory?.toString() || "",
           status: product.status,
           publish: product.publish,
+          isAvailable,
+          seller: product.seller,
         };
       });
 
@@ -496,9 +512,19 @@ export const getHomeContent = async (req: Request, res: Response) => {
         endDate: { $gte: now },
       })
         .populate("categoryCards.categoryId", "name slug image")
-        .populate("featuredProducts", "productName mainImage mainImageUrl galleryImageUrls galleryImages price mrp compareAtPrice discount rating reviewsCount")
+        .populate("featuredProducts", "productName mainImage mainImageUrl galleryImageUrls galleryImages price mrp compareAtPrice discount rating reviewsCount seller")
         .sort({ order: 1 })
         .lean();
+
+      // If we have promoStrip, add availability flag to featured products
+      if (promoStrip && promoStrip.featuredProducts) {
+        promoStrip.featuredProducts = promoStrip.featuredProducts.map((p: any) => {
+          const isAvailable = nearbySellerIds && nearbySellerIds.length > 0 && p.seller
+            ? nearbySellerIds.some(id => id.toString() === p.seller.toString())
+            : false;
+          return { ...p, isAvailable };
+        });
+      }
 
       // Cache for 3 minutes (PromoStrip data doesn't change frequently)
       if (promoStrip) {
@@ -728,7 +754,7 @@ export const getStoreProducts = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       success: true,
-      data: products,
+      data: products.map(p => ({ ...p, isAvailable: true })),
       shop: shopData,
       pagination: {
         page: 1,

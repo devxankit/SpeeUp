@@ -12,7 +12,7 @@ const calculateCartTotal = async (cartId: any, nearbySellerIds: mongoose.Types.O
         path: 'product',
         select: 'price seller status publish'
     });
-    
+
     let total = 0;
     for (const item of items) {
         const product = item.product as any;
@@ -50,9 +50,9 @@ export const getCart = async (req: Request, res: Response) => {
 
         let cart = await Cart.findOne({ customer: userId }).populate({
             path: 'items',
-            populate: { 
-                path: 'product', 
-                select: 'productName price mainImage stock pack mrp category seller status publish' 
+            populate: {
+                path: 'product',
+                select: 'productName price mainImage stock pack mrp category seller status publish'
             }
         });
 
@@ -172,9 +172,9 @@ export const addToCart = async (req: Request, res: Response) => {
         // Return updated cart with filtering
         const updatedCart = await Cart.findById(cart._id).populate({
             path: 'items',
-            populate: { 
-                path: 'product', 
-                select: 'productName price mainImage stock pack mrp category seller status publish' 
+            populate: {
+                path: 'product',
+                select: 'productName price mainImage stock pack mrp category seller status publish'
             }
         });
 
@@ -256,9 +256,9 @@ export const updateCartItem = async (req: Request, res: Response) => {
 
         const updatedCart = await Cart.findById(cart._id).populate({
             path: 'items',
-            populate: { 
-                path: 'product', 
-                select: 'productName price mainImage stock pack mrp category seller status publish' 
+            populate: {
+                path: 'product',
+                select: 'productName price mainImage stock pack mrp category seller status publish'
             }
         });
 
@@ -317,9 +317,9 @@ export const removeFromCart = async (req: Request, res: Response) => {
 
         const updatedCart = await Cart.findById(cart._id).populate({
             path: 'items',
-            populate: { 
-                path: 'product', 
-                select: 'productName price mainImage stock pack mrp category seller status publish' 
+            populate: {
+                path: 'product',
+                select: 'productName price mainImage stock pack mrp category seller status publish'
             }
         });
 

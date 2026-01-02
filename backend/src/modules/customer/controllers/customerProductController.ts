@@ -287,21 +287,6 @@ export const getProductById = async (req: Request, res: Response) => {
       isAvailableAtLocation = nearbySellerIds.some(
         (id) => id.toString() === sellerId!.toString()
       );
-
-      // Strictly enforce location: if product is not available, return 403
-      if (!isAvailableAtLocation) {
-        return res.status(403).json({
-          success: false,
-          message:
-            "This product is not available in your location. Please check sellers within your area.",
-        });
-      }
-    } else if (!userLat || !userLng) {
-      // Strictly enforce location: If no location provided, return 400
-      return res.status(400).json({
-        success: false,
-        message: "Location is required to view product details",
-      });
     }
 
     // Find similar products (by category)

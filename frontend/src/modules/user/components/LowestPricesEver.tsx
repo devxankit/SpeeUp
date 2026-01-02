@@ -52,12 +52,13 @@ const ProductCard = memo(({
       className="flex-shrink-0 w-[140px]"
       style={{ scrollSnapAlign: 'start' }}
     >
-      <div className="bg-white rounded-lg overflow-hidden flex flex-col relative h-full max-h-full" style={{ boxShadow: '0 1px 1px rgba(0, 0, 0, 0.03)' }}>
+      <div
+        onClick={() => navigate(`/product/${product.id}`)}
+        className="bg-white rounded-lg overflow-hidden flex flex-col relative h-full max-h-full cursor-pointer"
+        style={{ boxShadow: '0 1px 1px rgba(0, 0, 0, 0.03)' }}
+      >
         {/* Product Image Area */}
-        <div
-          onClick={() => navigate(`/product/${product.id}`)}
-          className="relative block cursor-pointer"
-        >
+        <div className="relative block">
           <div className="w-full h-28 bg-neutral-100 flex items-center justify-center overflow-hidden relative">
             {product.imageUrl ? (
               <img
@@ -80,13 +81,17 @@ const ProductCard = memo(({
 
             {/* Heart Icon - Top Right */}
             <button
-              onClick={toggleWishlist}
-              className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleWishlist(e);
+              }}
+              className="absolute top-1 right-1 z-30 w-7 h-7 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
               aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
             >
               <svg
-                width="12"
-                height="12"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill={isWishlisted ? "#ef4444" : "none"}
                 xmlns="http://www.w3.org/2000/svg"
@@ -113,14 +118,19 @@ const ProductCard = memo(({
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
                     transition={{ duration: 0.2 }}
+                    disabled={product.isAvailable === false}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       onAddToCart(product, e.currentTarget);
                     }}
-                    className="bg-white/95 backdrop-blur-sm text-green-600 border-2 border-green-600 text-[10px] font-semibold px-2 py-1 rounded shadow-md hover:bg-white transition-colors"
+                    className={`bg-white/95 backdrop-blur-sm text-[10px] font-semibold px-2 py-1 rounded shadow-md transition-colors ${
+                      product.isAvailable === false
+                      ? 'text-neutral-400 border-2 border-neutral-300 cursor-not-allowed'
+                      : 'text-green-600 border-2 border-green-600 hover:bg-white'
+                    }`}
                   >
-                    ADD
+                    {product.isAvailable === false ? 'Out of Range' : 'ADD'}
                   </motion.button>
                 ) : (
                   <motion.div
@@ -155,13 +165,18 @@ const ProductCard = memo(({
                       {inCartQty}
                     </motion.span>
                     <motion.button
-                      whileTap={{ scale: 0.9 }}
+                      whileTap={product.isAvailable === false ? {} : { scale: 0.9 }}
+                      disabled={product.isAvailable === false}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         onUpdateQuantity(product.id, inCartQty + 1);
                       }}
-                      className="w-4 h-4 flex items-center justify-center text-white font-bold hover:bg-green-700 rounded transition-colors p-0 leading-none"
+                      className={`w-4 h-4 flex items-center justify-center font-bold rounded transition-colors p-0 leading-none ${
+                        product.isAvailable === false
+                        ? 'text-neutral-300 cursor-not-allowed'
+                        : 'text-white hover:bg-green-700'
+                      }`}
                       style={{ lineHeight: 1, fontSize: '14px' }}
                     >
                       <span className="relative top-[-1px]">+</span>
@@ -188,10 +203,7 @@ const ProductCard = memo(({
           </div>
 
           {/* Product Name */}
-          <div
-            onClick={() => navigate(`/product/${product.id}`)}
-            className="mb-0.5 cursor-pointer"
-          >
+          <div className="mb-0.5">
             <h3 className="text-[10px] font-bold text-neutral-900 line-clamp-2 leading-tight min-h-[2rem] max-h-[2rem] overflow-hidden" title={productName}>
               {displayName}
             </h3>

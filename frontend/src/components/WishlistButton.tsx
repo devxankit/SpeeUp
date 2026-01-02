@@ -16,13 +16,13 @@ export default function WishlistButton({
   const { isWishlisted, toggleWishlist } = useWishlist(productId);
 
   const sizeClasses = {
-    sm: 'w-5 h-5',
+    sm: 'w-7 h-7',
     md: 'w-9 h-9',
     lg: 'w-12 h-12'
   };
 
   const iconSizes = {
-    sm: '12',
+    sm: '16',
     md: '20',
     lg: '24'
   };
@@ -30,11 +30,15 @@ export default function WishlistButton({
   // Only add default positioning if className doesn't already specify it
   const hasPositioning = className.includes('top-') || className.includes('right-') || className.includes('left-') || className.includes('bottom-');
   const positionClasses = position === 'absolute' && !hasPositioning ? 'absolute top-2 right-2' : position === 'absolute' ? 'absolute' : '';
-  const baseClasses = `${positionClasses} z-10 ${sizeClasses[size]} rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all shadow-md group/heart ${className}`;
+  const baseClasses = `${positionClasses} z-30 ${sizeClasses[size]} rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all shadow-md group/heart ${className}`;
 
   return (
     <button
-      onClick={toggleWishlist}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleWishlist(e);
+      }}
       className={baseClasses}
       aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
     >

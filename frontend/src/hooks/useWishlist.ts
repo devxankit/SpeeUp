@@ -23,9 +23,9 @@ export function useWishlist(productId?: string) {
     const checkWishlist = async () => {
       try {
         const res = await getWishlist();
-        if (res.success && res.data) {
+        if (res.success && res.data && res.data.products) {
           const exists = res.data.products.some(
-            (p: any) => p._id === productId || p.id === productId
+            (p: any) => String(p._id || p.id) === String(productId)
           );
           setIsWishlisted(exists);
         }
@@ -37,10 +37,10 @@ export function useWishlist(productId?: string) {
     checkWishlist();
   }, [productId, isAuthenticated]);
 
-  const toggleWishlist = async (e?: React.MouseEvent) => {
+  const toggleWishlist = async (e?: React.MouseEvent | React.TouchSplat) => {
     if (e) {
-      e.preventDefault();
-      e.stopPropagation();
+      if ('preventDefault' in e) e.preventDefault();
+      if ('stopPropagation' in e) e.stopPropagation();
     }
 
     // Redirect to login if not authenticated

@@ -62,8 +62,9 @@ export default function ProductCard({
           latitude: location?.latitude,
           longitude: location?.longitude
         });
-        if (res.success && res.data) {
-          const exists = res.data.products.some(p => p._id === (product.id || product._id) || (p as any).id === (product.id || product._id));
+        if (res.success && res.data && res.data.products) {
+          const targetId = String((product as any).id || product._id);
+          const exists = res.data.products.some(p => String(p._id || (p as any).id) === targetId);
           setIsWishlisted(exists);
         }
       } catch (e) {
@@ -84,13 +85,15 @@ export default function ProductCard({
       return;
     }
 
+    const targetId = String((product as any).id || product._id);
+
     try {
       if (isWishlisted) {
-        await removeFromWishlist(((product as any).id || product._id) as string);
+        await removeFromWishlist(targetId);
         setIsWishlisted(false);
       } else {
         await addToWishlist(
-          ((product as any).id || product._id) as string,
+          targetId,
           location?.latitude,
           location?.longitude
         );
@@ -119,6 +122,11 @@ export default function ProductCard({
   const handleAdd = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+
+    // Check if product is available in user's location
+    if (product.isAvailable === false) {
+      return;
+    }
 
     // Prevent any operation while another is in progress
     if (isOperationPendingRef.current) {
@@ -157,6 +165,11 @@ export default function ProductCard({
   const handleIncrease = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+
+    // Check if product is available in user's location
+    if (product.isAvailable === false) {
+      return;
+    }
 
     // Prevent any operation while another is in progress
     if (isOperationPendingRef.current) {
@@ -243,8 +256,12 @@ export default function ProductCard({
 
           {showHeartIcon && (
             <button
-              onClick={toggleWishlist}
-              className="absolute top-2 right-2 z-10 w-9 h-9 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all shadow-md group/heart"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleWishlist(e);
+              }}
+              className="absolute top-2 right-2 z-30 w-9 h-9 rounded-full bg-white/95 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all shadow-md group/heart"
               aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
             >
               <svg
@@ -275,13 +292,18 @@ export default function ProductCard({
                   ref={addButtonRef}
                   variant="outline"
                   size="sm"
+                  disabled={product.isAvailable === false}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleAdd(e);
                   }}
-                  className="w-full border border-green-600 text-green-600 bg-transparent hover:bg-green-50 rounded-full font-semibold text-xs h-7 px-3 flex items-center justify-center uppercase tracking-wide"
+                  className={`w-full border rounded-full font-semibold text-xs h-7 px-3 flex items-center justify-center uppercase tracking-wide ${
+                    product.isAvailable === false
+                    ? 'border-neutral-300 text-neutral-400 bg-neutral-50 cursor-not-allowed'
+                    : 'border-green-600 text-green-600 bg-transparent hover:bg-green-50'
+                  }`}
                 >
-                  ADD
+                  {product.isAvailable === false ? 'Out of Range' : 'ADD'}
                 </Button>
               </div>
             ) : (
@@ -304,11 +326,14 @@ export default function ProductCard({
                 <Button
                   variant="default"
                   size="icon"
+                  disabled={product.isAvailable === false}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleIncrease(e);
                   }}
-                  className="w-5 h-5 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
+                  className={`w-5 h-5 p-0 bg-transparent text-green-600 shadow-none ${
+                    product.isAvailable === false ? 'text-neutral-300 cursor-not-allowed' : 'hover:bg-green-50'
+                  }`}
                   aria-label="Increase quantity"
                 >
                   +
@@ -436,10 +461,15 @@ export default function ProductCard({
                   ref={addButtonRef}
                   variant="outline"
                   size="sm"
+                  disabled={product.isAvailable === false}
                   onClick={handleAdd}
-                  className="w-full border-green-600 text-green-600 hover:bg-green-50 h-8 text-xs font-semibold uppercase tracking-wide"
+                  className={`w-full border h-8 text-xs font-semibold uppercase tracking-wide ${
+                    product.isAvailable === false
+                    ? 'border-neutral-300 text-neutral-400 bg-neutral-50 cursor-not-allowed'
+                    : 'border-green-600 text-green-600 hover:bg-green-50'
+                  }`}
                 >
-                  Add
+                  {product.isAvailable === false ? 'Out of Range' : 'Add'}
                 </Button>
                 <div className="h-4 mt-1">
                   {showOptionsText && (
@@ -466,8 +496,11 @@ export default function ProductCard({
                 <Button
                   variant="default"
                   size="icon"
+                  disabled={product.isAvailable === false}
                   onClick={handleIncrease}
-                  className="w-6 h-6 p-0 bg-transparent text-green-600 hover:bg-green-50 shadow-none"
+                  className={`w-6 h-6 p-0 bg-transparent text-green-600 shadow-none ${
+                    product.isAvailable === false ? 'text-neutral-300 cursor-not-allowed' : 'hover:bg-green-50'
+                  }`}
                   aria-label="Increase quantity"
                 >
                   +

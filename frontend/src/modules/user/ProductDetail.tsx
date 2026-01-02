@@ -512,7 +512,7 @@ export default function ProductDetail() {
 
           {/* Thumbnail Gallery - Show below main image if multiple images */}
           {allImages.length > 1 && (
-            <div className="px-4 py-2 bg-white/50 backdrop-blur-sm">
+            <div className="px-4 py-2 bg-white/50 backdrop-blur-sm mb-4">
               {/* Mobile swipe hint */}
               <div className="md:hidden flex items-center justify-center gap-1 mb-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-neutral-500">
