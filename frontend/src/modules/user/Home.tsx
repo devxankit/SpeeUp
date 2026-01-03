@@ -9,6 +9,8 @@ import ProductCard from "./components/ProductCard";
 import { getHomeContent } from "../../services/api/customerHomeService";
 import { getHeaderCategoriesPublic } from "../../services/api/headerCategoryService";
 import { useLocation } from "../../hooks/useLocation";
+import { useLoading } from "../../context/LoadingContext";
+import PageLoader from "../../components/PageLoader";
 
 import { useThemeContext } from "../../context/ThemeContext";
 
@@ -16,6 +18,7 @@ export default function Home() {
   const navigate = useNavigate();
   const { location } = useLocation();
   const { activeCategory, setActiveCategory } = useThemeContext();
+  const { startRouteLoading, stopRouteLoading } = useLoading();
   const activeTab = activeCategory; // mapping for existing code compatibility
   const setActiveTab = setActiveCategory;
   const contentRef = useRef<HTMLDivElement>(null);
@@ -38,6 +41,7 @@ export default function Home() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        startRouteLoading();
         setLoading(true);
         setError(null);
         const response = await getHomeContent(
@@ -59,6 +63,7 @@ export default function Home() {
         setError("Network error. Please check your connection.");
       } finally {
         setLoading(false);
+        stopRouteLoading();
       }
     };
 
@@ -125,7 +130,7 @@ export default function Home() {
   );
 
   if (loading && !products.length) {
-    return null; // Let the global IconLoader handle the initial loading state
+    return <PageLoader />; // Let the global IconLoader handle the initial loading state
   }
 
   if (error && !loading) {
