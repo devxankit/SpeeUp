@@ -37,7 +37,7 @@ export function useWishlist(productId?: string) {
     checkWishlist();
   }, [productId, isAuthenticated]);
 
-  const toggleWishlist = async (e?: React.MouseEvent | React.TouchSplat) => {
+  const toggleWishlist = async (e?: React.MouseEvent | React.TouchEvent) => {
     if (e) {
       if ('preventDefault' in e) e.preventDefault();
       if ('stopPropagation' in e) e.stopPropagation();

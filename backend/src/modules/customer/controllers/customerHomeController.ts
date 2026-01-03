@@ -501,11 +501,11 @@ export const getHomeContent = async (req: Request, res: Response) => {
     const promoStripCacheKey = `promoStrip-${currentHeaderCategorySlug.toLowerCase()}`;
 
     // Try to get from cache first
-    let promoStrip = cache.get(promoStripCacheKey);
+    let promoStrip = cache.get(promoStripCacheKey) as any;
 
     if (!promoStrip) {
       const now = new Date();
-      promoStrip = await PromoStrip.findOne({
+      const promoStripDoc = await PromoStrip.findOne({
         headerCategorySlug: currentHeaderCategorySlug.toLowerCase(),
         isActive: true,
         startDate: { $lte: now },
@@ -516,9 +516,11 @@ export const getHomeContent = async (req: Request, res: Response) => {
         .sort({ order: 1 })
         .lean();
 
+      promoStrip = promoStripDoc;
+
       // If we have promoStrip, add availability flag to featured products
-      if (promoStrip && promoStrip.featuredProducts) {
-        promoStrip.featuredProducts = promoStrip.featuredProducts.map((p: any) => {
+      if (promoStrip && (promoStrip as any).featuredProducts) {
+        (promoStrip as any).featuredProducts = (promoStrip as any).featuredProducts.map((p: any) => {
           const isAvailable = nearbySellerIds && nearbySellerIds.length > 0 && p.seller
             ? nearbySellerIds.some(id => id.toString() === p.seller.toString())
             : false;
