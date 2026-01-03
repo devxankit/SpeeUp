@@ -1,13 +1,21 @@
 import { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
 import { updateStatus, getDeliveryProfile, updateGeneralLocation, getSellersInRadius } from '../../../services/api/delivery/deliveryService';
 
+interface SellerInRange {
+  _id: string;
+  storeName: string;
+  address: string;
+  serviceRadiusKm: number;
+  distanceFromDeliveryBoy: number;
+}
+
 interface DeliveryStatusContextType {
   isOnline: boolean;
   setIsOnline: (status: boolean) => void;
   toggleStatus: () => Promise<void>;
   currentLocation: { latitude: number; longitude: number } | null;
   sellersInRangeCount: number;
-  sellersInRange: any[];
+  sellersInRange: SellerInRange[];
   locationError: string | null;
   isLoadingSellers: boolean;
 }
@@ -18,7 +26,7 @@ export function DeliveryStatusProvider({ children }: { children: ReactNode }) {
   const [isOnline, setIsOnlineLocal] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [sellersInRangeCount, setSellersInRangeCount] = useState(0);
-  const [sellersInRange, setSellersInRange] = useState<any[]>([]);
+  const [sellersInRange, setSellersInRange] = useState<SellerInRange[]>([]);
   const [isLoadingSellers, setIsLoadingSellers] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const watchIdRef = useRef<number | null>(null);

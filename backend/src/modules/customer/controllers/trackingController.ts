@@ -363,6 +363,7 @@ export const getSellersInRadius = asyncHandler(
         $project: {
           _id: 1,
           storeName: 1,
+          address: 1,
           serviceRadiusKm: 1,
           distanceFromDeliveryBoy: 1,
         },

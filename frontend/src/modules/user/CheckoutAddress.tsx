@@ -127,9 +127,12 @@ export default function CheckoutAddress() {
     }
   };
 
-  const isFormValid = Object.values(address).every((val) => val.trim() !== '') &&
-    address.phone.length >= 10 &&
-    address.pincode.length >= 6;
+  const isFormValid = address.name.trim() !== '' &&
+    address.phone.trim().length >= 10 &&
+    address.flat.trim() !== '' &&
+    address.street.trim() !== '' &&
+    address.city.trim() !== '' &&
+    address.pincode.trim().length >= 6;
 
   return (
     <div className="pb-24 bg-white min-h-screen">
