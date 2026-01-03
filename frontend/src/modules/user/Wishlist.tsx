@@ -1,22 +1,28 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { getWishlist, removeFromWishlist } from '../../services/api/customerWishlistService';
 import { Product } from '../../types/domain';
 import { useCart } from '../../context/CartContext';
+import { useLocation } from '../../hooks/useLocation';
+import { useToast } from '../../context/ToastContext';
 import Button from '../../components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Wishlist() {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { location } = useLocation();
   const { addToCart } = useCart();
+  const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchWishlist = async () => {
     try {
       setLoading(true);
-      const res = await getWishlist();
+      const res = await getWishlist({
+        latitude: location?.latitude,
+        longitude: location?.longitude
+      });
       if (res.success && res.data) {
         setProducts(res.data.products.map(p => ({
           ...p,
@@ -27,8 +33,9 @@ export default function Wishlist() {
           pack: (p as any).pack || (p as any).variations?.[0]?.name || 'Standard'
         })) as any);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch wishlist:', error);
+      showToast(error.message || 'Failed to fetch wishlist', 'error');
     } finally {
       setLoading(false);
     }
@@ -36,7 +43,7 @@ export default function Wishlist() {
 
   useEffect(() => {
     fetchWishlist();
-  }, [location.pathname]); // Re-fetch when navigating to this page
+  }, [location?.latitude, location?.longitude]);
 
   const handleRemove = async (productId: string) => {
     try {
