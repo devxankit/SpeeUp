@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export interface IAddress extends Document {
   customer: mongoose.Types.ObjectId;
-  type: "Home" | "Work" | "Other";
+  type: "Home" | "Work" | "Hotel" | "Other";
   fullName: string;
   phone: string;
   address: string;
@@ -26,7 +26,7 @@ const AddressSchema = new Schema<IAddress>(
     },
     type: {
       type: String,
-      enum: ["Home", "Work", "Other"],
+      enum: ["Home", "Work", "Hotel", "Other"],
       default: "Home",
     },
     fullName: {

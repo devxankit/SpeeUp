@@ -8,7 +8,7 @@ export interface Address {
     city: string;
     state?: string;
     pincode: string;
-    type: 'Home' | 'Work' | 'Other';
+    type: 'Home' | 'Work' | 'Hotel' | 'Other';
     isDefault: boolean;
     latitude?: number;
     longitude?: number;

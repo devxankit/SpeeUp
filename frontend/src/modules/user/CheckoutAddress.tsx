@@ -1,18 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { OrderAddress } from '../../types/order';
-import { addAddress, updateAddress } from '../../services/api/customerAddressService';
+import { getAddresses, addAddress, updateAddress, Address } from '../../services/api/customerAddressService';
 import { appConfig } from '../../services/configService';
 
 export default function CheckoutAddress() {
   const { cart } = useCart();
+  const { isAuthenticated } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
   // Get address from navigation state if editing
   const editAddress = (location.state as any)?.editAddress as OrderAddress | undefined;
 
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [address, setAddress] = useState<OrderAddress>({
     name: editAddress?.name || '',
     phone: editAddress?.phone || '',
@@ -23,6 +28,79 @@ export default function CheckoutAddress() {
     state: editAddress?.state || 'Madhya Pradesh',
     landmark: editAddress?.landmark || '',
   });
+
+  const [errors, setErrors] = useState<Partial<Record<keyof OrderAddress, string>>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [orderingFor, setOrderingFor] = useState<'myself' | 'someone-else'>('myself');
+  const [addressType, setAddressType] = useState<'home' | 'work' | 'hotel' | 'other'>('home');
+
+  // Fetch all addresses on mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      const fetchAddresses = async () => {
+        try {
+          const response = await getAddresses();
+          if (response.success && Array.isArray(response.data)) {
+            setSavedAddresses(response.data);
+
+            // If not editing, try to load the default 'home' address if it exists
+            if (!editAddress) {
+              const homeAddr = response.data.find(a => a.type === 'Home');
+              if (homeAddr) {
+                const parts = homeAddr.address.split(', ');
+                setAddress({
+                  name: homeAddr.fullName,
+                  phone: homeAddr.phone,
+                  flat: parts[0] || '',
+                  street: parts[1] || '',
+                  city: homeAddr.city,
+                  state: homeAddr.state || 'Madhya Pradesh',
+                  pincode: homeAddr.pincode,
+                  landmark: homeAddr.landmark || '',
+                  id: homeAddr._id,
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching addresses:', error);
+        }
+      };
+      fetchAddresses();
+    }
+  }, [isAuthenticated, editAddress]);
+
+  // Update address when addressType changes
+  useEffect(() => {
+    if (!editAddress && savedAddresses.length > 0) {
+      const typeLabel = addressType.charAt(0).toUpperCase() + addressType.slice(1) as any;
+      const existingAddr = savedAddresses.find(a => a.type === typeLabel);
+
+      if (existingAddr) {
+        const parts = existingAddr.address.split(', ');
+        setAddress({
+          name: existingAddr.fullName,
+          phone: existingAddr.phone,
+          flat: parts[0] || '',
+          street: parts[1] || '',
+          city: existingAddr.city,
+          state: existingAddr.state || 'Madhya Pradesh',
+          pincode: existingAddr.pincode,
+          landmark: existingAddr.landmark || '',
+          id: existingAddr._id,
+        });
+      } else {
+        // Clear or reset to defaults if no address of this type
+        setAddress(prev => ({
+          ...prev,
+          flat: '',
+          street: '',
+          id: undefined,
+          _id: undefined,
+        }));
+      }
+    }
+  }, [addressType, savedAddresses, editAddress]);
 
   // Update address when editAddress changes
   useEffect(() => {
@@ -37,12 +115,13 @@ export default function CheckoutAddress() {
         state: editAddress.state || 'Madhya Pradesh',
         landmark: editAddress.landmark || '',
       });
+
+      // Try to set address type based on editAddress if it has one
+      if ((editAddress as any).type) {
+        setAddressType((editAddress as any).type.toLowerCase());
+      }
     }
   }, [editAddress]);
-  const [errors, setErrors] = useState<Partial<Record<keyof OrderAddress, string>>>({});
-  const [isSaving, setIsSaving] = useState(false);
-  const [orderingFor, setOrderingFor] = useState<'myself' | 'someone-else'>('myself');
-  const [addressType, setAddressType] = useState<'home' | 'work' | 'hotel' | 'other'>('home');
 
   const platformFee = appConfig.platformFee;
   const deliveryFee = cart.total >= appConfig.freeDeliveryThreshold ? 0 : appConfig.deliveryFee;
@@ -86,6 +165,12 @@ export default function CheckoutAddress() {
   };
 
   const handleSaveAddress = async () => {
+    if (!isAuthenticated) {
+      showToast('Please login to save your address', 'info');
+      navigate('/login', { state: { from: location.pathname } });
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
@@ -102,7 +187,7 @@ export default function CheckoutAddress() {
         state: address.state,
         pincode: address.pincode,
         landmark: address.landmark,
-        type: addressType.charAt(0).toUpperCase() + addressType.slice(1) as 'Home' | 'Work' | 'Other', // Capitalize
+        type: addressType.charAt(0).toUpperCase() + addressType.slice(1) as 'Home' | 'Work' | 'Hotel' | 'Other', // Capitalize
         isDefault: true, // Auto set as default for now
         address: `${address.flat}, ${address.street}` // Fallback combined string
       };
