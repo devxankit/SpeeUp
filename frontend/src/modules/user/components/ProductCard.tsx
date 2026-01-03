@@ -5,6 +5,7 @@ import { Product } from '../../../types/domain';
 import { useCart } from '../../../context/CartContext';
 import { useAuth } from '../../../context/AuthContext';
 import { useLocation } from '../../../hooks/useLocation';
+import { useToast } from '../../../context/ToastContext'; // Import useToast
 import { addToWishlist, removeFromWishlist, getWishlist } from '../../../services/api/customerWishlistService';
 import Button from '../../../components/ui/button';
 import Badge from '../../../components/ui/badge';
@@ -43,6 +44,7 @@ export default function ProductCard({
   const { cart, addToCart, updateQuantity } = useCart();
   const { isAuthenticated } = useAuth();
   const { location } = useLocation();
+  const { showToast } = useToast(); // Get toast function
   const imageRef = useRef<HTMLImageElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -86,21 +88,33 @@ export default function ProductCard({
     }
 
     const targetId = String((product as any).id || product._id);
+    const previousState = isWishlisted;
 
     try {
       if (isWishlisted) {
-        await removeFromWishlist(targetId);
+        // Optimistic update
         setIsWishlisted(false);
+        await removeFromWishlist(targetId);
+        showToast('Removed from wishlist');
       } else {
+        if (!location?.latitude || !location?.longitude) {
+           showToast('Location is required to add items to wishlist', 'error');
+           return;
+        }
+        // Optimistic update
+        setIsWishlisted(true);
         await addToWishlist(
           targetId,
           location?.latitude,
           location?.longitude
         );
-        setIsWishlisted(true);
+        showToast('Added to wishlist');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to toggle wishlist:', e);
+      setIsWishlisted(previousState);
+      const errorMessage = e.response?.data?.message || e.message || 'Failed to update wishlist';
+      showToast(errorMessage, 'error');
     }
   };
 

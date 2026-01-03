@@ -4,9 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../context/CartContext';
 import { useOrders } from '../../hooks/useOrders';
 import { useLocation as useLocationContext } from '../../hooks/useLocation';
+import { useToast } from '../../context/ToastContext';
+
 // import { products } from '../../data/products'; // Removed
 import { OrderAddress, Order } from '../../types/order';
-import Toast from '../../components/Toast';
 import PartyPopper from './components/PartyPopper';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '../../components/ui/sheet';
 import WishlistButton from '../../components/WishlistButton';
@@ -26,13 +27,13 @@ export default function Checkout() {
   const { cart, updateQuantity, clearCart, addToCart, removeFromCart, loading: cartLoading } = useCart();
   const { addOrder } = useOrders();
   const { location: userLocation } = useLocationContext();
+  const { showToast: showGlobalToast } = useToast();
   const navigate = useNavigate();
   const [tipAmount, setTipAmount] = useState<number | null>(null);
   const [customTipAmount, setCustomTipAmount] = useState<number>(0);
   const [showCustomTipInput, setShowCustomTipInput] = useState(false);
   const [savedAddress, setSavedAddress] = useState<OrderAddress | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<OrderAddress | null>(null);
-  const [showToast, setShowToast] = useState(false);
   const [showCouponSheet, setShowCouponSheet] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<ApiCoupon | null>(null);
   const [showPartyPopper, setShowPartyPopper] = useState(false);
@@ -47,15 +48,14 @@ export default function Checkout() {
   const [showGstinSheet, setShowGstinSheet] = useState(false);
   const [gstin, setGstin] = useState<string>('');
   const [showCancellationPolicy, setShowCancellationPolicy] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string>('Order placed');
   const [giftPackaging, setGiftPackaging] = useState<boolean>(false);
 
   // Redirect if empty
   useEffect(() => {
-    if (!cartLoading && cart.items.length === 0 && !showToast && !showOrderSuccess) {
+    if (!cartLoading && cart.items.length === 0 && !showOrderSuccess) {
       navigate('/');
     }
-  }, [cart.items.length, cartLoading, showToast, navigate, showOrderSuccess]);
+  }, [cart.items.length, cartLoading, navigate, showOrderSuccess]);
 
   // Load addresses and coupons
   useEffect(() => {
@@ -250,17 +250,21 @@ export default function Checkout() {
     const productId = product.id || product._id;
 
     try {
+      if (!userLocation?.latitude || !userLocation?.longitude) {
+         showGlobalToast('Location is required to move items to wishlist', 'error');
+         return;
+      }
+
       // Add to wishlist
-      await addToWishlist(productId);
+      await addToWishlist(productId, userLocation.latitude, userLocation.longitude);
       // Remove from cart
       await removeFromCart(productId);
       // Show success message
-      setToastMessage('Item moved to wishlist');
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2000);
-    } catch (error) {
+      showGlobalToast('Item moved to wishlist');
+    } catch (error: any) {
       console.error('Failed to move to wishlist:', error);
-      alert('Failed to move item to wishlist. Please try again.');
+      const msg = error.response?.data?.message || 'Failed to move item to wishlist';
+      showGlobalToast(msg, 'error');
     }
   };
 
@@ -343,13 +347,6 @@ export default function Checkout() {
       className="bg-white min-h-screen flex flex-col opacity-100"
       style={{ opacity: 1, height: '1250px' }}
     >
-      {/* Toast Notification */}
-      <Toast
-        message={toastMessage}
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
-        duration={3000}
-      />
 
       {/* Party Popper Animation */}
       <PartyPopper

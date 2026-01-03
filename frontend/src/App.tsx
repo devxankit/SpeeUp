@@ -5,6 +5,8 @@ import { OrdersProvider } from "./context/OrdersContext";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { LocationProvider } from "./context/LocationContext";
+import { ToastProvider } from "./context/ToastContext";
+
 import { LoadingProvider } from "./context/LoadingContext";
 import { AxiosLoadingInterceptor } from "./context/AxiosLoadingInterceptor";
 import IconLoader from "./components/loaders/IconLoader";
@@ -140,6 +142,8 @@ function App() {
           <AuthProvider>
             <ThemeProvider>
               <LocationProvider>
+                <ToastProvider>
+
                 <CartProvider>
                   <OrdersProvider>
                     <BrowserRouter
@@ -382,7 +386,9 @@ function App() {
                 </BrowserRouter>
                   </OrdersProvider>
                 </CartProvider>
+                </ToastProvider>
               </LocationProvider>
+
             </ThemeProvider>
           </AuthProvider>
         </AxiosLoadingInterceptor>

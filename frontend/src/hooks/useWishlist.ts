@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLocation } from './useLocation'; // Import useLocation
+import { useToast } from '../context/ToastContext'; // Import useToast
 import { addToWishlist, removeFromWishlist, getWishlist } from '../services/api/customerWishlistService';
 
 /**
@@ -11,6 +13,8 @@ import { addToWishlist, removeFromWishlist, getWishlist } from '../services/api/
 export function useWishlist(productId?: string) {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const { isAuthenticated } = useAuth();
+  const { location } = useLocation(); // Get location from context
+  const { showToast } = useToast(); // Get toast function
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,7 +26,11 @@ export function useWishlist(productId?: string) {
 
     const checkWishlist = async () => {
       try {
-        const res = await getWishlist();
+        // Pass location to getWishlist
+        const res = await getWishlist({
+            latitude: location?.latitude,
+            longitude: location?.longitude
+        });
         if (res.success && res.data && res.data.products) {
           const exists = res.data.products.some(
             (p: any) => String(p._id || p.id) === String(productId)
@@ -35,7 +43,7 @@ export function useWishlist(productId?: string) {
       }
     };
     checkWishlist();
-  }, [productId, isAuthenticated]);
+  }, [productId, isAuthenticated, location?.latitude, location?.longitude]);
 
   const toggleWishlist = async (e?: React.MouseEvent | React.TouchEvent) => {
     if (e) {
@@ -54,16 +62,32 @@ export function useWishlist(productId?: string) {
       return;
     }
 
+    const previousState = isWishlisted;
+
     try {
       if (isWishlisted) {
-        await removeFromWishlist(productId);
+        // Optimistic update
         setIsWishlisted(false);
+        await removeFromWishlist(productId);
+        showToast('Removed from wishlist');
       } else {
-        await addToWishlist(productId);
+        // Check for location availability before adding
+        if (!location?.latitude || !location?.longitude) {
+             showToast('Location is required to add items to wishlist', 'error');
+             return;
+        }
+
+        // Optimistic update
         setIsWishlisted(true);
+        await addToWishlist(productId, location.latitude, location.longitude);
+        showToast('Added to wishlist');
       }
-    } catch (e) {
-      console.error('Failed to toggle wishlist:', e);
+    } catch (error: any) {
+      console.error('Failed to toggle wishlist:', error);
+      // Revert state on error
+      setIsWishlisted(previousState);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to update wishlist';
+      showToast(errorMessage, 'error');
     }
   };
 
